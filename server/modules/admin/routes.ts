@@ -66,26 +66,27 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
    */
   router.get('/api/admin/rules/statistics',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('[Admin] Récupération statistiques règles métier', {
-          metadata: {
+        logger.info('[Admin] Récupération statistiques règles métier', { metadata: {
             route: '/api/admin/rules/statistics',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
         
-        logger.info('[Admin] Statistiques règles récupérées', {
-          metadata: {
+        logger.info('[Admin] Statistiques règles récupérées', { metadata: {
             totalRules: stats.totalRules,
             activeRules: stats.activeRules
-          }
-        });
+
+            })
+
+
+          );
         
         sendSuccess(res, stats);
       
@@ -93,11 +94,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * POST /api/admin/rules/seed
@@ -112,29 +115,30 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.post('/api/admin/rules/seed',
     isAuthenticated,
     rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('[Admin] Seeding forcé des règles par défaut', {
-          metadata: {
+        logger.info('[Admin] Seeding forcé des règles par défaut', { metadata: {
             route: '/api/admin/rules/seed',
             method: 'POST',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         await DateIntelligenceRulesSeeder.updateDefaultRules();
         
         const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
         
-        logger.info('[Admin] Seeding règles terminé', {
-          metadata: {
+        logger.info('[Admin] Seeding règles terminé', { metadata: {
             totalRules: stats.totalRules,
             activeRules: stats.activeRules,
             userId: req.user?.id
-          }
-        });
+
+            })
+
+
+          );
         
         eventBus.emit('admin:rules_seeded', {
           userId: req.user?.id,
@@ -151,11 +155,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * POST /api/admin/rules/reset
@@ -173,32 +179,33 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     isAuthenticated,
     rateLimits.auth, // Plus restrictif pour opération destructive
     validateBody(resetConfirmationSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
         const userId = req.user?.id || 'unknown';
         
-        logger.warn('[Admin] RESET COMPLET des règles initié', {
-          metadata: { 
+        logger.warn('[Admin] RESET COMPLET des règles initié', { metadata: { 
             route: '/api/admin/rules/reset',
             method: 'POST',
             userId,
             operation: 'DESTRUCTIVE'
-          }
-        });
+
+      });
         
         await DateIntelligenceRulesSeeder.resetAllRules();
         
         const stats = await DateIntelligenceRulesSeeder.getRulesStatistics();
         
-        logger.info('[Admin] RESET COMPLET terminé', {
-          metadata: { 
+        logger.info('[Admin] RESET COMPLET terminé', { metadata: { 
             userId,
             totalRules: stats.totalRules,
             activeRules: stats.activeRules
-          }
-        });
+
+            })
+
+
+          );
         
         eventBus.emit('admin:rules_reset', {
           userId,
@@ -218,11 +225,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * GET /api/admin/rules/validate
@@ -237,17 +246,16 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
    */
   router.get('/api/admin/rules/validate',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('[Admin] Validation cohérence règles métier', {
-          metadata: {
+        logger.info('[Admin] Validation cohérence règles métier', { metadata: {
             route: '/api/admin/rules/validate',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         const validation = await DateIntelligenceRulesSeeder.validateRulesConsistency();
         
@@ -264,14 +272,16 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           }
         };
         
-        logger.info('[Admin] Validation terminée', {
-          metadata: {
+        logger.info('[Admin] Validation terminée', { metadata: {
             isValid: validation.isValid,
             issuesCount: validation.issues.length,
             warningsCount: validation.warnings.length,
             status: response.summary.status
-          }
-        });
+
+            })
+
+
+          );
         
         // Statut HTTP selon la validation
         const statusCode = validation.isValid ? 200 : 422;
@@ -283,11 +293,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   // ========================================
   // INTELLIGENCE SYSTEM HEALTH ROUTES
@@ -307,17 +319,16 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
    */
   router.get('/api/admin/intelligence/health',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('[Admin] Vérification santé système intelligence temporelle', {
-          metadata: {
+        logger.info('[Admin] Vérification santé système intelligence temporelle', { metadata: {
             route: '/api/admin/intelligence/health',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         // Récupérer les statistiques des différents composants
         const [rulesStats, rulesValidation] = await Promise.all([
@@ -384,13 +395,15 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           healthReport.recommendations.push("Nombreux avertissements - Optimisation des règles recommandée");
         }
         
-        logger.info('[Admin] Santé système évaluée', {
-          metadata: { 
+        logger.info('[Admin] Santé système évaluée', { metadata: { 
             healthStatus, 
             healthScore,
             recommendationsCount: healthReport.recommendations.length
-          }
-        });
+
+            })
+
+
+          );
         
         sendSuccess(res, healthReport, 200);
         
@@ -399,11 +412,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * GET /api/admin/intelligence/test-integration
@@ -418,17 +433,16 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
    */
   router.get('/api/admin/intelligence/test-integration',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('[Admin] Démarrage test intégration intelligence temporelle', {
-          metadata: {
+        logger.info('[Admin] Démarrage test intégration intelligence temporelle', { metadata: {
             route: '/api/admin/intelligence/test-integration',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         // Import dynamique du test pour éviter les dépendances circulaires
         const { runIntegrationTest } = await import('../../test/dateIntelligenceIntegration.test');
@@ -442,13 +456,15 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           phase: '2.2_intelligent_date_calculation_engine'
         };
         
-        logger.info('[Admin] Test intégration terminé', {
-          metadata: {
+        logger.info('[Admin] Test intégration terminé', { metadata: {
             success: testResults.success,
             healthScore: testResults.healthScore || 0,
             eventsReceived: testResults.eventsReceived || 0
-          }
-        });
+
+            })
+
+
+          );
         
         const statusCode = testResults.success ? 200 : 422;
         
@@ -465,11 +481,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   // ========================================
   // INTELLIGENCE RULES ROUTES
@@ -499,9 +517,12 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
         const { phase, projectType, isActive, priority } = req.query;
         
-        logger.info('Récupération règles avec filtres', {
-          metadata: { filters: req.query }
-        });
+        logger.info('Récupération règles avec filtres', { metadata: { filters: req.query 
+
+            })
+ 
+
+          );
         
         // Construire les filtres pour le storage
         const filters: any = {};
@@ -528,8 +549,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
             activeRules: rules.filter(r => r.isActive).length,
             filtersApplied: Object.keys(req.query).length,
             retrievedAt: new Date()
-          }
-        };
+              })
+
+            );
         
         sendSuccess(res, result);
       
@@ -537,11 +559,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * POST /api/intelligence-rules
@@ -558,13 +582,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     isAuthenticated,
     rateLimits.creation,
     validateBody(insertDateIntelligenceRuleSchema),
-    asyncHandler(async (req: any, res) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
-        logger.info('Création nouvelle règle', {
-          metadata: { name: req.body.name }
-        });
+        logger.info('Création nouvelle règle', { metadata: { name: req.body.name 
+
+      });
         
         // Ajouter l'utilisateur créateur
         const ruleData = {
@@ -575,9 +599,12 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         // Créer la règle dans le storage
         const newRule = await storage.createRule(ruleData);
         
-        logger.info('Règle créée avec succès', {
-          metadata: { ruleId: newRule.id }
-        });
+        logger.info('Règle créée avec succès', { metadata: { ruleId: newRule.id 
+
+            })
+ 
+
+          );
         
         sendSuccess(res, newRule, 201);
       
@@ -585,15 +612,22 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  ););
+      metadata: {
+            })
+
+          ););
         }
         
         throw createError.database("Erreur lors de la création de la règle");
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   // ========================================
   // ONEDRIVE SYNC CONFIGURATION ROUTES
@@ -612,7 +646,7 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
    */
   router.get('/api/admin/sync-config',
     isAuthenticated,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
@@ -621,8 +655,8 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
             route: '/api/admin/sync-config',
             method: 'GET',
             userId: req.user?.id
-          }
-        });
+
+      });
         
         const config = await storage.getSyncConfig();
         
@@ -633,17 +667,20 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
             lastSyncAt: null,
             nextSyncAt: null,
             lastSyncStatus: null,
-            lastSyncResult: {}
-          });
+            lastSyncResult: {
+
+                });
           return;
         }
         
-        logger.info('[Admin] Configuration synchronisation récupérée', {
-          metadata: {
+        logger.info('[Admin] Configuration synchronisation récupérée', { metadata: {
             isEnabled: config.isEnabled,
             lastSyncStatus: config.lastSyncStatus
-          }
-        });
+
+            })
+
+
+          );
         
         sendSuccess(res, config);
       
@@ -651,11 +688,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   /**
    * PATCH /api/admin/sync-config
@@ -672,21 +711,23 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
   router.patch('/api/admin/sync-config',
     isAuthenticated,
     rateLimits.general,
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       return withErrorHandling(
     async () => {
 
         const { isEnabled, cronExpression } = req.body;
         
-        logger.info('[Admin] Mise à jour configuration synchronisation OneDrive', {
-          metadata: {
+        logger.info('[Admin] Mise à jour configuration synchronisation OneDrive', { metadata: {
             route: '/api/admin/sync-config',
             method: 'PATCH',
             userId: req.user?.id,
             isEnabled,
             cronExpression
-          }
-        });
+
+            })
+
+
+          );
         
         // Validation de l'expression cron si fournie
         if (cronExpression !== undefined) {
@@ -708,12 +749,14 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
         const syncScheduler = req.app.get('syncScheduler');
         if (syncScheduler) {
           await syncScheduler.restart();
-          logger.info('[Admin] Scheduler redémarré avec nouvelle configuration', {
-            metadata: {
+          logger.info('[Admin] Scheduler redémarré avec nouvelle configuration', { metadata: {
               isEnabled: updatedConfig.isEnabled,
               cronExpression: updatedConfig.cronExpression
-            }
-          });
+
+            })
+
+
+          );
         }
         
         eventBus.emit('admin:sync_config_updated', {
@@ -733,11 +776,13 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
     {
       operation: 'Management',
       service: 'routes',
-      metadata: {}
-    }
-  );
-    })
-  );
+      metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
   return router;
 }

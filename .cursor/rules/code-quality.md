@@ -501,3 +501,5 @@ router.post('/api/route', async (req, res) => { // ❌
 **Note:** Ces standards sont non négociables. Code qui ne respecte pas ces standards doit être refactorisé.
 
 
+
+

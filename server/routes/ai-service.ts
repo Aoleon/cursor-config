@@ -40,7 +40,12 @@ router.post("/generate-sql", asyncHandler(async (req, res) => {
   });
   
   res.status(result.success ? 200 : 400).json(result);
-}));
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * GET /api/ai/usage-stats
@@ -63,7 +68,12 @@ router.get("/usage-stats", asyncHandler(async (req, res) => {
     data: stats,
     timeRangeDays
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * POST /api/ai/clean-cache
@@ -80,9 +90,13 @@ router.post("/clean-cache", asyncHandler(async (req, res) => {
     data: {
       cleanedEntries: cleanedCount,
       message: `${cleanedCount} entrées de cache expirées supprimées`
-    }
-  });
-}));
+    });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * GET /api/ai/health-check
@@ -108,9 +122,13 @@ router.get("/health-check", asyncHandler(async (req, res) => {
         ...(!health.database ? ["Base de données inaccessible"] : []),
         ...(!health.cache ? ["Cache indisponible"] : [])
       ]
-    }
-  });
-}));
+    });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // ROUTES AVANCÉES - ADMINISTRATION ET DEBUG
@@ -152,7 +170,12 @@ router.post("/test-model", asyncHandler(async (req, res) => {
     testModel: model,
     result
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * GET /api/ai/model-comparison
@@ -192,7 +215,12 @@ router.get("/model-comparison", asyncHandler(async (req, res) => {
     success: true,
     data: comparison
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * GET /api/ai/cache-stats
@@ -220,7 +248,12 @@ router.get("/cache-stats", asyncHandler(async (req, res) => {
     success: true,
     data: cacheStats
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // ROUTES POUR CONFIGURATION ET GESTION
@@ -313,9 +346,14 @@ router.get("/context/:entityType/:id", asyncHandler(async (req, res) => {
       generatedAt: new Date().toISOString(),
       tokensEstimate: contextData.tokenEstimate,
       compressionLevel: contextData.compressionLevel
-    }
-  });
-}));
+        }
+          );
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * POST /api/ai/context-preview
@@ -381,7 +419,12 @@ router.post("/context-preview", asyncHandler(async (req, res) => {
     performance: result.performance,
     preview: true
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * GET /api/ai/context-stats
@@ -400,9 +443,13 @@ router.get("/context-stats", asyncHandler(async (req, res) => {
       globalStats: stats,
       efficiencyByEntityType: efficiency,
       retrievedAt: new Date().toISOString()
-    }
-  });
-}));
+    });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * POST /api/ai/context-invalidate
@@ -458,9 +505,13 @@ router.post("/context-invalidate", asyncHandler(async (req, res) => {
       entityType,
       entityId,
       invalidatedAt: new Date().toISOString()
-    }
-  });
-}));
+    });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * POST /api/ai/context-batch
@@ -511,17 +562,17 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
     {
       operation: 'Router',
       service: 'ai-service',
-      metadata: {}
-    }
-  ););
+      metadata: {
+            })
+
+          ););
       return {
         entityType: entity.entityType,
         entityId: entity.entityId,
         success: false,
         error: error instanceof Error ? error.message : String(error)
       };
-    }
-  });
+    });
 
   const batchResults = await Promise.all(batchPromises);
   const successCount = batchResults.filter(r => r.success).length;
@@ -545,8 +596,12 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
         averageTokensPerEntity: totalTokens / entities.length
       },
       processedAt: new Date().toISOString()
-    }
-  });
-}));
+    });
+            }
+
+                      }
+
+
+                    }));
 
 export default router;

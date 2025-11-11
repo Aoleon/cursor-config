@@ -278,8 +278,8 @@ export function databaseErrorHandler(
           constraint: errorInfo.constraint,
           // Include stack trace in development only
           stack: error.stack
-        }
-      });
+                                                                                }
+                                                                              });
     } else {
       // Production mode: minimal information
       res.status(statusCode).json({

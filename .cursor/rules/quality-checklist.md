@@ -150,3 +150,5 @@
 **Note:** Cette checklist garantit qualité exemplaire. Code qui ne respecte pas ces standards doit être refactorisé avant merge.
 
 
+
+

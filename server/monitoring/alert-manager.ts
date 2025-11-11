@@ -248,13 +248,12 @@ export class AlertManager {
       return;  // Déjà démarré
     }
 
-    logger.info('Démarrage du gestionnaire d\'alertes', {
-      metadata: {
+    logger.info('Démarrage du gestionnaire d\'alertes', { metadata: {
         service: 'AlertManager',
         rulesCount: this.rules.size,
         intervalMs: this.checkIntervalMs
-      }
-    });
+        }
+            });
 
     // Vérification immédiate
     this.checkAlerts();
@@ -273,11 +272,10 @@ export class AlertManager {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
       
-      logger.info('Arrêt du gestionnaire d\'alertes', {
-        metadata: {
+      logger.info('Arrêt du gestionnaire d\'alertes', { metadata: {
           service: 'AlertManager'
         }
-      });
+            });
     }
   }
 
@@ -306,11 +304,11 @@ export class AlertManager {
       
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'alert-manager',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
     }
 
     // Résoudre les alertes qui ne sont plus déclenchées
@@ -379,14 +377,13 @@ export class AlertManager {
     const cooldownMs = rule.cooldown * 60 * 1000;
     this.cooldowns.set(rule.id, new Date(now.getTime() + cooldownMs));
 
-    logger.warn(`Alerte déclenchée: ${rule.name}`, {
-      metadata: {
+    logger.warn(`Alerte déclenchée: ${rule.name}`, { metadata: {
         service: 'AlertManager',
         alertId: alert.id,
         severity: alert.severity,
         metrics: alert.details?.metrics
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -480,7 +477,7 @@ export class AlertManager {
       const handler = this.notificationCallbacks.get(action);
       
       if (handler) {
-        return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
           await handler(alert);
@@ -489,11 +486,10 @@ export class AlertManager {
         
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'alert-manager',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
       } else if (action === 'log') {
         // Log par défaut si pas de handler
         this.logAlert(alert);
@@ -519,8 +515,8 @@ export class AlertManager {
         severity: alert.severity,
         status: alert.status,
         metrics: alert.details?.metrics
-      }
-    };
+                                                                              }
+                                                                            });
     
     const message = `🚨 ALERTE [${alert.severity.toUpperCase()}]: ${alert.message}`;
     
@@ -559,13 +555,12 @@ export class AlertManager {
   private async resendNotification(alert: Alert, rule: AlertRule): Promise<void> {
     await this.sendNotifications(alert, rule);
     
-    logger.info(`Notification renvoyée pour l'alerte: ${alert.name}`, {
-      metadata: {
+    logger.info(`Notification renvoyée pour l'alerte: ${alert.name}`, { metadata: {
         service: 'AlertManager',
         alertId: alert.id,
         notificationsSent: alert.notificationsSent
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -575,13 +570,12 @@ export class AlertManager {
     alert.status = 'resolved';
     alert.resolvedAt = now;
     
-    logger.info(`Alerte résolue: ${alert.name}`, {
-      metadata: {
+    logger.info(`Alerte résolue: ${alert.name}`, { metadata: {
         service: 'AlertManager',
         alertId: alert.id,
         duration: now.getTime() - alert.triggeredAt.getTime()
-      }
-    });
+        }
+            });
     
     // Retirer de la liste des alertes actives
     this.activeAlerts.delete(alert.ruleId);
@@ -613,13 +607,12 @@ export class AlertManager {
       alert.acknowledgedAt = new Date();
       alert.acknowledgedBy = userId;
       
-      logger.info(`Alerte reconnue: ${alert.name}`, {
-        metadata: {
+      logger.info(`Alerte reconnue: ${alert.name}`, { metadata: {
           service: 'AlertManager',
           alertId: alert.id,
           acknowledgedBy: userId
         }
-      });
+            });
       
       return true;
     }
@@ -686,12 +679,11 @@ export class AlertManager {
     if (rule) {
       rule.enabled = enabled;
       
-      logger.info(`Règle ${enabled ? 'activée' : 'désactivée'}: ${rule.name}`, {
-        metadata: {
+      logger.info(`Règle ${enabled ? 'activée' : 'désactivée'}: ${rule.name}`, { metadata: {
           service: 'AlertManager',
           ruleId
         }
-      });
+            });
       
       return true;
     }
@@ -705,13 +697,12 @@ export class AlertManager {
   addRule(rule: AlertRule): void {
     this.rules.set(rule.id, rule);
     
-    logger.info(`Nouvelle règle ajoutée: ${rule.name}`, {
-      metadata: {
+    logger.info(`Nouvelle règle ajoutée: ${rule.name}`, { metadata: {
         service: 'AlertManager',
         ruleId: rule.id,
         severity: rule.severity
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -725,12 +716,11 @@ export class AlertManager {
       this.activeAlerts.delete(ruleId);
       this.cooldowns.delete(ruleId);
       
-      logger.info(`Règle supprimée: ${rule.name}`, {
-        metadata: {
+      logger.info(`Règle supprimée: ${rule.name}`, { metadata: {
           service: 'AlertManager',
           ruleId
         }
-      });
+            });
       
       return true;
     }

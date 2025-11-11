@@ -191,8 +191,7 @@ export async function withTransaction<T>(
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       // Log transaction start
-      logger.debug('Starting database transaction', {
-        metadata: {
+      logger.debug('Starting database transaction', { metadata: {
           module: 'DatabaseHelpers',
           operation: 'withTransaction',
           attempt: attempt + 1,
@@ -201,7 +200,7 @@ export async function withTransaction<T>(
           isolationLevel,
           usingCustomDb: dbInstance !== db
         }
-      });
+            });
       
       // Execute transaction with timeout and isolation level
       const result = await dbInstance.transaction(async (tx) => {
@@ -224,14 +223,13 @@ export async function withTransaction<T>(
       
       // Log success
       const duration = Date.now() - startTime;
-      logger.info('Database transaction completed successfully', {
-        metadata: {
+      logger.info('Database transaction completed successfully', { metadata: {
           module: 'DatabaseHelpers',
           operation: 'withTransaction',
           duration,
           attempt: attempt + 1
         }
-      });
+            });
       
       return result;
     } catch (error: any) {
@@ -242,16 +240,15 @@ export async function withTransaction<T>(
       
       if (retryable && attempt < retries - 1) {
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
-        logger.warn('Database transaction failed, retrying', {
-          metadata: {
+        logger.warn('Database transaction failed, retrying', { metadata: {
             module: 'DatabaseHelpers',
             operation: 'withTransaction',
             attempt: attempt + 1,
             maxRetries: retries,
             errorCode: error?.code,
             delay
-          }
-        });
+                                }
+                              });
         
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -259,8 +256,7 @@ export async function withTransaction<T>(
       }
       
       // Log final failure
-      logger.error('Database transaction failed permanently', lastError, {
-        metadata: {
+      logger.error('Database transaction failed permanently', lastError, { metadata: {
           module: 'DatabaseHelpers',
           operation: 'withTransaction',
           attempt: attempt + 1,
@@ -268,8 +264,8 @@ export async function withTransaction<T>(
           duration,
           retryable,
           errorCode: (lastError as any).code
-        }
-      });
+                                }
+                              });
       
       break;
     }
@@ -299,13 +295,12 @@ export async function withSavepoint<T>(
     // Create savepoint
     await parentTx.execute(sql.raw(`SAVEPOINT ${name}`));
     
-    logger.debug('Created database savepoint', {
-      metadata: {
+    logger.debug('Created database savepoint', { metadata: {
         module: 'DatabaseHelpers',
         operation: 'withSavepoint',
         savepointName: name
-      }
-    });
+        }
+            });
     
     // Execute callback
     const result = await callback(parentTx);
@@ -313,27 +308,25 @@ export async function withSavepoint<T>(
     // Release savepoint on success
     await parentTx.execute(sql.raw(`RELEASE SAVEPOINT ${name}`));
     
-    logger.debug('Released database savepoint', {
-      metadata: {
+    logger.debug('Released database savepoint', { metadata: {
         module: 'DatabaseHelpers',
         operation: 'withSavepoint',
         savepointName: name
-      }
-    });
+        }
+            });
     
     return result;
   } catch (error) {
     // Rollback to savepoint on error
     await parentTx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
     
-    logger.error('Database savepoint rolled back', {
-      metadata: {
+    logger.error('Database savepoint rolled back', { metadata: {
         module: 'DatabaseHelpers',
         operation: 'withSavepoint',
         savepointName: name,
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            });
     
     throw error;
   }
@@ -354,7 +347,7 @@ export async function withBatchTransaction<T>(
     const results: T[] = [];
     
     for (let i = 0; i < operations.length; i++) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const result = await operations[i](tx);
@@ -364,9 +357,8 @@ export async function withBatchTransaction<T>(
     {
       operation: 'serialization_failure',
       service: 'database-helpers',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
     
     return results;
@@ -387,9 +379,8 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     {
       operation: 'serialization_failure',
       service: 'database-helpers',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
 }
 
 /**
@@ -403,13 +394,12 @@ export async function waitForDatabase(
   
   while (Date.now() - startTime < maxWaitTime) {
     if (await checkDatabaseHealth()) {
-      logger.info('Database connection established', {
-        metadata: {
+      logger.info('Database connection established', { metadata: {
           module: 'DatabaseHelpers',
           operation: 'waitForDatabase',
           waitTime: Date.now() - startTime
         }
-      });
+            });
       return;
     }
     

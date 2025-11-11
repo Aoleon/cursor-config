@@ -91,8 +91,7 @@ export class RBACService {
         }
         if (permission.canExport) {
           table.export = this.buildPermissionResult(permission, 'export');
-        }
-      });
+        });
 
       return {
         userId,
@@ -102,15 +101,14 @@ export class RBACService {
         lastUpdated: new Date()
       };
     } catch (error) {
-      logger.error('[RBACService] Erreur lors de la récupération des permissions utilisateur', {
-        metadata: {
+      logger.error('[RBACService] Erreur lors de la récupération des permissions utilisateur', { metadata: {
           operation: 'getUserPermissions',
           service: 'RBACService',
           userId,
           role,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }
   }
@@ -141,7 +139,7 @@ export class RBACService {
         .select()
         .from(permissions)
         .where(and(
-          eq(permissions.role, ras unknown)unknown),
+          eq(permissions.role, ras unknown),
           eq(permissions.tableName, tableName),
           eq(permissions.isActive, true)
         ))
@@ -205,9 +203,7 @@ export class RBACService {
       operation: 'constructor',
       service: 'RBACService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         allowed: false,
         denialReason: "Erreur système lors de la validation"
@@ -251,9 +247,7 @@ export class RBACService {
       operation: 'constructor',
       service: 'RBACService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Erreur lors de la création du contexte', error as Error);
     }
   }
@@ -293,9 +287,7 @@ export class RBACService {
       operation: 'constructor',
       service: 'RBACService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Erreur lors de l\'assignation du contexte', error as Error);
     }
   }
@@ -349,9 +341,7 @@ export class RBACService {
       operation: 'constructor',
       service: 'RBACService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError('Erreur lors de la récupération de l\'audit', error as Error);
     }
   }
@@ -419,7 +409,7 @@ export class RBACService {
   private async checkContextRequirements(
     userId: string,
     permission: Permission,
-    contextValues: Record<st, unknown>unknown>,
+    contextValues: Record<st, unknown>,
     recordId?: string
   ): Promise<PermissionCheckResult> {
     
@@ -462,7 +452,7 @@ export class RBACService {
 
   private async checkTeamProjectsContext(
     userId: string, 
-    contextValues: R, unknown>unknown>unknown any>
+    contextValues: Record<string, unknown>
   ): Promise<PermissionCheckResult> {
     // Vérifier que l'utilisateur fait partie de l'équipe du projet
     return { allowed: true }; // Implémentation simplifiée
@@ -523,9 +513,7 @@ export class RBACService {
       operation: 'constructor',
       service: 'RBACService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Ne pas faire échouer l'opération principale si l'audit échoue
     }
   }

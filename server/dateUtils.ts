@@ -22,7 +22,9 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     const dateLimite = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
     
     if (isNaN(dateLimite.getTime())) {
-      logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise } });
+      logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise 
+
+      });
       return undefined;
     }
 
@@ -30,12 +32,11 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     const dateRemise = new Date(dateLimite);
     dateRemise.setDate(dateRemise.getDate() - 15);
 
-    logger.debug('DateUtils - Date remise calculée', { 
-      metadata: { 
+    logger.debug('DateUtils - Date remise calculée', { metadata: { 
         dateLimite: dateLimite.formatDateFR(new Date()), 
         dateRemise: dateRemise.formatDateFR(new Date()) 
-      } 
-    });
+        }
+            });
     
     return dateRemise;
   
@@ -44,8 +45,7 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
       operation: 'e',
       service: 'dateUtils',
       metadata: {}
-    }
-  );
+    } );
 }
 
 /**
@@ -61,7 +61,9 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     const dateSortie = typeof dateSortieAO === 'string' ? new Date(dateSortieAO) : dateSortieAO;
     
     if (isNaN(dateSortie.getTime())) {
-      logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO } });
+      logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO 
+
+      });
       return undefined;
     }
 
@@ -69,13 +71,12 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     const dateLimite = new Date(dateSortie);
     dateLimite.setDate(dateLimite.getDate() + delaiJours);
 
-    logger.debug('DateUtils - Date limite calculée', { 
-      metadata: { 
+    logger.debug('DateUtils - Date limite calculée', { metadata: { 
         dateSortie: dateSortie.formatDateFR(new Date()), 
         dateLimite: dateLimite.formatDateFR(new Date()),
         delaiJours 
-      } 
-    });
+        }
+            });
     
     return dateLimite;
   
@@ -84,8 +85,7 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
       operation: 'e',
       service: 'dateUtils',
       metadata: {}
-    }
-  );
+    } );
 }
 
 /**
@@ -128,9 +128,8 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
   }
 
   // Date de démarrage des travaux
@@ -144,9 +143,8 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
   }
 
   // Date de livraison prévue
@@ -160,9 +158,8 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
   }
 
   return dates;
@@ -198,8 +195,7 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
       operation: 'e',
       service: 'dateUtils',
       metadata: {}
-    }
-  );
+    } );
 }
 
 /**
@@ -228,9 +224,8 @@ export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: 
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
 }
 
 /**

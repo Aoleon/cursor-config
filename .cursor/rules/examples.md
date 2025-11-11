@@ -1,6 +1,24 @@
 # Exemples Concrets - Saxium
 
-**Exemples de code réels** du projet Saxium pour référence rapide.
+**Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
+**Version:** 2.0.0  
+**Dernière mise à jour:** 2025-01-29
+
+Exemples de code réels du projet Saxium organisés par type de tâche pour référence rapide.
+
+## 🎯 Organisation par Type de Tâche
+
+### Créer une Route API
+### Créer un Composant React
+### Modifier un Service
+### Modifier le Schéma DB
+### Ajouter une Fonctionnalité IA
+
+## 🚫 Exemples à Éviter
+
+**Référence:** `@.cursor/rules/anti-patterns.md` - Anti-patterns consolidés par domaine
+
+Pour voir les exemples de code à éviter avec corrections, consultez le fichier anti-patterns consolidé.
 
 ## 🏗️ Exemples Backend
 
@@ -509,15 +527,95 @@ export function CreateOfferModal({ open, onClose }: { open: boolean; onClose: ()
 }
 ```
 
-## 🔗 Références
+## 🔗 Références par Type de Tâche
+
+### Créer une Route API
+
+**Exemples:**
+- `@server/modules/auth/routes.ts` - Exemple route modulaire complet
+- `@server/modules/documents/coreRoutes.ts` - Exemple routes documents
+
+**Règles à charger:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/backend.md` - Patterns backend
+- `@.cursor/rules/workflows.md` - Workflow création route
+
+**Référence:** `@.cursor/rules/workflows.md` - Workflow création route détaillé
+
+### Créer un Composant React
+
+**Exemples:**
+- `@client/src/components/ui/button.tsx` - Exemple composant UI
+- `@client/src/components/offers/CreateOfferModal.tsx` - Exemple composant avec form
+
+**Règles à charger:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/frontend.md` - Patterns frontend
+- `@.cursor/rules/workflows.md` - Workflow création composant
+
+**Référence:** `@.cursor/rules/workflows.md` - Workflow création composant détaillé
+
+### Modifier un Service
+
+**Exemples:**
+- `@server/services/AIService.ts` - Exemple service IA complet
+- `@server/storage-poc.ts` - Exemple storage avec transaction
+
+**Règles à charger:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/backend.md` - Patterns backend
+- `@.cursor/rules/workflows.md` - Workflow modification service
+
+**Référence:** `@.cursor/rules/workflows.md` - Workflow modification service détaillé
+
+### Modifier le Schéma DB
+
+**Exemples:**
+- `@shared/schema.ts` - Schéma base de données
+- `@server/storage-poc.ts` - Exemple storage avec transaction
+
+**Règles à charger:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/database.md` - Règles base de données
+- `@.cursor/rules/workflows.md` - Workflow modification schéma
+
+**Référence:** `@.cursor/rules/workflows.md` - Workflow modification schéma détaillé
+
+### Ajouter une Fonctionnalité IA
+
+**Exemples:**
+- `@server/services/AIService.ts` - Exemple service IA complet
+- `@server/services/SQLEngineService.ts` - Exemple SQL sécurisé
+
+**Règles à charger:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/ai-services.md` - Services IA
+- `@.cursor/rules/workflows.md` - Workflow modification service IA
+
+**Référence:** `@.cursor/rules/workflows.md` - Workflow modification service IA détaillé
+
+## 🔗 Références Générales
+
+### Fichiers d'Exemples
 
 - `@server/modules/auth/routes.ts` - Exemple route modulaire complet
 - `@server/services/AIService.ts` - Exemple service IA complet
 - `@client/src/components/ui/button.tsx` - Exemple composant UI
 - `@client/src/hooks/useOffer.ts` - Exemple hook personnalisé
+- `@client/src/components/offers/CreateOfferModal.tsx` - Exemple composant avec form
+
+### Règles et Guides
+
+- `@.cursor/rules/workflows.md` - Workflows détaillés avec patterns
+- `@.cursor/rules/anti-patterns.md` - Anti-patterns consolidés
+- `@.cursor/rules/quick-start.md` - Guide de démarrage rapide
+- `@.cursor/rules/examples.md` - Ce fichier
 
 ---
 
-**Note:** Ces exemples sont basés sur le code réel du projet. Utiliser comme référence pour maintenir la cohérence.
+**Note:** Ces exemples sont basés sur le code réel du projet. Utiliser comme référence pour maintenir la cohérence. Pour les exemples de code à éviter, consultez `@.cursor/rules/anti-patterns.md`.
+
+**Version:** 2.0.0  
+**Dernière mise à jour:** 2025-01-29
 
 

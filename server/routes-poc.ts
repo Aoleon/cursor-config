@@ -104,15 +104,15 @@ const analyticsService = getBusinessAnalyticsService(storage as IStorage, eventB
 const predictiveEngineService = new PredictiveEngineService(storage as IStorage, analyticsService);
 
 // Intégration EventBus → PredictiveEngineService
-logger.info('EventBus PredictiveEngineService Integration', {
-  metadata: { location: 'server/routes-poc.ts', type: 'REAL_PredictiveEngine_instance' }
-});
+logger.info('EventBus PredictiveEngineService Integration', { metadata: { location: 'server/routes-poc.ts', type: 'REAL_PredictiveEngine_instance' 
+
+        }
+            });
 
 // Intégrer PredictiveEngine dans EventBus
   eventBus.integratePredictiveEngine(predictiveEngineService);
   
-  logger.info('PredictiveEngine EventBus integration completed', {
-    metadata: { 
+  logger.info('PredictiveEngine EventBus integration completed', { metadata: { 
       status: 'success',
       features: [
         'background_preloading_cycles',
@@ -121,8 +121,8 @@ logger.info('EventBus PredictiveEngineService Integration', {
         'latency_reduction_35_percent',
         'performance_objective_25s_to_10s'
       ]
-    }
-  });
+        }
+            });
 
 // Instance du service IA multi-modèles pour génération SQL intelligente
 const aiService = getAIService(storage as IStorage);
@@ -191,13 +191,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   
   // Initialiser les règles métier par défaut au démarrage
-  logger.info('Initialisation des règles métier menuiserie', {
-    metadata: { context: 'app_startup' }
-  });
+  logger.info('Initialisation des règles métier menuiserie', { metadata: { context: 'app_startup' 
+
+        }
+            });
   await initializeDefaultRules();
-  logger.info('Règles métier initialisées avec succès', {
-    metadata: { context: 'app_startup' }
-  });
+  logger.info('Règles métier initialisées avec succès', { metadata: { context: 'app_startup' 
+
+        }
+            });
 
 // ========================================
 // ROUTES MIGRÉES VERS MODULES
@@ -234,8 +236,7 @@ app.use("/api/ai", isAuthenticated, rateLimits.creation, aiServiceRoutes);
 // Enregistrer les routes OneDrive
 app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
 
-  logger.info('System - Routes API legacy (POC)', {
-    metadata: {
+  logger.info('System - Routes API legacy (POC)', { metadata: {
       note: 'Most routes have been migrated to modular architecture',
       remainingRoutes: [],
       migratedToModules: [
@@ -257,8 +258,8 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
         'supplier workflow → suppliers',
         'ao lots comparison → commercial'
       ]
-    }
-  });
+        }
+      });
 
   // ========================================
   // ROUTES ADMIN
@@ -271,26 +272,24 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
   const eventBusFromApp = app.get('eventBus');
   
   if (!auditServiceFromApp) {
-    logger.error('CRITICAL - AuditService non trouvé dans app.get', {
-      metadata: { 
+    logger.error('CRITICAL - AuditService non trouvé dans app.get', { metadata: { 
         route: 'system/admin-routes',
         method: 'MOUNT',
         issue: 'AuditService_missing',
         impact: 'admin_routes_unavailable'
-      }
-    });
+        }
+            });
     throw new AppError('AuditService manquant - impossible de monter routes admin', 500);
   }
   
   if (!eventBusFromApp) {
-    logger.error('CRITICAL - EventBus non trouvé dans app.get', {
-      metadata: { 
+    logger.error('CRITICAL - EventBus non trouvé dans app.get', { metadata: { 
         route: 'system/admin-routes',
         method: 'MOUNT',
         issue: 'EventBus_missing',
         impact: 'admin_routes_unavailable'
-      }
-    });
+        }
+            });
     throw new AppError('EventBus manquant - impossible de monter routes admin', 500);
   }
   
@@ -298,9 +297,9 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
   const adminRouter = createAdminRoutes(storage, auditServiceFromApp, eventBusFromApp);
   app.use('/api/admin', adminRouter);
   
-  logger.info('System - Routes administrateur montées', {
-    metadata: { path: '/api/admin', services: ['AuditService', 'EventBus', 'Storage'] }
-  });
+  logger.info('System - Routes administrateur montées', { metadata: { path: '/api/admin', services: ['AuditService', 'EventBus', 'Storage'] 
+        }
+            });
 
   
   const httpServer = createServer(app);

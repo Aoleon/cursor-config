@@ -100,9 +100,9 @@ export class TemplateValidator {
     {
       operation: 'Logger',
       service: 'TemplateValidator',
-      metadata: {}
-    }
-  );`,
+      metadata: {
+                                                                                }
+                                                                              });
         severity: 'critical'
       });
 
@@ -244,8 +244,7 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
               column: this.getColumnNumber(content, match.index),
               index: match.index,
               length: match[0].length
-            }
-          });
+            });
         } else {
           stack.pop();
         }
@@ -432,8 +431,7 @@ if (estimatedTime > 10000) { // 10 seconds;
         autoFixFunction: () => {
           return template.content.replace('</style>', 
             '.keep-together { page-break-inside: avoid; }</style>');
-        }
-      });
+        });
     }
   }
 

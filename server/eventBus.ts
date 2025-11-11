@@ -881,8 +881,8 @@ export class EventBus extends EventEmitter {
         cacheKey: params.cacheKey,
         action: params.action,
         executionTimeMs: params.executionTimeMs
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -914,8 +914,8 @@ export class EventBus extends EventEmitter {
         executionTimeMs: params.executionTimeMs,
         isScheduled: params.isScheduled,
         action: 'prewarming_completed'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -949,8 +949,8 @@ export class EventBus extends EventEmitter {
         afterValue: params.afterValue,
         entityType: params.entityType,
         action: 'optimization_detected'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -990,8 +990,8 @@ export class EventBus extends EventEmitter {
         constraintsApplied: params.constraintsApplied,
         calculationMethod: params.calculationMethod,
         action: 'timeline_calculated'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1030,8 +1030,8 @@ export class EventBus extends EventEmitter {
         totalImpactDays: params.totalImpactDays,
         recalculationType: params.recalculationType,
         action: 'cascade_recalculated'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1067,8 +1067,8 @@ export class EventBus extends EventEmitter {
         confidence: params.confidence,
         impact: params.impact,
         action: 'rule_applied'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1110,8 +1110,8 @@ export class EventBus extends EventEmitter {
         entityType: params.entityType,
         entityId: params.entityId,
         action: 'alert_created'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1147,8 +1147,8 @@ export class EventBus extends EventEmitter {
         affectedPhases: params.affectedPhases,
         recommendations: params.recommendations,
         action: 'planning_issue_detected'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1200,8 +1200,8 @@ export class EventBus extends EventEmitter {
         affectedUsers: params.metadata.affectedUsers,
         actionRequired: params.metadata.actionRequired,
         action: 'alert_created'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1240,8 +1240,8 @@ export class EventBus extends EventEmitter {
         acknowledgedAt: params.metadata.acknowledgedAt,
         note: params.metadata.note,
         action: 'alert_acknowledged'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1280,8 +1280,8 @@ export class EventBus extends EventEmitter {
         resolvedAt: params.metadata.resolvedAt,
         resolution: params.metadata.resolution,
         action: 'alert_resolved'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1316,8 +1316,8 @@ export class EventBus extends EventEmitter {
         escalationLevel: params.metadata.escalationLevel,
         immediateAction: params.metadata.immediateAction,
         action: 'critical_escalation'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1352,8 +1352,8 @@ export class EventBus extends EventEmitter {
         resourceType: params.resourceType,
         shortfall: params.shortfall,
         action: 'resource_conflict_detected'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1386,8 +1386,8 @@ export class EventBus extends EventEmitter {
         estimatedGainDays: params.estimatedGainDays,
         feasibility: params.feasibility,
         action: 'optimization_detected'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1423,8 +1423,8 @@ export class EventBus extends EventEmitter {
         riskFactors: params.riskFactors,
         suggestedActions: params.suggestedActions,
         action: 'delay_risk_detected'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1467,8 +1467,8 @@ export class EventBus extends EventEmitter {
         preparationStatus: params.preparationStatus,
         requiredActions: params.requiredActions,
         action: 'critical_deadline_alert'
-      }
-    });
+                                                                              }
+                                                                            });
 
     this.publish(event);
   }
@@ -1507,8 +1507,8 @@ export class EventBus extends EventEmitter {
           threshold_id: payload.threshold_id,
           context_data: payload.context_data,
           requires_immediate_notification: payload.severity === 'critical'
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1540,8 +1540,8 @@ export class EventBus extends EventEmitter {
           notes: payload.notes,
           previous_status: payload.previous_status,
           user_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1575,8 +1575,8 @@ export class EventBus extends EventEmitter {
           previous_status: payload.previous_status,
           resolution_duration_minutes: payload.resolution_duration_minutes,
           user_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1608,8 +1608,8 @@ export class EventBus extends EventEmitter {
           dismissal_reason: payload.dismissal_reason,
           previous_status: payload.previous_status,
           user_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1640,8 +1640,8 @@ export class EventBus extends EventEmitter {
           assigned_at: payload.assigned_at,
           previous_assigned_to: payload.previous_assigned_to,
           user_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1678,8 +1678,8 @@ export class EventBus extends EventEmitter {
           is_active: payload.is_active,
           notification_channels: payload.notification_channels,
           admin_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1711,8 +1711,8 @@ export class EventBus extends EventEmitter {
           is_active: payload.is_active,
           activation_changed: payload.was_active !== payload.is_active,
           admin_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1741,8 +1741,8 @@ export class EventBus extends EventEmitter {
           deactivated_at: payload.deactivated_at,
           reason: payload.reason,
           admin_action: true
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1773,8 +1773,8 @@ export class EventBus extends EventEmitter {
           triggers_evaluation: payload.triggers_evaluation,
           confidence_score: payload.confidence_score,
           triggers_alert_evaluation: payload.triggers_evaluation
-        }
-      });
+                                                                                }
+                                                                              });
       
       this.publish(event);
       
@@ -1864,8 +1864,8 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'integratePredictiveEngine',
         context: { triggersEnabled: true, automaticPreloading: true }
-      }
-    });
+                                                                              }
+                                                                            });
     
     // Démarrer cycles background preloading
     this.startBackgroundPreloadingCycles();
@@ -1881,12 +1881,11 @@ export class EventBus extends EventEmitter {
     if (this.backgroundTasksRunning) return;
     
     this.backgroundTasksRunning = true;
-    logger.info('Démarrage cycles preloading background', {
-      metadata: {
+    logger.info('Démarrage cycles preloading background', { metadata: {
         module: 'EventBus',
         operation: 'startBackgroundPreloadingCycles'
-      }
-    });
+        }
+            });
 
     // 1. CYCLE BUSINESS HOURS PRELOADING (toutes les 30 minutes pendant horaires business)
     const businessHoursInterval = setInterval(async () => {
@@ -1924,27 +1923,25 @@ export class EventBus extends EventEmitter {
     
     this.preloadingIntervals.set('nightly_maintenance', nightlyMaintenanceInterval);
 
-    logger.info('Cycles preloading background configurés et démarrés', {
-      metadata: {
+    logger.info('Cycles preloading background configurés et démarrés', { metadata: {
         module: 'EventBus',
         operation: 'startBackgroundPreloadingCycles',
         context: {
           cycles: ['business_hours', 'weekend_warming', 'peak_hours', 'nightly_maintenance']
         }
-      }
-    });
+                                                                              }
+                                                                            });
   }
 
   /**
    * Configure les déclencheurs prédictifs basés sur événements métier
    */
   private setupPredictiveEventTriggers(): void {
-    logger.info('Configuration déclencheurs prédictifs événementiels', {
-      metadata: {
+    logger.info('Configuration déclencheurs prédictifs événementiels', { metadata: {
         module: 'EventBus',
         operation: 'setupPredictiveEventTriggers'
-      }
-    });
+        }
+            });
 
     // Déclencheur AO : Prédict étude technique et fournisseurs
     this.subscribe(async (event) => {
@@ -2001,8 +1998,8 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'setupPredictiveEventTriggers',
         context: { triggersCount: 5 }
-      }
-    });
+                                                                              }
+                                                                            });
   }
 
   /**
@@ -2013,21 +2010,19 @@ export class EventBus extends EventEmitter {
 
     try {
       const startTime = Date.now();
-      logger.info('Exécution preloading business hours', {
-        metadata: {
+      logger.info('Exécution preloading business hours', { metadata: {
           module: 'EventBus',
           operation: 'executeBusinessHoursPreloading'
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading business hours
     } catch (error) {
-      logger.error('Erreur executeBusinessHoursPreloading', {
-        metadata: {
+      logger.error('Erreur executeBusinessHoursPreloading', { metadata: {
           module: 'EventBus',
           operation: 'executeBusinessHoursPreloading',
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2040,21 +2035,19 @@ export class EventBus extends EventEmitter {
 
     try {
       const startTime = Date.now();
-      logger.info('Exécution weekend warming', {
-        metadata: {
+      logger.info('Exécution weekend warming', { metadata: {
           module: 'EventBus',
           operation: 'weekendWarming'
         }
-      });
+            });
       // TODO: Implémenter la logique de weekend warming
     } catch (error) {
-      logger.error('Erreur executeWeekendWarming', {
-        metadata: {
+      logger.error('Erreur executeWeekendWarming', { metadata: {
           module: 'EventBus',
           operation: 'weekendWarming',
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2066,24 +2059,22 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
     try {
-      logger.info('Optimisation peak hours', {
-        metadata: {
+      logger.info('Optimisation peak hours', { metadata: {
           module: 'EventBus',
           operation: 'peakHoursOptimization'
         }
-      });
+            });
 
       // 3. ÉVICTION AGGRESSIVE ENTITÉS FROIDES
       await this.contextCacheService.optimizeLRUWithPredictiveScoring();
     } catch (error) {
-      logger.error('Erreur peak hours optimization', {
-        metadata: {
+      logger.error('Erreur peak hours optimization', { metadata: {
           module: 'EventBus',
           operation: 'peakHoursOptimization',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2095,27 +2086,24 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveEngine || !this.contextCacheService) return;
 
     try {
-      logger.info('Maintenance nocturne', {
-        metadata: {
+      logger.info('Maintenance nocturne', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance'
         }
-      });
+            });
 
-      logger.info('Maintenance nocturne terminée', {
-        metadata: {
+      logger.info('Maintenance nocturne terminée', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance'
         }
-      });
+            });
     } catch (error) {
-      logger.error('Erreur executeNightlyMaintenance', {
-        metadata: {
+      logger.error('Erreur executeNightlyMaintenance', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance',
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2131,23 +2119,21 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      logger.info('Déclencheur AO workflow preloading', {
-        metadata: {
+      logger.info('Déclencheur AO workflow preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerAOWorkflowPreloading',
           entityId: event.entityId
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading AO workflow
     } catch (error) {
-      logger.error('Erreur déclencheur AO workflow', {
-        metadata: {
+      logger.error('Erreur déclencheur AO workflow', { metadata: {
           module: 'EventBus',
           operation: 'triggerAOWorkflowPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2159,23 +2145,21 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      logger.info('Déclencheur Offre→Projet preloading', {
-        metadata: {
+      logger.info('Déclencheur Offre→Projet preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerOfferToProjectPreloading',
           entityId: event.entityId
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading Offre→Projet
     } catch (error) {
-      logger.error('Erreur déclencheur offre→projet', {
-        metadata: {
+      logger.error('Erreur déclencheur offre→projet', { metadata: {
           module: 'EventBus',
           operation: 'triggerOfferToProjectPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2187,23 +2171,21 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      logger.info('Déclencheur Projet workflow preloading', {
-        metadata: {
+      logger.info('Déclencheur Projet workflow preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerProjectWorkflowPreloading',
           entityId: event.entityId
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading Projet workflow
     } catch (error) {
-      logger.error('Erreur déclencheur projet workflow', {
-        metadata: {
+      logger.error('Erreur déclencheur projet workflow', { metadata: {
           module: 'EventBus',
           operation: 'triggerProjectWorkflowPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2215,23 +2197,21 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService || !event.projectId) return;
 
     try {
-      logger.info('Déclencheur Tâche preloading', {
-        metadata: {
+      logger.info('Déclencheur Tâche preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerTaskRelatedPreloading',
           entityId: event.entityId,
           projectId: event.projectId
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading Tâche
     } catch (error) {
-      logger.error('Erreur déclencheur tâche preloading', {
-        metadata: {
+      logger.error('Erreur déclencheur tâche preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerTaskRelatedPreloading',
           error: error instanceof Error ? error.message : String(error)
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2243,22 +2223,20 @@ export class EventBus extends EventEmitter {
     if (!this.predictiveTriggersEnabled || !this.contextCacheService) return;
 
     try {
-      logger.info('Déclencheur Analytics dashboard preloading', {
-        metadata: {
+      logger.info('Déclencheur Analytics dashboard preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerAnalyticsDashboardPreloading'
         }
-      });
+            });
       // TODO: Implémenter la logique de preloading Analytics dashboard
     } catch (error) {
-      logger.error('Erreur déclencheur analytics dashboard', {
-        metadata: {
+      logger.error('Erreur déclencheur analytics dashboard', { metadata: {
           module: 'EventBus',
           operation: 'triggerAnalyticsDashboardPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       this.backgroundStats.failedBackgroundTasks++;
     }
   }
@@ -2334,13 +2312,12 @@ export class EventBus extends EventEmitter {
    */
   public setPredictiveTriggersEnabled(enabled: boolean): void {
     this.predictiveTriggersEnabled = enabled;
-    logger.info(`Déclencheurs prédictifs ${enabled ? 'activés' : 'désactivés'}`, {
-      metadata: {
+    logger.info(`Déclencheurs prédictifs ${enabled ? 'activés' : 'désactivés'}`, { metadata: {
         module: 'EventBus',
         operation: 'setPredictiveTriggersEnabled',
         enabled
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -2348,13 +2325,12 @@ export class EventBus extends EventEmitter {
    */
   public setBusinessHoursPreloadingEnabled(enabled: boolean): void {
     this.businessHoursPreloadingEnabled = enabled;
-    logger.info(`Preloading business hours ${enabled ? 'activé' : 'désactivé'}`, {
-      metadata: {
+    logger.info(`Preloading business hours ${enabled ? 'activé' : 'désactivé'}`, { metadata: {
         module: 'EventBus',
         operation: 'setBusinessHoursPreloadingEnabled',
         enabled
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -2362,13 +2338,12 @@ export class EventBus extends EventEmitter {
    */
   public setWeekendWarmingEnabled(enabled: boolean): void {
     this.weekendWarmingEnabled = enabled;
-    logger.info(`Weekend warming ${enabled ? 'activé' : 'désactivé'}`, {
-      metadata: {
+    logger.info(`Weekend warming ${enabled ? 'activé' : 'désactivé'}`, { metadata: {
         module: 'EventBus',
         operation: 'setWeekendWarmingEnabled',
         enabled
-      }
-    });
+        }
+            });
   }
 
   /**
@@ -2385,24 +2360,22 @@ export class EventBus extends EventEmitter {
     // Arrêter tous les intervals
     for (const [name, interval] of Array.from(this.preloadingIntervals.entries())) {
       clearInterval(interval);
-      logger.info('Interval arrêté', {
-        metadata: {
+      logger.info('Interval arrêté', { metadata: {
           module: 'EventBus',
           operation: 'cleanupPredictiveIntegration',
           intervalName: name
         }
-      });
+            });
     }
     
     this.preloadingIntervals.clear();
     this.backgroundTasksRunning = false;
     
-    logger.info('Intégration prédictive nettoyée', {
-      metadata: {
+    logger.info('Intégration prédictive nettoyée', { metadata: {
         module: 'EventBus',
         operation: 'cleanupPredictiveIntegration'
-      }
-    });
+        }
+            });
   }
 
 }

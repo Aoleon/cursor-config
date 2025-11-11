@@ -196,7 +196,9 @@ function fallbackClientName(name: string): string {
   }
   
   if (!isValidForProduction(normalized)) {
-    logger.warn('MondayValidator - Client name normalized', { metadata: { original: name, fallback: 'CLIENT_EXCEL_NORMALISE' } });
+    logger.warn('MondayValidator - Client name normalized', { metadata: { original: name, fallback: 'CLIENT_EXCEL_NORMALISE' 
+        }
+            });
     return 'CLIENT_EXCEL_NORMALISE';
   }
   
@@ -215,7 +217,9 @@ function fallbackGeographicName(name: string): string {
   }
   
   if (!isValidForProduction(normalized)) {
-    logger.warn('MondayValidator - Geographic name normalized', { metadata: { original: name, fallback: 'ZONE_EXCEL_NORMALISEE' } });
+    logger.warn('MondayValidator - Geographic name normalized', { metadata: { original: name, fallback: 'ZONE_EXCEL_NORMALISEE' 
+        }
+            });
     return 'ZONE_EXCEL_NORMALISEE';
   }
   
@@ -228,16 +232,15 @@ function fallbackGeographicName(name: string): string {
  */
 function debugValidationValue(fieldName: string, value: string): void {
   if (process.env.NODE_ENV !== 'production') {
-    logger.debug('MondayValidator - Validation debug', { 
-      metadata: { 
+    logger.debug('MondayValidator - Validation debug', { metadata: { 
         fieldName, 
         value, 
         type: typeof value, 
         chars: JSON.stringify([...value]), 
         charCodes: [...value].map(c => c.charCodeAt(0)).join(', '),
         isValid: isValidForProduction(value)
-      } 
-    });
+        }
+            });
   }
 }
 
@@ -431,7 +434,7 @@ export function validateMondayAoData(data: MondayAoData): MondayAoData {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `$) {err.path.join('.')}: ${err.message}`).join(', ');
       throw new AppError(`Validation Monday.com AO échouée: ${errorMessages}`, 500);
     }
     throw error;
@@ -463,7 +466,7 @@ export function validateMondayProjectData(data: MondayProjectData): MondayProjec
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `$) {err.path.join('.')}: ${err.message}`).join(', ');
       throw new AppError(`Validation Monday.com Project échouée: ${errorMessages}`, 500);
     }
     throw error;
@@ -695,8 +698,7 @@ export function validateAoBatch(data: MondayAoData[]): {
         errors: [error instanceof Error ? error.message : String(error)]
       });
       results.summary.invalid++;
-    }
-  });
+    });
 
   results.summary.validationRate = results.summary.valid / results.summary.total;
 
@@ -738,8 +740,7 @@ export function validateProjectBatch(data: MondayProjectData[]): {
         errors: [error instanceof Error ? error.message : String(error)]
       });
       results.summary.invalid++;
-    }
-  });
+    });
 
   results.summary.validationRate = results.summary.valid / results.summary.total;
 

@@ -25,83 +25,73 @@ export class RedisCacheAdapter implements ICacheAdapter {
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > this.MAX_RECONNECT_ATTEMPTS) {
-          logger.error('[RedisCacheAdapter] Max reconnect attempts reached', {
-            metadata: {
+          logger.error('[RedisCacheAdapter] Max reconnect attempts reached', { metadata: {
               service: 'RedisCacheAdapter',
               operation: 'retryStrategy',
-              attempts: times
-            }
-          });
+              attempts: times 
+              }
+            });
           return null;
         }
-
         const delay = Math.min(times * 1000, 5000);
-        logger.warn('[RedisCacheAdapter] Reconnecting to Redis', {
-          metadata: {
+        logger.warn('[RedisCacheAdapter] Reconnecting to Redis', { metadata: {
             service: 'RedisCacheAdapter',
             operation: 'retryStrategy',
             attempt: times,
-            delayMs: delay
-          }
-        });
+            delayMs: delay 
+              }
+            });
         return delay;
       },
       reconnectOnError: (err) => {
         const targetErrors = ['READONLY', 'ECONNREFUSED', 'ETIMEDOUT'];
         return targetErrors.some(targetError => err.message.includes(targetError));
-      }
-    });
+      });
 
     this.client.on('connect', () => {
       this.isConnected = true;
       this.reconnectAttempts = 0;
-      logger.info('[RedisCacheAdapter] Connected to Redis', {
-        metadata: {
+      logger.info('[RedisCacheAdapter] Connected to Redis', { metadata: {
           service: 'RedisCacheAdapter',
-          operation: 'connect'
-        }
-      });
+          operation: 'connect' 
+              }
+            });
     });
 
     this.client.on('ready', () => {
-      logger.info('[RedisCacheAdapter] Redis client ready', {
-        metadata: {
+      logger.info('[RedisCacheAdapter] Redis client ready', { metadata: {
           service: 'RedisCacheAdapter',
-          operation: 'ready'
-        }
-      });
+          operation: 'ready' 
+              }
+            });
     });
 
     this.client.on('error', (error) => {
       this.isConnected = false;
-      logger.error('[RedisCacheAdapter] Redis connection error', {
-        metadata: {
+      logger.error('[RedisCacheAdapter] Redis connection error', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'error',
-          error: error.message
-        }
-      });
+          error: error.message 
+              }
+            });
     });
 
     this.client.on('close', () => {
       this.isConnected = false;
-      logger.warn('[RedisCacheAdapter] Redis connection closed', {
-        metadata: {
+      logger.warn('[RedisCacheAdapter] Redis connection closed', { metadata: {
           service: 'RedisCacheAdapter',
-          operation: 'close'
-        }
-      });
+          operation: 'close' 
+              }
+            });
     });
 
-    logger.info('[RedisCacheAdapter] Initialized', {
-      metadata: {
+    logger.info('[RedisCacheAdapter] Initialized', { metadata: {
         service: 'RedisCacheAdapter',
         operation: 'constructor',
-        redisUrl: connectionString.replace(/:[^:]*@/, ':***@') // Mask password
-      }
-    });
+        redisUrl: connectionString.replace(/:[^:]*@/, ':***@') // Mask password 
+              }
+            });
   }
-
   async get<T>(key: string): Promise<T | null> {
     return withErrorHandling(
     async () => {
@@ -118,9 +108,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return null;
     }
@@ -138,9 +126,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -154,9 +140,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
     }
   }
@@ -166,21 +150,16 @@ export class RedisCacheAdapter implements ICacheAdapter {
     async () => {
 
       await this.client.flushdb();
-      logger.info('[RedisCacheAdapter] Cache flushed', {
-        metadata: {
+      logger.info('[RedisCacheAdapter] Cache flushed', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'flush'
-        }
       });
-    
     },
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -194,9 +173,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return [];
     }
@@ -212,9 +189,7 @@ export class RedisCacheAdapter implements ICacheAdapter {
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return 0;
     }
@@ -235,21 +210,16 @@ export class RedisCacheAdapter implements ICacheAdapter {
     async () => {
 
       await this.client.quit();
-      logger.info('[RedisCacheAdapter] Disconnected from Redis', {
-        metadata: {
+      logger.info('[RedisCacheAdapter] Disconnected from Redis', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'disconnect'
-        }
       });
-    
     },
     {
       operation: 'constructor',
       service: 'RedisCacheAdapter',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 }

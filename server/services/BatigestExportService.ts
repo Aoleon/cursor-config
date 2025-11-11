@@ -92,8 +92,8 @@ export class BatigestExportService {
         montantHT: item.total
       })),
       totalHT: parseFloat(quote.totalHT as unknown),
-      totalTVA: parseFloat(quote.totalas unknown)unknown),
-      totalTTC: parseFloat(quote.tas unknown) as unknown),
+      totalTVA: parseFloat(quote.totalTVA as unknown),
+      totalTTC: parseFloat(quote.totalTTC as unknown),
       conditionsPaiement: quote.paymentTerms || undefined,
       delaiLivraison: quote.deliveryDelay || undefined,
       validiteJours: quote.validityDate 
@@ -120,9 +120,9 @@ export class BatigestExportService {
         prixUnitaire: item.unitPrice,
         montantHT: item.total
       })),
-      totalHT: parseFloat(oras unknown)aas unknunknown)unknown),
-      totalTVA: parseFloatas unknown)tas unknunknown)unknown any),
-      totalTTC: parseFas unknown)das unknunknown)unknownC as any),
+      totalHT: parseFloat(oras unknown)aas unknown),
+      totalTVA: parseFloatas unknown)tas unknown)unknown any),
+      totalTTC: parseFas unknown)das unknown)unknownC as any),
       dateEchue: order.expectedDeliveryDate?.toISOString().split('T')[0] || undefined,
       modePaiement: order.paymentTerms || undefined
     };
@@ -137,7 +137,7 @@ export class BatigestExportService {
     const lignesXML = data.lignes.map(ligne => `
     <Ligne>
       <Numero>${ligne.numero}</Numero>
-      <Designation><![CDATA[${this.escapeXML(ligne.designation)}]]></Designation>
+      <Designation><![CDATA[$) {this.escapeXML(ligne.designation)}]]></Designation>
       <Quantite>${ligne.quantite}</Quantite>
       <PrixUnitaire>${ligne.prixUnitaire.toFixed(2)}</PrixUnitaire>
       <MontantHT>${ligne.montantHT.toFixed(2)}</MontantHT>
@@ -176,7 +176,7 @@ export class BatigestExportService {
     const lignesXML = data.lignes.map(ligne => `
     <Ligne>
       <Numero>${ligne.numero}</Numero>
-      <Designation><![CDATA[${this.escapeXML(ligne.designation)}]]></Designation>
+      <Designation><![CDATA[$) {this.escapeXML(ligne.designation)}]]></Designation>
       <Quantite>${ligne.quantite}</Quantite>
       <PrixUnitaire>${ligne.prixUnitaire.toFixed(2)}</PrixUnitaire>
       <MontantHT>${ligne.montantHT.toFixed(2)}</MontantHT>
@@ -260,17 +260,14 @@ export class BatigestExportService {
    */
   async exportClientQuote(quote: ClientQuote): Promise<BatigestExportResult> {
     try {
-      logger.info('[BatigestExport] Export devis client', {
-        metadata: {
+      logger.info('[BatigestExport] Export devis client', { metadata: {
           service: 'BatigestExportService',
           operation: 'exportClientQuote',
-          reference: quote.reference
-        }
-      });
-
+          reference: quote.reference 
+              }
+            });
       const xml = this.convertClientQuoteToXML(quote);
       const csv = this.convertClientQuoteToCSV(quote);
-
       return {
         success: true,
         xml,
@@ -279,19 +276,15 @@ export class BatigestExportService {
           documentType: 'devis_client',
           documentReference: quote.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both'
-        }
-      };
+          format: 'both' } });
     } catch (error) {
-      logger.error('[BatigestExport] Erreur lors de l\'export du devis client', {
-        metadata: {
+      logger.error('[BatigestExport] Erreur lors de l\'export du devis client', { metadata: {
           service: 'BatigestExportService',
           operation: 'exportClientQuote',
           reference: quote.reference,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       return {
         success: false,
         metadata: {
@@ -312,17 +305,13 @@ export class BatigestExportService {
     return withErrorHandling(
     async () => {
 
-      logger.info('[BatigestExport] Export bon de commande', {
-        metadata: {
+      logger.info('[BatigestExport] Export bon de commande', { metadata: {
           service: 'BatigestExportService',
           operation: 'exportPurchaseOrder',
           reference: order.reference
-        }
       });
-
       const xml = this.convertPurchaseOrderToXML(order);
       const csv = this.convertPurchaseOrderToCSV(order);
-
       return {
         success: true,
         xml,
@@ -331,19 +320,13 @@ export class BatigestExportService {
           documentType: 'bon_commande',
           documentReference: order.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both'
-        }
-      };
-    
+          format: 'both' } });
     },
     {
       operation: 'Saxium',
       service: 'BatigestExportService',
       metadata: {}
-    }
-  );
-      });
-
+    } );
       return {
         success: false,
         metadata: {

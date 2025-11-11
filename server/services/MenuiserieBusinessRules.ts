@@ -607,7 +607,7 @@ export function getApplicableRules(
   conditions?: Record<string, unknown>
 ): typeof DEFAULT_MENUISERIE_RULES {
   
-  return DEFAULT_MENUISERIE_RULES.filter(rule => {
+  return DEFAULT_MENUISERIE_RULES.filter(rule  => {
     // Filtrer par phase (null = applicable à toutes)
     if (rule.phase && phase && rule.phase !== phase) return false;
     

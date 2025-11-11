@@ -28,9 +28,11 @@ async function resetRules() {
     {
       operation: 'resetRules',
       service: 'reset-date-rules',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
 }
 
 resetRules();

@@ -2,11 +2,11 @@
  * Script pour analyser les valeurs uniques des colonnes status Monday.com
  */
 
-import { MondayService } from '../services/MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { logger } from './utils/logger';
 
 async function analyzeUniqueValues() {
-  const service = new MondayService();
+  const service = mondayintegrationService();
   const boardId = '3946257560';
   
   logger.info('🔍 Analyse valeurs uniques board AO\n');

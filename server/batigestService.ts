@@ -272,9 +272,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -529,9 +529,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -722,9 +722,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**

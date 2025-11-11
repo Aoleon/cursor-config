@@ -106,6 +106,17 @@ export default defineConfig({
       timeout: 90 * 1000,
       dependencies: ['setup'],
     },
+    // Tests des nouveaux workflows
+    {
+      name: 'new-workflows',
+      testDir: './e2e/workflows',
+      testMatch: /.*\.spec\.ts$/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
     {
       name: 'chromium',
       use: { 

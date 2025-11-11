@@ -98,11 +98,10 @@ router.get('/health', async (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // MÉTRIQUES
@@ -130,7 +129,7 @@ router.get('/metrics', requireAuth, (req: Request, res: Response) => {
       business: metrics.business,
       system: metrics.system,
       trends: metrics.trends,
-      alerts: metrics.alerts.map(alert => ({
+      alerts: metrics.alerts.map(alert  => ({
         id: alert.id,
         name: alert.name,
         severity: alert.severity,
@@ -145,11 +144,10 @@ router.get('/metrics', requireAuth, (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Récupère les métriques d'une fenêtre temporelle
@@ -173,17 +171,17 @@ router.get('/metrics/:window', requireAuth, (req: Request, res: Response) => {
     res.json({
       success: true,
       ...metrics
-    });
+
+          });
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Récupère la timeline pour les graphiques
@@ -208,17 +206,17 @@ router.get('/timeline', requireAuth, (req: Request, res: Response) => {
       success: true,
       window,
       data: timeline
-    });
+
+          });
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // ERREURS
@@ -252,7 +250,7 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
     res.json({
       success: true,
       count: errors.length,
-      errors: errors.map(err => ({
+      errors: errors.map(err  => ({
         id: err.id,
         timestamp: err.timestamp,
         level: err.level,
@@ -270,11 +268,10 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Récupère les détails d'une erreur avec stack trace
@@ -301,19 +298,17 @@ router.get('/errors/:errorId', requireAuth, (req: Request, res: Response) => {
       error: {
         ...error,
         stack: error.stack  // Inclure le stack trace complet
-      }
-    });
+      });
     
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // ALERTES
@@ -332,7 +327,7 @@ router.get('/alerts', requireAuth, (req: Request, res: Response) => {
     res.json({
       success: true,
       count: alerts.length,
-      alerts: alerts.map(alert => ({
+      alerts: alerts.map(alert  => ({
         id: alert.id,
         ruleId: alert.ruleId,
         name: alert.name,
@@ -353,11 +348,10 @@ router.get('/alerts', requireAuth, (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Récupère l'historique des alertes
@@ -382,18 +376,18 @@ router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
       success: true,
       count: history.length,
       alerts: history
-    });
+
+          });
     
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Reconnaît une alerte (acknowledge)
@@ -425,11 +419,10 @@ router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Res
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Récupère les règles d'alerte configurées
@@ -444,7 +437,7 @@ router.get('/alerts/rules', requireAuth, (req: Request, res: Response) => {
     res.json({
       success: true,
       count: rules.length,
-      rules: rules.map(rule => ({
+      rules: rules.map(rule  => ({
         id: rule.id,
         name: rule.name,
         description: rule.description,
@@ -461,11 +454,10 @@ router.get('/alerts/rules', requireAuth, (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Active/désactive une règle d'alerte
@@ -504,11 +496,10 @@ router.put('/alerts/rules/:ruleId', requireAuth, (req: Request, res: Response) =
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // TESTS ET SIMULATIONS
@@ -528,18 +519,18 @@ router.post('/test/notifications', requireAuth, async (req: Request, res: Respon
       success: true,
       message: 'Tests de notification effectués',
       results
-    });
+
+          });
     
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                      }
+                                    });
+  });
 
 /**
  * Simule une erreur pour tester le monitoring
@@ -579,19 +570,17 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
         level: event.level,
         category: event.category,
         message: event.message
-      }
-    });
+      });
     
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 /**
  * Réinitialise les métriques (admin uniquement)
@@ -615,28 +604,27 @@ router.post('/reset', requireAuth, (req: Request, res: Response) => {
     errorCollector.reset();
     alertManager.reset();
     
-    logger.warn('Métriques de monitoring réinitialisées', {
-      metadata: {
+    logger.warn('Métriques de monitoring réinitialisées', { metadata: {
         service: 'Monitoring',
         resetBy: user.id || user.email
-      }
-    });
+
+      });
     
     res.json({
       success: true,
       message: 'Métriques réinitialisées avec succès'
-    });
+
+          });
     
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // HELPERS
@@ -669,9 +657,9 @@ async function checkDatabase(): Promise<{
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  );;
+      metadata: {
+                                                                                }
+                                                                              });
   }
 }
 
@@ -737,13 +725,12 @@ router.get('/cache', requireAuth, async (req: Request, res: Response) => {
     const cacheService = getCacheService();
     const stats = await cacheService.getStats();
     
-    logger.info('Cache stats récupérées', {
-      metadata: {
+    logger.info('Cache stats récupérées', { metadata: {
         route: '/api/monitoring/cache',
         method: 'GET',
         userId: (req as any).user?.id
-      }
-    });
+
+      });
     
     res.json({
       success: true,
@@ -755,18 +742,16 @@ router.get('/cache', requireAuth, async (req: Request, res: Response) => {
         size: stats.size,
         totalKeys: stats.keys.length,
         keys: stats.keys
-      }
-    });
+      });
   
     },
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // ========================================
 // LOGS MONITORING WITH CORRELATION ID - PHASE 4
@@ -782,14 +767,14 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
 
     const { correlationId, level, limit = '100' } = req.query;
     
-    logger.info('Requête de logs avec filtres', {
-      metadata: {
+    logger.info('Requête de logs avec filtres', { metadata: {
         route: '/api/monitoring/logs',
         method: 'GET',
         userId: (req as any).user?.id,
-        filters: { correlationId, level, limit }
-      }
-    });
+        filters: { correlationId, level, limit 
+
+        }
+                });
     
     // Note: Dans une implémentation complète, les logs seraient stockés dans une base de données
     // ou un système de log aggregation (Elasticsearch, Datadog, etc.) qui permettrait
@@ -832,11 +817,10 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
     {
       operation: 'Router',
       service: 'monitoring',
-      metadata: {}
-    }
-  ););
-  }
-});
+      metadata: {
+                                                                                }
+                                                                              });
+  });
 
 // Démarrer le gestionnaire d'alertes au démarrage
 alertManager.start();

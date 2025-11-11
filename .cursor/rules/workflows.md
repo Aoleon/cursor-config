@@ -8,17 +8,20 @@
 
 **Étapes:**
 1. Analyser la tâche (objectif, contraintes, dépendances)
-2. Identifier au moins 2-3 approches différentes
-3. Évaluer chaque approche selon 4 critères :
+2. **ÉVALUER AUTOMATISATION PAR SCRIPT** - Détecter si tâche est automatisable par script
+3. Identifier au moins 2-3 approches différentes (incluant script si applicable)
+4. Évaluer chaque approche selon 4 critères :
    - **Rapidité** (complexité, temps, parallélisation)
    - **Performance** (mémoire, CPU, cache, optimisations)
    - **Robustesse** (erreurs, validation, résilience, tests)
    - **Maintenabilité** (clarté, documentation, testabilité, réutilisabilité)
-4. Comparer approches et sélectionner la meilleure
-5. Documenter sélection avec raisonnement
-6. Implémenter approche sélectionnée
+5. Comparer approches et sélectionner la meilleure
+6. **Si script sélectionné** - Créer et exécuter script automatiquement
+7. Documenter sélection avec raisonnement
+8. Implémenter approche sélectionnée (ou valider résultat script)
 
-**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète  
+**Référence:** `@.cursor/rules/script-automation.md` - Automatisation par script complète
 
 ### Workflow 1: Créer une Nouvelle Route API
 
@@ -80,6 +83,8 @@ export function create[Module]Router(
 - `@server/utils/README-UTILS.md` - Patterns backend
 - `@.cursor/rules/backend.md` - Règles backend
 
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de routes API
+
 ### Workflow 2: Modifier un Service Métier
 
 **Étapes:**
@@ -126,6 +131,8 @@ export class [Service]Service {
 - `@server/utils/README-UTILS.md` - Patterns services
 - `@systemPatterns.md` - Patterns de design
 
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de services
+
 ### Workflow 3: Ajouter Fonctionnalité IA
 
 **Étapes:**
@@ -162,6 +169,8 @@ const result = await sqlEngine.executeNaturalLanguageQuery({
 - `@server/services/SQLEngineService.ts` - SQL sécurisé
 - `@.cursor/rules/ai-services.md` - Règles services IA
 
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de services IA
+
 ### Workflow 4: Modifier Schéma Base de Données
 
 **Étapes:**
@@ -188,6 +197,8 @@ export type InsertNewTable = typeof newTable.$inferInsert;
 - `@shared/schema.ts` - Schéma actuel
 - `@server/storage-poc.ts` - Interface storage
 - `@.cursor/rules/database.md` - Règles base de données
+
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de modification schéma DB
 
 ### Workflow 5: Créer Composant Frontend
 
@@ -243,6 +254,8 @@ export function Component({ id }: ComponentProps) {
 - `@client/src/hooks/useOffer.ts` - Exemple hook
 - `@.cursor/rules/frontend.md` - Règles frontend
 
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de composants React
+
 ### Workflow 6: Migrer Route vers Module
 
 **Étapes:**
@@ -273,6 +286,8 @@ app.use(create[Module]Router(storage, eventBus));
 - `@server/modules/auth/routes.ts` - Exemple migration
 - `@server/modules/documents/coreRoutes.ts` - Exemple migration
 - `@activeContext.md` - État migration actuelle
+
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de routes modulaires
 
 ### Workflow 7: Ajouter Test avec Validation E2E
 
@@ -351,6 +366,8 @@ describe('Component', () => {
 - `@.cursor/rules/testing.md` - Règles tests
 - `@tests/backend/` - Exemples tests backend
 - `@tests/frontend/` - Exemples tests frontend
+
+**Exemples concrets:** `@.cursor/rules/examples.md` - Exemples de tests
 
 ## 🎯 Checklist Workflows
 

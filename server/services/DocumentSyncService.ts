@@ -60,9 +60,7 @@ export class DocumentSyncService {
 
     // Vérifier si une synchronisation est déjà en cours
     if (this.syncInProgress.has(aoId)) {
-      logger.warn('[DocumentSyncService] Sync déjà en cours', {
-        metadata: { aoId, aoReference }
-      });
+      logger.warn('[DocumentSyncService] Sync déjà en cours', { metadata: { aoId, aoReference 
       return {
         success: false,
         documentsAdded: 0,
@@ -91,75 +89,58 @@ export class DocumentSyncService {
     return withErrorHandling(
     async () => {
 
-      logger.info('[DocumentSyncService] Début synchronisation', {
-        metadata: { aoId, aoReference, force }
+      logger.info('[DocumentSyncService] Début synchronisation', { metadata: { aoId, aoReference, force 
       });
-
       // PERF-5 FIX: Invalider le cache OneDrive avant sync pour garantir données fraîches
       const basePath = buildAoPath(aoReference);
       const categories = getAoCategories();
-      
       // Invalider cache pour chaque catégorie
       for (const category of categories) {
         const categoryPath = buildAoCategoryPath(aoReference, category);
         await oneDriveService.invalidateCache(categoryPath);
       }
-
-      logger.debug('[DocumentSyncService] Cache OneDrive invalidé', {
-        metadata: { aoId, aoReference, categoriesInvalidated: categories.length }
-      });
-
+      logger.debug('[DocumentSyncService] Cache OneDrive invalidé', { metadata: { aoId, aoReference, categoriesInvalidated: categories.length  
+              }
+            });
       // Récupérer les documents existants en DB
       const existingDocs = await this.storage.getDocumentsByEntity('ao', aoId);
-
       // Map des documents existants par oneDriveId
       const existingDocsMap = new Map(
         existingDocs
           .filter(doc => doc.oneDriveId)
           .map(doc => [doc.oneDriveId!, doc])
       );
-
       // Map des fichiers OneDrive trouvés
       const oneDriveFilesMap = new Map<string, unknown>();
-
       // PERF-3: Scanner toutes les catégories en parallèle
       const categoryPromises = categories.map(async (category) => {
         try {
           // ROBUST-2: Utiliser helper pour construire le path
           const categoryPath = buildAoCategoryPath(aoReference, category);
           const items = await oneDriveService.listItems(categoryPath);
-
           // Filtrer uniquement les fichiers (pas les dossiers)
           const files = items.filter(item => 'size' in item && !item.deleted);
-
           return { category, files, error: null };
-        
     },
     {
       operation: 'Set',
-service: 'DocumentSyncService',;
-      metadata: {}
-    }
-  );
+service: 'DocumentSyncService',
+      metadata: { } });
         for (const file of files) {
           oneDriveFilesMap.set(file.id, { ...file, category });
         }
       }
-
-      logger.info('[DocumentSyncService] Scan OneDrive terminé', {
-        metadata: {
+      logger.info('[DocumentSyncService] Scan OneDrive terminé', { metadata: {
           aoId,
           categories: categories.length,
-          filesFound: oneDriveFilesMap.size
-        }
-      });
-
+          filesFound: oneDriveFilesMap.size 
+              }
+            });
       // Ajouter les nouveaux documents
       for (const [oneDriveId, fileData] of Array.from(oneDriveFilesMap.entries())) {
         if (!existingDocsMap.has(oneDriveId)) {
-          return withErrorHandling(
+      await withErrorHandling(
     async () => {
-
             await this.storage.createDocument({
               name: fileData.name,
               originalName: fileData.name,
@@ -178,17 +159,14 @@ service: 'DocumentSyncService',;
               lastSyncedAt: new Date()
             });
             result.documentsAdded++;
-            logger.debug('[DocumentSyncService] Document ajouté', {
-              metadata: { aoId, documentName: fileData.name, category: fileData.category }
+            logger.debug('[DocumentSyncService] Document ajouté', { metadata: { aoId, documentName: fileData.name, category: fileData.category  
+              }
             });
-          
     },
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
         } else {
           // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
           const existingDoc = existingDocsMap.get(oneDriveId)!;
@@ -200,10 +178,8 @@ service: 'DocumentSyncService',;
             existingDoc.oneDriveUrl !== fileData.webUrl ||
             existingDoc.filePath !== `onedrive/${aoReference}/${fileData.category}/${fileData.name}` ||
             existingDoc.category !== fileData.category;
-
           return withErrorHandling(
     async () => {
-
             await this.storage.updateDocument(existingDoc.id, {
               name: fileData.name,
               originalName: fileData.name,
@@ -219,63 +195,50 @@ service: 'DocumentSyncService',;
               lastSyncedAt: new Date()
             });
             if (needsBackfill) {
-              logger.info('[DocumentSyncService] Backfill aoId effectué', {
-                metadata: { documentId: existingDoc.id, aoId }
-              });
+              logger.info('[DocumentSyncService] Backfill aoId effectué', { metadata: { documentId: existingDoc.id, aoId  
+              }
+            });
             }
             if (needsUpdate) {
-              logger.info('[DocumentSyncService] Métadonnées mises à jour', {
-                metadata: { 
+              logger.info('[DocumentSyncService] Métadonnées mises à jour', { metadata: { 
                   documentId: existingDoc.id, 
                   oldName: existingDoc.name, 
                   newName: fileData.name,
                   oldCategory: existingDoc.category,
-                  newCategory: fileData.category
-                }
-              });
+                  newCategory: fileData.category 
+              }
+            });
             }
             result.documentsUpdated++;
-          
     },
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
         }
       }
-
       // Marquer comme supprimés les documents qui ne sont plus dans OneDrive
       for (const [oneDriveId, doc] of Array.from(existingDocsMap.entries())) {
         if (!oneDriveFilesMap.has(oneDriveId)) {
-          return withErrorHandling(
+      await withErrorHandling(
     async () => {
-
             await this.storage.deleteDocument(doc.id);
             result.documentsDeleted++;
-            logger.debug('[DocumentSyncService] Document supprimé', {
-              metadata: { aoId, documentId: doc.id, documentName: doc.name }
-            });
-          
+            logger.debug('[DocumentSyncService] Document supprimé', { metadata: { aoId, documentId: doc.id, documentName: doc.name 
+      });
     },
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
         }
       }
-
-      logger.info('[DocumentSyncService] Synchronisation terminée', {
-        metadata: {
+      logger.info('[DocumentSyncService] Synchronisation terminée', { metadata: {
           aoId,
           aoReference,
-          ...result
-        }
-      });
-
+          ...result 
+              }
+            });
     } catch (error: unknown) {
       result.success = false;
       // ROBUST-3: Error typing pour erreur globale
@@ -284,29 +247,23 @@ service: 'DocumentSyncService',;
         message: `Erreur globale de synchronisation: ${error.message || String(error)}`,
         originalError: error
       });
-      logger.error('[DocumentSyncService] Erreur synchronisation', error, {
-        metadata: { aoId, aoReference }
-      });
+      logger.error('[DocumentSyncService] Erreur synchronisation', error, { metadata: { aoId, aoReference  } });
     } finally {
       this.syncInProgress.delete(aoId);
     }
-
     return result;
   }
-
   /**
    * Synchronise tous les AOs d'un seul coup (admin/maintenance)
    */
   async syncAllAOs(): Promise<{ total: number; synced: number; errors: number }> {
     logger.info('[DocumentSyncService] Début sync globale');
-
     const aos = await this.storage.getAos();
     const results = {
       total: aos.length,
       synced: 0,
       errors: 0
     };
-
     for (const ao of aos) {
       const result = await this.syncDocuments({
         aoId: ao.id,

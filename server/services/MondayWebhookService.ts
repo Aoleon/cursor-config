@@ -13,75 +13,64 @@ export class MondayWebhookService {
     const eventId = event?.eventId || event?.id;
     
     if (!eventId) {
-      logger.warn('[Monday Webhook] Event sans ID reçu', {
-        metadata: {
+      logger.warn('[Monday Webhook] Event sans ID reçu', { metadata: {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
-          payload
-        }
-      });
+          payload 
+              }
+            });
       return;
     }
-    
     // Idempotence check
     if (this.eventIdCache.has(eventId)) {
-      logger.info('[Monday Webhook] Event déjà traité (dupliqué)', {
-        metadata: {
+      logger.info('[Monday Webhook] Event déjà traité (dupliqué)', { metadata: {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
-          eventId
-        }
-      });
+          eventId 
+              }
+            });
       return;
     }
-    
     this.eventIdCache.add(eventId);
     
     // Cleanup old events (keep last 1000)
     if (this.eventIdCache.size > 1000) {
       const oldest = Array.from(this.eventIdCache)[0];
       this.eventIdCache.delete(oldest);
-      logger.debug('[Monday Webhook] Cache nettoyé', {
-        metadata: {
+      logger.debug('[Monday Webhook] Cache nettoyé', { metadata: {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
           cacheSize: this.eventIdCache.size,
-          deletedEventId: oldest
-        }
-      });
+          deletedEventId: oldest 
+              }
+            });
     }
-    
     // Extract data
     const { pulseId, itemId, boardId, type, columnValues, userId } = event;
     const itemIdentifier = pulseId || itemId;
     
     if (!itemIdentifier || !boardId) {
-      logger.error('[Monday Webhook] Event incomplet - itemId ou boardId manquant', {
-        metadata: {
+      logger.error('[Monday Webhook] Event incomplet - itemId ou boardId manquant', { metadata: {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
           eventId,
-          event
-        }
-      });
+          event 
+              }
+            });
       return;
     }
-    
-    logger.info('[Monday Webhook] Traitement event Monday', {
-      metadata: {
+    logger.info('[Monday Webhook] Traitement event Monday', { metadata: {
         module: 'MondayWebhookService',
         operation: 'processWebhook',
         eventId,
         boardId,
         itemId: itemIdentifier,
         type,
-        userId
-      }
-    });
-    
+        userId 
+              }
+            });
     return withErrorHandling(
     async () => {
-
       // Route to MondayImportService
       await mondayImportService.syncFromMonday({
         boardId,
@@ -109,30 +98,25 @@ export class MondayWebhookService {
           boardId,
           itemId: itemIdentifier,
           type
-        }
-      });
+        });
       
-      logger.info('[Monday Webhook] Event traité avec succès', {
-        metadata: {
+      logger.info('[Monday Webhook] Event traité avec succès', { metadata: {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
           eventId,
           boardId,
-          itemId: itemIdentifier
-        }
-      });
-    
+          itemId: itemIdentifier 
+              }
+            });
     },
     {
       operation: 'processWebhook',
       service: 'MondayWebhookService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
 }
 
-export const mondayWebhookService = new MondayWebhookService();
+export const mondayWebhookService = mondayintegrationService();

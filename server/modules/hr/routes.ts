@@ -50,17 +50,19 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
     isAuthenticated,
     rateLimits.general,
     validateParams(commonParamSchemas.id),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id: userId } = req.params;
       
-      logger.info('[HR] Récupération labels employé', {
-        metadata: {
+      logger.info('[HR] Récupération labels employé', { metadata: {
           route: '/api/employees/:id/labels',
           method: 'GET',
           employeeId: userId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       return withErrorHandling(
     async () => {
@@ -73,13 +75,17 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       operation: 'object',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         throw createError.database('Erreur lors de la récupération des labels employé');
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   /**
    * POST /api/employees/:id/labels
@@ -90,19 +96,21 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
     rateLimits.creation,
     validateParams(commonParamSchemas.id),
     validateBody(employeeLabelAssignmentSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id: userId } = req.params;
       const { labelId, assignedBy } = req.body;
       
-      logger.info('[HR] Assignation label employé', {
-        metadata: {
+      logger.info('[HR] Assignation label employé', { metadata: {
           route: '/api/employees/:id/labels',
           method: 'POST',
           employeeId: userId,
           labelId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       return withErrorHandling(
     async () => {
@@ -126,13 +134,17 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       operation: 'object',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         throw createError.database('Erreur lors de l\'assignation du label employé');
-      }
-    })
-  );
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
   /**
    * DELETE /api/employees/:userId/labels/:labelId
@@ -142,18 +154,20 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
     isAuthenticated,
     rateLimits.general,
     validateParams(employeeLabelParamsSchema),
-    asyncHandler(async (req: any, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { userId, labelId } = req.params;
       
-      logger.info('[HR] Suppression label employé', {
-        metadata: {
+      logger.info('[HR] Suppression label employé', { metadata: {
           route: '/api/employees/:userId/labels/:labelId',
           method: 'DELETE',
           targetUserId: userId,
           labelId,
           userId: req.user?.id
-        }
-      });
+
+            })
+
+
+          );
 
       return withErrorHandling(
     async () => {
@@ -173,20 +187,26 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       operation: 'object',
       service: 'routes',
       metadata: {}
-    }
-  );
-        });
+    } );
         throw createError.database('Erreur lors de la suppression du label employé');
-      }
-    })
-  );
+            }
 
-  logger.info('[HR] Routes HR montées avec succès', {
-    metadata: {
+                      }
+
+
+                                }
+
+
+                              }));
+
+  logger.info('[HR] Routes HR montées avec succès', { metadata: {
       module: 'HR',
       routes: 3
-    }
-  });
+    
+            })
+
+    
+          );
 
   return router;
 }

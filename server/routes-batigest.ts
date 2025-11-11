@@ -37,7 +37,15 @@ export function registerBatigestRoutes(app: Express) {
     });
 
     res.json(result);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Synchronise un dossier d'offre avec Batigest
@@ -113,8 +121,17 @@ export function registerBatigestRoutes(app: Express) {
       integration: integration[0],
       batigestData: syncResult.batigestData,
       message: syncResult.message
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupère les devis clients depuis Batigest
@@ -157,8 +174,17 @@ export function registerBatigestRoutes(app: Express) {
       success: true,
       count: devisClients.length,
       devis: devisClients
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupère les coefficients de marge par famille
@@ -206,8 +232,17 @@ export function registerBatigestRoutes(app: Express) {
       success: true,
       coefficientsParFamille: Object.values(coefficientsParFamille),
       totalOuvrages: ouvrages.length
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupère l'état des facturations en cours
@@ -240,8 +275,17 @@ export function registerBatigestRoutes(app: Express) {
     res.json({
       success: true,
       analyse
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Génère les analytics de Business Intelligence
@@ -290,8 +334,17 @@ export function registerBatigestRoutes(app: Express) {
       success: true,
       analytics,
       saved: savedAnalytics[0]
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupère l'historique des analytics
@@ -323,8 +376,17 @@ export function registerBatigestRoutes(app: Express) {
       success: true,
       count: history.length,
       analytics: history
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupère toutes les intégrations Batigest
@@ -341,8 +403,7 @@ export function registerBatigestRoutes(app: Express) {
         reference: offers.reference,
         client: offers.client,
         status: offers.status
-      }
-    })
+      })
     .from(batigestIntegrations)
     .leftJoin(offers, eq(batigestIntegrations.offerId, offers.id))
     .orderBy(desc(batigestIntegrations.lastSyncAt));
@@ -355,8 +416,17 @@ export function registerBatigestRoutes(app: Express) {
       success: true,
       count: integrations.length,
       integrations
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Dashboard consolidé Batigest
@@ -398,6 +468,15 @@ export function registerBatigestRoutes(app: Express) {
     res.json({
       success: true,
       dashboard
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 }

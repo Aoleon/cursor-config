@@ -348,7 +348,7 @@ function generateAnalysisReport(analysis: CompleteAnalysis): any {
       peopleFound: Array.from(boardData.people).slice(0, 10),
       numbersFound: boardData.numbers.slice(0, 10),
       subitemsCount: boardData.subitems.length,
-      subitemsDetails: boardData.subitems.slice(0, 3).map(si => ({
+      subitemsDetails: boardData.subitems.slice(0, 3).map(si  => ({
         parentItem: si.parentItem,
         columns: si.columns,
         itemCount: si.items.length,
@@ -373,13 +373,13 @@ function generateMarkdownReport(analysis: CompleteAnalysis): string {
   md += `- **Colonnes globales**: ${analysis.globalColumns.size}\n\n`;
 
   md += `## 🎯 Statuts Détectés\n\n`;
-  md += Array.from(analysis.globalStatuses).map(s => `- ${s}`).join('\n') + '\n\n';
+  md += Array.from(analysis.globalStatuses).map(s => `- $) {s}`).join('\n') + '\n\n';
 
   md += `## 🏙️ Principales Villes\n\n`;
-  md += Array.from(analysis.cities).slice(0, 30).map(c => `- ${c}`).join('\n') + '\n\n';
+  md += Array.from(analysis.cities).slice(0, 30).map(c => `- $) {c}`).join('\n') + '\n\n';
 
   md += `## 🏢 Clients Identifiés\n\n`;
-  md += Array.from(analysis.clients).map(c => `- ${c}`).join('\n') + '\n\n';
+  md += Array.from(analysis.clients).map(c => `- $) {c}`).join('\n') + '\n\n';
 
   md += `## 📋 Colonnes Globales\n\n`;
   md += `| Colonne | Types Détectés | Boards |\n`;

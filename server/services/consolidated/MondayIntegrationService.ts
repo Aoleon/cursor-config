@@ -131,8 +131,9 @@ export class MondayIntegrationService {
     if (!this.apiKey) {
       logger.warn('MONDAY_API_KEY not configured', { 
         service: 'MondayIntegrationService',
-        metadata: { operation: 'constructor' }
-      });
+        metadata: { operation: 'constructor' 
+
+            });
     }
 
     this.client = axios.create({
@@ -141,16 +142,15 @@ export class MondayIntegrationService {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
         'API-Version': '2024-01'
-      }
-    });
+      });
 
     logger.info('MondayIntegrationService initialized', {
       service: 'MondayIntegrationService',
       metadata: {
         operation: 'constructor',
         hasApiKey: !!this.apiKey
-      }
-    });
+
+          });
   }
 
   // ========================================
@@ -175,8 +175,8 @@ export class MondayIntegrationService {
               operation: 'executeGraphQL',
               queryLength: query.length,
               hasVariables: !!variables
-            }
-          });
+
+                });
 
           const response = await this.client.post('', {
             query,
@@ -184,8 +184,7 @@ export class MondayIntegrationService {
           }, {
             headers: {
               ...(correlationId && { 'X-Correlation-ID': correlationId })
-            }
-          });
+            });
 
           if (response.data.errors) {
             logger.error('Monday.com GraphQL errors', {
@@ -193,8 +192,8 @@ export class MondayIntegrationService {
               metadata: {
                 operation: 'executeGraphQL',
                 errors: response.data.errors
-              }
-            });
+
+                  });
             throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
           }
 
@@ -204,9 +203,7 @@ export class MondayIntegrationService {
     {
       operation: 'MondayService',
       service: 'MondayIntegrationService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
       },
       'GraphQL Query'
     );
@@ -226,8 +223,8 @@ export class MondayIntegrationService {
           operation: 'getBoards',
           cacheHit: true,
           count: cached.length
-        }
-      });
+
+            });
       return cached;
     }
 
@@ -255,8 +252,8 @@ export class MondayIntegrationService {
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
-      }
-    });
+
+          });
 
     return boards;
   }
@@ -289,8 +286,8 @@ export class MondayIntegrationService {
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
-      }
-    });
+
+          });
 
     return columns;
   }
@@ -341,8 +338,8 @@ export class MondayIntegrationService {
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
-      }
-    });
+
+          });
 
     return items;
   }
@@ -362,8 +359,8 @@ export class MondayIntegrationService {
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
-      }
-    });
+
+          });
 
     while (hasMore) {
       const query = `
@@ -419,8 +416,8 @@ export class MondayIntegrationService {
             operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
-          }
-        });
+
+              });
         break;
       }
 
@@ -440,8 +437,8 @@ export class MondayIntegrationService {
           totalSoFar: allItems.length,
           hasMore,
           nextCursor: cursor ? cursor.substring(0, 20) + '...' : null
-        }
-      });
+
+            });
 
       if (pageCount > 100) {
         logger.error('Too many pages, stopping pagination', {
@@ -451,8 +448,8 @@ export class MondayIntegrationService {
             boardId,
             pageCount,
             totalItems: allItems.length
-          }
-        });
+
+              });
         break;
       }
     }
@@ -464,8 +461,8 @@ export class MondayIntegrationService {
         boardId,
         totalItems: allItems.length,
         totalPages: pageCount
-      }
-    });
+
+          });
 
     return allItems;
   }
@@ -484,8 +481,8 @@ export class MondayIntegrationService {
           operation: 'getBoardData',
           boardId,
           cacheHit: true
-        }
-      });
+
+            });
       return cached;
     }
 
@@ -542,8 +539,8 @@ export class MondayIntegrationService {
         columnCount: response.columns.length,
         itemCount: response.items.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARD_DETAIL
-      }
-    });
+
+          });
 
     return response;
   }
@@ -573,8 +570,8 @@ export class MondayIntegrationService {
           operation: 'testConnection',
           userId: result.me?.id,
           userName: result.me?.name
-        }
-      });
+
+            });
 
       return true;
     
@@ -582,9 +579,7 @@ export class MondayIntegrationService {
     {
       operation: 'MondayService',
       service: 'MondayIntegrationService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   /**
@@ -633,8 +628,8 @@ export class MondayIntegrationService {
         operation: 'getItem',
         itemId,
         itemName: item.name
-      }
-    });
+
+          });
 
     return item;
   }
@@ -674,7 +669,7 @@ export class MondayIntegrationService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.ma: unknown)unknown) => ({
+            return parsed.personsAndTeams?.ma: unknown) => ({
               id: p.id,
               name: p.name,
               email: p.email
@@ -711,7 +706,7 @@ export class MondayIntegrationService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.m: unknown)unknunknown)any) => ({
+              linkedItems: parsed.linkedPulseIds?.m: unknown)any) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -720,7 +715,7 @@ export class MondayIntegrationService {
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseId: unknown)unknunknown)em: any) => 
+              subitemIds: parsed.linkedPulseId: unknown)em: any) => 
                 item.linkedPulseId || item
               ) || [],
               count: parsed.linkedPulseIds?.length || 0
@@ -763,7 +758,7 @@ export class MondayIntegrationService {
    * Process Monday.com webhook event
    * Includes idempotence check and event deduplication
    */
-  async handl: unknown)unknunknown)ayload: any): Promise<void> {
+  async handl: unknown)ayload: any): Promise<void> {
     const { event } = payload;
     const eventId = event?.eventId || event?.id;
     
@@ -773,8 +768,8 @@ export class MondayIntegrationService {
         metadata: {
           operation: 'handleWebhook',
           payload
-        }
-      });
+
+            });
       return;
     }
     
@@ -785,8 +780,7 @@ export class MondayIntegrationService {
         metadata: {
           operation: 'handleWebhook',
           eventId
-        }
-      });
+        });
       return;
     }
     
@@ -802,8 +796,8 @@ export class MondayIntegrationService {
           operation: 'handleWebhook',
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest
-        }
-      });
+
+            });
     }
     
     const { pulseId, itemId, boardId, type, columnValues, userId } = event;
@@ -816,8 +810,8 @@ export class MondayIntegrationService {
           operation: 'handleWebhook',
           eventId,
           event
-        }
-      });
+
+            });
       return;
     }
     
@@ -830,8 +824,8 @@ export class MondayIntegrationService {
         itemId: itemIdentifier,
         type,
         userId
-      }
-    });
+
+          });
     
     try {
       // Publish to EventBus for downstream processing
@@ -854,8 +848,7 @@ export class MondayIntegrationService {
           itemId: itemIdentifier,
           type,
           columnValues
-        }
-      });
+        });
       
       logger.info('Webhook event processed successfully', {
         service: 'MondayIntegrationService',
@@ -864,17 +857,15 @@ export class MondayIntegrationService {
           eventId,
           boardId,
           itemId: itemIdentifier
-        }
-      });
+
+            });
     
     },
     {
       operation: 'MondayService',
-service: 'MondayIntegrationService',;
+service: 'MondayIntegrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -893,8 +884,8 @@ service: 'MondayIntegrationService',;
         operation: 'analyzeBoards',
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all'
-      }
-    });
+
+          });
 
     return withErrorHandling(
     async () => {
@@ -918,8 +909,8 @@ service: 'MondayIntegrationService',;
           operation: 'analyzeBoards',
           totalBoards: result.totalBoards,
           totalColumns: result.totalColumns
-        }
-      });
+
+            });
 
       return result;
 
@@ -929,9 +920,7 @@ service: 'MondayIntegrationService',;
       operation: 'MondayService',
       service: 'MondayIntegrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -950,8 +939,8 @@ service: 'MondayIntegrationService',;
           operation: 'getBoardStructure',
           boardId,
           cacheHit: true
-        }
-      });
+
+            });
       return cached;
     }
 
@@ -961,21 +950,29 @@ service: 'MondayIntegrationService',;
         operation: 'getBoardStructure',
         boardId,
         boardName
-      }
-    });
+
+          });
 
     return withErrorHandling(
     async () => {
 
       const columns = await this.getBoardColumns(boardId);
 
-      const enrichedColumns: BoardColumnMetadata[] = columns.map(col => ({
+      const enrichedColumns: BoardColumnMetadata[] = columns.map(col  => ({
         id: col.id,
         title: col.title,
         type: col.type,
         settings: col.settings_str ? this.parseSettings(col.settings_str) : undefined,
         description: this.getColumnDescription(col)
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
       const structure: BoardStructure = {
         boardId,
@@ -993,8 +990,8 @@ service: 'MondayIntegrationService',;
           boardId,
           columnCount: enrichedColumns.length,
           cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
-        }
-      });
+
+            });
 
       return structure;
 
@@ -1004,9 +1001,7 @@ service: 'MondayIntegrationService',;
       operation: 'MondayService',
       service: 'MondayIntegrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -1025,8 +1020,8 @@ service: 'MondayIntegrationService',;
         boardId: boardStructure.boardId,
         mondayColumns: boardStructure.columns.length,
         saxiumFields: saxiumFields.length
-      }
-    });
+
+          });
 
     const suggestions = new Map<string, { saxiumField: string; confidence: number; reason: string }>();
 
@@ -1043,8 +1038,8 @@ service: 'MondayIntegrationService',;
             mondayColumn: column.title,
             saxiumField: match.saxiumField,
             confidence: match.confidence
-          }
-        });
+
+              });
       }
     }
 
@@ -1054,8 +1049,8 @@ service: 'MondayIntegrationService',;
         operation: 'suggestMappings',
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length
-      }
-    });
+
+          });
 
     return suggestions;
   }
@@ -1072,8 +1067,8 @@ service: 'MondayIntegrationService',;
       metadata: {
         operation: 'invalidateBoardCache',
         boardId
-      }
-    });
+
+          });
   }
 
   // ========================================
@@ -1082,11 +1077,23 @@ service: 'MondayIntegrationService',;
 
   private async getBoardsToAnalyze(boardIds?: string[]) {
     if (boardIds && boardIds.length > 0) {
-      return boardIds.map(id => ({ id, name: undefined }));
+      return boardIds.map(id  => ({ id, name: undefined       }
+                 }
+
+                           }
+
+
+                         }));
     }
 
     const allBoards = await this.getBoards();
-    return allBoards.map(board => ({ id: board.id, name: board.name }));
+    return allBoards.map(board  => ({ id: board.id, name: board.name       }
+                 }
+
+                           }
+
+
+                         }));
   }
 
   private parseSettings(settinunknowntr: string): any {
@@ -1097,8 +1104,8 @@ service: 'MondayIntegrationService',;
         service: 'MondayIntegrationService',
         metadata: {
           operation: 'parseSettings'
-        }
-      });
+
+            });
       return {};
     }
   }

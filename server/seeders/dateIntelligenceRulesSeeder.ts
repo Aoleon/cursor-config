@@ -61,9 +61,9 @@ export class DateIntelligenceRulesSeeder {
     {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       }
       
       logger.info(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
@@ -113,9 +113,8 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
       }
       
       logger.info(`[DateIntelligenceSeeder] ${deletedCount} règles supprimées`);
@@ -161,9 +160,9 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
         }
       }
       
@@ -218,9 +217,9 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
   
   /**
@@ -299,9 +298,9 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 }
 
@@ -355,7 +354,7 @@ export async function initializeDefaultRules(): Promise<void> {
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
 }

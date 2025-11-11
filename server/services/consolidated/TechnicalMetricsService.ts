@@ -159,8 +159,9 @@ export class TechnicalMetricsService {
 
     logger.info('TechnicalMetricsService initialized', {
       service: 'TechnicalMetricsService',
-      metadata: { operation: 'constructor' }
-    });
+      metadata: { operation: 'constructor' 
+
+          });
   }
 
   // ========================================
@@ -172,33 +173,29 @@ export class TechnicalMetricsService {
    */
   startPipelineTrace(traceId: string, userId: string, userRole: string, query: string, complexity: QueryComplexity): void {
     this.activeTraces.set(traceId, []);
-    logger.info('Pipeline trace started', {
-      metadata: {
+    logger.info('Pipeline trace started', { metadata: {
         service: 'TechnicalMetricsService',
         operation: 'startPipelineTrace',
         traceId,
-        complexity
-      }
-    });
+        complexity 
+              }
+            });
   }
-
   /**
    * Start pipeline step
    */
-  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<st, unknown>unknown>): void {
+  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<st, unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      logger.warn('Attempt to start step on non-existent trace', {
-        metadata: {
+      logger.warn('Attempt to start step on non-existent trace', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'startStep',
           stepName,
-          traceId
-        }
-      });
+          traceId 
+              }
+            });
       return;
     }
-
     const stepMetrics: PipelineStepMetrics = {
       stepName,
       startTime: Date.now(),
@@ -215,32 +212,28 @@ export class TechnicalMetricsService {
   endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Recor, unknown>unknown>unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      logger.warn('Attempt to end step on non-existent trace', {
-        metadata: {
+      logger.warn('Attempt to end step on non-existent trace', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'endStep',
           stepName,
-          traceId
-        }
-      });
+          traceId 
+              }
+            });
       return;
     }
-
     const step = traces.reverse().find(s => s.stepName === stepName && !s.endTime);
     traces.reverse();
 
     if (!step) {
-      logger.warn('Step not found for trace', {
-        metadata: {
+      logger.warn('Step not found for trace', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'endStep',
           stepName,
-          traceId
-        }
-      });
+          traceId 
+              }
+            });
       return;
     }
-
     step.endTime = Date.now();
     step.duration = step.endTime - step.startTime;
     step.success = success;
@@ -260,20 +253,18 @@ export class TechnicalMetricsService {
     complexity: QueryComplexity, 
     totalSuccess: boolean,
     cacheHit: boolean = false,
-    additionalMetadata?: R, unknown>unknown>unknown any>
+    additionalMetadata?: Record<string, unknown>
   ): Promise<DetailedTimings> {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
-      logger.warn('Attempt to end non-existent pipeline trace', {
-        metadata: {
+      logger.warn('Attempt to end non-existent pipeline trace', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'endPipelineTrace',
-          traceId
-        }
-      });
+          traceId 
+              }
+            });
       return this.createEmptyTimings();
     }
-
     const timings = this.calculateDetailedTimings(traces);
     
     return withErrorHandling(
@@ -302,26 +293,20 @@ export class TechnicalMetricsService {
 
       this.activeTraces.delete(traceId);
 
-      logger.info('Pipeline trace completed', {
-        metadata: {
+      logger.info('Pipeline trace completed', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'endPipelineTrace',
           traceId,
-          totalDuration: timings.total
-        }
-      });
-
-    
+          totalDuration: timings.total 
+              }
+            });
     },
     {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
       metadata: {}
+    } );
     }
-  );
-      });
-    }
-
     return timings;
   }
 
@@ -364,15 +349,13 @@ export class TechnicalMetricsService {
     this.circuitBreakerLastFailureTime = new Date();
     this.parallelismStats.circuitBreakerTriggered++;
     
-    logger.warn('Parallelism failure recorded', {
-      metadata: {
+    logger.warn('Parallelism failure recorded', { metadata: {
         service: 'TechnicalMetricsService',
         operation: 'recordParallelismFailure',
-        consecutiveFailures: this.circuitBreakerFailureCount
-      }
-    });
+        consecutiveFailures: this.circuitBreakerFailureCount 
+              }
+            });
   }
-
   /**
    * Record parallelism success
    */
@@ -471,9 +454,7 @@ export class TechnicalMetricsService {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return this.createEmptyPercentileStats();
     }
   }
@@ -549,9 +530,7 @@ export class TechnicalMetricsService {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return this.createEmptyCacheAnalytics();
     }
   }
@@ -625,9 +604,7 @@ export class TechnicalMetricsService {
     {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
     }
   }
@@ -670,23 +647,18 @@ export class TechnicalMetricsService {
     async () => {
 
       await db.insert(performanceAlerts).values(alert);
-      logger.warn('Performance alert created', {
-        metadata: {
+      logger.warn('Performance alert created', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'createPerformanceAlert',
           alertType: alert.alertType,
           severity: alert.severity
-        }
       });
-    
     },
     {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -760,8 +732,9 @@ export class TechnicalMetricsService {
     // Placeholder for real-time metrics refresh logic
     logger.debug('Real-time metrics refreshed', {
       service: 'TechnicalMetricsService',
-      metadata: { operation: 'refreshRealtimeMetrics' }
-    });
+      metadata: { operation: 'refreshRealtimeMetrics' 
+
+          });
   }
 }
 

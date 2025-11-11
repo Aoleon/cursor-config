@@ -408,7 +408,7 @@ export class MetricsAggregator {
     const recent = this.timeSeriesData.filter(d => 
       now - d.timestamp.getTime() < this.windows['5min']
     );
-    const previous = this.timeSeriesData.filter(d => {
+    const previous = this.timeSeriesData.filter(d  => {
       const age = now - d.timestamp.getTime();
       return age >= this.windows['5min'] && age < this.windows['5min'] * 2;
     });

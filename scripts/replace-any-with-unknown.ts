@@ -181,16 +181,22 @@ async function processFile(filePath: string): Promise<FileStats> {
 }
 
 async function main() {
-  const targetDir = join(process.cwd(), 'server/services');
+  const targetDirs = [
+    join(process.cwd(), 'server'),
+    join(process.cwd(), 'shared')
+  ];
   
-  if (!existsSync(targetDir)) {
-    console.error(`❌ Directory not found: ${targetDir}`);
-    process.exit(1);
+  console.log(`🔍 Scanning TypeScript files...\n`);
+  
+  const allFiles: string[] = [];
+  for (const targetDir of targetDirs) {
+    if (existsSync(targetDir)) {
+      const files = await getAllTsFiles(targetDir);
+      allFiles.push(...files);
+    }
   }
   
-  console.log(`🔍 Scanning TypeScript files in ${targetDir}...\n`);
-  
-  const files = await getAllTsFiles(targetDir);
+  const files = allFiles;
   console.log(`📁 Found ${files.length} TypeScript files\n`);
   
   const stats: FileStats[] = [];

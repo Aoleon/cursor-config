@@ -73,7 +73,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.json(teamsWithStats);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupérer une équipe spécifique avec ses membres
@@ -125,7 +133,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.json(team);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Créer une nouvelle équipe
@@ -178,7 +194,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.status(201).json(createdTeam);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Modifier une équipe
@@ -255,10 +279,20 @@ export function registerTeamsRoutes(app: Express) {
       },
     });
 
-    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId } });
+    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId 
+        }
+            });
 
     res.json(team);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Supprimer une équipe (désactivation)
@@ -303,8 +337,18 @@ export function registerTeamsRoutes(app: Express) {
       teamName: existingTeam.name 
     });
 
-    res.json({ message: "Équipe désactivée avec succès" });
-  }));
+    res.json({ message: "Équipe désactivée avec succès" 
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // GESTION DES MEMBRES D'ÉQUIPE
@@ -407,7 +451,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.status(201).json(createdMember);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Modifier un membre d'équipe
@@ -474,7 +526,15 @@ export function registerTeamsRoutes(app: Express) {
     logger.info('[Teams] Membre modifié avec succès', { metadata: { teamId }, memberId });
 
     res.json(member);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Retirer un membre d'une équipe
@@ -511,8 +571,18 @@ export function registerTeamsRoutes(app: Express) {
 
     logger.info('[Teams] Membre retiré avec succès', { metadata: { teamId }, memberId });
 
-    res.json({ message: "Membre retiré de l'équipe avec succès" });
-  }));
+    res.json({ message: "Membre retiré de l'équipe avec succès" 
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupérer les utilisateurs disponibles pour ajout à une équipe
@@ -561,5 +631,13 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.json(availableUsers);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 }

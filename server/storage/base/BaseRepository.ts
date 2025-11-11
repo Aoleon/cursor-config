@@ -154,12 +154,12 @@ export abstract class BaseRepository<
     return withErrorHandling(
     async () => {
 
-      this.logger.debug(`Executing ${operation}`, {
-        metadata: {
+      this.logger.debug(`Executing ${operation}`, { metadata: {
           module: this.repositoryName,
           operation,
           ...metadata
-        }
+        
+        
       });
 
       const result = await safeQuery(queryFn, {
@@ -167,12 +167,11 @@ export abstract class BaseRepository<
         operation
       });
 
-      this.logger.debug(`${operation} completed successfully`, {
-        metadata: {
+      this.logger.debug(`${operation} completed successfully`, { metadata: {
           module: this.repositoryName,
           operation
         }
-      });
+            });
 
       return result;
     
@@ -180,9 +179,9 @@ export abstract class BaseRepository<
     {
       operation: 'create',
       service: 'BaseRepository',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -265,13 +264,12 @@ export abstract class BaseRepository<
    */
   protected handleNotFound(id: string, operation: string): never {
     const message = `Entité non trouvée: ${id} dans ${this.repositoryName}`;
-    this.logger.warn(message, {
-      metadata: {
+    this.logger.warn(message, { metadata: {
         module: this.repositoryName,
         operation,
         entityId: id
-      }
-    });
+        }
+            });
     throw new DatabaseError(message);
   }
 
@@ -284,21 +282,18 @@ export abstract class BaseRepository<
     async () => {
 
         this.eventBus.emit(eventName, data);
-        this.logger.debug(`Event emitted: ${eventName}`, {
-          metadata: {
+        this.logger.debug(`Event emitted: ${eventName}`, { metadata: {
             module: this.repositoryName,
             event: eventName
-          }
-        });
+        }
+            });
       
     },
     {
       operation: 'create',
       service: 'BaseRepository',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
     }
   }
@@ -321,12 +316,11 @@ export abstract class BaseRepository<
    * ```
    */
   async create(data: TInsert, tx?: DrizzleTransaction): Promise<T> {
-    this.logger.debug('Creating entity', {
-      metadata: {
+    this.logger.debug('Creating entity', { metadata: {
         module: this.repositoryName,
         operation: 'create'
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -358,13 +352,12 @@ export abstract class BaseRepository<
    * @returns Les entités créées
    */
   async createMany(data: TInsert[], tx?: DrizzleTransaction): Promise<T[]> {
-    this.logger.debug('Creating multiple entities', {
-      metadata: {
+    this.logger.debug('Creating multiple entities', { metadata: {
         module: this.repositoryName,
         operation: 'createMany',
         count: data.length
-      }
-    });
+        }
+            });
 
     if (data.length === 0) {
       return [];
@@ -409,13 +402,12 @@ export abstract class BaseRepository<
     // Normaliser l'ID avant de l'utiliser dans la requête
     const normalizedId = this.normalizeId(id);
 
-    this.logger.debug('Updating entity', {
-      metadata: {
+    this.logger.debug('Updating entity', { metadata: {
         module: this.repositoryName,
         operation: 'update',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -461,13 +453,12 @@ export abstract class BaseRepository<
     // Normaliser l'ID avant de l'utiliser dans la requête
     const normalizedId = this.normalizeId(id);
 
-    this.logger.debug('Deleting entity', {
-      metadata: {
+    this.logger.debug('Deleting entity', { metadata: {
         module: this.repositoryName,
         operation: 'delete',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -517,13 +508,12 @@ export abstract class BaseRepository<
       );
     }
     
-    this.logger.debug('Soft deleting entity', {
-      metadata: {
+    this.logger.debug('Soft deleting entity', { metadata: {
         module: this.repositoryName,
         operation: 'softDelete',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -580,13 +570,12 @@ export abstract class BaseRepository<
       );
     }
     
-    this.logger.debug('Restoring soft deleted entity', {
-      metadata: {
+    this.logger.debug('Restoring soft deleted entity', { metadata: {
         module: this.repositoryName,
         operation: 'restore',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -643,13 +632,12 @@ export abstract class BaseRepository<
     
     const normalizedIds = ids.map(id => this.normalizeId(id));
     
-    this.logger.debug('Updating multiple entities', {
-      metadata: {
+    this.logger.debug('Updating multiple entities', { metadata: {
         module: this.repositoryName,
         operation: 'updateMany',
         count: ids.length
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -669,13 +657,12 @@ export abstract class BaseRepository<
     
     result.forEach(record => this.emitEvent(`${this.tableName}:updated`, record));
     
-    this.logger.info(`Updated ${result.length} records`, {
-      metadata: {
+    this.logger.info(`Updated ${result.length} records`, { metadata: {
         module: this.repositoryName,
         operation: 'updateMany',
         count: result.length
-      }
-    });
+        }
+            });
     
     return result;
   }
@@ -705,13 +692,12 @@ export abstract class BaseRepository<
     conflictTarget: keyof TInsert,
     tx?: DrizzleTransaction
   ): Promise<T> {
-    this.logger.debug('Upserting entity', {
-      metadata: {
+    this.logger.debug('Upserting entity', { metadata: {
         module: this.repositoryName,
         operation: 'upsert',
         conflictTarget: conflictTarget as string
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -759,13 +745,12 @@ export abstract class BaseRepository<
    * ```
    */
   async count(filters?: Record<string, any>, tx?: DrizzleTransaction): Promise<number> {
-    this.logger.debug('Counting entities', {
-      metadata: {
+    this.logger.debug('Counting entities', { metadata: {
         module: this.repositoryName,
         operation: 'count',
         hasFilters: !!filters
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -819,13 +804,12 @@ export abstract class BaseRepository<
       );
     }
     
-    this.logger.debug('Archiving entity', {
-      metadata: {
+    this.logger.debug('Archiving entity', { metadata: {
         module: this.repositoryName,
         operation: 'archive',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     
@@ -872,13 +856,12 @@ export abstract class BaseRepository<
     this.validateId(id, 'unarchive');
     const normalizedId = this.normalizeId(id);
     
-    this.logger.debug('Unarchiving entity', {
-      metadata: {
+    this.logger.debug('Unarchiving entity', { metadata: {
         module: this.repositoryName,
         operation: 'unarchive',
         entityId: id
-      }
-    });
+        }
+            });
 
     const dbInstance = this.getDb(tx);
     

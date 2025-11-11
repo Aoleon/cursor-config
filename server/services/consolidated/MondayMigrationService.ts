@@ -180,23 +180,19 @@ class ExcelImportStrategy implements IMigrationStrategy {
     const startedAt = new Date();
     this.warnings = [];
 
-    logger.info('Démarrage migration Excel Import Strategy', {
-      metadata: {
+    logger.info('Démarrage migration Excel Import Strategy', { metadata: {
         service: 'MondayMigrationService',
         strategy: 'excel_import',
         migrationId,
         entityType: config.entityType,
-        dryRun: config.options?.dryRun
-      }
-    });
-
+        dryRun: config.options?.dryRun 
+              }
+            });
     return withErrorHandling(
     async () => {
-
       // Load Excel files
       const excelFiles = config.source?.excelFiles || this.getDefaultExcelFiles();
       const authenticData = await this.loadAuthenticMondayData(excelFiles);
-
       const result: MigrationResult = {
         migrationId,
         strategyUsed: 'excel_import',
@@ -214,7 +210,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
         success: true,
         isDryRun: config.options?.dryRun || false
       };
-
       // Migrate AOs
       if (config.entityType === 'aos' || config.entityType === 'both') {
         result.aos = await this.migrateAuthenticAOs(
@@ -226,7 +221,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
         result.totalErrors += result.aos.errors;
         result.totalLines += authenticData.aos.length;
       }
-
       // Migrate Projects
       if (config.entityType === 'projects' || config.entityType === 'both') {
         result.projects = await this.migrateAuthenticProjects(
@@ -245,28 +239,22 @@ class ExcelImportStrategy implements IMigrationStrategy {
       result.totalWarnings = this.warnings.length;
       result.success = result.totalErrors === 0;
 
-      logger.info('Migration Excel Import terminée', {
-        metadata: {
+      logger.info('Migration Excel Import terminée', { metadata: {
           service: 'MondayMigrationService',
           strategy: 'excel_import',
           migrationId,
           duration: result.duration,
           totalMigrated: result.totalMigrated,
-          totalErrors: result.totalErrors
-        }
-      });
-
+          totalErrors: result.totalErrors 
+              }
+            });
       return result;
-
-    
     },
     {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -331,9 +319,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
 
     for (const file of excelFiles) {
       if (!fs.existsSync(file)) {
-        logger.warn('Excel file not found, skipping', {
-          metadata: { file }
-        });
+        logger.warn('Excel file not found, skipping', { metadata: { file 
         continue;
       }
 
@@ -387,9 +373,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return null;
     }
   }
@@ -415,9 +399,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return null;
     }
   }
@@ -481,7 +463,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
     };
 
     for (const [index, ao] of aoData.entries()) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const validatedAo = this.validateAndTransformAoData(ao);
@@ -497,24 +479,18 @@ class ExcelImportStrategy implements IMigrationStrategy {
 
         // Progress logging
         if ((index + 1) % 100 === 0) {
-          logger.info('AO migration progress', {
-            metadata: {
+          logger.info('AO migration progress', { metadata: {
               progress: index + 1,
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100)
-            }
-          });
+      });
         }
-
-      
     },
     {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -555,7 +531,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       const batch = aoData.slice(i, i + batchSize);
       
       for (const ao of batch) {
-        return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
           const validatedAo = validateMondayAoData(ao);
@@ -591,9 +567,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -631,9 +605,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
       operation: 'MondayMigrationService',
       service: 'MondayMigrationService',
       metadata: {}
-    }
-  );
-        });
+    } );
       }
     }
 
@@ -701,22 +673,18 @@ export class MondayMigrationService {
    * Execute migration with automatic strategy selection
    */
   async migrate(config: MigrationConfig): Promise<MigrationResult> {
-    logger.info('Démarrage migration Monday → Saxium', {
-      metadata: {
+    logger.info('Démarrage migration Monday → Saxium', { metadata: {
         service: 'MondayMigrationService',
         entityType: config.entityType,
-        strategyType: config.strategyType || 'auto-detect'
-      }
-    });
-
+        strategyType: config.strategyType || 'auto-detect' 
+              }
+            });
     // Auto-select strategy if not specified
     const strategyType = config.strategyType || this.autoSelectStrategy(config);
-    
     const strategy = this.strategies.get(strategyType);
     if (!strategy) {
       throw new AppError(`Unknown migration strategy: ${strategyType}`, 500);
     }
-
     // Validate configuration
     const validation = await strategy.validate(config);
     if (!validation.valid) {
@@ -729,20 +697,17 @@ export class MondayMigrationService {
     // Store in history
     this.migrationHistory.push(result);
 
-    logger.info('Migration terminée', {
-      metadata: {
+    logger.info('Migration terminée', { metadata: {
         service: 'MondayMigrationService',
         migrationId: result.migrationId,
         strategyUsed: result.strategyUsed,
         duration: result.duration,
         totalMigrated: result.totalMigrated,
-        totalErrors: result.totalErrors
-      }
-    });
-
+        totalErrors: result.totalErrors 
+              }
+            });
     return result;
   }
-
   /**
    * Validate migration configuration
    */

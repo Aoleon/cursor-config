@@ -1,4 +1,5 @@
 import { Pool as NeonPool, neonConfig, PoolClient as NeonPoolClient } from '@neondatabase/serverless';
+import { AppError } from './utils/error-handler';
 import { Pool as PgPool, PoolClient as PgPoolClient } from 'pg';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
@@ -19,7 +20,7 @@ function detectDatabaseProvider(): 'neon' | 'nhost' | 'standard' {
   const databaseUrl = process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    throw new Error(
+    throw new AppError(
       "DATABASE_URL must be set. Did you forget to provision a database?",
     );
   }
@@ -36,14 +37,13 @@ function detectDatabaseProvider(): 'neon' | 'nhost' | 'standard' {
 
 const dbProvider = detectDatabaseProvider();
 
-logger.info('Provider de base de données détecté', {
-  metadata: {
+logger.info('Provider de base de données détecté', { metadata: {
     module: 'DatabaseConfig',
     operation: 'detectProvider',
     provider: dbProvider,
     hasDatabaseUrl: !!process.env.DATABASE_URL
-  }
-});
+        }
+            });
 
 // ========================================
 // CONFIGURATION WEBSOCKET NEON (si nécessaire)
@@ -106,25 +106,23 @@ export { pool };
  * Log et notifications pour monitoring
  */
 pool.on('error', (err: Error, client: NeonPoolClient | PgPoolClient) => {
-  logger.error('Erreur inattendue sur client pool inactif', {
-    metadata: {
+  logger.error('Erreur inattendue sur client pool inactif', { metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolError',
       provider: dbProvider,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined
-    }
-  });
+        }
+            });
 });
 
 pool.on('connect', (client: NeonPoolClient | PgPoolClient) => {
-  logger.debug('Nouvelle connexion pool établie', {
-    metadata: {
+  logger.debug('Nouvelle connexion pool établie', { metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolConnect',
       provider: dbProvider
-    }
-  });
+        }
+            });
 });
 
 pool.on('acquire', (client: NeonPoolClient | PgPoolClient) => {
@@ -133,13 +131,12 @@ pool.on('acquire', (client: NeonPoolClient | PgPoolClient) => {
 });
 
 pool.on('remove', (client: NeonPoolClient | PgPoolClient) => {
-  logger.debug('Connexion retirée du pool', {
-    metadata: {
+  logger.debug('Connexion retirée du pool', { metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolRemove',
       provider: dbProvider
-    }
-  });
+        }
+            });
 });
 
 // ========================================
@@ -202,14 +199,14 @@ export async function closePool() {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { action: 'shutdown' }
-    }
-  });
+                                                                            }
+                                                                          });
   await pool.end();
   logger.info('Pool de connexions fermé proprement', {
     metadata: {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { status: 'closed' }
-    }
-  });
+                                                                            }
+                                                                          });
 }

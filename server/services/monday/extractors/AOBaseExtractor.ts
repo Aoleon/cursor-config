@@ -47,10 +47,10 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
         if (transformedValue !== null && transformedValue !== undefined) {
           // Traitement spécial pour timeline qui mappe vers 2 champs
           if ((transformedValue as unknown)._timeline) {
-            if ((transformedVaas unknown)unknown).from) aoData.dateSortieAO = (transformas unknown) as unknown).from;
-            if ((transas unknown)aas unknunknown)unknown).to) aoData.dateLimiteRemise = (tas unknown)mas unknunknown)unknown any).to;
+            if ((transformedVaas unknown).from) aoData.dateSortieAO = (transformas unknown) as unknown).from;
+            if ((transas unknown)aas unknown).to) aoData.dateLimiteRemise = (tas unknown)mas unknown)unknown any).to;
           } else {
-as unknown) as unknunknown)unknowna as any)[fieldName] = transformedValue;
+as unknown) as unknown)unknowna as any)[fieldName] = transformedValue;
           }
           
           this.addDiagnostic(context, 'info', 
@@ -75,7 +75,7 @@ as unknown) as unknunknown)unknowna as any)[fieldName] = transformedValue;
     // Appliquer valeurs par défaut
     if (!aoData.source) aoData.source = 'other' as unknown;
     if (!aoData.menuiserieType) aoData.menuiserieType = 'autas unknown;unknown;
-    if (!aoData.status) aoData.statuas unknown unknunknown;unknown;any;
+    if (!aoData.status) aoData.statuas unknown unknown;unknown;any;
     
     // Validation champs requis basiques
     const requiredFields = ['intituleOperation', 'menuiserieType', 'source'];

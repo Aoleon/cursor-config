@@ -333,3 +333,57 @@ export type AnalyzeSupplierDocumentInput = z.infer<typeof analyzeSupplierDocumen
 export type ApproveQuoteAnalysisInput = z.infer<typeof approveQuoteAnalysisSchema>;
 export type InviteToSessionInput = z.infer<typeof inviteToSessionSchema>;
 export type BasicLoginInput = z.infer<typeof basicLoginSchema>;
+
+// ======================================
+// Schémas pour les fonctionnalités 3-4-5-6-7-8
+// ======================================
+
+// POST /api/projects/:id/feedback-terrain
+export const insertProjectFeedbackTerrainSchema = z.object({
+  projectId: z.string().uuid("ID projet invalide"),
+  offerId: z.string().uuid("ID offre invalide").optional(),
+  reportedBy: z.string().uuid("ID utilisateur invalide"),
+  feedbackType: z.enum(["erreur_plan", "oublis", "retour_prix", "probleme_technique", "amelioration"]),
+  severity: z.enum(["tres_faible", "faible", "normale", "elevee", "critique"]).optional(),
+  title: z.string().trim().min(1, "Titre requis").max(255, "Titre trop long"),
+  description: z.string().trim().min(1, "Description requise"),
+  photos: z.array(z.string().url("URL photo invalide")).optional(),
+  impact: z.string().trim().max(1000, "Impact trop long").optional()
+}).strict();
+
+// POST /api/sav/demandes
+export const insertSavDemandeSchema = z.object({
+  projectId: z.string().uuid("ID projet invalide"),
+  demandeType: z.enum(["garantie", "hors_garantie", "reserve"]),
+  source: z.enum(["email", "kaliti", "telephone", "chantier"]),
+  description: z.string().trim().min(1, "Description requise"),
+  photos: z.array(z.string().url("URL photo invalide")).optional(),
+  createdBy: z.string().uuid("ID utilisateur invalide").optional(),
+  assignedTo: z.string().uuid("ID utilisateur invalide").optional()
+}).strict();
+
+// POST /api/offers/:id/be-checklist/initialize
+export const initializeBeQualityChecklistSchema = z.object({
+  offerId: z.string().uuid("ID offre invalide")
+}).strict();
+
+// PATCH /api/offers/:id/be-checklist/:itemId
+export const updateBeQualityChecklistItemSchema = z.object({
+  status: z.enum(["non_controle", "conforme", "non_conforme"]),
+  notes: z.string().trim().max(1000, "Notes trop longues").optional()
+}).strict();
+
+// POST /api/time-tracking
+export const insertTimeTrackingSchema = z.object({
+  projectId: z.string().uuid("ID projet invalide").optional(),
+  offerId: z.string().uuid("ID offre invalide").optional(),
+  userId: z.string().uuid("ID utilisateur invalide"),
+  taskType: z.enum(["be", "admin", "terrain", "chiffrage", "commercial"]),
+  hours: z.number().min(0, "Heures doit être >= 0").max(24, "Heures doit être <= 24"),
+  date: z.string().datetime("Date invalide"),
+  description: z.string().trim().max(500, "Description trop longue").optional(),
+  hourlyRate: z.number().min(0, "Taux horaire doit être >= 0").optional()
+}).strict().refine(
+  (data) => data.projectId || data.offerId,
+  { message: "projectId ou offerId doit être fourni" }
+);

@@ -35,7 +35,7 @@ const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'onRetry'>> = {
  */
 function isRetryableError(error: Error, retryableErrors: Array<string | RegExp>): boolean {
   const errorMessage = error.message || '';
-  return retryableErrors.some(pattern => {
+  return retryableErrors.some(pattern  => {
     if (typeof pattern === 'string') {
       return errorMessage.includes(pattern);
     }
@@ -72,20 +72,19 @@ export async function withRetry<T>(
   let lastError: Error;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
-    return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
       const result = await fn();
       
       if (attempt > 1) {
-        logger.info('Retry successful', {
-          metadata: {
+        logger.info('Retry successful', { metadata: {
             module: 'RetryService',
             operation: 'withRetry',
             attempt,
             totalAttempts: opts.maxAttempts
-          }
-        });
+
+      });
       }
       
       return result;
@@ -94,28 +93,26 @@ export async function withRetry<T>(
     {
       operation: 'isRetryableError',
       service: 'retry-service',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
       
       // Vérifier si l'erreur est retryable
       if (!isRetryableError(lastError, opts.retryableErrors)) {
-        logger.warn('Non-retryable error encountered', {
-          metadata: {
+        logger.warn('Non-retryable error encountered', { metadata: {
             module: 'RetryService',
             operation: 'withRetry',
             error: lastError.message,
             attempt
-          }
-        });
+        }
+            });
         throw lastError;
       }
       
       // Calculer délai et attendre
       const delayMs = calculateDelay(attempt, opts);
       
-      logger.warn('Retrying after error', {
-        metadata: {
+      logger.warn('Retrying after error', { metadata: {
           module: 'RetryService',
           operation: 'withRetry',
           attempt,
@@ -123,7 +120,7 @@ export async function withRetry<T>(
           delayMs,
           error: lastError.message
         }
-      });
+            });
       
       if (options.onRetry) {
         options.onRetry(attempt, lastError);

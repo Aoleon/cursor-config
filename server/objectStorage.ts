@@ -133,7 +133,9 @@ export class ObjectStorageService {
     return withErrorHandling(
     async () => {
 
-      logger.debug('ObjectStorage - Downloading object', { metadata: { objectPath } });
+      logger.debug('ObjectStorage - Downloading object', { metadata: { objectPath 
+
+      });
       // Use Replit's sidecar to get the file
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
         method: "POST",
@@ -143,9 +145,13 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
 
-      logger.debug('ObjectStorage - Download response', { metadata: { objectPath, status: response.status } });
+      logger.debug('ObjectStorage - Download response', { metadata: { objectPath, status: response.status 
+        }
+            });
       if (!response.ok) {
-        logger.warn('ObjectStorage - Download failed', { metadata: { objectPath, status: response.status } });
+        logger.warn('ObjectStorage - Download failed', { metadata: { objectPath, status: response.status 
+        }
+            });
         return res.status(404).json({ error: "File not found" });
       }
 
@@ -174,9 +180,9 @@ export class ObjectStorageService {
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {}
-    }
-  ););
+      metadata: {
+                                                                                }
+                                                                              });
       }
     }
   }
@@ -210,7 +216,9 @@ export class ObjectStorageService {
     return withErrorHandling(
     async () => {
 
-      logger.debug('ObjectStorage - Checking if object exists', { metadata: { objectPath } });
+      logger.debug('ObjectStorage - Checking if object exists', { metadata: { objectPath 
+
+      });
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
         method: "POST",
         headers: {
@@ -219,22 +227,28 @@ export class ObjectStorageService {
         body: JSON.stringify({ object_path: objectPath }),
       });
       
-      logger.debug('ObjectStorage - Object exists response', { metadata: { objectPath, status: response.status } });
+      logger.debug('ObjectStorage - Object exists response', { metadata: { objectPath, status: response.status 
+        }
+            });
       if (!response.ok) {
-        logger.warn('ObjectStorage - Object exists check failed', { metadata: { objectPath, status: response.status } });
+        logger.warn('ObjectStorage - Object exists check failed', { metadata: { objectPath, status: response.status 
+        }
+            });
         return false;
       }
       const data = await response.json();
-      logger.debug('ObjectStorage - Object exists result', { metadata: { objectPath, exists: data.exists } });
+      logger.debug('ObjectStorage - Object exists result', { metadata: { objectPath, exists: data.exists 
+        }
+            });
       return data.exists === true;
     
     },
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
@@ -271,7 +285,7 @@ export class ObjectStorageService {
       const keepFilePath = `${basePath}/${folder}/.gitkeep`;
       const { bucketName, objectName } = parseObjectPath(keepFilePath);
       
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         // Upload empty file to create folder structure
@@ -291,16 +305,15 @@ export class ObjectStorageService {
             'x-goog-meta-offer-reference': offerReference,
             'x-goog-meta-folder-type': folder,
             'x-goog-meta-auto-generated': 'true'
-          }
-        });
+          });
       
     },
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
     }
     
     return { basePath, folders };
@@ -325,7 +338,9 @@ export class ObjectStorageService {
     const filePath = `${privateObjectDir}/offers/${offerId}/${validatedFolder}/${sanitizedFileName}`;
     
     // Log security-related upload attempts for monitoring
-    logger.info('ObjectStorage - Secure upload URL generated', { metadata: { offerId, folder: validatedFolder, file: sanitizedFileName } });
+    logger.info('ObjectStorage - Secure upload URL generated', { metadata: { offerId, folder: validatedFolder, file: sanitizedFileName 
+        }
+            });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
 
@@ -359,7 +374,9 @@ export class ObjectStorageService {
     const timestamp = Date.now();
     const filePath = `${privateObjectDir}/supplier-quotes/${sessionId}/${timestamp}_${sanitizedFileName}`;
     
-    logger.info('ObjectStorage - Uploading supplier document', { metadata: { sessionId, file: sanitizedFileName, size: fileBuffer.length } });
+    logger.info('ObjectStorage - Uploading supplier document', { metadata: { sessionId, file: sanitizedFileName, size: fileBuffer.length 
+        }
+            });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
 
@@ -394,7 +411,9 @@ export class ObjectStorageService {
       throw new AppError(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`, 500);
     }
 
-    logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath } });
+    logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath 
+        }
+            });
 
     return {
       filePath,

@@ -54,12 +54,11 @@ export class Notifier {
         this.alertEmailRecipients = process.env.ALERT_EMAIL.split(',').map(e => e.trim());
       }
       
-      logger.info('Service de notification email configuré', {
-        metadata: {
+      logger.info('Service de notification email configuré', { metadata: {
           service: 'Notifier',
           recipients: this.alertEmailRecipients.length
         }
-      });
+            });
     }
     
     // Configurer Slack si disponible
@@ -67,11 +66,10 @@ export class Notifier {
       this.webhookUrl = process.env.SLACK_WEBHOOK_URL;
       this.slackEnabled = true;
       
-      logger.info('Service de notification Slack configuré', {
-        metadata: {
+      logger.info('Service de notification Slack configuré', { metadata: {
           service: 'Notifier'
         }
-      });
+            });
     }
   }
 
@@ -83,7 +81,7 @@ export class Notifier {
     const channels = this.determineChannels(alert);
     
     for (const channel of channels) {
-      return withErrorHandling(
+      await withErrorHandling(
     async () => {
 
         const result = await this.sendViaChannel(channel, alert);
@@ -93,9 +91,9 @@ export class Notifier {
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  ););
+      metadata: {
+                                                                                }
+                                                                              });
       }
     }
     
@@ -170,21 +168,20 @@ export class Notifier {
 
       await sgMail.send(msg);
       
-      logger.info('Alerte email envoyée', {
-        metadata: {
+      logger.info('Alerte email envoyée', { metadata: {
           service: 'Notifier',
           alertId: alert.id,
           recipients: this.alertEmailRecipients.length
-        }
+
       });
     
     },
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -212,20 +209,19 @@ export class Notifier {
         throw new AppError(`Slack webhook error: ${response.status}`, 500);
       }
       
-      logger.info('Alerte Slack envoyée', {
-        metadata: {
+      logger.info('Alerte Slack envoyée', { metadata: {
           service: 'Notifier',
           alertId: alert.id
         }
-      });
+            });
     
     },
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -266,21 +262,20 @@ export class Notifier {
         throw new AppError(`Webhook error: ${response.status}`, 500);
       }
       
-      logger.info('Alerte webhook envoyée', {
-        metadata: {
+      logger.info('Alerte webhook envoyée', { metadata: {
           service: 'Notifier',
           alertId: alert.id,
           url: webhookUrl
         }
-      });
+            });
     
     },
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -298,8 +293,8 @@ export class Notifier {
         status: alert.status,
         message: alert.message,
         metrics: alert.details?.metrics
-      }
-    };
+                                                                              }
+                                                                            });
     
     // Log selon la sévérité
     switch (alert.severity) {
@@ -560,9 +555,8 @@ case 'medium':;
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
     
     // Test Slack
@@ -577,9 +571,8 @@ case 'medium':;
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
     
     // Test webhook
@@ -594,17 +587,15 @@ case 'medium':;
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
     }
     
-    logger.info('Tests de notification terminés', {
-      metadata: {
+    logger.info('Tests de notification terminés', { metadata: {
         service: 'Notifier',
         results
-      }
-    });
+        }
+            });
     
     return results;
   }

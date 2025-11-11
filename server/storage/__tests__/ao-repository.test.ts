@@ -48,8 +48,7 @@ describe('AoRepository Integration Tests', () => {
       for (let i = 1; i < createdAoIds.length; i++) {
         await db.delete(aos).where(eq(aos.id, createdAoIds[i]));
       }
-    }
-  });
+    } );
 
   // Helper pour créer un AO de test valide
   const createValidAoData = (overrides: Partial<InsertAo> = {}): InsertAo => {
@@ -94,7 +93,15 @@ describe('AoRepository Integration Tests', () => {
     it('should find AO by id', async () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'Test Find By ID',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(created.id);
 
       const found = await repository.findById(created.id);
@@ -109,7 +116,15 @@ describe('AoRepository Integration Tests', () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'Test Update',
         status: 'etude',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(created.id);
 
       const updated = await repository.update(created.id, {
@@ -125,7 +140,15 @@ describe('AoRepository Integration Tests', () => {
     it('should delete an AO', async () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'Test Delete',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
       await repository.delete(created.id);
 
@@ -175,13 +198,29 @@ describe('AoRepository Integration Tests', () => {
       const ao1 = await repository.create(createValidAoData({ 
         mondayItemId: mondayId1,
         intituleOperation: 'AO Monday 1',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao1.id);
 
       const ao2 = await repository.create(createValidAoData({ 
         mondayItemId: mondayId2,
         intituleOperation: 'AO Monday 2',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao2.id);
 
       const found1 = await repository.findByMondayId(mondayId1);
@@ -206,13 +245,29 @@ describe('AoRepository Integration Tests', () => {
       const ao1 = await repository.create(createValidAoData({
         intituleOperation: 'Filter Status Test 1',
         status: 'etude',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao1.id);
 
       const ao2 = await repository.create(createValidAoData({
         intituleOperation: 'Filter Status Test 2',
         status: 'finalise',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao2.id);
 
       const etudeResults = await repository.findAll({ status: 'etude' });
@@ -231,13 +286,29 @@ describe('AoRepository Integration Tests', () => {
       const ao1 = await repository.create(createValidAoData({
         intituleOperation: 'Filter Menuiserie Fenetre',
         menuiserieType: 'fenetre',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao1.id);
 
       const ao2 = await repository.create(createValidAoData({
         intituleOperation: 'Filter Menuiserie Porte',
         menuiserieType: 'porte',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao2.id);
 
       const fenetreResults = await repository.findAll({ menuiserieType: 'fenetre' });
@@ -256,7 +327,15 @@ describe('AoRepository Integration Tests', () => {
       const ao = await repository.create(createValidAoData({
         intituleOperation: 'Filter Source Test',
         source: 'mail',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao.id);
 
       const results = await repository.findAll({ source: 'mail' });
@@ -272,14 +351,29 @@ describe('AoRepository Integration Tests', () => {
         createValidAoData({ 
           mondayItemId: `monday-${Date.now()}`,
           intituleOperation: 'AO with Monday ID',
-        })
-      );
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
       createdAoIds.push(withMonday.id);
 
       // Créer AO sans mondayId
       const withoutMonday = await repository.create(createValidAoData({
         intituleOperation: 'AO without Monday ID',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(withoutMonday.id);
 
       // Filter: hasMondayId = true
@@ -298,7 +392,15 @@ describe('AoRepository Integration Tests', () => {
       const ao = await repository.create(createValidAoData({
         intituleOperation: 'Filter Search Test',
         reference: uniqueString,
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao.id);
 
       const results = await repository.findAll({ search: uniqueString });
@@ -313,7 +415,15 @@ describe('AoRepository Integration Tests', () => {
         status: 'etude',
         menuiserieType: 'fenetre',
         source: 'website',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao.id);
 
       const results = await repository.findAll({
@@ -343,7 +453,15 @@ describe('AoRepository Integration Tests', () => {
       for (let i = 0; i < 15; i++) {
         const ao = await repository.create(createValidAoData({
           intituleOperation: `Pagination Test ${i}`,
-        }));
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
         aoIds.push(ao.id);
       }
       createdAoIds.push(...aoIds);
@@ -377,10 +495,26 @@ describe('AoRepository Integration Tests', () => {
 
       const ao1 = await repository.create(createValidAoData({
         intituleOperation: 'Count Test 1',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       const ao2 = await repository.create(createValidAoData({
         intituleOperation: 'Count Test 2',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao1.id, ao2.id);
 
       const countAfter = await repository.count();
@@ -417,7 +551,15 @@ describe('AoRepository Integration Tests', () => {
 
       const ao = await repository.create(createValidAoData({
         intituleOperation: 'EventBus Create Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(ao.id);
 
       const event = await eventPromise;
@@ -428,7 +570,15 @@ describe('AoRepository Integration Tests', () => {
     it('should emit aos:updated event', async () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'EventBus Update Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(created.id);
 
       const eventPromise = new Promise((resolve) => {
@@ -448,7 +598,15 @@ describe('AoRepository Integration Tests', () => {
     it('should emit aos:deleted event', async () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'EventBus Delete Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
       const eventPromise = new Promise((resolve) => {
         eventBus.once('aos:deleted', resolve);
@@ -527,7 +685,15 @@ describe('AoRepository Integration Tests', () => {
     it('should normalize UUIDs correctly', async () => {
       const created = await repository.create(createValidAoData({
         intituleOperation: 'UUID Normalization Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdAoIds.push(created.id);
 
       // Test avec UUID en majuscules et espaces

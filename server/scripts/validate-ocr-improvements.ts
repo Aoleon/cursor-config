@@ -41,9 +41,11 @@ async function main() {
     {
       operation: 'main',
       service: 'validate-ocr-improvements',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
 }
 
 // Exécuter si appelé directement

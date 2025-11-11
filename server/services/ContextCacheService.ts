@@ -13,9 +13,7 @@ import type {
 // SERVICE CACHE INTELLIGENT POUR CONTEXTE IA
 // ========================================
 
-export interface CacheEnreturn withErrorHandling(
-    async () => {
-
+export interface CacheEntry {
   data: AIContextualData;
   createdAt: Date;
   lastAccessedAt: Date;
@@ -87,42 +85,37 @@ export class ContextCacheService {
     entityId: string, 
     config: ContextGenerationConfig
   ): Promise<AIContextualData | null> {
-    const startTime = Date.now();
-    const cacheKey = this.generateCacheKey(entityType, entityId, config);
-    
-    try {
-      // Vérification cache mémoire d'abord
-      const memoryEntry = this.memoryCache.get(cacheKey);
-      if (memoryEntry && this.isValidEntry(memoryEntry)) {
-        await this.recordCacheHit(cacheKey, Date.now() - startTime);
-        return memoryEntry.data;
+    return withErrorHandling(
+      async () => {
+        const startTime = Date.now();
+        const cacheKey = this.generateCacheKey(entityType, entityId, config);
+        
+        // Vérification cache mémoire d'abord
+        const memoryEntry = this.memoryCache.get(cacheKey);
+        if (memoryEntry && this.isValidEntry(memoryEntry)) {
+          await this.recordCacheHit(cacheKey, Date.now() - startTime);
+          return memoryEntry.data;
+        }
+
+        // Tentative de récupération depuis stockage persistant
+        const persistentEntry = await this.getFromPersistentCache(cacheKey);
+        if (persistentEntry && this.isValidEntry(persistentEntry)) {
+          // Restaurer en mémoire
+          this.memoryCache.set(cacheKey, persistentEntry);
+          await this.recordCacheHit(cacheKey, Date.now() - startTime);
+          return persistentEntry.data;
+        }
+
+        // Cache miss
+        await this.recordCacheMiss(cacheKey, Date.now() - startTime);
+        return null;
+      },
+      {
+        operation: 'getContext',
+        service: 'ContextCacheService',
+        metadata: {}
       }
-
-      // Tentative de récupération depuis stockage persistant
-      const persistentEntry = await this.getFromPersistentCache(cacheKey);
-      if (persistentEntry && this.isValidEntry(persistentEntry)) {
-        // Restaurer en mémoire
-        this.memoryCache.set(cacheKey, persistentEntry);
-        await this.recordCacheHit(cacheKey, Date.now() - startTime);
-        return persistentEntry.data;
-      }
-
-      // Cache miss
-      await this.recordCacheMiss(cacheKey, Date.now() - startTime);
-      return null;
-
-    
-    },
-    {
-      operation: 'operation',
-service: 'ContextCacheService',;
-      metadata: {}
-    }
-  );
-      });
-      await this.recordCacheMiss(cacheKey, Date.now() - startTime);
-      return null;
-    }
+    );
   }
 
   /**
@@ -153,37 +146,31 @@ service: 'ContextCacheService',;
     };
 
     return withErrorHandling(
-    async () => {
-
-      // Stockage mémoire
-      this.memoryCache.set(cacheKey, entry);
-      
-      // Stockage persistant (asynchrone)
-      this.storeToPersistentCache(cacheKey, entry).catch(error => {
-        logger.warn('Erreur stockage persistant', {
-          metadata: {
+      async () => {
+        // Stockage mémoire
+        this.memoryCache.set(cacheKey, entry);
+        
+        // Stockage persistant (asynchrone)
+        this.storeToPersistentCache(cacheKey, entry).catch(error => {
+          logger.warn('Erreur stockage persistant', { metadata: {
             service: 'ContextCacheService',
             operation: 'setContext',
             cacheKey,
             error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
-          }
+            stack: error instanceof Error ? error.stack : undefined 
+              }
+            });
         });
-      });
 
-      // Nettoyage si nécessaire
-      await this.enforeCacheLimits();
-
-    
-    },
+        // Nettoyage si nécessaire
+        await this.enforeCacheLimits();
+      },
     {
-      operation: 'Map',
+      operation: 'setContext',
       service: 'ContextCacheService',
       metadata: {}
     }
   );
-      });
-    }
   }
 
   // ========================================
@@ -201,24 +188,20 @@ service: 'ContextCacheService',;
   ): Promise<void> {
     const rules = this.invalidationRules.get(entityType) || [];
     
-    logger.info('Invalidation déclenchée', {
-      metadata: {
+    logger.info('Invalidation déclenchée', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateOnEntityChange',
         entityType,
         entityId,
-        changeType
-      }
-    });
-    
+        changeType 
+              }
+            });
     // Tags intelligents basés sur l'entité et le contexte
     const smartTags = this.generateSmartInvalidationTags(entityType, entityId, changeType, additionalContext);
-    
     for (const rule of rules) {
       if (rule.triggerEvents.includes(changeType)) {
         // Invalidation directe avec tags intelligents
         await this.invalidateBySmartTags(smartTags);
-        
         // Invalidation en cascade si activée
         if (rule.cascadingInvalidation) {
           for (const relatedType of rule.relatedEntityTypes) {
@@ -237,15 +220,13 @@ service: 'ContextCacheService',;
 
     // Métriques et logging
     this.stats.invalidationEvents++;
-    logger.info('Invalidation terminée', {
-      metadata: {
+    logger.info('Invalidation terminée', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateOnEntityChange',
-        smartTagsCount: smartTags.length
-      }
-    });
+        smartTagsCount: smartTags.length 
+              }
+            });
   }
-
   /**
    * Invalide les entrées correspondant à un pattern
    */
@@ -262,28 +243,25 @@ service: 'ContextCacheService',;
 
     // Invalidation persistante (asynchrone)
     this.invalidateFromPersistentCache(pattern).catch(error => {
-      logger.warn('Erreur invalidation persistante', {
-        metadata: {
+      logger.warn('Erreur invalidation persistante', { metadata: {
           service: 'ContextCacheService',
           operation: 'invalidateByPattern',
           pattern,
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
+          stack: error instanceof Error ? error.stack : undefined 
+              }
+            });
     });
 
-    logger.info('Invalidé entrées pour pattern', {
-      metadata: {
+    logger.info('Invalidé entrées pour pattern', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateByPattern',
         pattern,
-        invalidatedCount
-      }
-    });
+        invalidatedCount 
+              }
+            });
     return invalidatedCount;
   }
-
   /**
    * Invalidation intelligente par tags multiples avec priorités
    */
@@ -304,42 +282,38 @@ service: 'ContextCacheService',;
           this.memoryCache.delete(key);
           invalidatedCount++;
           
-          logger.info('Entrée invalidée', {
-            metadata: {
+          logger.info('Entrée invalidée', { metadata: {
               service: 'ContextCacheService',
               operation: 'invalidateBySmartTags',
               matchScore: matchScore.toFixed(2),
-              cacheKey: key.substring(0, 50)
-            }
-          });
+              cacheKey: key.substring(0, 50) 
+              }
+            });
         }
       }
     }
 
     // Invalidation persistante par tags
     this.invalidateFromPersistentCacheByTags(tags).catch(error => {
-      logger.warn('Erreur invalidation persistante par tags', {
-        metadata: {
+      logger.warn('Erreur invalidation persistante par tags', { metadata: {
           service: 'ContextCacheService',
           operation: 'invalidateBySmartTags',
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
+          stack: error instanceof Error ? error.stack : undefined 
+              }
+            });
     });
 
     const duration = Date.now() - startTime;
-    logger.info('Invalidation intelligente', {
-      metadata: {
+    logger.info('Invalidation intelligente', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateBySmartTags',
         invalidatedCount,
-        durationMs: duration
-      }
-    });
+        durationMs: duration 
+              }
+            });
     return invalidatedCount;
   }
-
   /**
    * Génère des tags intelligents pour invalidation basés sur le contexte
    */
@@ -347,7 +321,7 @@ service: 'ContextCacheService',;
     entityType: string,
     entityId: string,
     changeType: string,
-    additionalContext?: Record<st, unknown>unknown>
+    additionalContext?: Record<string, unknown>
   ): string[] {
     const tags = [
       `entity:${entityType}`,
@@ -417,14 +391,12 @@ service: 'ContextCacheService',;
     this.memoryCache.clear();
     await this.clearPersistentCache();
     this.resetStats();
-    logger.info('Cache entièrement vidé', {
-      metadata: {
+    logger.info('Cache entièrement vidé', { metadata: {
         service: 'ContextCacheService',
-        operation: 'invalidateAll'
-      }
-    });
+        operation: 'invalidateAll' 
+              }
+            });
   }
-
   // ========================================
   // OPTIMISATIONS ET NETTOYAGE
   // ========================================
@@ -450,15 +422,13 @@ service: 'ContextCacheService',;
 
     this.stats.expiredEntries += cleanedCount;
     if (cleanedCount > 0) {
-      logger.info('Nettoyé entrées expirées', {
-        metadata: {
+      logger.info('Nettoyé entrées expirées', { metadata: {
           service: 'ContextCacheService',
           operation: 'cleanupExpiredEntries',
-          cleanedCount
-        }
-      });
+          cleanedCount 
+              }
+            });
     }
-
     return cleanedCount;
   }
 
@@ -467,26 +437,21 @@ service: 'ContextCacheService',;
    */
   async preloadFrequentContexts(): Promise<void> {
     const startTime = Date.now();
-    logger.info('Démarrage prewarming intelligent', {
-      metadata: {
+    logger.info('Démarrage prewarming intelligent', { metadata: {
         service: 'ContextCacheService',
-        operation: 'preloadFrequentContexts'
-      }
-    });
-    
+        operation: 'preloadFrequentContexts' 
+              }
+            });
     // Analyser les patterns d'usage fréquents
     const frequentPatterns = await this.analyzeUsagePatterns();
-    
     // Patterns de prewarming spécialisés par période
     const currentHour = new Date().getHours();
     const isBusinessHours = currentHour >= 8 && currentHour <= 18;
     const isPeakHours = (currentHour >= 8 && currentHour <= 12) || (currentHour >= 14 && currentHour <= 18);
-    
     if (isPeakHours) {
       // Préchargement agressif pendant les heures de pointe
       await this.prewarmPeakHourContexts();
     }
-    
     if (isBusinessHours) {
       // Préchargement des contextes business standards
       await this.prewarmBusinessContexts();
@@ -494,50 +459,39 @@ service: 'ContextCacheService',;
     
     // Précharger les contextes identifiés par usage historique
     for (const pattern of frequentPatterns) {
-      return withErrorHandling(
-    async () => {
-
-        await this.preloadContextForPattern(pattern);
-      
-    },
-    {
-      operation: 'Map',
-      service: 'ContextCacheService',
-      metadata: {}
-    }
-  );
-        });
-      }
+      await withErrorHandling(
+        async () => {
+          await this.preloadContextForPattern(pattern);
+        },
+        {
+          operation: 'preloadFrequentContexts',
+          service: 'ContextCacheService',
+          metadata: {
+      });
     }
     
     const duration = Date.now() - startTime;
-    logger.info('Prewarming terminé', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'preloadFrequentContexts',
+    logger.info('Prewarming terminé', { metadata: {
+      service: 'ContextCacheService',
+      operation: 'preloadFrequentContexts',
         durationMs: duration,
-        patternsCount: frequentPatterns.length
-      }
-    });
+        patternsCount: frequentPatterns.length 
+              }
+            });
   }
-
   /**
    * Préchargement intelligent pour les heures de pointe
    */
   private async prewarmPeakHourContexts(): Promise<void> {
-    logger.info('Prewarming heures de pointe activé', {
-      metadata: {
+    logger.info('Prewarming heures de pointe activé', { metadata: {
         service: 'ContextCacheService',
-        operation: 'prewarmPeakHourContexts'
-      }
-    });
-    
+        operation: 'prewarmPeakHourContexts' 
+              }
+            });
     // Précharger les contextes AO/Offres récents (dernières 48h)
     const recentThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    
     return withErrorHandling(
     async () => {
-
       // Simuler le préchargement des AO récents
       await this.prewarmEntityType('ao', { 
         dateFilter: recentThreshold, 
@@ -556,55 +510,44 @@ service: 'ContextCacheService',;
         statusFilter: ['etude', 'planification', 'chantier'],
         limit: 10 
       });
-      
-    
     },
     {
-      operation: 'Map',
+      operation: 'prewarmPeakHourContexts',
       service: 'ContextCacheService',
       metadata: {}
     }
   );
-      });
-    }
   }
 
   /**
    * Préchargement des contextes business standards
    */
   private async prewarmBusinessContexts(): Promise<void> {
-    logger.info('Prewarming contextes business', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'prewarmBusinessContexts'
-      }
-    });
-    
-    return withErrorHandling(
-    async () => {
-
-      // Précharger les contextes fournisseurs actifs
-      await this.prewarmEntityType('supplier', { 
-        statusFilter: ['actif'],
-        limit: 5 
-      });
-      
-      // Précharger les équipes avec charge
-      await this.prewarmEntityType('team', { 
-        statusFilter: ['occupe', 'disponible'],
-        limit: 8 
-      });
-      
-    
-    },
-    {
-      operation: 'Map',
+    logger.info('Prewarming contextes business', { metadata: {
       service: 'ContextCacheService',
-      metadata: {}
-    }
-  );
-      });
-    }
+      operation: 'prewarmBusinessContexts' 
+              }
+            });
+    return withErrorHandling(
+      async () => {
+        // Précharger les contextes fournisseurs actifs
+        await this.prewarmEntityType('supplier', { 
+          statusFilter: ['actif'],
+          limit: 5 
+        });
+        
+        // Précharger les équipes avec charge
+        await this.prewarmEntityType('team', { 
+          statusFilter: ['occupe', 'disponible'],
+          limit: 8 
+        });
+      },
+      {
+        operation: 'prewarmBusinessContexts',
+        service: 'ContextCacheService',
+        metadata: {}
+      }
+    );
   }
 
   // ========================================
@@ -633,8 +576,8 @@ service: 'ContextCacheService',;
   /**
    * Analyse l'efficacité du cache par type d'entité
    */
-  async analyzeEfficiencyByEntityType(): Promise<Recor, unknown>unknown>unknown>> {
-    const analysis: R, unknown>unknown>unknown any> = {};
+  async analyzeEfficiencyByEntityType(): Promise<Record<string, unknown>> {
+    const analysis: Record<string, unknown> = {};
     
     for (const [key, entry] of this.memoryCache.entries()) {
       const entityType = key.split(':')[0];
@@ -910,15 +853,13 @@ service: 'ContextCacheService',;
 
   private async invalidateFromPersistentCacheByTags(tags: string[]): Promise<void> {
     // Implémentation future avec Redis/DB pour invalidation par tags
-    logger.info('Invalidation persistante par tags', {
-      metadata: {
+    logger.info('Invalidation persistante par tags', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateFromPersistentCacheByTags',
-        tags: tags.join(', ')
-      }
-    });
+        tags: tags.join(', ') 
+              }
+            });
   }
-
   /**
    * Calcule la complexité d'une requête de contexte
    */
@@ -964,23 +905,19 @@ service: 'ContextCacheService',;
       limit?: number;
     }
   ): Promise<void> {
-    logger.info('Prewarming avec filtres', {
-      metadata: {
+    logger.info('Prewarming avec filtres', { metadata: {
         service: 'ContextCacheService',
         operation: 'prewarmEntityType',
         entityType,
-        filters: JSON.stringify(filters)
-      }
-    });
-    
+        filters: JSON.stringify(filters) 
+              }
+            });
     // Simulation du préchargement - dans un vrai système, on interrogerait la DB
     // et on génèrerait les contextes pour les entités correspondantes
     const limit = filters.limit || 10;
-    
     for (let i = 0; i < limit; i++) {
       const mockEntityId = `${entityType}_${Date.now()}_${i}`;
       const mockCacheKey = `prewarmed:${entityType}:${mockEntityId}`;
-      
       // Simuler un contexte préchargé léger
       const mockEntry: CacheEntry = {
         data: {
@@ -1015,24 +952,19 @@ service: 'ContextCacheService',;
           'complexity:simple'
         ]
       };
-      
       // Stocker en cache avec un délai pour éviter la surcharge
       this.memoryCache.set(mockCacheKey, mockEntry);
-      
       // Délai micro pour simuler le traitement
       await new Promise(resolve => setTimeout(resolve, 10));
     }
-    
-    logger.info('Prewarming terminé', {
-      metadata: {
+    logger.info('Prewarming terminé', { metadata: {
         service: 'ContextCacheService',
         operation: 'prewarmEntityType',
         entityType,
-        contextsGenerated: limit
-      }
-    });
+        contextsGenerated: limit 
+              }
+            });
   }
-
   private async analyzeUsagePatterns(): Promise<string[]> {
     // Analyse basique des patterns fréquents
     const patterns: Record<string, number> = {};
@@ -1051,15 +983,13 @@ service: 'ContextCacheService',;
 
   private async preloadContextForPattern(pattern: string): Promise<void> {
     // Logique de préchargement future
-    logger.info('Préchargement pattern', {
-      metadata: {
+    logger.info('Préchargement pattern', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadContextForPattern',
-        pattern
-      }
-    });
+        pattern 
+              }
+            });
   }
-
   private async invalidateRelatedEntities(
     entityType: string, 
     entityId: string, 
@@ -1073,16 +1003,14 @@ service: 'ContextCacheService',;
     ];
     
     await this.invalidateBySmartTags(relatedTags);
-    logger.info('Invalidation cascade', {
-      metadata: {
+    logger.info('Invalidation cascade', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateRelatedEntities',
         entityType,
-        relatedEntityId: entityId
-      }
-    });
+        relatedEntityId: entityId 
+              }
+            });
   }
-
   // ========================================
   // PREWARMING INTELLIGENT AVEC BACKGROUND TASKS PHASE 2 PERFORMANCE
   // ========================================
@@ -1102,15 +1030,13 @@ service: 'ContextCacheService',;
    */
   public startIntelligentPrewarming(): void {
     if (this.backgroundTasksRunning) {
-      logger.info('Prewarming déjà en cours', {
-      metadata: {
+      logger.info('Prewarming déjà en cours', { metadata: {
         service: 'ContextCacheService',
-        operation: 'startIntelligentPrewarming'
-      }
-    });
+        operation: 'startIntelligentPrewarming' 
+              }
+            });
       return;
     }
-
     this.backgroundTasksRunning = true;
     
     // Task principale : prewarming périodique intelligent
@@ -1122,14 +1048,12 @@ service: 'ContextCacheService',;
     // Prewarming initial au démarrage
     this.executeInitialPrewarming();
     
-    logger.info('Système de prewarming intelligent démarré', {
-      metadata: {
+    logger.info('Système de prewarming intelligent démarré', { metadata: {
         service: 'ContextCacheService',
-        operation: 'startIntelligentPrewarming'
-      }
-    });
+        operation: 'startIntelligentPrewarming' 
+              }
+            });
   }
-
   /**
    * Arrête le système de prewarming
    */
@@ -1140,14 +1064,12 @@ service: 'ContextCacheService',;
     }
     
     this.backgroundTasksRunning = false;
-    logger.info('Système de prewarming arrêté', {
-      metadata: {
+    logger.info('Système de prewarming arrêté', { metadata: {
         service: 'ContextCacheService',
-        operation: 'stopIntelligentPrewarming'
-      }
-    });
+        operation: 'stopIntelligentPrewarming' 
+              }
+            });
   }
-
   /**
    * Planifie le prewarming périodique intelligent
    */
@@ -1172,22 +1094,18 @@ service: 'ContextCacheService',;
       const isScheduledRun = this.shouldRunScheduledPrewarming();
       
       if (!isPeakHours && !isScheduledRun) {
-        logger.info('Prewarming reporté - hors période optimale', {
-      metadata: {
+        logger.info('Prewarming reporté - hors période optimale', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeIntelligentPrewarming'
-      }
-    });
+      });
         return;
       }
-
-      logger.info('Début prewarming intelligent', {
-      metadata: {
+      logger.info('Début prewarming intelligent', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeIntelligentPrewarming',
-        isPeakHours
-      }
-    });
+        isPeakHours 
+              }
+            });
       
       // Analyser les patterns d'usage récents
       const popularContexts = await this.analyzePopularContexts();
@@ -1211,25 +1129,20 @@ service: 'ContextCacheService',;
         });
       }
       
-      logger.info('Prewarming terminé', {
-      metadata: {
+      logger.info('Prewarming terminé', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeIntelligentPrewarming',
         durationMs: Date.now() - startTime,
-        contextsPrewarmed: prewarmingResults.contextsPrewarmed
-      }
-    });
-      
-    
+        contextsPrewarmed: prewarmingResults.contextsPrewarmed 
+              }
+            });
     },
     {
-      operation: 'Map',
+      operation: 'executeIntelligentPrewarming',
       service: 'ContextCacheService',
       metadata: {}
     }
   );
-    });
-    }
   }
 
   /**
@@ -1352,7 +1265,12 @@ service: 'ContextCacheService',;
   /**
    * Exécute la stratégie de prewarming
    */
-  private async executePrewarmingStrategy(stra: unknown)unknown): Promise<{
+  private async executePrewarmingStrategy(strategy: {
+    priority: 'high' | 'medium' | 'low';
+    entityTypes: string[];
+    maxContextsPerType: number;
+    complexityFocus: 'simple' | 'medium' | 'complex'[];
+  }): Promise<{
     contextsPrewarmed: number;
     entityTypes: string[];
     executionTimeMs: number;
@@ -1362,32 +1280,27 @@ service: 'ContextCacheService',;
     const processedEntityTypes: string[] = [];
 
     for (const entityType of strategy.entityTypes) {
-      return withErrorHandling(
-    async () => {
-
-        // Précharger les contextes pour ce type d'entité
-        await this.prewarmContextsForEntityType(entityType, {
-          maxContexts: strategy.maxContextsPerType,
-          complexity: strategy.complexityFocus,
-          priority: strategy.priority
-        });
-        
-        totalContexts += strategy.maxContextsPerType;
-        processedEntityTypes.push(entityType);
-        
-        // Délai entre les types pour éviter la surcharge
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      
-    },
-    {
-      operation: 'Map',
-      service: 'ContextCacheService',
-      metadata: {}
-    }
-  );
-    });
-      }
+      await withErrorHandling(
+        async () => {
+          // Précharger les contextes pour ce type d'entité
+          await this.prewarmContextsForEntityType(entityType, {
+            maxContexts: strategy.maxContextsPerType,
+            complexity: strategy.complexityFocus,
+            priority: strategy.priority
+          });
+          
+          totalContexts += strategy.maxContextsPerType;
+          processedEntityTypes.push(entityType);
+          
+          // Délai entre les types pour éviter la surcharge
+          await new Promise(resolve => setTimeout(resolve, 100));
+        },
+        {
+          operation: 'executePrewarmingStrategy',
+          service: 'ContextCacheService',
+          metadata: {}
+        }
+      );
     }
 
     return {
@@ -1450,16 +1363,13 @@ service: 'ContextCacheService',;
    * Exécute le prewarming initial au démarrage
    */
   private async executeInitialPrewarming(): Promise<void> {
-    logger.info('Prewarming initial au démarrage', {
-      metadata: {
+    logger.info('Prewarming initial au démarrage', { metadata: {
         service: 'ContextCacheService',
-        operation: 'executeInitialPrewarming'
-      }
-    });
-    
+        operation: 'executeInitialPrewarming' 
+              }
+            });
     // Précharger les contextes essentiels
     const essentialEntityTypes = ['ao', 'offer', 'project'];
-    
     for (const entityType of essentialEntityTypes) {
       await this.prewarmContextsForEntityType(entityType, {
         maxContexts: 5,
@@ -1468,14 +1378,12 @@ service: 'ContextCacheService',;
       });
     }
     
-    logger.info('Prewarming initial terminé', {
-      metadata: {
+    logger.info('Prewarming initial terminé', { metadata: {
         service: 'ContextCacheService',
-        operation: 'executeInitialPrewarming'
-      }
-    });
+        operation: 'executeInitialPrewarming' 
+              }
+            });
   }
-
   /**
    * Planifie le monitoring de performance
    */
@@ -1492,23 +1400,20 @@ service: 'ContextCacheService',;
     const prewarmingHitRate = this.calculatePrewarmingHitRate();
     const cacheUtilization = this.getCacheUtilizationRate();
     
-    logger.info('Monitoring prewarming', {
-      metadata: {
+    logger.info('Monitoring prewarming', { metadata: {
         service: 'ContextCacheService',
         operation: 'monitorPrewarmingEffectiveness',
         prewarmingHitRate: (prewarmingHitRate * 100).toFixed(1) + '%',
-        cacheUtilization: (cacheUtilization * 100).toFixed(1) + '%'
-      }
-    });
-    
+        cacheUtilization: (cacheUtilization * 100).toFixed(1) + '%' 
+              }
+            });
     // Alerter si l'efficacité est faible
     if (prewarmingHitRate < 0.4) {
-      logger.warn('Efficacité prewarming faible - révision recommandée', {
-      metadata: {
+      logger.warn('Efficacité prewarming faible - révision recommandée', { metadata: {
         service: 'ContextCacheService',
-        operation: 'monitorPrewarmingEffectiveness'
-      }
-    });
+        operation: 'monitorPrewarmingEffectiveness' 
+              }
+            });
     }
   }
 
@@ -1625,21 +1530,18 @@ service: 'ContextCacheService',;
   /**
    * Configure l'intégration avec PredictiveEngine pour preloading intelligent
    */
-  public integratePredictiveEngine(predicti: unknown)unknownnown)any): void {
+  public integratePredictiveEngine(predictiveEngine: unknown): void {
     this.predictiveEngine = predictiveEngine;
     this.predictiveStats.heatMapIntegrationActive = true;
     
-    logger.info('Intégration PredictiveEngine activée', {
-      metadata: {
+    logger.info('Intégration PredictiveEngine activée', { metadata: {
         service: 'ContextCacheService',
-        operation: 'integratePredictiveEngine'
-      }
-    });
-    
+        operation: 'integratePredictiveEngine' 
+              }
+            });
     // Démarrer cycles prédictifs automatiques
     this.startPredictiveCycles();
   }
-
   /**
    * MÉTHODE PRINCIPALE : Preloading contexte basé sur prédictions
    * Preload intelligent selon predictions du PredictiveEngine
@@ -1647,48 +1549,41 @@ service: 'ContextCacheService',;
   async preloadContextByPrediction(
     entityType: string,
     entityId: string,
-    contextCon: unknown, unknown,
+    contextConfig?: unknown,
     priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
   ): Promise<boolean> {
     if (!this.predictivePreloadingEnabled) {
-      logger.info('Preloading prédictif désactivé', {
-      metadata: {
+      logger.info('Preloading prédictif désactivé', { metadata: {
         service: 'ContextCacheService',
-        operation: 'preloadContextByPrediction'
-      }
-    });
+        operation: 'preloadContextByPrediction' 
+              }
+            });
       return false;
     }
-
     return withErrorHandling(
     async () => {
 
       const startTime = Date.now();
       
-      logger.info('Preloading prédictif démarré', {
-      metadata: {
+      logger.info('Preloading prédictif démarré', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadContextByPrediction',
         entityType,
         entityId,
         priority
-      }
-    });
-      
+      });
       // 1. VÉRIFICATION CACHE EXISTANT
       const existingKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
       if (this.memoryCache.has(existingKey)) {
-        logger.info('Contexte déjà en cache', {
-      metadata: {
+        logger.info('Contexte déjà en cache', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadContextByPrediction',
         entityType,
-        entityId
-      }
-    });
+        entityId 
+              }
+            });
         return true;
       }
-
       // 2. GÉNÉRATION CONTEXTE PRÉDICTIF OPTIMISÉ
       const predictiveContext = await this.generatePredictiveContext(
         entityType, 
@@ -1696,12 +1591,10 @@ service: 'ContextCacheService',;
         contextConfig,
         priority
       );
-
       if (!predictiveContext) {
         this.predictiveStats.failedPredictions++;
         return false;
       }
-
       // 3. STOCKAGE AVEC SCORING PRÉDICTIF
       await this.storePredictiveContext(
         entityType,
@@ -1711,10 +1604,8 @@ service: 'ContextCacheService',;
         priority,
         startTime
       );
-
       // 4. OPTIMISATION LRU BASÉE PRÉDICTIONS
       await this.optimizeLRUWithPredictiveScoring();
-
       // 5. ENREGISTREMENT ACCÈS POUR HEAT-MAP
       if (this.predictiveEngine) {
         this.predictiveEngine.recordEntityAccess(
@@ -1724,35 +1615,28 @@ service: 'ContextCacheService',;
           this.determineContextComplexity(contextConfig)
         );
       }
-
       this.predictiveStats.totalPredictivePreloads++;
       this.predictiveStats.successfulPredictions++;
-      
       const duration = Date.now() - startTime;
-      logger.info('Preloading prédictif complété', {
-      metadata: {
+      logger.info('Preloading prédictif complété', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadContextByPrediction',
         entityType,
         entityId,
-        durationMs: duration
-      }
-    });
-      
+        durationMs: duration 
+              }
+            });
       return true;
-
-    
     },
     {
-      operation: 'Map',
+      operation: 'preloadContextByPrediction',
       service: 'ContextCacheService',
       metadata: {}
     }
-  );
-    });
-      this.predictiveStats.failedPredictions++;
-      return false;
-    }
+  ).catch(() => {
+    this.predictiveStats.failedPredictions++;
+    return false;
+  });
   }
 
   /**
@@ -1760,58 +1644,42 @@ service: 'ContextCacheService',;
    */
   async integrateHeatMapData(): Promise<void> {
     if (!this.predictiveEngine) {
-      logger.info('PredictiveEngine non intégré', {
-      metadata: {
+      logger.info('PredictiveEngine non intégré', { metadata: {
         service: 'ContextCacheService',
-        operation: 'integrateHeatMapData'
-      }
-    });
+        operation: 'integrateHeatMapData' 
+              }
+            });
       return;
     }
-
     return withErrorHandling(
-    async () => {
-
-      logger.info('Intégration heat-map pour optimisation cache', {
-      metadata: {
+      async () => {
+        logger.info('Intégration heat-map pour optimisation cache', { metadata: {
+          service: 'ContextCacheService',
+          operation: 'integrateHeatMapData'
+      });
+        // 1. RÉCUPÉRATION HEAT-MAP ACTUELLE
+        const heatMap = await this.predictiveEngine.generateEntityHeatMap();
+        // 2. PRELOADING ENTITÉS CHAUDES
+        await this.preloadHotEntities(heatMap.hotEntities);
+        // 3. ÉVICTION ENTITÉS FROIDES
+        await this.evictColdEntities(heatMap.coldEntities);
+        // 4. OPTIMISATION CACHE SELON TRENDS
+        await this.optimizeCacheByTrends(heatMap.accessTrends);
+        // 5. AJUSTEMENT BUSINESS HOURS
+        await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
+        this.predictiveStats.lastHeatMapUpdate = new Date();
+        logger.info('Intégration heat-map terminée', { metadata: {
+          service: 'ContextCacheService',
+          operation: 'integrateHeatMapData' 
+              }
+            });
+      },
+      {
+        operation: 'integrateHeatMapData',
         service: 'ContextCacheService',
-        operation: 'integrateHeatMapData'
+        metadata: {}
       }
-    });
-      
-      // 1. RÉCUPÉRATION HEAT-MAP ACTUELLE
-      const heatMap = await this.predictiveEngine.generateEntityHeatMap();
-      
-      // 2. PRELOADING ENTITÉS CHAUDES
-      await this.preloadHotEntities(heatMap.hotEntities);
-      
-      // 3. ÉVICTION ENTITÉS FROIDES
-      await this.evictColdEntities(heatMap.coldEntities);
-      
-      // 4. OPTIMISATION CACHE SELON TRENDS
-      await this.optimizeCacheByTrends(heatMap.accessTrends);
-      
-      // 5. AJUSTEMENT BUSINESS HOURS
-      await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
-
-      this.predictiveStats.lastHeatMapUpdate = new Date();
-      logger.info('Intégration heat-map terminée', {
-      metadata: {
-        service: 'ContextCacheService',
-        operation: 'integrateHeatMapData'
-      }
-    });
-
-    
-    },
-    {
-      operation: 'Map',
-      service: 'ContextCacheService',
-      metadata: {}
-    }
-  );
-    });
-    }
+    );
   }
 
   /**
@@ -1828,13 +1696,10 @@ service: 'ContextCacheService',;
         return; // Pas besoin d'optimisation
       }
 
-      logger.info('Optimisation LRU avec scoring prédictif', {
-      metadata: {
+      logger.info('Optimisation LRU avec scoring prédictif', { metadata: {
         service: 'ContextCacheService',
         operation: 'optimizeLRUWithPredictiveScoring'
-      }
-    });
-      
+      });
       // 1. CALCUL SCORES PRÉDICTIFS POUR CHAQUE ENTRÉE
       const entriesWithScores: Array<{
         key: string;
@@ -1842,11 +1707,9 @@ service: 'ContextCacheService',;
         predictiveScore: number;
         shouldEvict: boolean;
       }> = [];
-
       for (const [key, entry] of this.memoryCache.entries()) {
         const predictiveScore = await this.calculatePredictiveScore(key, entry);
         const shouldEvict = predictiveScore < 30; // Seuil d'éviction
-        
         entriesWithScores.push({
           key,
           entry,
@@ -1854,93 +1717,73 @@ service: 'ContextCacheService',;
           shouldEvict
         });
       }
-
       // 2. TRI PAR SCORE PRÉDICTIF (plus bas = candidat éviction)
       entriesWithScores.sort((a, b) => a.predictiveScore - b.predictiveScore);
-
       // 3. ÉVICTION INTELLIGENTE
       let evictedCount = 0;
       const targetReduction = Math.floor(this.memoryCache.size * 0.2); // Réduire de 20%
-
       for (const item of entriesWithScores) {
         if (evictedCount >= targetReduction) break;
-        
         if (item.shouldEvict || item.predictiveScore < 40) {
           this.memoryCache.delete(item.key);
           evictedCount++;
-          
-          logger.info('Éviction prédictive', {
-      metadata: {
+          logger.info('Éviction prédictive', { metadata: {
         service: 'ContextCacheService',
         operation: 'optimizeLRUWithPredictiveScoring',
         cacheKey: item.key.substring(0, 40) + '...',
-        predictiveScore: item.predictiveScore
-      }
-    });
+        predictiveScore: item.predictiveScore 
+              }
+            });
         }
       }
-
       this.predictiveStats.lruOptimizationsApplied++;
-      logger.info('Optimisation LRU terminée', {
-      metadata: {
+      logger.info('Optimisation LRU terminée', { metadata: {
         service: 'ContextCacheService',
         operation: 'optimizeLRUWithPredictiveScoring',
-        evictedCount
-      }
-    });
-
-    
+        evictedCount 
+              }
+            });
     },
     {
-      operation: 'Map',
+      operation: 'optimizeLRUWithPredictiveScoring',
       service: 'ContextCacheService',
       metadata: {}
     }
   );
-    });
-    }
   }
 
   /**
    * Preloading intelligent des entités chaudes selon heat-map
    */
   private async preloadHotEntities(hotEntities: unknown[]): Promise<void> {
-    logger.info('Preloading entités chaudes', {
-      metadata: {
+    logger.info('Preloading entités chaudes', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadHotEntities',
-        hotEntitiesCount: hotEntities.length
-      }
-    });
-    
+        hotEntitiesCount: hotEntities.length 
+              }
+            });
     // Limite concurrent preloading pour éviter surcharge
     const MAX_CONCURRENT = 3;
     const hotBatch = hotEntities.slice(0, 10); // Top 10 entités chaudes
-    
     for (let i = 0; i < hotBatch.length; i += MAX_CONCURRENT) {
       const batch = hotBatch.slice(i, i + MAX_CONCURRENT);
-      
       const preloadPromises = batch.map(async (entity) => {
-        return withErrorHandling(
-    async () => {
-
-          const priority = this.determinePriorityFromPopularity(entity);
-          await this.preloadContextByPrediction(
-            entity.entityType,
-            entity.entityId,
-            this.getOptimalConfigForEntity(entity),
-            priority
-          );
-        
-    },
-    {
-      operation: 'Map',
-      service: 'ContextCacheService',
-      metadata: {}
-    }
-  );
-    });
-        }
+      await withErrorHandling(
+          async () => {
+            const priority = this.determinePriorityFromPopularity(entity);
+            await this.preloadContextByPrediction(
+              entity.entityType,
+              entity.entityId,
+              this.getOptimalConfigForEntity(entity),
+              priority
+            );
+          },
+          {
+            operation: 'preloadHotEntities',
+            service: 'ContextCacheService',
+            metadata: {}
+          }
+        );
       });
 
       await Promise.allSettled(preloadPromises);
@@ -1960,25 +1803,23 @@ service: 'ContextCacheService',;
           this.memoryCache.delete(cacheKey);
           evictedCount++;
           
-          logger.info('Éviction entité froide', {
-      metadata: {
+          logger.info('Éviction entité froide', { metadata: {
         service: 'ContextCacheService',
         operation: 'evictColdEntities',
-        entityKey
-      }
-    });
+        entityKey 
+              }
+            });
         }
       }
     }
     
     if (evictedCount > 0) {
-      logger.info('Entités froides évincées', {
-      metadata: {
+      logger.info('Entités froides évincées', { metadata: {
         service: 'ContextCacheService',
         operation: 'evictColdEntities',
-        evictedCount
-      }
-    });
+        evictedCount 
+              }
+            });
     }
   }
 
@@ -2014,30 +1855,27 @@ service: 'ContextCacheService',;
     
     if (peakHours.includes(currentHour)) {
       // Mode agressif pendant heures de pointe
-      logger.info('Mode preloading agressif - heures de pointe', {
-      metadata: {
+      logger.info('Mode preloading agressif - heures de pointe', { metadata: {
         service: 'ContextCacheService',
-        operation: 'calculatePreloadingBudget'
-      }
-    });
+        operation: 'calculatePreloadingBudget' 
+              }
+            });
       await this.activateAggressivePreloading();
     } else if (businessMultiplier > 1.2) {
       // Mode modéré pendant horaires business
-      logger.info('Mode preloading modéré - horaires business', {
-      metadata: {
+      logger.info('Mode preloading modéré - horaires business', { metadata: {
         service: 'ContextCacheService',
-        operation: 'calculatePreloadingBudget'
-      }
-    });
+        operation: 'calculatePreloadingBudget' 
+              }
+            });
       await this.activateModeratePreloading();
     } else {
       // Mode conservateur hors horaires
-      logger.info('Mode preloading conservateur - hors horaires', {
-      metadata: {
+      logger.info('Mode preloading conservateur - hors horaires', { metadata: {
         service: 'ContextCacheService',
-        operation: 'calculatePreloadingBudget'
-      }
-    });
+        operation: 'calculatePreloadingBudget' 
+              }
+            });
       await this.activateConservativePreloading();
     }
   }
@@ -2100,18 +1938,15 @@ service: 'ContextCacheService',;
       }
       
       return 30; // Score bas si pas dans prédictions
-
-    
     },
     {
-      operation: 'Map',
+      operation: 'getPredictiveScoreFromEngine',
       service: 'ContextCacheService',
       metadata: {}
     }
-  );
-    });
-      return 50; // Score neutre en cas d'erreur
-    }
+  ).catch(() => {
+    return 50; // Score neutre en cas d'erreur
+  });
   }
 
   /**
@@ -2168,8 +2003,8 @@ service: 'ContextCacheService',;
    */
   private async storePredictiveContext(
     entityType: string,
-    entityId: string,: unknown,unknowneunknown,any,
- : unknown,unknowntunknown,ig: any,
+    entityId: string,
+    contextConfig?: unknown,
     priority: string,
     startTime: number
   ): Promise<void> {
@@ -2195,17 +2030,15 @@ service: 'ContextCacheService',;
     // Stockage avec priorité
     this.memoryCache.set(cacheKey, entry);
     
-    logger.info('Contexte prédictif stocké', {
-      metadata: {
+    logger.info('Contexte prédictif stocké', { metadata: {
         service: 'ContextCacheService',
         operation: 'storePredictiveContext',
         cacheKey,
         ttlHours,
-        priority
-      }
-    });
+        priority 
+              }
+            });
   }
-
   /**
    * Démarre les cycles prédictifs automatiques
    */
@@ -2231,14 +2064,12 @@ service: 'ContextCacheService',;
       }
     }, 5 * 60 * 1000);
 
-    logger.info('Cycles prédictifs automatiques démarrés', {
-      metadata: {
+    logger.info('Cycles prédictifs automatiques démarrés', { metadata: {
         service: 'ContextCacheService',
-        operation: 'startPredictiveCycles'
-      }
-    });
+        operation: 'startPredictiveCycles' 
+              }
+            });
   }
-
   /**
    * Exécute un cycle complet de preloading prédictif
    */
@@ -2246,26 +2077,20 @@ service: 'ContextCacheService',;
     return withErrorHandling(
     async () => {
 
-      logger.info('Cycle preloading prédictif démarré', {
-      metadata: {
+      logger.info('Cycle preloading prédictif démarré', { metadata: {
         service: 'ContextCacheService',
         operation: 'startPredictiveCycles'
-      }
-    });
-      
+      });
       // 1. Obtenir prédictions depuis PredictiveEngine
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
-      
       // 2. Filtrer prédictions selon capacité cache
       const viablePredictions = predictions
         .filter(p => p.confidence >= 70)
         .slice(0, 5); // Limiter à 5 prédictions par cycle
-      
       // 3. Preloader contextes prédits
       for (const prediction of viablePredictions) {
         const priority = prediction.confidence >= 90 ? 'critical' :
                         prediction.confidence >= 80 ? 'high' : 'medium';
-        
         await this.preloadContextByPrediction(
           prediction.entityType,
           prediction.entityId,
@@ -2273,32 +2098,26 @@ service: 'ContextCacheService',;
           priority
         );
       }
-      
-      logger.info('Cycle prédictif terminé', {
-      metadata: {
+      logger.info('Cycle prédictif terminé', { metadata: {
         service: 'ContextCacheService',
-        operation: 'startPredictiveCycles',
-        contextsPreloaded: viablePredictions.length
-      }
-    });
-      
-    
+        operation: 'runPredictivePreloadingCycle',
+        contextsPreloaded: viablePredictions.length 
+              }
+            });
     },
     {
-      operation: 'Map',
+      operation: 'runPredictivePreloadingCycle',
       service: 'ContextCacheService',
       metadata: {}
     }
   );
-    });
-    }
   }
 
   // ========================================
   // MÉTHODES HELPER PRELOADING PRÉDICTIF
   // ========================================
 
-  private unknownDefaultConfig(): any {
+  private getDefaultConfig(): unknown {
     return {
       contextTypes: ['business', 'technical'],
       scope: 'standard',
@@ -2310,7 +2129,7 @@ service: 'ContextCacheService',;
     };
   }
 
-  private determineContextComplexityunknown unknown)unknown)ig: any): 'low' | 'medium' | 'high' {
+  private determineContextComplexity(contextConfig?: unknown): 'low' | 'medium' | 'high' {
     if (!contextConfig) return 'medium';
     
     const scope = contextConfig.scope || 'standard';
@@ -2321,18 +2140,21 @@ service: 'ContextCacheService',;
     }
   }
 
-  private determinePriorityFrounknown unknown)unknown)entity: any): 'low' | 'medium' | 'high' | 'critical' {
-    if (entity.accessCount >= 20) return 'critical';
-    if (entity.accessCount >= 10) return 'high';
-    if (entity.accessCount >= 5) return 'medium';
+  private determinePriorityFromPopularity(entity: unknown): 'low' | 'medium' | 'high' | 'critical' {
+    const entityData = entity as { accessCount?: number };
+    const accessCount = entityData.accessCount || 0;
+    if (accessCount >= 20) return 'critical';
+    if (accessCount >= 10) return 'high';
+    if (accessCount >= 5) return 'medium';
     return 'low';
   }
 
-  private getOptimalunknowunknownnknown)unknown)ity(entity: any): any {
+  private getOptimalConfigForEntity(entity: unknown): unknown {
+    const entityData = entity as { entityType?: string; contextComplexity?: string };
     return {
-      contextTypes: entity.entityType === 'project' ? ['business', 'technical', 'temporal'] : 
-                   entity.entityType === 'ao' ? ['business', 'relational'] : ['business'],
-      scope: entity.contextComplexity === 'high' ? 'comprehensive' : 'standard',
+      contextTypes: entityData.entityType === 'project' ? ['business', 'technical', 'temporal'] : 
+                   entityData.entityType === 'ao' ? ['business', 'relational'] : ['business'],
+      scope: entityData.contextComplexity === 'high' ? 'comprehensive' : 'standard',
       performance: {
         compressionLevel: 'medium',
         timeoutMs: 4000,
@@ -2434,8 +2256,8 @@ service: 'ContextCacheService',;
 
   private generatePredictiveTags(
     entityType: string,
-   unknowntityId:: unknown,g,
- unknown,ontext: any,
+    entityId: string,
+    contextConfig?: unknown,
     priority: string
   ): string[] {
     const baseTags = [
@@ -2469,15 +2291,13 @@ service: 'ContextCacheService',;
    */
   public setPredictivePreloadingEnabled(enabled: boolean): void {
     this.predictivePreloadingEnabled = enabled;
-    logger.info('État preloading prédictif modifié', {
-      metadata: {
+    logger.info('État preloading prédictif modifié', { metadata: {
         service: 'ContextCacheService',
         operation: 'togglePredictivePreloading',
-        enabled
-      }
-    });
+        enabled 
+              }
+            });
   }
-
   /**
    * Statistiques preloading prédictif pour monitoring
    */

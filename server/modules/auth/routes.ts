@@ -71,14 +71,16 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     
     // SECURITY: Strict development-only enforcement
     if (process.env.NODE_ENV !== 'development') {
-      logger.warn('[Auth] Tentative accès route basic en production bloquée', {
-        metadata: {
+      logger.warn('[Auth] Tentative accès route basic en production bloquée', { metadata: {
           route: '/api/login/basic',
           method: 'POST',
           ip: req.ip,
           userAgent: req.headers['user-agent']
-        }
-      });
+
+            })
+
+
+          );
       return res.status(404).json({ message: 'Not found' });
     }
     
@@ -89,26 +91,30 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     const validatedRole = role && allowedRoles.includes(role) ? role : 'admin';
     
     if (role && !allowedRoles.includes(role)) {
-      logger.warn('[Auth] Tentative assignation rôle invalide bloquée', {
-        metadata: {
+      logger.warn('[Auth] Tentative assignation rôle invalide bloquée', { metadata: {
           route: '/api/login/basic',
           method: 'POST',
           attemptedRole: role,
           username
-        }
-      });
+
+            })
+
+
+          );
     }
 
-    logger.info('[Auth] Tentative connexion basic', { 
-      metadata: { 
+    logger.info('[Auth] Tentative connexion basic', { metadata: { 
         route: '/api/login/basic',
         method: 'POST',
         username,
         requestedRole: role,
         validatedRole,
         hasSession: !!(req as any).session
-      }
-    });
+
+            })
+
+
+          );
 
     // Default admin credentials (development)
     if (username === 'admin' && password === 'admin') {
@@ -122,41 +128,48 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         isBasicAuth: true,
       };
 
-      logger.info('[Auth] Création utilisateur admin dev', { 
-        metadata: { 
+      logger.info('[Auth] Création utilisateur admin dev', { metadata: { 
           route: '/api/login/basic',
           method: 'POST',
           userId: adminUser.id,
           role: adminUser.role
-        }
-      });
+
+            })
+
+
+          );
       
       (req as any).session.user = adminUser;
       
       await new Promise<void>((resolve, reject) => {
         (req as any).session.save((err: any) => {
           if (err) {
-            logger.error('[Auth] Erreur sauvegarde session', { 
-              metadata: { 
+            logger.error('[Auth] Erreur sauvegarde session', { metadata: { 
                 route: '/api/login/basic',
                 method: 'POST',
                 error: err instanceof Error ? err.message : String(err),
                 stack: err instanceof Error ? err.stack : undefined,
                 username
-              }
-            });
+
+            })
+
+
+          );
             reject(err);
           } else {
-            logger.info('[Auth] Session sauvegardée', {
-              metadata: {
+            logger.info('[Auth] Session sauvegardée', { metadata: {
                 route: '/api/login/basic',
                 method: 'POST',
                 userId: adminUser.id
-              }
-            });
+
+            })
+
+
+          );
             resolve();
-          }
-        });
+              })
+
+            );
       });
 
       res.json({
@@ -165,19 +178,22 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         user: adminUser
       });
     } else {
-      logger.warn('[Auth] Identifiants invalides', { 
-        metadata: { 
+      logger.warn('[Auth] Identifiants invalides', { metadata: { 
           route: '/api/login/basic',
           method: 'POST',
           username
-        }
-      });
+
+            })
+
+
+          );
       throw new AuthenticationError('Identifiants incorrects');
-    }
-  }));
+                        }
+
+                      }));
 
   // Health check PROTÉGÉ admin uniquement 
-  router.get('/api/auth/health', isAuthenticated, requireAdminForHealth, asyncHandler(async (req: any, res: Response) => {
+  router.get('/api/auth/health', isAuthenticated, requireAdminForHealth, asyncHandler(async (req: Request, res: Response) => {
     const sessionExists = !!req.session;
     const sessionUser = req.session?.user;
     const passportUser = req.user;
@@ -201,73 +217,91 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       }
     };
     
-    logger.info('[Auth] Health check effectué', { 
-      metadata: { 
+    logger.info('[Auth] Health check effectué', { metadata: { 
         route: '/api/auth/health',
         method: 'GET',
         healthy: sessionExists,
         userId: req.user?.id
-      }
-    });
+
+            })
+
+
+          );
     
     res.json({
       success: true,
       healthy: sessionExists,
       data: healthStatus
-    });
-  }));
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Get current authenticated user
-  router.get('/api/auth/user', isAuthenticated, asyncHandler(async (req: any, res: Response) => {
+  router.get('/api/auth/user', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
     const sessionUser = req.session?.user;
     
-    logger.info('[Auth] Récupération utilisateur', { 
-      metadata: { 
+    logger.info('[Auth] Récupération utilisateur', {
+      metadata: {
         route: '/api/auth/user',
         method: 'GET',
         hasUser: !!user,
         hasSessionUser: !!sessionUser,
         userType: (sessionUser?.isBasicAuth || user?.isBasicAuth) ? 'basic' : 'oidc',
         userId: user?.id || sessionUser?.id
-      }
-    });
+        
+            })
+          );
     
     // CORRECTION BLOCKER 3: Vérifier d'abord si c'est un utilisateur basic auth
     if (user?.isBasicAuth || sessionUser?.isBasicAuth) {
-      logger.info('[Auth] Retour utilisateur basic auth', {
-        metadata: {
+      logger.info('[Auth] Retour utilisateur basic auth', { metadata: {
           route: '/api/auth/user',
           method: 'GET',
           userId: user?.id || sessionUser?.id
-        }
-      });
+
+            })
+
+
+          );
       const basicAuthUser = user?.isBasicAuth ? user : sessionUser;
       return res.json(basicAuthUser);
     }
     
     // Pour les utilisateurs OIDC uniquement - vérifier claims
     if (!user || !user.claims) {
-      logger.warn('[Auth] Utilisateur OIDC sans claims détectés', {
-        metadata: {
+      logger.warn('[Auth] Utilisateur OIDC sans claims détectés', { metadata: {
           route: '/api/auth/user',
           method: 'GET',
           hasUser: !!user,
           hasClaims: !!(user?.claims),
           userId: user?.id
-        }
-      });
+
+            })
+
+
+          );
       throw new AuthenticationError('Session invalide - aucun utilisateur authentifié');
     }
     
-    logger.info('[Auth] Utilisateur OIDC récupéré avec succès', {
-      metadata: {
+    logger.info('[Auth] Utilisateur OIDC récupéré avec succès', { metadata: {
         route: '/api/auth/user',
         method: 'GET',
         userId: user.id || user.claims.sub,
         email: user.email || user.claims.email
-      }
-    });
+
+            })
+
+
+          );
     
     // Récupération de l'utilisateur depuis la DB si OIDC (évite duplications)
     const userId = user.id || user.claims.sub;
@@ -275,13 +309,15 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     
     // CORRECTION : Gestion du cas où l'utilisateur n'existe pas en DB (première connexion)
     if (!dbUser) {
-      logger.warn('[Auth] Utilisateur OIDC non trouvé en DB, création automatique', {
-        metadata: {
+      logger.warn('[Auth] Utilisateur OIDC non trouvé en DB, création automatique', { metadata: {
           route: '/api/auth/user',
           method: 'GET',
           userId: userId
-        }
-      });
+
+              })
+
+
+            );
       
       // Créer l'utilisateur en DB s'il n'existe pas
       await storage.upsertUser({
@@ -295,13 +331,15 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       // Récupérer l'utilisateur nouvellement créé
       const newDbUser = await storage.getUser(userId);
       if (!newDbUser) {
-        logger.error('[Auth] Échec création utilisateur en DB', {
-          metadata: {
+        logger.error('[Auth] Échec création utilisateur en DB', { metadata: {
             route: '/api/auth/user',
             method: 'GET',
             userId: userId
-          }
-        });
+
+            })
+
+
+          );
         throw new AuthenticationError('Erreur lors de la création de votre profil utilisateur');
       }
       
@@ -309,10 +347,18 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     } else {
       res.json(dbUser);
     }
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // Debug auth state (development only)
-  router.get('/api/debug-auth-state', asyncHandler(async (req: any, res: Response) => {
+  router.get('/api/debug-auth-state', asyncHandler(async (req: Request, res: Response) => {
     if (process.env.NODE_ENV === 'production') {
       return res.status(404).json({ message: "Not found" });
     }
@@ -347,16 +393,26 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       }
     };
     
-    logger.info('[Auth] Debug auth state', {
-      metadata: {
+    logger.info('[Auth] Debug auth state', { metadata: {
         route: '/api/debug-auth-state',
         method: 'GET',
         debugInfo
-      }
-    });
+
+            })
+
+
+          );
     
     res.json(debugInfo);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   return router;
 }

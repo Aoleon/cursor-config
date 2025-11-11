@@ -272,3 +272,5 @@ const found: User | undefined = await storage.getUser(id);
 **Note:** Ce fichier est une référence rapide. Pour plus de détails, voir les fichiers de règles complets.
 
 
+
+

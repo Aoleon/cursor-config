@@ -227,14 +227,13 @@ class CalculationEngine {
         warnings
       };
     } catch (error) {
-      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée', {
-        metadata: {
+      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée', { metadata: {
           operation: 'calculateDuration',
           service: 'DateIntelligenceService',
           phase,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);
     }
@@ -248,7 +247,7 @@ class CalculationEngine {
   ): DateIntelligenceRule | null {
     
     // Filtrer les règles actives pour cette phase
-    const applicableRules = rules.filter(rule => {
+    const applicableRules = rules.filter(rule  => {
       if (!rule.isActive) return false;
       if (rule.phase && rule.phase !== phase) return false;
       
@@ -495,15 +494,14 @@ export class DateIntelligenceService {
 
       return result;
     } catch (error) {
-      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée de phase', {
-        metadata: {
+      logger.error('[DateIntelligenceService] Erreur lors du calcul de la durée de phase', { metadata: {
           service: 'DateIntelligenceService',
           operation: 'calculatePhaseDuration',
           phase,
           projectId,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
+          error: error instanceof Error ? error.message : String(error) 
+              }
+            });
       throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }
   }
@@ -587,9 +585,7 @@ export class DateIntelligenceService {
       operation: 'constructor',
       service: 'DateIntelligenceService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError(`Impossible de générer la timeline du projet ${projectId}`, error as Error);
     }
   }
@@ -686,9 +682,7 @@ export class DateIntelligenceService {
       operation: 'constructor',
       service: 'DateIntelligenceService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError(`Impossible de recalculer depuis la phase ${fromPhase}`, error as Error);
     }
   }
@@ -722,8 +716,7 @@ export class DateIntelligenceService {
             durationImpact,
             conditions: typeof rule.baseConditions === 'string' 
               ? JSON.parse(rule.baseConditions || '{}') 
-              : rule.baseConditions || {}
-          });
+              : rule.baseConditions || {});
 
           // CORRECTION BLOCKER 5: Publier événement pour chaque règle appliquée
           eventBus.publishDateIntelligenceRuleApplied({
@@ -746,9 +739,7 @@ export class DateIntelligenceService {
       operation: 'constructor',
       service: 'DateIntelligenceService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError(`Impossible d'appliquer les règles d'intelligence`, error as Error);
     }
   }
@@ -786,8 +777,7 @@ export class DateIntelligenceService {
             ],
             estimatedImpact: {
               delayDays: Math.ceil((current.endDate.getTime() - next.startDate.getTime()) / (1000 * 60 * 60 * 24))
-            }
-          });
+            });
         }
       }
 
@@ -809,10 +799,8 @@ export class DateIntelligenceService {
             ],
             estimatedImpact: {
               delayDays: Math.floor(phase.duration * 0.2) // Optimisation possible de 20%
-            }
-          });
-        }
-      });
+            });
+        });
 
       // 3. Détecter les risques de retard (faible confiance)
       timeline.forEach(phase => {
@@ -832,10 +820,8 @@ export class DateIntelligenceService {
             ],
             estimatedImpact: {
               delayDays: Math.ceil(phase.duration * 0.3)
-            }
-          });
-        }
-      });
+            });
+        });
 
       // 4. Opportunités d'optimisation (phases très courtes)
       timeline.forEach(phase => {
@@ -855,10 +841,8 @@ export class DateIntelligenceService {
             ],
             estimatedImpact: {
               delayDays: -2 // Gain possible
-            }
-          });
-        }
-      });
+            });
+        });
 
       return issues.sort((a, b) => {
         const severityOrder = { 'critical': 3, 'warning': 2, 'info': 1 };
@@ -871,9 +855,7 @@ export class DateIntelligenceService {
       operation: 'constructor',
       service: 'DateIntelligenceService',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw new DatabaseError(`Impossible de détecter les problèmes de planification`, error as Error);
     }
   }

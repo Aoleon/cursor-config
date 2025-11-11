@@ -154,3 +154,5 @@ Saxium est une application web full-stack de gestion de projets pour **JLM Menui
 **Source de vérité:** Ce document définit le périmètre et les objectifs du projet. Toute modification doit être validée et documentée ici.
 
 
+
+

@@ -14,25 +14,23 @@ export function verifyMondaySignature(
   const signature = req.headers['x-monday-signature'] as string;
   
   if (!signature) {
-    logger.error('[Monday Webhook] Signature manquante', {
-      metadata: {
+    logger.error('[Monday Webhook] Signature manquante', { metadata: {
         module: 'MondayWebhook',
         operation: 'verifySignature',
         correlationId,
         headers: Object.keys(req.headers)
-      }
-    });
+        }
+            });
     return res.status(401).json({ error: 'Missing signature' });
   }
   
   if (!mondayConfig.signingSecret) {
-    logger.error('[Monday Webhook] Signing secret non configuré', {
-      metadata: {
+    logger.error('[Monday Webhook] Signing secret non configuré', { metadata: {
         module: 'MondayWebhook',
         operation: 'verifySignature',
         correlationId
-      }
-    });
+        }
+            });
     return res.status(500).json({ error: 'Webhook not configured' });
   }
   
@@ -52,25 +50,23 @@ export function verifyMondaySignature(
   );
   
   if (!isValid) {
-    logger.error('[Monday Webhook] Signature invalide', {
-      metadata: {
+    logger.error('[Monday Webhook] Signature invalide', { metadata: {
         module: 'MondayWebhook',
         operation: 'verifySignature',
         correlationId,
         received: signature.substring(0, 20) + '...',
         expected: expectedSignature.substring(0, 20) + '...'
-      }
-    });
+        }
+            });
     return res.status(401).json({ error: 'Invalid signature' });
   }
   
-  logger.info('[Monday Webhook] Signature validée', {
-    metadata: {
+  logger.info('[Monday Webhook] Signature validée', { metadata: {
       module: 'MondayWebhook',
       operation: 'verifySignature',
       correlationId
-    }
-  });
+        }
+            });
   
   // Parse JSON body pour le handler
   return withErrorHandling(
@@ -83,10 +79,8 @@ export function verifyMondaySignature(
     {
       operation: 'verifyMondaySignature',
       service: 'monday-webhook',
-      metadata: {}
-    }
-  );
-    });
+      metadata: {
+      });
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 }

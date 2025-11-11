@@ -18,9 +18,9 @@
  *   --skip-existing     Skip items déjà migrés (défaut: true)
  */
 
-import { getMondayMigrationServiceEnhanced, type MigrationOptions } from '../services/MondayMigrationServiceEnhanced';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { withErrorHandling } from './utils/error-handler';
-import { getMondaySchemaAnalyzer } from '../services/MondaySchemaAnalyzer';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { storage } from '../storage-poc';
 import { logger } from '../utils/logger';
 import type { EntityType } from '../config/monday-migration-mapping';
@@ -235,9 +235,11 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
     {
       operation: 'insertion',
       service: 'migrate-from-monday',
-      metadata: {}
-    }
-  );\n`);
+      metadata: {
+
+              }
+
+            );\n`);
     process.exit(1);
   }
 }
@@ -320,9 +322,11 @@ async function main() {
     {
       operation: 'insertion',
       service: 'migrate-from-monday',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
    
    Stack trace:
    ${error instanceof Error ? error.stack : 'N/A'}

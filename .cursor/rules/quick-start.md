@@ -281,6 +281,39 @@ Guide de démarrage rapide avec les 5 règles essentielles à vérifier avant to
 
 **Référence:** `@.cursor/rules/bug-prevention.md` - Règles de détection proactive (IMPÉRATIF)
 
+### 19. Contournement Système Unifié des Limites Cursor (IMPÉRATIF)
+
+**IMPÉRATIF:** L'agent DOIT surveiller et contourner automatiquement toutes les limites de Cursor.
+
+**Limites surveillées:**
+- Tool calls (< 1000) - Checkpointing automatique
+- Contexte tokens (< 200k/1M) - Max Mode, compression
+- Outils MCP (< 40) - Désactivation non essentiels
+- Taille fichiers (< 50KB) - Approche deux étapes
+- Quotas mensuels - Mode économie, sélection modèle
+
+**Critères:**
+- Surveillance continue de toutes les limites
+- Détection approche de chaque limite
+- Contournements coordonnés et optimisés
+- Validation que contournements fonctionnent
+
+**Référence:** `@.cursor/rules/cursor-limits-workaround.md` - Système unifié de contournement (IMPÉRATIF)
+
+## 20. Décomposition des Tâches (IMPÉRATIF pour Tâches Complexes)
+
+**Pour tâches complexes nécessitant décomposition:**
+- [ ] Analyser complexité de la tâche (dépendances, lignes estimées, fichiers)
+- [ ] Décomposer avec critères de taille optimale (max 50 lignes, max 3 fichiers)
+- [ ] Utiliser pensée séquentielle pour structurer les sous-tâches
+- [ ] Générer listes de tâches structurées avec dépendances explicites
+- [ ] Identifier opportunités Background Agent pour tâches différées
+- [ ] Valider taille de chaque sous-tâche créée
+- [ ] Re-décomposer si sous-tâche trop complexe
+- [ ] Gérer dépendances entre sous-tâches explicitement
+
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF)
+
 ## 📋 Workflow Simplifié (3 Étapes)
 
 ### Étape 1: Préparation

@@ -103,10 +103,10 @@ Règles de détection automatique du contexte pour optimiser le chargement des r
 - P2: `agent-optimization.md` (si optimisation)
 
 **Exemples:**
-- Tâche complexe ou run autonome → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF) + règles domaine
+- Tâche complexe ou run autonome → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF) + `task-decomposition.md` (IMPÉRATIF) + règles domaine
 - Tâche de migration/refactoring → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `migration-refactoring-manager.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF) + règles domaine
 - Tâche de consolidation/dette technique → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `tech-debt-manager.md` (IMPÉRATIF) + `hard-coding-specialist.md` (IMPÉRATIF) + règles domaine
-- Tâche avec 5 todos → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `todo-completion.md` (IMPÉRATIF) + règles domaine
+- Tâche avec 5 todos → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `todo-completion.md` (IMPÉRATIF) + `task-decomposition.md` (IMPÉRATIF) + règles domaine
 - Run autonome long → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `todo-completion.md` + `autonomous-workflows.md` + `agent-optimization.md`
 - Tâche nécessitant itération → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `iterative-perfection.md` (IMPÉRATIF) + règles domaine
 - Tâche de création/modification → Charger `senior-architect-oversight.md` (IMPÉRATIF) + `client-consultant-oversight.md` (IMPÉRATIF) + `similar-code-detection.md` + `preventive-validation.md` + règles domaine
@@ -324,6 +324,16 @@ Dependencies: core.md, quality-principles.md, code-quality.md, iterative-perfect
 -->
 ```
 
+**task-decomposition.md:**
+```markdown
+<!-- 
+Context: task-decomposition, complex-tasks, subtasks, sequential-thinking, background-agent, structured-task-lists, autonomy, planning
+Priority: P1
+Auto-load: when task is complex (> 3 todos, > 5 dependencies, > 200 lines estimated, > 5 files) or requires decomposition or autonomous run
+Dependencies: core.md, quality-principles.md, code-quality.md, senior-architect-oversight.md, autonomous-workflows.md, parallel-execution.md
+-->
+```
+
 ## 📊 Mapping Contexte → Règles
 
 ### Matrice de Chargement
@@ -359,11 +369,11 @@ Dependencies: core.md, quality-principles.md, code-quality.md, iterative-perfect
 
 **Exemple 4: Tâche complexe (> 3 todos)**
 - Contexte détecté: Backend + Tâche complexe
-- Règles chargées: P0 (3) + P1 backend + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + similar-code-detection (1) + preventive-validation (1) + P2 pre-task-evaluation (1) = 14 fichiers
+- Règles chargées: P0 (3) + P1 backend + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + task-decomposition (1) + similar-code-detection (1) + preventive-validation (1) + P2 pre-task-evaluation (1) = 15 fichiers
 
 **Exemple 5: Run autonome**
 - Contexte détecté: Backend + Run autonome
-- Règles chargées: P0 (3) + P1 backend + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + learning-memory (1) + similar-code-detection (1) + preventive-validation (1) + P2 autonomous-workflows + agent-optimization (2) = 16 fichiers
+- Règles chargées: P0 (3) + P1 backend + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + task-decomposition (1) + learning-memory (1) + similar-code-detection (1) + preventive-validation (1) + P2 autonomous-workflows + agent-optimization (2) = 17 fichiers
 
 **Exemple 6: Migration + Consolidation**
 - Contexte détecté: Backend + Migration + Consolidation
@@ -404,33 +414,70 @@ interface ContextDetection {
   };
 }
 
-function detectContext(filePath: string): ContextDetection {
+function detectContext(
+  filePath: string,
+  task?: Task
+): ContextDetection {
   // 1. Détecter domaine principal
   if (filePath.includes('server/') && !filePath.includes('.test.')) {
+    const p1Rules = ['backend.md'];
+    
+    // Détecter sous-domaines
+    if (filePath.includes('server/storage/') || filePath.includes('repository')) {
+      p1Rules.push('database.md');
+    }
+    if (filePath.includes('AIService') || filePath.includes('SQL')) {
+      p1Rules.push('ai-services.md');
+    }
+    
+    // Détecter si tâche complexe nécessite décomposition
+    if (task && shouldLoadTaskDecomposition(task)) {
+      p1Rules.push('task-decomposition.md');
+    }
+    
     return {
       filePath,
       context: { domain: 'backend' },
       rulesToLoad: {
         p0: ['core.md', 'quality-principles.md', 'code-quality.md'],
-        p1: ['backend.md'],
+        p1: p1Rules,
         p2: []
       }
     };
   }
   
   if (filePath.includes('client/src/')) {
+    const p1Rules = ['frontend.md'];
+    
+    // Détecter si tâche complexe nécessite décomposition
+    if (task && shouldLoadTaskDecomposition(task)) {
+      p1Rules.push('task-decomposition.md');
+    }
+    
     return {
       filePath,
       context: { domain: 'frontend' },
       rulesToLoad: {
         p0: ['core.md', 'quality-principles.md', 'code-quality.md'],
-        p1: ['frontend.md'],
+        p1: p1Rules,
         p2: []
       }
     };
   }
   
   // ... autres détections
+}
+
+// Détecter si task-decomposition.md doit être chargé
+function shouldLoadTaskDecomposition(task: Task): boolean {
+  return (
+    task.todos.length > 3 ||
+    task.dependencies.length > 5 ||
+    task.estimatedLines > 200 ||
+    task.filesToModify.length > 5 ||
+    task.isComplex ||
+    task.isAutonomousRun
+  );
 }
 ```
 
@@ -483,6 +530,23 @@ function detectContext(filePath: string): ContextDetection {
 - `error-recovery.md` - Si erreur détectée (IMPÉRATIF)
 - `conflict-detection.md` - Si conflit potentiel (IMPÉRATIF)
 - `bug-prevention.md` - Si bug potentiel (IMPÉRATIF)
+- `task-decomposition.md` - Si tâche complexe nécessitant décomposition (> 3 todos, > 5 dépendances, > 200 lignes estimées, > 5 fichiers) ou run autonome (IMPÉRATIF)
+- `intelligent-task-detection.md` - Détection intelligente de la complexité des tâches (détection automatique)
+- `rule-cache.md` - Cache intelligent des règles (éviter rechargement)
+- `rule-feedback-loop.md` - Boucle de feedback pour ajuster chargement selon résultats
+- `metadata-standard.md` - Standardisation des métadonnées (format standardisé)
+- `auto-documentation.md` - Si création/modification de code nécessitant documentation (IMPÉRATIF)
+- `cost-optimization.md` - Si utilisation de services IA (optimisation coûts) (IMPÉRATIF)
+- `timeout-management.md` - Si opérations longues ou timeouts détectés (gestion timeouts) (IMPÉRATIF)
+- `intelligent-preloading.md` - Si optimisation performance nécessaire (préchargement intelligent)
+- `context-compression.md` - Si contexte saturé ou large (compression intelligente)
+- `validation-pipeline.md` - Si validation stricte nécessaire (pipeline validation cascade)
+- `predictive-problem-detection.md` - Si analyse risques nécessaire (prédiction proactive)
+- `auto-refactoring.md` - Si code dupliqué détecté (auto-refactoring)
+- `code-sentiment-analysis.md` - Si évaluation qualité nécessaire (analyse sentiment)
+- `auto-test-generation.md` - Si génération tests nécessaire (tests automatiques)
+- `tool-call-limit-workaround.md` - Si tool calls > 800 ou limite approchée (contournement limite) (détails)
+- `cursor-limits-workaround.md` - Si approche de toute limite Cursor (système unifié) (IMPÉRATIF)
 
 ### Règles P2 (Sur Demande)
 

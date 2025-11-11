@@ -6,9 +6,11 @@
 
 **IMPÉRATIF:** L'agent DOIT continuer l'exécution jusqu'à completion complète, sans s'arrêter prématurément, même pour des runs de plusieurs heures.
 
-**Problème identifié:** L'agent s'arrête régulièrement après 30-45 minutes maximum, même s'il reste des tâches à accomplir.
+**Problème identifié:** L'agent s'arrête régulièrement après 30-45 minutes maximum ou après 1000 tool calls, même s'il reste des tâches à accomplir.
 
-**Solution:** Mécanismes stricts de vérification, continuation forcée, et gestion proactive de la persistance.
+**Solution:** Mécanismes stricts de vérification, continuation forcée, gestion proactive de la persistance, et contournement de la limite de 1000 tool calls avec checkpointing automatique.
+
+**Référence:** `@.cursor/rules/tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (IMPÉRATIF)
 
 ## 📋 Règles d'Exécution Persistante
 
@@ -27,6 +29,8 @@
 - ✅ Vérifier qu'il n'y a pas de dépendances non satisfaites
 - ✅ Vérifier qu'il n'y a pas de checkpoints en attente
 - ✅ Vérifier qu'il n'y a pas de corrections en cours
+- ✅ Vérifier nombre de tool calls (< 1000)
+- ✅ Créer checkpoint automatique si tool calls > 900
 
 **Pattern:**
 ```typescript

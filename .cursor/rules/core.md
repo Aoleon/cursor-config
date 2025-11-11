@@ -600,6 +600,54 @@ router.post('/api/users',
 
 **Référence:** `@.cursor/rules/senior-architect-oversight.md` - Workflow d'itération architecturale avec validation continue
 
+### 26. Contournement Système Unifié des Limites Cursor (IMPÉRATIF)
+
+**IMPÉRATIF:** L'agent DOIT surveiller et contourner automatiquement toutes les limites de Cursor (tool calls, contexte, MCP, fichiers, quotas) avec optimisation globale.
+
+**TOUJOURS:**
+- ✅ Surveiller toutes les limites simultanément (tool calls, contexte, MCP, fichiers, quotas)
+- ✅ Détecter approche de chaque limite
+- ✅ Prioriser contournements selon criticité
+- ✅ Appliquer contournements coordonnés
+- ✅ Optimiser globalement pour éviter conflits
+- ✅ Valider que contournements fonctionnent
+
+**Limites surveillées:**
+- Tool calls (< 1000) - Checkpointing automatique
+- Contexte tokens (< 200k/1M) - Max Mode, compression
+- Outils MCP (< 40) - Désactivation non essentiels
+- Taille fichiers (< 50KB) - Approche deux étapes
+- Édition multi-fichiers - Division en modules
+- Quotas mensuels - Mode économie, sélection modèle
+- Performance grands projets - `.cursorignore`, segmentation
+
+**Référence:** `@.cursor/rules/cursor-limits-workaround.md` - Système unifié de contournement (IMPÉRATIF)  
+**Référence:** `@.cursor/rules/tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (détails)
+
+## 27. Décomposition des Tâches (IMPÉRATIF)
+
+**IMPÉRATIF:** Décomposer automatiquement les tâches complexes en sous-tâches gérables selon les recommandations officielles de Cursor, avec critères de taille optimale, pensée séquentielle, Background Agent et listes structurées.
+
+**TOUJOURS:**
+- ✅ Décomposer tâches complexes avec critères de taille optimale (max 50 lignes, max 3 fichiers)
+- ✅ Utiliser pensée séquentielle pour structurer les sous-tâches
+- ✅ Générer listes de tâches structurées avec dépendances explicites
+- ✅ Identifier opportunités Background Agent pour tâches différées
+- ✅ Valider taille de chaque sous-tâche créée
+- ✅ Re-décomposer si sous-tâche trop complexe
+- ✅ Gérer dépendances entre sous-tâches explicitement
+
+**NE JAMAIS:**
+- ❌ Créer sous-tâches > 50 lignes de code
+- ❌ Créer sous-tâches > 3 fichiers modifiés
+- ❌ Ignorer dépendances entre sous-tâches
+- ❌ Ne pas valider taille avant création
+- ❌ Ne pas utiliser pensée séquentielle
+- ❌ Ne pas générer listes structurées avec dépendances
+- ❌ Ignorer opportunités Background Agent
+
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor
+
 ## 🔗 Références Essentielles
 
 - **Documentation projet:** `projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`

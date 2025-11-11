@@ -46,7 +46,7 @@ export class DateIntelligenceRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('DateIntelligenceRepository', db, eventBus);
   }
 
@@ -727,7 +727,7 @@ export class DateIntelligenceRepository extends BaseRepository<
       async () => {
         const now = new Date();
 
-        const updateData: any = {
+        const updateData: unknown = {
           status: 'resolved',
           actionBy: normalizedUserId,
           resolvedAt: now,
@@ -781,7 +781,7 @@ export class DateIntelligenceRepository extends BaseRepository<
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser getAllRules, getActiveRules, ou getDateAlerts
    */
-  async findAll(filters?: any, tx?: DrizzleTransaction): Promise<DateIntelligenceRule[]> {
+  async findAll(filt: unknown, unknown, tx?: DrizzleTransaction): Promise<DateIntelligenceRule[]> {
     throw new AppError('Use getAllRules(, 500), getActiveRules(), or getDateAlerts() instead');
   }
 
@@ -789,18 +789,18 @@ export class DateIntelligenceRepository extends BaseRepository<
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async findPaginated(
-    filters?: any,
-    pagination?: any,
-    sort?: any,
+    : unknown,s?: unknown,
+   : unknown,ation?: unknown,
+    sorunknown,unknown,
     tx?: DrizzleTransaction
-  ): Promise<any> {
+  ): Promise<unknown> {
     throw new AppError('Pagination not implemented for multi-entity repository - use specific methods with filtering', 500);
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser deleteRule ou deleteDateAlert
    */
-  async deleteMany(filters: any, tx?: DrizzleTransaction): Promise<number> {
+  asyn: unknown,teMany(funknown,unknown any, tx?: DrizzleTransaction): Promise<number> {
     throw new AppError('Use deleteRule(, 500) or deleteDateAlert() instead');
   }
 
@@ -813,8 +813,7 @@ export class DateIntelligenceRepository extends BaseRepository<
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques avec filtres
-   */
-  async count(filters?: any, tx?: DrizzleTransaction): Promise<number> {
+   *: unknown,ync coununknown,unknownrs?: any, tx?: DrizzleTransaction): Promise<number> {
     throw new AppError('Count not implemented for multi-entity repository', 500);
   }
 }

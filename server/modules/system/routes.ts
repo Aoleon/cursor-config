@@ -148,7 +148,7 @@ async function checkSendGridHealth() {
 // FACTORY FUNCTION - Dependency Injection Pattern
 // ========================================
 
-export function createSystemRoutes(storage: IStorage, eventBus: any) {
+export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
   const router = Router();
 
   // ========================================

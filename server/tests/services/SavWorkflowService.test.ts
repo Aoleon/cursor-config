@@ -47,7 +47,7 @@ describe('SavWorkflowService', () => {
         reference: 'SAV-2024-01-0001'
       };
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
       vi.mocked(mockStorage.createSavDemande).mockResolvedValue(mockDemande as SavDemande);
 
       const result = await service.createDemande(demandeData);

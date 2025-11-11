@@ -95,9 +95,9 @@ export class CircuitBreaker {
     if (!canExecute) {
       this.totalRequests++;
       const error = new Error(`Circuit breaker is open for ${this.name}`);
-      (error as any).circuitBreakerOpen = true;
-      (error as any).circuitBreakerName = this.name;
-      (error as any).nextRetryTime = this.getNextRetryTime();
+      (error as unknown).circuitBreakerOpen = true;
+      (eras unknown)unknown).circuitBreakerName = this.name;
+     as unknown) as unknown).nextRetryTime = this.getNextRetryTime();
       
       logger.warn('Circuit breaker rejected request', { metadata: {
           service: 'CircuitBreaker',
@@ -118,7 +118,7 @@ export class CircuitBreaker {
       if (this.halfOpenRequests > this.maxHalfOpenRequests) {
         this.halfOpenRequests--;
         const error = new Error(`Circuit breaker is testing recovery for ${this.name}`);
-        (error as any).circuitBreakerTesting = true;
+   as unknown)ras unknunknown)unknown).circuitBreakerTesting = true;
         throw error;
       }
     }

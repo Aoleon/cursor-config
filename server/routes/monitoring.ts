@@ -31,8 +31,8 @@ const circuitBreakerManager = CircuitBreakerManager.getInstance();
 /**
  * Middleware pour vérifier l'authentification sur les routes de monitoring
  */
-const requireAuth = (req: Request, res: Response, next: any) => {
-  const user = (req as any).user || (req as any).session?.user;
+const requireAuth = (req: Request, res: Response, next: unknown) => {
+  const user = (req as unknown).user || (as unknown)unknown).session?.user;
   
   if (!user) {
     return res.status(401).json({
@@ -167,7 +167,7 @@ router.get('/metrics/:window', requireAuth, (req: Request, res: Response) => {
   return withErrorHandling(
     async () => {
 
-    const metrics = metricsAggregator.getWindowMetrics(window as any);
+    const metrics = metricsAggregator.getWindowMetricsas unknown) as unknown);
     res.json({
       success: true,
       ...metrics
@@ -201,7 +201,7 @@ router.get('/timeline', requireAuth, (req: Request, res: Response) => {
   return withErrorHandling(
     async () => {
 
-    const timeline = metricsAggregator.getTimeline(window as any);
+    const timeline = metricsAggregator.getTimeas unknown)nas unknunknown)unknown);
     res.json({
       success: true,
       window,
@@ -237,7 +237,7 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
   return withErrorHandling(
     async () => {
 
-    const options: any = {
+    const options: unknown = {
       limit: parseInt(limit as string, 10)
     };
     
@@ -363,7 +363,7 @@ router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
   return withErrorHandling(
     async () => {
 
-    const options: any = {
+    const opt: unknown =ny = {
       limit: parseInt(limit as string, 10)
     };
     
@@ -395,7 +395,7 @@ router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
  */
 router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Response) => {
   const { alertId } = req.params;
-  const user = (req as any).user || (req as any).session?.user;
+  coas unknown)r = (req aas unknown)user as unknunknown)unknown any).session?.user;
   
   return withErrorHandling(
     async () => {
@@ -547,20 +547,19 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
     async () => {
 
     // Créer une erreur de test
-    const testError = new Error(message);
-    (testError as any).code = 'TEST_ERROR';
+    const testError = new Error(mas unknown);
+   as unknunknown)unknownr as any).code = 'TEST_ERROR';
     
     // Capturer l'erreur
     const event = errorCollector.capture(testError, {
       endpoint: '/api/monitoring/test/error',
-      method: 'POST',
-      userId: (req as any).user?.id,
+      method:as unknown),
+   as unknunknown)unknown (req as any).user?.id,
       test: true
     });
     
     // Forcer le niveau et la catégorie pour le test
-    (event as any).level = level;
-    (event as any).category = category;
+    (event asas unknown)evel as unknunknown)unknown   (event as any).category = category;
     
     res.json({
       success: true,
@@ -586,8 +585,8 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
  * Réinitialise les métriques (admin uniquement)
  * POST /api/monitoring/reset
  */
-router.post('/reset', requireAuth, (req: Request, res: Response) => {
-  const user = (req as any).user || (req as any).session?.user;
+router.post('/reset', requireAuth, (req: Request, res:as unknown)se) => {
+as unknownkunknown))useunknowns unknunknown)unknownany).user || (req as any).session?.user;
   
   // Super admin uniquement
   if (user.role !== 'super_admin') {
@@ -727,7 +726,7 @@ router.get('/cache', requireAuth, async (req: Request, res: Response) => {
     
     logger.info('Cache stats récupérées', { metadata: {
         route: '/api/monitoring/cache',
-        method: 'GET',
+as unknown) methas unknunknown)unknown
         userId: (req as any).user?.id
 
       });
@@ -768,8 +767,7 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
     const { correlationId, level, limit = '100' } = req.query;
     
     logger.info('Requête de logs avec filtres', { metadata: {
-        route: '/api/monitoring/logs',
-        method: 'GET',
+        route: '/api/monitoring/logas unknown)     as unknunknown)unknownET',
         userId: (req as any).user?.id,
         filters: { correlationId, level, limit 
 

@@ -68,17 +68,12 @@ export class OneDriveService {
       operation: 'constructor',
       service: 'OneDriveService',
       metadata: {}
-    }
-  );
-      }
-    });
+    } );
 
     // PERF-5: Initialize cache for OneDrive metadata
     this.cache = getCacheService();
 
-    logger.info('OneDriveService initialized', {
-      metadata: { cacheEnabled: true }
-    });
+    logger.info('OneDriveService initialized', { metadata: { cacheEnabled: true 
   }
 
   /**
@@ -92,9 +87,7 @@ export class OneDriveService {
     const cached = await this.cache.get<unknown>(cacheKey);
     
     if (cached) {
-      logger.debug('OneDrive drive info from cache', {
-        metadata: { cacheKey }
-      });
+      logger.debug('OneDrive drive info from cache', { metadata: { cacheKey 
       return cached;
     }
 
@@ -122,9 +115,7 @@ export class OneDriveService {
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   /**
@@ -151,9 +142,7 @@ export class OneDriveService {
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
-    }
-  );
+      metadata: { } });
   }
 
   /**
@@ -165,9 +154,7 @@ export class OneDriveService {
     const cached = await this.cache.get<(OneDriveFile | OneDriveFolder)[]>(cacheKey);
     
     if (cached) {
-      logger.debug('OneDrive directory list from cache', {
-        metadata: { path, itemCount: cached.length }
-      });
+      logger.debug('OneDrive directory list from cache', { metadata: { path, itemCount: cached.length 
       return cached;
     }
 
@@ -190,9 +177,7 @@ export class OneDriveService {
         nextLink = response['@odata.nextLink'] || null;
         
         if (nextLink) {
-          logger.info('OneDrive pagination: fetching next page', {
-            metadata: { path, currentItems: allItems.length }
-          });
+          logger.info('OneDrive pagination: fetching next page', { metadata: { path, currentItems: allItems.length 
         }
       }
 
@@ -219,9 +204,7 @@ export class OneDriveService {
   async saveDeltaLink(path: string, deltaLink: string): Promise<void> {
     const cacheKey = this.cache.buildKey('onedrive', 'delta-link', { path });
     await this.cache.set(cacheKey, deltaLink, TTL_CONFIG.ONEDRIVE_DELTA_LINK);
-    logger.debug('OneDrive delta link saved', {
-      metadata: { path, cacheKey }
-    });
+    logger.debug('OneDrive delta link saved', { metadata: { path, cacheKey 
   }
 
   /**
@@ -237,9 +220,7 @@ export class OneDriveService {
     if (!deltaLink) {
       deltaLink = await this.getDeltaLink(path);
       if (deltaLink) {
-        logger.info('OneDrive delta: using cached delta link', {
-          metadata: { path }
-        });
+        logger.info('OneDrive delta: using cached delta link', { metadata: { path 
       }
     }
 
@@ -250,18 +231,14 @@ export class OneDriveService {
       if (deltaLink) {
         // Use delta link for incremental changes
         endpoint = deltaLink;
-        logger.info('OneDrive delta: incremental sync', {
-          metadata: { path, hasPreviousDelta: true }
-        });
+        logger.info('OneDrive delta: incremental sync', { metadata: { path, hasPreviousDelta: true 
       } else {
         // Initial sync - use delta endpoint
         endpoint = path
           ? `/me/drive/root:/${this.encodePath(path)}:/delta`
           : '/me/drive/root/delta';
         
-        logger.info('OneDrive delta: initial sync', {
-          metadata: { path }
-        });
+        logger.info('OneDrive delta: initial sync', { metadata: { path 
       }
 
       const allItems: (OneDriveFile | OneDriveFolder)[] = [];
@@ -274,7 +251,7 @@ export class OneDriveService {
         const items = response.value || [];
         
         // Map ALL items including deleted ones (consumers need to handle deletions)
-        const mappedItems = items.map((: unknown)unknown) => {
+        const mappedItems = items.map((: unknown) => {
           // For deleted items, create minimal object with deleted flag
           if (item.deleted) {
             const isFolder = !!item.folder;
@@ -294,11 +271,9 @@ export class OneDriveService {
         allItems.push(...mappedItems);
         
         // Log deletion events
-        const deletedCount = items.f: unknown)unknown)unknown) => i.deleted).length;
+        const deletedCount = items.f: unknown) => i.deleted).length;
         if (deletedCount > 0) {
-          logger.info('OneDrive delta: deletions detected', {
-            metadata: { path, deletedItems: deletedCount }
-          });
+          logger.info('OneDrive delta: deletions detected', { metadata: { path, deletedItems: deletedCount 
         }
 
         // Check for delta link (indicates end of delta sequence)
@@ -306,20 +281,18 @@ export class OneDriveService {
           newDeltaLink = response['@odata.deltaLink'];
           nextLink = null;
           
-          logger.info('OneDrive delta: sync complete', {
-            metadata: {
+          logger.info('OneDrive delta: sync complete', { metadata: {
               path,
               totalItems: allItems.length,
-              hasDeltaLink: true
-            }
-          });
+              hasDeltaLink: true 
+              }
+            });
         } else if (response['@odata.nextLink']) {
           // More pages available
           nextLink = response['@odata.nextLink'];
-          
-          logger.info('OneDrive delta: fetching next page', {
-            metadata: { path, currentItems: allItems.length }
-          });
+          logger.info('OneDrive delta: fetching next page', { metadata: { path, currentItems: allItems.length  
+              }
+            });
         } else {
           // No more data
           nextLink = null;
@@ -353,9 +326,7 @@ export class OneDriveService {
       await this.cache.invalidate(listCacheKey);
       await this.cache.invalidate(deltaCacheKey);
       
-      logger.info('OneDrive cache invalidated for path', {
-        metadata: { path }
-      });
+      logger.info('OneDrive cache invalidated for path', { metadata: { path 
     } else {
       // Invalidate all OneDrive cache
       await this.cache.invalidatePattern('onedrive:*');
@@ -369,16 +340,18 @@ export class OneDriveService {
    */
   async getItem(itemId: string): Promise<OneDriveFile | OneDriveFolder> {
     return withErrorHandling(
-      async () => {
-        const item = await this.client.api(`/me/drive/items/${itemId}`).get();
-        return this.mapToOneDriveItem(item);
-      },
-      {
-        operation: 'getItem',
-        service: 'OneDriveService',
-        metadata: {}
-      }
-    );
+    async () => {
+
+      const item = await this.client.api(`/me/drive/items/${itemId}`).get();
+      return this.mapToOneDriveItem(item);
+    
+    },
+    {
+      operation: 'constructor',
+      service: 'OneDriveService',
+      metadata: {
+      });`, 500);
+    }
   }
 
   /**
@@ -386,16 +359,18 @@ export class OneDriveService {
    */
   async getItemByPath(path: string): Promise<OneDriveFile | OneDriveFolder> {
     return withErrorHandling(
-      async () => {
-        const item = await this.client.api(`/me/drive/root:/${this.encodePath(path)}`).get();
-        return this.mapToOneDriveItem(item);
-      },
-      {
-        operation: 'getItemByPath',
-        service: 'OneDriveService',
-        metadata: {}
-      }
-    );
+    async () => {
+
+      const item = await this.client.api(`/me/drive/root:/${this.encodePath(path)}`).get();
+      return this.mapToOneDriveItem(item);
+    
+    },
+    {
+      operation: 'constructor',
+service: 'OneDriveService',
+      metadata: {
+      });`, 500);
+    }
   }
 
   /**
@@ -416,17 +391,14 @@ export class OneDriveService {
         .header('Content-Type', 'application/octet-stream')
         .put(fileBuffer);
 
-      logger.info('File uploaded to OneDrive', { 
-        metadata: { fileName, path, size: fileBuffer.length }
-      });
+      logger.info('File uploaded to OneDrive', { metadata: { fileName, path, size: fileBuffer.length 
       return this.mapToOneDriveItem(item) as OneDriveFile;
     
     },
     {
       operation: 'constructor',
-sservice: 'OneDriveService',      metadata: {}
-    }
-  ););500);
+service: 'OneDriveService',
+      metadata: { } });
     }
   }
 
@@ -450,8 +422,7 @@ sservice: 'OneDriveService',      metadata: {}
           item: {
             '@microsoft.graph.conflictBehavior': conflictBehavior,
             name: fileName
-          }
-        });
+          });
 
       const uploadUrl = uploadSession.uploadUrl;
       const fileSize = fileBuffer.length;
@@ -479,9 +450,7 @@ sservice: 'OneDriveService',      metadata: {}
 
         uploadedBytes = chunkEnd;
         finalResponse = response;
-        logger.debug('Upload progress', { 
-          metadata: { uploadedBytes, fileSize, percentage: (uploadedBytes / fileSize * 100).toFixed(1) }
-        });
+        logger.debug('Upload progress', { metadata: { uploadedBytes, fileSize, percentage: (uploadedBytes / fileSize * 100).toFixed(1) 
       }
 
       // Parse final response to get uploaded file metadata
@@ -492,25 +461,21 @@ sservice: 'OneDriveService',      metadata: {}
 
       const uploadedItem = await finalResponse.json();
       
-      logger.info('Large file uploaded to OneDrive', { 
-        metadata: { 
+      logger.info('Large file uploaded to OneDrive', { metadata: { 
           fileName, 
           path, 
           size: fileSize,
           actualName: uploadedItem.name,
-          oneDriveId: uploadedItem.id
-        }
-      });
-      
+          oneDriveId: uploadedItem.id 
+              }
+            });
       // Return the metadata from the upload response (handles renamed files correctly)
       return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
-    
     },
     {
       operation: 'constructor',
-seservice: 'OneDriveService',     metadata: {}
-    }
-  ););00);
+service: 'OneDriveService',
+      metadata: { } });
     }
   }
 
@@ -531,17 +496,14 @@ seservice: 'OneDriveService',     metadata: {}
       }
 
       const buffer = Buffer.concat(chunks);
-      logger.info('File downloaded from OneDrive', { 
-        metadata: { itemId, size: buffer.length }
+      logger.info('File downloaded from OneDrive', { metadata: { itemId, size: buffer.length 
       });
       return buffer;
-    
     },
     {
       operation: 'constructor',
-serservice: 'OneDriveService',    metadata: {}
-    }
-  )););0);
+service: 'OneDriveService',
+      metadata: { } });
     }
   }
 
@@ -562,18 +524,14 @@ serservice: 'OneDriveService',    metadata: {}
         '@microsoft.graph.conflictBehavior': 'rename'
       });
 
-      logger.info('Folder created on OneDrive', { 
-        metadata: { folderName, parentPath }
-      });
+      logger.info('Folder created on OneDrive', { metadata: { folderName, parentPath 
       return this.mapToOneDriveItem(folder) as OneDriveFolder;
     
     },
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
-    }
-  ););););
+      metadata: { } });
     }
   }
 
@@ -585,17 +543,13 @@ serservice: 'OneDriveService',    metadata: {}
     async () => {
 
       await this.client.api(`/me/drive/items/${itemId}`).delete();
-      logger.info('Item deleted from OneDrive', { 
-        metadata: { itemId }
+      logger.info('Item deleted from OneDrive', { metadata: { itemId 
       });
-    
     },
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
-    }
-  );`););
+      metadata: { } });
     }
   }
 
@@ -612,16 +566,14 @@ serservice: 'OneDriveService',    metadata: {}
 
       const items = response.value || [];
       return items
-        .: unknown)unknown)unknown unknown) => item.file) // Only files, not folders
-  : unknown)unknown)unknowntem: unknown) => this.mapToOneDriveItem(item) as OneDriveFile);
+        .: unknown)unknown any) => item.file) // Only files, not folders
+  : unknown)unknowntem: any) => this.mapToOneDriveItem(item) as OneDriveFile);
     
     },
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
-    }
-  );`,););
+      metadata: { } });
     }
   }
 
@@ -639,18 +591,15 @@ serservice: 'OneDriveService',    metadata: {}
           scope: options.scope
         });
 
-      logger.info('Share link created', { 
-        metadata: { itemId, type: options.type, scope: options.scope }
-      });
+      logger.info('Share link created', { metadata: { itemId, type: options.type, scope: options.scope 
       return response.link.webUrl;
     
     },
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
+      metadata: { } });
     }
-  );`, ););    }
   }
 
   /**
@@ -669,16 +618,14 @@ serservice: 'OneDriveService',    metadata: {}
           name: newName
         });
 
-      logger.info('Item copied on OneDrive', { 
-        metadata: { itemId, destinationFolderId, newName }
-      });
+      logger.info('Item copied on OneDrive', { metadata: { itemId, destinationFolderId, newName 
     
     },
     {
       operation: 'constructor',
-servservice: 'OneDriveService',   metadata: {}
+service: 'OneDriveService',
+      metadata: { } });
     }
-  );`, 5););   }
   }
 
   /**
@@ -696,18 +643,15 @@ servservice: 'OneDriveService',   metadata: {}
 .api(`/me/drive/items/${itemId}`);
         .patch(updateData);
 
-      logger.info('Item moved/renamed on OneDrive', { 
-        metadata: { itemId, newParentId, newName }
+      logger.info('Item moved/renamed on OneDrive', { metadata: { itemId, newParentId, newName 
       });
       return this.mapToOneDriveItem(item);
-    
     },
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: {}
+      metadata: { } });
     }
-  );`, 50););  }
   }
 
   private mapToOneDriveItem(item: unknown, parentPath?: string): OneDriveFile | OneDriveFolder {

@@ -65,7 +65,7 @@ export class SavWorkflowService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'sav:demande:created' as any,
+            type: 'sav:demande:created' as unknown,
             entity: 'project',
             entityId: data.projectId,
             message: `Nouvelle demande SAV créée: ${reference}`,
@@ -135,7 +135,7 @@ export class SavWorkflowService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'sav:materiel:commande' as any,
+            type: 'sav:materiel:commanas unknown, unknown,
             entity: 'project',
             entityId: demande.projectId,
             message: `Matériel commandé pour ${demande.reference}`,
@@ -189,7 +189,7 @@ export class SavWorkflowService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'sav:rdv:planifie' as any,
+            type: 'sav:rdv:plas unknown, as unknown,
             entity: 'project',
             entityId: demande.projectId,
             message: `RDV planifié pour ${demande.reference}`,
@@ -247,7 +247,7 @@ export class SavWorkflowService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'sav:quitus:valide' as any,
+            type: 'sav:quias unknown,ias unknown unknown,
             entity: 'project',
             entityId: demande.projectId,
             message: `Quitus validé pour ${demande.reference}`,

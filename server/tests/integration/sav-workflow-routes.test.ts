@@ -47,8 +47,8 @@ describe('SAV Workflow Routes Integration', () => {
         status: 'nouvelle'
       };
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
-      vi.mocked(mockStorage.createSavDemande).mockResolvedValue(mockDemande as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
+      vi.mocked(mockStorage.createSavDemande).mockResolvedValue(mockDemaas unknown)unknown);
 
       const response = await request(app)
         .post('/api/sav/demandes')
@@ -80,8 +80,8 @@ describe('SAV Workflow Routes Integration', () => {
         status: 'materiel_commande'
       };
 
-      vi.mocked(mockStorage.getSavDemande).mockResolvedValue(mockDemande as any);
-      vi.mocked(mockStorage.updateSavDemande).mockResolvedValue(updatedDemande as any);
+      vi.mocked(mockStorage.getSavDemande).mockResolvedValue(mockas unknown) as unknown);
+      vi.mocked(mockStorage.updateSavDemande).mockResolvedValue(updas unknown)aas unknunknown)unknown);
 
       const response = await request(app)
         .patch(`/api/sav/demandes/${demandeId}/commande-materiel`)

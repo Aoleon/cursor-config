@@ -40,7 +40,7 @@ export interface ExtractedFields {
   amount?: number;
   address?: string;
   items?: ExtractedItem[];
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
 }
 
 export interface ExtractedItem {
@@ -70,7 +70,7 @@ export interface OCRPattern {
 // PDF generation types
 export interface PDFGenerationRequest {
   template: PDFTemplate;
-  data: any;
+  data: unknown;
   options?: PDFOptions;
 }
 
@@ -87,14 +87,14 @@ export interface PDFTemplate {
 
 export interface PDFSection {
   type: 'text' | 'table' | 'image' | 'chart' | 'pagebreak';
-  content: any;
+  con: unknown;unknown;
   position?: {
     x?: number;
     y?: number;
     width?: number;
     height?: number;
   };
-  style?: any;
+: unknown;unknown;unknown;
 }
 
 export interface PDFStyles {
@@ -111,14 +111,12 @@ export interface PDFStyles {
 }
 
 export interface PDFHeader {
-  height?: number;
-  content: any;
+  height?: numbe: unknown;unknown;unknown any;
   showOnFirstPage?: boolean;
 }
 
 export interface PDFFooter {
-  height?: number;
-  content: any;
+  height?: n: unknown;unknown;unknownent: any;
   showPageNumber?: boolean;
 }
 
@@ -152,7 +150,7 @@ export interface DocumentUploadRequest {
   category?: string;
   entityType?: 'ao' | 'offer' | 'project' | 'supplier';
   entityId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<st, unknown>unknown>;
 }
 
 export interface DocumentAnalysisRequest {
@@ -194,8 +192,7 @@ export interface DocumentAnalysisResult {
     isValid: boolean;
     errors?: string[];
     warnings?: string[];
-  };
-  extractedData?: any;
+ : unknown;unknown;unknownedData?: any;
 }
 
 export interface DocumentSection {
@@ -217,10 +214,8 @@ export interface Document {
   entityId?: string;
   storageUrl?: string;
   publicUrl?: string;
-  metadata?: Record<string, any>;
-  ocrProcessed?: boolean;
-  ocrData?: any;
-  analysisData?: any;
+  metadata?: Recor, unknownnown>unknown>any>;
+  ocrProcess: unknown;ooleunknown;  oc: unknown;unknown;unknown  analysisData?: any;
   createdAt: Date;
   createdBy?: string;
   updatedAt?: Date;
@@ -234,7 +229,7 @@ export interface ObjectUploadRequest {
   bucket?: string;
   path?: string;
   isPublic?: boolean;
-  metadata?: Record<string, any>;
+  metadata?:unknown unknown>unknown>ng, any>;
 }
 
 export interface ObjectUploadResult {
@@ -253,7 +248,7 @@ export interface ObjectMetadata {
   size: number;
   etag?: string;
   lastModified: Date;
-  metadata?: Record<string, any>;
+  metadaunknown unknown>unknown>string, any>;
 }
 
 export interface SignedUrlRequest {
@@ -277,7 +272,7 @@ export interface DocumentTemplate {
   category?: string;
   content: string;
   variables?: TemplateVariable[];
-  metadata?: Record<string, any>;
+  meunknown unknown>unknown>ord<string, any>;
   isActive: boolean;
   version?: number;
   createdAt: Date;
@@ -289,16 +284,15 @@ export interface DocumentTemplate {
 export interface TemplateVariable {
   name: string;
   type: 'text' | 'number' | 'date' | 'boolean' | 'list' | 'object';
-  required?: boolean;
+  req: unknunknown;unknown;olean;
   defaultValue?: any;
   description?: string;
   format?: string;
 }
 
 export interface TemplateRenderRequest {
-  templateId: string;
-  data: Record<string, any>;
-  format?: 'pdf' | 'html' | 'text';
+  templateId:unknownrin, unknown>unknown> Record<string, any>;
+  format?:: unknownnown;unknown;html' | 'text';
   options?: any;
 }
 
@@ -363,7 +357,7 @@ export interface OCRService {
 
 export interface PDFGenerator {
   generateFromTemplate(request: PDFGenerationRequest): Promise<PDFGenerationResult>;
-  generateDPGF(data: any, options?: PDFOptions): Promise<Buffer>;
-  generateReport(data: any, template: PDFTemplate): Promise<Buffer>;
+  generateDPGF(data: unknown, options?: PDFOptions): Promise<Buffer>;
+  generateReport(: unknown, unknown, template: PDFTemplate): Promise<Buffer>;
   merge(pdfs: Buffer[], options?: PDFOptions): Promise<Buffer>;
 }

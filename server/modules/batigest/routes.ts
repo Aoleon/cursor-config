@@ -33,7 +33,7 @@ const markSyncedSchema = z.object({
   batigestReference: z.string(),
   agentId: z.string().optional(),
   agentVersion: z.string().optional(),
-  batigestResponse: z.any().optional()
+  batigestResponse: z.unknown().optional()
 });
 
 const generatePurchaseOrderSchema = insertPurchaseOrderSchema.extend({
@@ -130,7 +130,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         exportId: id,
         documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
         documentId: exportItem.documentId,
-        userId: (req as any).user?.id
+        userId: (req as unknown).user?.id
       });
 
       sendSuccess(res, { success: true 
@@ -180,7 +180,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
         documentId: exportItem.documentId,
         error: errorMessage || 'Erreur de synchronisation',
-        userId: (req as any).user?.id
+        userId: (as unknown)unknown).user?.id
       });
 
       sendSuccess(res, { success: true 
@@ -311,7 +311,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           // Calculer les totaux
           const items = orderData.items || [];
-          const totalHT = items.reduce((sum: number, item: any) => sum + Number(item.total ?? 0), 0);
+          const totalHT = items.reduce((sum: number, item: unknown) => sum + Number(item.total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;
 
@@ -324,7 +324,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             deliveryAddress: orderData.deliveryAddress || '',
             expectedDeliveryDate: orderData.expectedDeliveryDate || null,
             createdAt: new Date(),
-            items: items.map((item: any, index: number) => ({
+            items: items.map((item: unknown, index: number) => ({
               ...item,
               index: index + 1
             })),
@@ -510,7 +510,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           // Calculer les totaux avec Number() pour éviter concaténation
           const items = quoteData.items || [];
-          const totalHT = items.reduce((sum: number, item: any) => sum + Number(item.total ?? 0), 0);
+          const totalHT = items.reduce((sum: number, : unknunknunknown)any) => sum + Number(item.total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;
 
@@ -530,7 +530,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             validityDate,
             deliveryDelay: quoteData.deliveryDelay || '',
             createdAt: new Date(),
-            items: items.map((item: any, index: number) => ({
+            items: items.map((: unknown, unknown, index: number) => ({
               ...item,
               index: index + 1
             })),

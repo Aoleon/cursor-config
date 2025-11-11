@@ -80,7 +80,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters } });
+      logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters 
+
+      });
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -146,9 +148,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -164,7 +166,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters } });
+      logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters 
+
+      });
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -230,9 +234,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -246,7 +250,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters } });
+      logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters 
+
+      });
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -296,9 +302,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -314,7 +320,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getConversionStats - SQL aggregation', { metadata: { period, filters } });
+      logger.debug('[AnalyticsStorage] getConversionStats - SQL aggregation', { metadata: { period, filters 
+
+      });
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -418,9 +426,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -433,7 +441,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getProjectDelayStats - SQL aggregation', { metadata: { period } });
+      logger.debug('[AnalyticsStorage] getProjectDelayStats - SQL aggregation', { metadata: { period 
+
+      });
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -505,9 +515,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -520,7 +530,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getTeamPerformanceStats - SQL aggregation', { metadata: { period } });
+      logger.debug('[AnalyticsStorage] getTeamPerformanceStats - SQL aggregation', { metadata: { period 
+
+      });
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -600,9 +612,9 @@ export class AnalyticsStorage {
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -619,7 +631,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity } });
+      logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity 
+
+      });
 
       // Thresholds by severity
       const thresholds = {
@@ -648,19 +662,27 @@ export class AnalyticsStorage {
           )
         );
 
-      return delayedProjects.map(p => ({
+      return delayedProjects.map(p  => ({
         ...p,
         delayDays: Number(p.delayDays),
         budget: Number(p.budget || 0)
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
     
     },
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -677,7 +699,9 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period } });
+      logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period 
+
+      });
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -700,19 +724,27 @@ export class AnalyticsStorage {
         )
         .groupBy(sql`COALESCE(${offers.menuiserieType}, 'autres')`);
 
-      return categoryStats.map(stat => ({
+      return categoryStats.map(stat  => ({
         category: stat.category || 'autres',
         revenue: Number(stat.revenue || 0),
         projectCount: Number(stat.projectCount || 0)
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
     
     },
     {
       operation: 'getProjectStats',
       service: 'analytics',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 }
 

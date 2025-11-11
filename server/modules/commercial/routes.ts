@@ -153,11 +153,11 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           );
       
       const aos = await storage.getAos();
-      const aosEtude = aos.filter((ao: any) => 
+      const aosEtude = aos.filter((ao: unknown) => 
         ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
       );
       
-      const enrichedAos = aosEtude.map((ao: any) => ({
+      const enrichedAos = aosEtude.map: unknown)unknown) => ({
         ...ao,
         cctpAnalyzed: Math.random() > 0.3,
         technicalDetailsComplete: Math.random() > 0.4,
@@ -223,7 +223,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         throw new ValidationError('Validation error', validationResult.error.issues);
       }
       
-      let aoData: any = { ...validationResult.data };
+      let aoData: unknown = { ...validationResult.data };
       
       // Si une date de sortie AO est fournie, calculer automatiquement la date limite de remise
       if (aoData.dateSortieAO) {
@@ -2144,7 +2144,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           // Note: getAoLots prend un aoId, donc on doit récupérer tous les lots et filtrer
           // Pour l'instant, on utilise une approche simplifiée
           const allAOs = await storage.getAos();
-          let lot: any = null;
+          let: unknown =ny = null;
           
           // Chercher le lot dans tous les AOs
           for (const ao of allAOs) {

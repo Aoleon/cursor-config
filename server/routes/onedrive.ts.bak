@@ -16,8 +16,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 100 * 1024 * 1024 // 100MB max
-  }
-});
+  });
 
 // ========================================
 // MIDDLEWARE D'AUTHENTIFICATION
@@ -50,8 +49,14 @@ router.get('/info', requireAuth, asyncHandler(async (req: Request, res: Response
   res.json({
     success: true,
     data: driveInfo
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // LISTE DES FICHIERS ET DOSSIERS
@@ -72,9 +77,14 @@ router.get('/list', requireAuth, asyncHandler(async (req: Request, res: Response
       path,
       items,
       count: items.length
-    }
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * Récupère un fichier/dossier par ID
@@ -88,8 +98,14 @@ router.get('/item/:itemId', requireAuth, asyncHandler(async (req: Request, res: 
   res.json({
     success: true,
     data: item
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * Récupère un fichier/dossier par chemin
@@ -110,8 +126,14 @@ router.get('/item-by-path', requireAuth, asyncHandler(async (req: Request, res: 
   res.json({
     success: true,
     data: item
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // UPLOAD
@@ -134,14 +156,16 @@ router.post('/upload', requireAuth, upload.single('file'), asyncHandler(async (r
   const path = (req.body.path as string) || '';
   const conflictBehavior = (req.body.conflictBehavior as 'rename' | 'replace' | 'fail') || 'rename';
   
-  logger.info('Uploading file to OneDrive', {
-    metadata: {
+  logger.info('Uploading file to OneDrive', { metadata: {
       fileName: file.originalname,
       size: file.size,
       path,
       conflictBehavior
-    }
-  });
+    
+            })
+
+    
+          );
   
   // Choisir la méthode d'upload selon la taille
   const uploadedFile = file.size < 4 * 1024 * 1024
@@ -160,8 +184,14 @@ router.post('/upload', requireAuth, upload.single('file'), asyncHandler(async (r
     success: true,
     data: uploadedFile,
     message: 'Fichier uploadé avec succès'
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // DOWNLOAD
@@ -195,7 +225,12 @@ router.get('/download/:itemId', requireAuth, asyncHandler(async (req: Request, r
   res.setHeader('Content-Length', fileBuffer.length);
   
   res.send(fileBuffer);
-}));
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // DOSSIERS
@@ -222,8 +257,14 @@ router.post('/folder', requireAuth, asyncHandler(async (req: Request, res: Respo
     success: true,
     data: folder,
     message: 'Dossier créé avec succès'
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // RECHERCHE
@@ -251,9 +292,14 @@ router.get('/search', requireAuth, asyncHandler(async (req: Request, res: Respon
       query,
       files,
       count: files.length
-    }
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // PARTAGE
@@ -291,7 +337,12 @@ router.post('/share/:itemId', requireAuth, asyncHandler(async (req: Request, res
     },
     message: 'Lien de partage créé avec succès'
   });
-}));
+            }
+
+                      }
+
+
+                    }));
 
 // ========================================
 // GESTION DES FICHIERS
@@ -309,8 +360,14 @@ router.delete('/item/:itemId', requireAuth, asyncHandler(async (req: Request, re
   res.json({
     success: true,
     message: 'Élément supprimé avec succès'
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * Copie un fichier ou dossier
@@ -333,8 +390,14 @@ router.post('/copy/:itemId', requireAuth, asyncHandler(async (req: Request, res:
   res.json({
     success: true,
     message: 'Copie en cours (opération asynchrone)'
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 /**
  * Déplace ou renomme un fichier ou dossier
@@ -358,7 +421,13 @@ router.patch('/item/:itemId', requireAuth, asyncHandler(async (req: Request, res
     success: true,
     data: updatedItem,
     message: 'Élément mis à jour avec succès'
-  });
-}));
+
+        });
+            }
+
+                      }
+
+
+                    }));
 
 export default router;

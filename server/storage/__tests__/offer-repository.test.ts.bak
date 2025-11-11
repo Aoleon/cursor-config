@@ -129,7 +129,15 @@ describe('OfferRepository Integration Tests', () => {
     it('should find offer by id', async () => {
       const created = await repository.create(createValidOfferData({
         intituleOperation: 'Test Find By ID',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(created.id);
 
       const found = await repository.findById(created.id);
@@ -144,7 +152,15 @@ describe('OfferRepository Integration Tests', () => {
       const created = await repository.create(createValidOfferData({
         intituleOperation: 'Test Update',
         status: 'brouillon',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(created.id);
 
       const updated = await repository.update(created.id, {
@@ -160,7 +176,15 @@ describe('OfferRepository Integration Tests', () => {
     it('should delete an offer', async () => {
       const created = await repository.create(createValidOfferData({
         intituleOperation: 'Test Delete',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
       await repository.delete(created.id);
 
@@ -185,13 +209,29 @@ describe('OfferRepository Integration Tests', () => {
       const offer1 = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Test 1',
         status: 'brouillon',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer1.id);
 
       const offer2 = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Test 2',
         status: 'en_cours_chiffrage',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer2.id);
 
       const brouillons = await repository.findAll({ status: 'brouillon' });
@@ -210,7 +250,15 @@ describe('OfferRepository Integration Tests', () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Responsible User',
         responsibleUserId: testUserId,
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({ responsibleUserId: testUserId });
@@ -224,7 +272,15 @@ describe('OfferRepository Integration Tests', () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Filter AO',
         aoId: testAoId,
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({ aoId: testAoId });
@@ -238,7 +294,15 @@ describe('OfferRepository Integration Tests', () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Menuiserie Type',
         menuiserieType: 'porte',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({ menuiserieType: 'porte' });
@@ -253,7 +317,15 @@ describe('OfferRepository Integration Tests', () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Search Test',
         reference: uniqueString,
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({ search: uniqueString });
@@ -269,7 +341,15 @@ describe('OfferRepository Integration Tests', () => {
 
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Filter Date Range',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({
@@ -287,7 +367,15 @@ describe('OfferRepository Integration Tests', () => {
         status: 'brouillon',
         responsibleUserId: testUserId,
         menuiserieType: 'fenetre',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const results = await repository.findAll({
@@ -317,7 +405,15 @@ describe('OfferRepository Integration Tests', () => {
       for (let i = 0; i < 15; i++) {
         const offer = await repository.create(createValidOfferData({
           intituleOperation: `Pagination Test ${i}`,
-        }));
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
         offerIds.push(offer.id);
       }
       createdOfferIds.push(...offerIds);
@@ -351,10 +447,26 @@ describe('OfferRepository Integration Tests', () => {
 
       const offer1 = await repository.create(createValidOfferData({
         intituleOperation: 'Count Test 1',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       const offer2 = await repository.create(createValidOfferData({
         intituleOperation: 'Count Test 2',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer1.id, offer2.id);
 
       const countAfter = await repository.count({ responsibleUserId: testUserId });
@@ -393,8 +505,8 @@ describe('OfferRepository Integration Tests', () => {
 
   describe('EventBus Integration', () => {
     it('should emit offers:created event', async () => {
-      const eventPromise = new Promise<unknown>((resolve) => {
-        eventBus.once('event', (event: unknown) => {
+      const eventPromise = new Promise<any>((resolve) => {
+        eventBus.once('event', (event: any) => {
           if (event.entity === 'offers' && event.type === 'created') {
             resolve(event);
           }
@@ -403,7 +515,15 @@ describe('OfferRepository Integration Tests', () => {
 
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'EventBus Create Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const event = await Promise.race([
@@ -418,11 +538,19 @@ describe('OfferRepository Integration Tests', () => {
     it('should emit offers:updated event', async () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'EventBus Update Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
-      const eventPromise = new Pro<unknown>unknown>((resolve) => {
-        eventBus.once('event', (e: unknown)unknown) => {
+      const eventPromise = new Promise<any>((resolve) => {
+        eventBus.once('event', (event: any) => {
           if (event.entity === 'offers' && event.type === 'updated') {
             resolve(event);
           }
@@ -443,10 +571,18 @@ describe('OfferRepository Integration Tests', () => {
     it('should emit offers:deleted event', async () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'EventBus Delete Test',
-      }));
+            }
 
-      const eventPromise = new<unknown>unknown>unknown>((resolve) => {
-        eventBus.once('event': unknown)unknunknown)any) => {
+                      }
+
+
+                                }
+
+
+                              }));
+
+      const eventPromise = new Promise<any>((resolve) => {
+        eventBus.once('event', (event: any) => {
           if (event.entity === 'offers' && event.type === 'deleted') {
             resolve(event);
           }
@@ -534,7 +670,15 @@ describe('OfferRepository Integration Tests', () => {
     it('should normalize UUIDs correctly (uppercase to lowercase)', async () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'UUID Normalization Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const uppercaseId = offer.id.toUpperCase();
@@ -559,7 +703,15 @@ describe('OfferRepository Integration Tests', () => {
     it('should handle exists() method correctly', async () => {
       const offer = await repository.create(createValidOfferData({
         intituleOperation: 'Exists Test',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       createdOfferIds.push(offer.id);
 
       const exists = await repository.exists(offer.id);
@@ -576,11 +728,27 @@ describe('OfferRepository Integration Tests', () => {
       const offer1 = await repository.create(createValidOfferData({
         intituleOperation: uniqueTag,
         status: 'brouillon',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       const offer2 = await repository.create(createValidOfferData({
         intituleOperation: uniqueTag,
         status: 'brouillon',
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
 
       const deletedCount = await repository.deleteMany({
         search: uniqueTag,
@@ -598,7 +766,15 @@ describe('OfferRepository Integration Tests', () => {
       for (let i = 0; i < 5; i++) {
         batchData.push(createValidOfferData({
           intituleOperation: `Batch Create ${i}`,
-        }));
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
       }
 
       const created = await repository.createMany(batchData);

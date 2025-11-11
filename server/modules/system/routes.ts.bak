@@ -191,8 +191,7 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
     
     const isHealthy = databaseHealth.status === 'healthy';
     
-    logger.info('[Health] Health check effectué', {
-      metadata: {
+    logger.info('[Health] Health check effectué', { metadata: {
         route: '/api/health',
         method: 'GET',
         status: health.status,
@@ -201,12 +200,22 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
           monday: mondayHealth.status,
           openai: openaiHealth.status,
           sendgrid: sendgridHealth.status
-        }
-      }
-    });
+
+            })
+
+
+          );
     
     res.status(isHealthy ? 200 : 503).json(health);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // USER ROUTES
@@ -214,16 +223,26 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
 
   router.get("/api/users", isAuthenticated, asyncHandler(async (req, res) => {
     const users = await storage.getUsers();
-    logger.info('[Users] Liste utilisateurs récupérée', { 
-      metadata: { 
+    logger.info('[Users] Liste utilisateurs récupérée', { metadata: { 
         route: '/api/users',
         method: 'GET',
         count: users.length,
         userId: req.user?.id
-      }
-    });
+
+            })
+
+
+          );
     res.json(users);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   router.get("/api/users/:id", 
     isAuthenticated, 
@@ -234,8 +253,9 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
         throw createError.notFound('Utilisateur', req.params.id);
       }
       sendSuccess(res, user);
-    })
-  );
+          }
+        })
+      );
 
   // ========================================
   // GLOBAL SEARCH ROUTE
@@ -323,8 +343,7 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
         )
         .limit(limitNum);
 
-      logger.info('[Search] Global search effectuée', {
-        metadata: {
+      logger.info('[Search] Global search effectuée', { metadata: {
           route: '/api/search/global',
           method: 'GET',
           query: searchTerm,
@@ -332,9 +351,11 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
             aos: matchingAos.length,
             offers: matchingOffers.length,
             projects: matchingProjects.length
-          }
-        }
-      });
+
+            })
+
+
+          );
 
       res.json({
         success: true,
@@ -343,10 +364,11 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
           offers: matchingOffers,
           projects: matchingProjects,
           total: matchingAos.length + matchingOffers.length + matchingProjects.length
-        }
-      });
-    })
-  );
+
+            });
+          }
+        })
+      );
 
   // ========================================
   // OBJECT STORAGE ROUTES
@@ -358,13 +380,19 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
-      logger.info('[ObjectStorage] URL upload générée', { 
-        metadata: { userId: req.user?.id } 
-      });
+      logger.info('[ObjectStorage] URL upload générée', { metadata: { userId: req.user?.id 
+
+            })
+ 
+
+          );
       
-      res.json({ success: true, data: { uploadURL } });
-    })
-  );
+      res.json({ success: true, data: { uploadURL 
+
+            });
+          }
+        })
+      );
 
   router.get("/api/objects/:objectPath/*splat", 
     isAuthenticated, 
@@ -378,21 +406,24 @@ export function createSystemRoutes(storage: IStorage, eventBus: any) {
         throw new NotFoundError("File not found");
       }
       
-      logger.info('[ObjectStorage] Objet servi', { 
-        metadata: { objectPath, userId: req.user?.id } 
-      });
+      logger.info('[ObjectStorage] Objet servi', { metadata: { objectPath, userId: req.user?.id 
+
+            })
+ 
+
+          );
       
       // Download and serve object
       await objectStorageService.downloadObject(objectPath, res);
-    })
-  );
+          }
+                                  }
+                                });
 
   return router;
 }
 
 // Log module initialization
-logger.info('[SystemModule] Module System initialized', {
-  metadata: {
+logger.info('[SystemModule] Module System initialized', { metadata: {
     routes: [
       '/api/health',
       '/api/users',
@@ -401,5 +432,8 @@ logger.info('[SystemModule] Module System initialized', {
       '/api/objects/upload',
       '/api/objects/:objectPath/*splat'
     ]
-  }
-});
+
+            })
+
+
+          );

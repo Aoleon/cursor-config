@@ -858,7 +858,7 @@ service: 'ActionExecutionService',
       const historyData: InsertActionHistory = {
         actionId,
         fromStatus: oldStatus,
-     as unknown,aas unknowntunknown,unknown any,
+     as unknown,aas unknowntunknown,unknown unknown,
         changeReason: reason,
         changeType: 'system_update',
         success: true
@@ -943,7 +943,7 @@ case 'transform_to_project':;
 case 'create_project':;
         return await this.createProject(action.parameters);
 case 'update_status':;
-        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)any).status);
+        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)unknown).status);
 case 'archive_project':;
         return await this.archiveProject(action.targetEntityId!);
       default:
@@ -970,7 +970,7 @@ case 'archive_project':;
 case 'create_project_task':;
         return await this.createProjectTask(action.parameters);
 case 'update_task_status':;
-        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as any).status);
+        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as unknown).status);
       default:
         return {
           success: false,
@@ -1002,7 +1002,7 @@ case 'update_task_status':;
   // ========================================
   // OPÉRATIONS SPÉCIFIQUES CRUD
   // ========================================
-  private async createOffer(paraunknownnown)any): Promise<ActionExecutionResult> {
+  private async createOffer(paraunknownnunknown)unknown): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
       const offerId = crypto.randomUUID();
@@ -1014,7 +1014,7 @@ case 'update_task_status':;
         location: parameters.location || '',
         menuiserieType: parameters.menuiserieType || 'fenetre',
         montantEstime: parameters.montantEstime ? parseFloat(parameters.montantEstime) : null,
-    as uas unknown,tus:unknownrunknown,lon' as any,
+    as uas unknown,tus:unknownrunknown,lon' as unknown,
         responsibleUserId: parameters.responsibleUserId,
         departement: parameters.departement,
         source: parameters.source || 'website'
@@ -1046,7 +1046,7 @@ case 'update_task_status':;
     async () => {
       const result = await db
         .update(offers)
-  as uas unknown,set(unknowntunknown,: status as any, updatedAt: new Date() })
+  as uas unknown,set(unknowntunknown,: staas unknown, unknown, updatedAt: new Date() })
         .where(eq(offers.id, offerId));
       return {
         success: true,

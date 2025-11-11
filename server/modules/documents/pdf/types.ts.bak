@@ -36,7 +36,7 @@ export interface Placeholder {
   path: string;                 // Extracted path like "client.name"
   segments: string[];           // Path segments ["client", "name"]
   formatter?: PlaceholderFormatter;
-  defaultValue?: unknown;
+  defaultValue?: any;
   isRequired?: boolean;
   position?: PlaceholderPosition;
 }
@@ -46,7 +46,7 @@ export interface PlaceholderFormatter {
   format?: string;              // e.g., "dd/mm/yyyy" for dates
   precision?: number;           // For numbers
   locale?: string;              // For currency and dates
-  customFunction?: (value: unknown) => string;
+  customFunction?: (value: any) => string;
 }
 
 export interface PlaceholderPosition {
@@ -236,12 +236,12 @@ export interface CacheStats {
 
 // Rendering context
 export interface RenderContext {
-  data: Record<string, unknown>;
+  data: Record<string, any>;
   images?: Record<string, string | ProcessedImage>;
   locale?: string;
   timezone?: string;
   formatters?: Record<string, PlaceholderFormatter>;
-  helpers?: Record<string, (...args: unknown[]) => unknown>;
+  helpers?: Record<string, (...args: any[]) => any>;
   partials?: Record<string, string>;
   debug?: boolean;
 }
@@ -292,7 +292,7 @@ export interface PDFTemplateEngineConfig {
   performanceTracking?: boolean;
   errorRecovery?: boolean;
   maxRenderTime?: number;
-  puppeteerOpti: unknown;unknown;
+  puppeteerOptions?: any;
 }
 
 // Error types
@@ -300,7 +300,7 @@ export class TemplateError extends Error {
   constructor(
     message: string,
     public code: string,
-    public deta: unknown)
+    public details?: any
   ) {
     super(message);
     this.name = 'TemplateError';
@@ -308,28 +308,28 @@ export class TemplateError extends Error {
 }
 
 export class PlaceholderError extends TemplateError {
-  constructor(message: string, det: unknown) unknown) {
+  constructor(message: string, details?: any) {
     super(message, 'PLACEHOLDER_ERROR', details);
     this.name = 'PlaceholderError';
   }
 }
 
 export class ImageError extends TemplateError {
-  constructor(message: string,: unknown)lunknown)unknown) {
+  constructor(message: string, details?: any) {
     super(message, 'IMAGE_ERROR', details);
     this.name = 'ImageError';
   }
 }
 
 export class LayoutError extends TemplateError {
-  constructor(message: str: unknown)eunknown)unknown any) {
+  constructor(message: string, details?: any) {
     super(message, 'LAYOUT_ERROR', details);
     this.name = 'LayoutError';
   }
 }
 
 export class ValidationError extends TemplateError {
-  constructor(message:: unknown)gunknown)unknownls?: any) {
+  constructor(message: string, details?: any) {
     super(message, 'VALIDATION_ERROR', details);
     this.name = 'ValidationError';
   }
@@ -385,5 +385,5 @@ export interface LDMItem {
   category?: string;
   supplier?: string;
   image?: string;
-  specifications?: Record<st, unknownnunknown>any>;
+  specifications?: Record<string, any>;
 }

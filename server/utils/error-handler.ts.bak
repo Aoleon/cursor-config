@@ -158,9 +158,8 @@ export async function withErrorHandling<T>(
           ...logContext.metadata, 
           duration,
           errorCode: (normalizedError as AppError).code
-        }
-      }
-    );
+                                                                                }
+                                                                              });
     
     throw normalizedError;
   }

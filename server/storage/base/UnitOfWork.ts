@@ -37,7 +37,7 @@ export class UnitOfWork {
   /**
    * Instance de la base de données
    */
-  private readonly db: any;
+  private readonly db: unknown;
 
   /**
    * Options de transaction
@@ -50,7 +50,7 @@ export class UnitOfWork {
    * @param db - Instance Drizzle de la base de données
    * @param options - Options de transaction optionnelles
    */
-  constructor(db: any, options: TransactionOptions = {}) {
+  constructor(db: unknown, options: TransactionOptions = {}) {
     this.db = db;
     this.options = options;
   }
@@ -127,7 +127,7 @@ export class UnitOfWork {
  * ```
  */
 export async function withUnitOfWork<T>(
-  db: any,
+: unknown, unknown,
   fn: (tx: DrizzleTransaction) => Promise<T>,
   options?: TransactionOptions
 ): Promise<T> {

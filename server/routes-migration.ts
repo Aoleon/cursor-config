@@ -350,7 +350,7 @@ migrationRoutes.post('/validate',
         }
                 });
     
-    const response: any = {
+    const response: unknown = {
       success: true,
       validation: {
         summary: {

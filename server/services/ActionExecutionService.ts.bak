@@ -236,9 +236,7 @@ export class ActionExecutionService {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return { hasActionIntention: false, confidence: 0 };
     }
   }
@@ -289,11 +287,9 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
     },
     {
       operation: 'constructor',
-service: 'ActionExecutionService',;
+service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-          });
+    } );
           return null;
         }
       }
@@ -301,14 +297,13 @@ service: 'ActionExecutionService',;
       return null;
 
     } catch (error) {
-      logger.error('Erreur analyzeActionWithAI', {
-        metadata: {
+      logger.error('Erreur analyzeActionWithAI', { metadata: {
           service: 'ActionExecutionService',
           operation: 'analyzeActionWithAI',
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
+          stack: error instanceof Error ? error.stack : undefined 
+              }
+            });
       return null;
     }
   }
@@ -327,24 +322,19 @@ service: 'ActionExecutionService',;
     return withErrorHandling(
     async () => {
 
-      logger.info('Proposition d\'action', {
-        metadata: {
+      logger.info('Proposition d\'action', { metadata: {
           service: 'ActionExecutionService',
           operation: 'proposeAction',
           actionId,
           userId: request.userId
-        }
       });
-
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
         role: request.uas unknown, as unknown,
         tableName: this.getTableNameForEntity(request.entity),
         action: this.mapActionTypeToRBACAction(request.type),
-        contextValues: {}
-      });
-
+        contextValues: {});
       if (!rbacCheck.allowed) {
         await this.auditService.logEvent({
           userId: request.userId,
@@ -358,7 +348,6 @@ service: 'ActionExecutionService',;
           entityType: 'action',
           errorDetails: rbacCheck.denialReason
         });
-
         return {
           success: false,
           confirmationRequired: false,
@@ -370,7 +359,6 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 2. Validation de l'opération supportée
       if (!this.isOperationSupported(request.entity, request.type, request.operation)) {
         return {
@@ -383,11 +371,9 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 3. Détermination du niveau de risque
       const riskLevel = request.riskLevel || this.determineRiskLevel(request.operation);
       const confirmationRequired = request.confirmationRequired || riskLevel !== 'low';
-
       // 4. Validation des paramètres
       const parameterValidation = await this.validateActionParameters(request);
       if (!parameterValidation.valid) {
@@ -402,11 +388,9 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 5. Création de l'action en base
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + (request.expirationMinutes || DEFAULT_CONFIRMATION_TIMEOUT_MINUTES));
-
       const actionData: InsertAction = {
         type: request.type,
         entity: request.entity,
@@ -431,15 +415,12 @@ service: 'ActionExecutionService',;
         tags: ['proposed_by_chatbot'],
         metadata: request.metadata || {}
       };
-
       await db.insert(actions).values([actionData]);
-
       // 6. Création de la confirmation si requise
       let confirmationId: string | undefined;
       if (confirmationRequired) {
         confirmationId = await this.createActionConfirmation(actionId, request.userId, riskLevel, request.parameters);
       }
-
       // 7. Logging d'audit
       await this.auditService.logEvent({
         userId: request.userId,
@@ -453,9 +434,9 @@ service: 'ActionExecutionService',;
         entityType: 'action',
         entityId: actionId,
         payload: { actionDefinition: request },
-        metadata: { executionTime: Date.now() - startTime }
-      });
-
+        metadata: { executionTime: Date.now() - startTime 
+        }
+              );
       // 8. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
@@ -477,9 +458,7 @@ service: 'ActionExecutionService',;
           operation: request.operation,
           riskLevel,
           confirmationRequired
-        }
-      });
-
+        });
       return {
         success: true,
         actionId,
@@ -489,17 +468,12 @@ service: 'ActionExecutionService',;
         estimatedTime: this.estimateExecutionTime(request.operation),
         warnings: this.generateActionWarnings(request, riskLevel)
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
-
+    } );
       await this.auditService.logEvent({
         userId: request.userId,
         userRole: request.userRole,
@@ -510,9 +484,9 @@ service: 'ActionExecutionService',;
         resource: `action:${request.entity}:${request.operation}`,
         action: 'propose_action',
         errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
-        metadata: { executionTime: Date.now() - startTime }
-      });
-
+        metadata: { executionTime: Date.now() - startTime 
+        }
+              );
       return {
         success: false,
         confirmationRequired: false,
@@ -524,37 +498,29 @@ service: 'ActionExecutionService',;
       };
     }
   }
-
   // ========================================
   // EXÉCUTION D'ACTIONS
   // ========================================
-
   /**
    * Exécute une action après validation
    */
   async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
     const startTime = Date.now();
     let currentAction: Action | null = null;
-
     return withErrorHandling(
     async () => {
-
-      logger.info('Exécution d\'action', {
-        metadata: {
+      logger.info('Exécution d\'action', { metadata: {
           service: 'ActionExecutionService',
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-        }
       });
-
       // 1. Récupérer l'action
       const actionResults = await db
         .select()
         .from(actions)
         .where(eq(actions.id, request.actionId))
         .limit(1);
-
       if (actionResults.length === 0) {
         return {
           success: false,
@@ -565,9 +531,7 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       currentAction = actionResults[0];
-
       // 2. Vérifications préliminaires
       if (currentAction.userId !== request.userId) {
         return {
@@ -579,7 +543,6 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       if (currentAction.status !== 'proposed' && currentAction.status !== 'confirmed') {
         return {
           success: false,
@@ -590,7 +553,6 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       if (currentAction.expiresAt && currentAction.expiresAt < new Date()) {
         // Marquer comme expirée
         await this.updateActionStatus(request.actionId, 'timeout', 'Action expirée');
@@ -603,7 +565,6 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 3. Gestion de la confirmation si requise
       if (currentAction.confirmationRequired && !request.userConfirmation) {
         return {
@@ -615,16 +576,13 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 4. Re-validation RBAC au moment de l'exécution
       const rbacRecheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
         role: currentActias unknown,Ras unknown unknown,
         tableName: this.getTableNameForEntity(currentAction.entity),
         action: this.mapActionTypeToRBACAction(currentAction.type),
-        contextValues: {}
-      });
-
+        contextValues: {});
       if (!rbacRecheck.allowed) {
         await this.updateActionStatus(request.actionId, 'failed', 'RBAC validation échec');
         return {
@@ -636,17 +594,13 @@ service: 'ActionExecutionService',;
           }
         };
       }
-
       // 5. Marquer l'action comme en cours d'exécution
       await this.updateActionStatus(request.actionId, 'executing', 'Démarrage exécution');
-
       // 6. Exécuter l'action selon son type et entité
       const executionResult = await this.performActionExecution(currentAction);
-
       // 7. Marquer l'action comme complétée ou échouée
       if (executionResult.success) {
         await this.updateActionStatus(request.actionId, 'completed', 'Action exécutée avec succès');
-        
         // Mettre à jour le résultat d'exécution
         await db
           .update(actions)
@@ -659,7 +613,6 @@ service: 'ActionExecutionService',;
           .where(eq(actions.id, request.actionId));
       } else {
         await this.updateActionStatus(request.actionId, 'failed', executionResult.error?.message || 'Erreur d\'exécution');
-        
         await db
           .update(actions)
           .set({
@@ -669,7 +622,6 @@ service: 'ActionExecutionService',;
           })
           .where(eq(actions.id, request.actionId));
       }
-
       // 8. Logging d'audit
       await this.auditService.logEvent({
         userId: request.userId,
@@ -688,9 +640,7 @@ service: 'ActionExecutionService',;
         metadata: { 
           executionTime: Date.now() - startTime,
           riskLevel: currentAction.riskLevel
-        }
-      });
-
+        });
       // 9. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
@@ -714,9 +664,7 @@ service: 'ActionExecutionService',;
           operation: currentAction.operation,
           executionTime: Date.now() - startTime,
           success: executionResult.success
-        }
-      });
-
+        });
       return {
         success: executionResult.success,
         result: executionResult,
@@ -728,22 +676,16 @@ service: 'ActionExecutionService',;
           details: executionResult.error.details
         } : undefined
       };
-
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
-
+    } );
       // Marquer l'action comme échouée si possible
       if (currentAction) {
         await this.updateActionStatus(request.actionId, 'failed', `Erreur système: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       }
-
       await this.auditService.logEvent({
         userId: request.userId,
         userRole: currentAction?.userRole || 'unknown',
@@ -753,9 +695,9 @@ service: 'ActionExecutionService',;
         resource: `action:execution:${request.actionId}`,
         action: 'execute_action',
         errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
-        metadata: { executionTime: Date.now() - startTime }
-      });
-
+        metadata: { executionTime: Date.now() - startTime 
+        }
+              );
       return {
         success: false,
         actionId: request.actionId,
@@ -767,11 +709,9 @@ service: 'ActionExecutionService',;
       };
     }
   }
-
   // ========================================
   // MÉTHODES UTILITAIRES PRIVÉES
   // ========================================
-
   private mapEntityName(entityText: string): string | null {
     const entityMappings: Record<string, string> = {
       'projet': 'project',
@@ -785,32 +725,24 @@ service: 'ActionExecutionService',;
       'jalons': 'milestone',
       'jalon': 'milestone'
     };
-
     return entityMappings[entityText.toLowerCase()] || null;
   }
-
   private detectSpecificOperation(query: string, actionType: string, entity: string | null): string | null {
     if (!entity || !SUPPORTED_OPERATIONS[entity as keyof typeof SUPPORTED_OPERATIONS]) return null;
-
     const supportedOps = SUPPORTED_OPERATIONS[entity as keyof typeof SUPPORTED_OPERATIONS][actionType as keyof typeof SUPPORTED_OPERATIONS[keyof typeof SUPPORTED_OPERATIONS]];
-    
     // Logique simple pour détecter l'opération spécifique
     if (actionType === 'update' && query.includes('statut')) return 'update_status';
     if (actionType === 'update' && query.includes('montant')) return 'update_montant';
     if (actionType === 'create') return supportedOps?.[0] || null;
     if (actionType === 'delete') return supportedOps?.[0] || null;
-    
     return supportedOps?.[0] || null;
   }
-
   private isOperationSupported(entity: string, actionType: string, operation: string): boolean {
     const entityOps = SUPPORTED_OPERATIONS[entity as keyof typeof SUPPORTED_OPERATIONS];
     if (!entityOps) return false;
-    
     const typeOps = entityOps[actionType as keyof typeof entityOps];
     return typeOps?.includes(operation as unknown) || false;
   }
-
   private determineRiskLevel(operation: string): 'low' | 'medium' | 'high' {
     for (const [level, operations] of Object.entries(OPERATION_RISK_LEVELS)) {
       if (operations.includes(operation)) {
@@ -819,7 +751,6 @@ service: 'ActionExecutionService',;
     }
     return 'medium'; // Par défaut
   }
-
   private getTableNameForEntity(entity: string): string {
     const entityTableMap: Record<string, string> = {
       'offer': 'offers',
@@ -829,10 +760,8 @@ service: 'ActionExecutionService',;
       'task': 'project_tasks',
       'supplier': 'suppliers'
     };
-    
     return entityTableMap[entity] || entity;
   }
-
   private mapActionTypeToRBACAction(actionType: string): 'read' | 'write' | 'create' | 'delete' {
     const actionMap: Record<string, 'read' | 'write' | 'create' | 'delete'> = {
       'create': 'create',
@@ -840,38 +769,30 @@ service: 'ActionExecutionService',;
       'delete': 'delete',
       'business_action': 'write'
     };
-    
     return actionMap[actionType] || 'write';
   }
-
   private async validateActionParameters(request: ProposeActionRequest): Promise<{ valid: boolean; errors?: string[] }> {
     // Validation basique - peut être étendue selon les besoins
     if (!request.parameters || typeof request.parameters !== 'object') {
       return { valid: false, errors: ['Paramètres manquants ou invalides'] };
     }
-    
     // Validations spécifiques par type d'entité et d'opération
     const errors: string[] = [];
-    
     if (request.entity === 'offer' && request.operation === 'create_offer') {
       if (!request.parameters.client) errors.push('Client requis pour créer une offre');
       if (!request.parameters.location) errors.push('Localisation requise pour créer une offre');
     }
-    
     if (request.entity === 'project' && request.operation === 'create_project') {
       if (!request.parameters.offerId && !request.parameters.client) {
         errors.push('ID d\'offre ou client requis pour créer un projet');
       }
     }
-    
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
-
   private async createActionConfirmation(actionId: string, userId: string, riskLevel: string, parameters: unknown): Promise<string> {
     const confirmationId = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_CONFIRMATION_TIMEOUT_MINUTES);
-
     const confirmationData: InsertActionConfirmation = {
       actionId,
       userId,
@@ -880,16 +801,13 @@ service: 'ActionExecutionService',;
       warningMessage: riskLevel === 'high' ? 'Action à haut risque - Vérifiez attentivement avant de confirmer' : undefined,
       expiresAt
     };
-
     await db.insert(actionConfirmations).values([confirmationData]);
     return confirmationId;
   }
-
   private generateConfirmationMessage(parameters: unknown, riskLevel: string): string {
     const riskIndicator = riskLevel === 'high' ? '⚠️' : riskLevel === 'medium' ? '⚡' : 'ℹ️';
     return `${riskIndicator} Confirmer l'action avec les paramètres: ${JSON.stringify(parameters, null, 2)}`;
   }
-
   private estimateExecutionTime(operation: string): number {
     // Estimations approximatives en secondes
     const timeEstimates: Record<string, number> = {
@@ -899,43 +817,32 @@ service: 'ActionExecutionService',;
       'archive_offer': 2,
       'transform_to_project': 5
     };
-    
     return timeEstimates[operation] || 2;
   }
-
   private generateActionWarnings(request: ProposeActionRequest, riskLevel: string): string[] {
     const warnings: string[] = [];
-    
     if (riskLevel === 'high') {
       warnings.push('Cette action peut avoir des conséquences importantes');
     }
-    
     if (request.entity === 'offer' && request.operation === 'archive_offer') {
       warnings.push('L\'archivage d\'une offre est irréversible');
     }
-    
     if (request.entity === 'project' && request.operation === 'create_project') {
       warnings.push('Un nouveau projet sera créé avec les paramètres spécifiés');
     }
-    
     return warnings;
   }
-
   private async updateActionStatus(actionId: string, status: string, reason: string): Promise<void> {
     return withErrorHandling(
     async () => {
-
       // Récupérer l'état actuel
       const currentAction = await db
         .select()
         .from(actions)
         .where(eq(actions.id, actionId))
         .limit(1);
-
       if (currentAction.length === 0) return;
-
       const oldStatus = currentAction[0].status;
-
       // Mettre à jour l'action
       await db
         .update(actions)
@@ -947,44 +854,33 @@ service: 'ActionExecutionService',;
           ...(status === 'completed' ? { completedAt: new Date() } : {})
         })
         .where(eq(actions.id, actionId));
-
       // Enregistrer l'historique
       const historyData: InsertActionHistory = {
         actionId,
         fromStatus: oldStatus,
-     as unknown,aas unknowntunknown,unknown unknown,
+     as unknown,aas unknowntunknown,unknown any,
         changeReason: reason,
         changeType: 'system_update',
         success: true
       };
-
       await db.insert(actionHistory).values([historyData]);
-
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
-
   private async performActionExecution(action: Action): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
-
-      logger.info('Exécution opération', {
-        metadata: {
+      logger.info('Exécution opération', { metadata: {
           service: 'ActionExecutionService',
           operation: 'performActionExecution',
           actionOperation: action.operation,
           entity: action.entity
-        }
       });
-
       switch (action.entity) {
         case 'offer':
           return await this.executeOfferAction(action);
@@ -1007,15 +903,12 @@ service: 'ActionExecutionService',;
             }
           };
       }
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         success: false,
         error: {
@@ -1025,13 +918,12 @@ service: 'ActionExecutionService',;
       };
     }
   }
-
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
 case 'create_offer':;
         return await this.createOffer(action.parameters);
 case 'update_status':;
-        return await this.updateOfferStatus(action.targetEntityId!, (action.parametas unknown)unknown).status);
+        return await this.updateOfferStatus(action.targetEntityId!, (action.parametas unknown).status);
 case 'archive_offer':;
         return await this.archiveOffer(action.targetEntityId!);
 case 'transform_to_project':;
@@ -1046,13 +938,12 @@ case 'transform_to_project':;
         };
     }
   }
-
   private async executeProjectAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
 case 'create_project':;
         return await this.createProject(action.parameters);
 case 'update_status':;
-        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)unknown).status);
+        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)any).status);
 case 'archive_project':;
         return await this.archiveProject(action.targetEntityId!);
       default:
@@ -1065,7 +956,6 @@ case 'archive_project':;
         };
     }
   }
-
   private async executeAoAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -1075,13 +965,12 @@ case 'archive_project':;
       }
     };
   }
-
   private async executeTaskAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
 case 'create_project_task':;
         return await this.createProjectTask(action.parameters);
 case 'update_task_status':;
-        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as unknown).status);
+        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as any).status);
       default:
         return {
           success: false,
@@ -1092,7 +981,6 @@ case 'update_task_status':;
         };
     }
   }
-
   private async executeContactAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -1102,7 +990,6 @@ case 'update_task_status':;
       }
     };
   }
-
   private async executeSupplierAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -1112,18 +999,14 @@ case 'update_task_status':;
       }
     };
   }
-
   // ========================================
   // OPÉRATIONS SPÉCIFIQUES CRUD
   // ========================================
-
-  private async createOffer(paraunknownnown)unknunknown)unknown): Promise<ActionExecutionResult> {
+  private async createOffer(paraunknownnown)any): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
-
       const offerId = crypto.randomUUID();
       const reference = `OF-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-
       const offerData = {
         id: offerId,
         reference,
@@ -1131,29 +1014,24 @@ case 'update_task_status':;
         location: parameters.location || '',
         menuiserieType: parameters.menuiserieType || 'fenetre',
         montantEstime: parameters.montantEstime ? parseFloat(parameters.montantEstime) : null,
-    as uas unknown,tus:unknownrunknown,lon' as unknown,
+    as uas unknown,tus:unknownrunknown,lon' as any,
         responsibleUserId: parameters.responsibleUserId,
         departement: parameters.departement,
         source: parameters.source || 'website'
       };
-
       await db.insert(offers).values([offerData]);
-
       return {
         success: true,
         entityId: offerId,
         affectedRows: 1,
         warnings: parameters.montantEstime ? [] : ['Montant estimé non spécifié']
       };
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         success: false,
         error: {
@@ -1163,30 +1041,24 @@ case 'update_task_status':;
       };
     }
   }
-
   private async updateOfferStatus(offerId: string, status: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
-
       const result = await db
         .update(offers)
-  as uas unknown,set(unknowntunknown,: staas unknown, unknown, updatedAt: new Date() })
+  as uas unknown,set(unknowntunknown,: status as any, updatedAt: new Date() })
         .where(eq(offers.id, offerId));
-
       return {
         success: true,
         entityId: offerId,
         affectedRows: 1
       };
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         success: false,
         error: {
@@ -1196,31 +1068,25 @@ case 'update_task_status':;
       };
     }
   }
-
   private async archiveOffer(offerId: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
-
       await db
         .update(offers)
         .set({ status: 'archive', updatedAt: new Date() })
         .where(eq(offers.id, offerId));
-
       return {
         success: true,
         entityId: offerId,
         affectedRows: 1,
         warnings: ['Offre archivée - action irréversible']
       };
-    
     },
     {
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return {
         success: false,
         actions: [],

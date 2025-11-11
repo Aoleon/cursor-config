@@ -18,9 +18,9 @@
  *   --skip-existing     Skip items déjà migrés (défaut: true)
  */
 
-import { getMondayMigrationServiceEnhanced, type MigrationOptions } from '../services/MondayMigrationServiceEnhanced';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { withErrorHandling } from './utils/error-handler';
-import { getMondaySchemaAnalyzer } from '../services/MondaySchemaAnalyzer';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { storage } from '../storage-poc';
 import { logger } from '../utils/logger';
 import type { EntityType } from '../config/monday-migration-mapping';
@@ -30,7 +30,7 @@ import type { EntityType } from '../config/monday-migration-mapping';
  */
 function parseArgs(): Partial<MigrationOptions> & { help?: boolean; analyze?: boolean } {
   const args = process.argv.slice(2);
-  const options: unknown = {};
+  const options: any = {};
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') {
@@ -144,7 +144,7 @@ RAPPORT DE MIGRATION:
 /**
  * Affiche rapport migration formatté
  */
-function printReport(report: unknown) {
+function printReport(report: any) {
   logger.info(`
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                     RAPPORT MIGRATION MONDAY → SAXIUM                     ║
@@ -172,17 +172,17 @@ ${report.successful.length > 0 ? `✅ SUCCÈS (${report.successful.length} items
 ` : ''}
 
 ${report.skipped.length > 0 ? `⏭️  SKIPPED (${report.skipped.length} items)
-${report.skipped.slice(0, 5).ma: unknown)unknown) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
+${report.skipped.slice(0, 5).map((s: any) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
 ${report.skipped.length > 5 ? `   ... et ${report.skipped.length - 5} autres` : ''}
 ` : ''}
 
 ${report.errors.length > 0 ? `❌ ERREURS (${report.errors.length} items)
-${report.errors.slice(0, 5: unknown)unknown)unknown) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
+${report.errors.slice(0, 5).map((e: any) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
 ${report.errors.length > 5 ? `   ... et ${report.errors.length - 5} autres` : ''}
 ` : ''}
 
 ${report.missingFields.length > 0 ? `⚠️  CHAMPS MANQUANTS (${report.missingFields.length} items)
-${report.missingFields.slice(: unknown)unknown)unknown any) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
+${report.missingFields.slice(0, 3).map((m: any) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
 ${report.missingFields.length > 3 ? `   ... et ${report.missingFields.length - 3} autres` : ''}
 ` : ''}
 
@@ -235,9 +235,11 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
     {
       operation: 'insertion',
       service: 'migrate-from-monday',
-      metadata: {}
-    }
-  );\n`);
+      metadata: {
+
+              }
+
+            );\n`);
     process.exit(1);
   }
 }
@@ -320,9 +322,11 @@ async function main() {
     {
       operation: 'insertion',
       service: 'migrate-from-monday',
-      metadata: {}
-    }
-  );
+      metadata: {
+
+              }
+
+            );
    
    Stack trace:
    ${error instanceof Error ? error.stack : 'N/A'}

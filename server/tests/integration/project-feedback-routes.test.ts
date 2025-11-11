@@ -49,8 +49,8 @@ describe('Project Feedback Routes Integration', () => {
         status: 'nouveau'
       };
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
-      vi.mocked(mockStorage.createProjectFeedbackTerrain).mockResolvedValue(mockFeedback as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
+      vi.mocked(mockStorage.createProjectFeedbackTerrain).mockResolvedValue(mockFeedbas unknown)unknown);
 
       const response = await request(app)
         .post(`/api/projects/${projectId}/feedback-terrain`)
@@ -77,7 +77,7 @@ describe('Project Feedback Routes Integration', () => {
         status: 'nouveau'
       }];
 
-      vi.mocked(mockStorage.getProjectFeedbackTerrain).mockResolvedValue(mockFeedback as any);
+      vi.mocked(mockStorage.getProjectFeedbackTerrain).mockResolvedValue(mockFas unknown) as unknown);
 
       const response = await request(app)
         .get(`/api/projects/${projectId}/feedback-terrain`)

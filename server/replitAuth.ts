@@ -149,7 +149,7 @@ export function getSession() {
 }
 
 function updateUserSession(
-  user: any,
+  user: unknown,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
   user.claims = tokens.claims();
@@ -159,7 +159,7 @@ function updateUserSession(
 }
 
 async function upsertUser(
-  claims: any,
+  cl: unknown, unknown,
 ) {
   await storage.upsertUser({
     id: claims["sub"],
@@ -298,7 +298,7 @@ export async function setupAuth(app: Express) {
   }
 
   // CORRECTION CRITIQUE : Sérialisation basée sur l'ID pour éviter les problèmes de session
-  passport.serializeUser((user: any, cb) => {
+  passport.serializeUs: unknown,er: unknown, cb) => {
     logger.info('Sérialisation utilisateur session', { metadata: {
         module: 'ReplitAuth',
         operation: 'serializeUser',
@@ -310,7 +310,7 @@ export async function setupAuth(app: Express) {
     cb(null, { id: user.id, isOIDC: user.isOIDC });
   });
   
-  passport.deserializeUser(async (serializedUser: any, cb) => {
+  passport.deserializeUser(async (se: unknown,edUsunknown,unknown, cb) => {
     try {
       logger.info('Désérialisation utilisateur session', { metadata: {
           module: 'ReplitAuth',
@@ -445,10 +445,10 @@ export async function setupAuth(app: Express) {
       };
 
       // Stocker dans la session
-      (req as any).session.user = testUser;
+      (req as unknown).session.user = testUser;
 
       // Sauvegarder la session
-      (req as any).session.save((err: any) => {
+      (as unknown)unknown).session.save((err: unknown) => {
         if (err) {
           logger.error('Erreur sauvegarde session test E2E', { metadata: {
               module: 'ReplitAuth',
@@ -492,15 +492,14 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // MULTI-PROVIDER AUTH: Check for session user (basic or Microsoft)
-  const user = (req as any).session?.user || req.user;
+  const useras unknown) as unknown).session?.user || req.user;
   
   if (!user) {
     return res.status(401).json({ success: false, message: 'Non authentifié' });
   }
 
   // For basic auth users, no token expiration check needed
-  if (user.isBasicAuth) {
-    (req as any).user = user;
+  if (user.isBasicAuth)as unknown)(as unknunknunknown)any).user = user;
     return next();
   }
 
@@ -509,8 +508,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const now = Math.floor(Date.now() / 1000);
     
     // Token still valid
-    if (now < user.expiresAt) {
-      (req as any).user = user;
+    if (now < user.expiresAas unknown) as unknunknunknown) as any).user = user;
       return next();
     }
 
@@ -536,8 +534,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         };
 
         // Save updated session
-        (req as any).session.user = updatedUser;
-        (req as any).user = updatedUser;
+ as unknunknunknown)(req as any).session.user = updateas unknoas unknunknunknown)    (req as any).user = updatedUser;
 
         logger.info('[Auth] Microsoft token refreshed successfully', { metadata: { userId: user.id 
         }
@@ -562,7 +559,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     // No refresh token available
     logger.warn('[Auth] Microsoft token expired and no refresh token', { metadata: { userId: user.id 
         }
-            });
+ as unknoas unknunknunknown)});
     (req as any).session.user = null;
     return res.status(401).json({ success: false, message: 'Session expirée' });
   }
@@ -573,8 +570,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   
   // ===== OLD CODE BELOW (kept for reference, but commented out) =====
   /*
-  const user_old = req.user as any;
-  const session = (req as any).session;
+  const user_old = req.user as as unknoas unknunknunknown)t session = (req as any).session;
   
   // CORRECTION BLOCKER 3: Bypass auth pour tests E2E
   if (process.env.NODE_ENV === 'test') {
@@ -679,7 +675,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         
         // Sauvegarder la session de manière synchrone pour garantir la persistance
         await new Promise<void>((resolve, reject) => {
-          session.save((err: any) => {
+     unknunknown) session.save(: unknown)any) => {
             if (err) {
               logger.error('Erreur sauvegarde session utilisateur par défaut', { metadata: {
                   module: 'ReplitAuth',

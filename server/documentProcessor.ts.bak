@@ -202,7 +202,12 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length } });
+      logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length }
+
+
+          }
+
+        });
 
       // Parser la réponse JSON en gérant les blocs markdown
       let jsonText = responseText.trim();
@@ -237,7 +242,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         maitreOeuvreDetails: extractedData.maitreOeuvreDetails || null,
       };
 
-      logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots } });
+      logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots 
+        }
+            });
       return cleanedData;
 
     
@@ -245,9 +252,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {}
+      metadata: {
+                                                                                }
+                                                                              });
+      };
     }
-  );
   }
 
   /**
@@ -286,7 +295,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       
       // Traiter tous les contacts extraits
       if (contactsToProcess.length > 0) {
-        logger.info('DocumentProcessor - Processing contacts', { metadata: { count: contactsToProcess.length } });
+        logger.info('DocumentProcessor - Processing contacts', { metadata: { count: contactsToProcess.length 
+        }
+            });
         
         const results = await contactService.processExtractedContacts(contactsToProcess);
         
@@ -297,10 +308,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
           
           if (contactData.role === 'maitre_ouvrage') {
             linkedContacts.maitreOuvrage = result;
-            logger.info('DocumentProcessor - Maître d\'ouvrage processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) } });
+            logger.info('DocumentProcessor - Maître d\'ouvrage processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
+        }
+            });
           } else if (contactData.role === 'maitre_oeuvre') {
             linkedContacts.maitreOeuvre = result;
-            logger.info('DocumentProcessor - Maître d\'œuvre processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) } });
+            logger.info('DocumentProcessor - Maître d\'œuvre processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
+        }
+            });
           }
         }
       }
@@ -316,9 +331,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -342,38 +357,54 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       }
 
       // Fallback: essayer de récupérer le fichier normalement
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        logger.warn('DocumentProcessor - Cannot fetch file', { metadata: { filename, statusText: response.statusText } });
-        // Utiliser un contenu de démonstration basé sur le nom du fichier
-        return this.generateDemoContent(filename);
-      }
+      try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          logger.warn('DocumentProcessor - Cannot fetch file', { metadata: { filename, statusText: response.statusText 
+        }
+            });
+          // Utiliser un contenu de démonstration basé sur le nom du fichier
+          return this.generateDemoContent(filename);
+        }
 
-      const buffer = await response.arrayBuffer();
-      const fileExtension = filename.toLowerCase().split('.').pop();
+        const buffer = await response.arrayBuffer();
+        const fileExtension = filename.toLowerCase().split('.').pop();
 
-      switch (fileExtension) {
-        case 'pdf':
-          return await this.extractTextFromPDF(buffer);
-        case 'txt':
-          return new TextDecoder().decode(buffer);
-        case 'doc':
-        case 'docx':
-          return await this.extractTextFromWord(buffer);
-        default:
-          try {
+        switch (fileExtension) {
+          case 'pdf':
+            return await this.extractTextFromPDF(buffer);
+          case 'txt':
             return new TextDecoder().decode(buffer);
-          } catch {
-            return this.generateDemoContent(filename);
-          }
-      }
+          case 'doc':
+          case 'docx':
+            return await this.extractTextFromWord(buffer);
+          default:
+            try {
+              return new TextDecoder().decode(buffer);
+            } catch {
+              return this.generateDemoContent(filename);
+            }
+        }
+      
     },
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {}
+      metadata: {
+                                                                                }
+                                                                              });
+        return this.generateDemoContent(filename);
+      }
+
+    } catch (error) {
+      logger.error('DocumentProcessor - Error extracting text', error as Error, { metadata: { filename }
+
+
+          }
+
+        });
+      return this.generateDemoContent(filename);
     }
-  );
   }
 
   /**
@@ -385,56 +416,59 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    */
   async extractDetailedLots(content: string, filename: string): Promise<ExtractedLotData[]> {
     return withErrorHandling(
-      async () => {
-        const prompt = [
-          "Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.",
-          "",
-          "Analyse le contenu suivant et extrais tous les lots de menuiserie avec leurs spécifications techniques détaillées.",
-          "",
-          "Document: " + filename,
-          "Contenu:",
-          "---",
-          content.substring(0, 15000),
-          "---",
-          "",
-          "Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.",
-          "Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.",
-          "",
-          "Format de réponse attendu:",
-          JSON.stringify({
-            lots: [{
-              numero: "numéro/référence du lot (ex: 07.1, LOT-02, etc.)",
-              designation: "désignation complète du lot",
-              quantite: "nombre d'éléments (nombre uniquement)",
-              materiau: "matériau principal (ex: Aluminium, PVC, Bois, etc.)",
-              vitrage: "type de vitrage (ex: Double vitrage, Triple vitrage, etc.)",
-              localisation: "localisation/orientation (ex: Façade Sud, Étage 1, etc.)",
-              couleur: "couleur/finition (ex: RAL 7016, Gris anthracite, etc.)",
-              dimensions: "dimensions types (ex: 135x120 cm, Variable selon plans, etc.)",
-              performanceThermique: "performance thermique (ex: Uw ≤ 1,4 W/m².K, etc.)",
-              performanceAcoustique: "performance acoustique (ex: Rw ≥ 35 dB, etc.)",
-              normes: ["liste des normes applicables (ex: DTU 36.5, RE2020, NF Fenêtre, etc.)"],
-              accessoires: "accessoires inclus (ex: Volets roulants, Grilles de ventilation, etc.)",
-              specificites: "spécifications particulières (ex: Seuil PMR, Ouverture à la française, etc.)",
-              delaiLivraison: "délai de livraison (ex: 8 semaines, 2 mois, etc.)",
-              uniteOeuvre: "unité d'œuvre (ex: À l'unité, Au m², Au ml, etc.)",
-              montantEstime: "montant estimé en euros (nombre uniquement)",
-              status: "statut inféré selon le contexte (brouillon, en_attente_fournisseur, pre_devis_recu, etc.)",
-              technicalDetails: "détails techniques supplémentaires extraits du document"
-            }]
-          }, null, 2),
-          "",
-          "Règles importantes:",
-          "- Extrais TOUS les lots de menuiserie mentionnés dans le document;",
-          "- Si une information n'est pas trouvée, utilise null;",
-          "- Pour les quantités et montants, extrais uniquement les nombres;",
-          "- Inférer le statut le plus probable selon le contexte du document;",
-          "- Sois très précis sur les spécifications techniques;",
-          "- Inclure tous les détails trouvés dans technicalDetails;",
-          "- Les normes doivent être une liste de strings;",
-          "",
-          "Réponds UNIQUEMENT avec le JSON, sans explication."
-        ].join("\n");
+    async () => {
+
+      const prompt = `
+Tu es un expert en analyse de documents techniques de menuiserie et d'appels d'offres.
+
+Analyse le contenu suivant et extrais tous les lots de menuiserie avec leurs spécifications techniques détaillées.
+
+Document: ${filename}
+Contenu:
+---
+${content.substring(0, 15000)}
+---
+
+Extrais et structure TOUS les lots de menuiserie trouvés au format JSON strict.
+Pour chaque lot identifié, extrais le maximum d'informations techniques disponibles.
+
+Format de réponse attendu:
+{
+"lots": [
+    {
+      "numero": "numéro/référence du lot (ex: 07.1, LOT-02, etc.)",
+      "designation": "désignation complète du lot",
+      "quantite": "nombre d'éléments (nombre uniquement)",
+      "materiau": "matériau principal (ex: Aluminium, PVC, Bois, etc.)",
+      "vitrage": "type de vitrage (ex: Double vitrage, Triple vitrage, etc.)",
+      "localisation": "localisation/orientation (ex: Façade Sud, Étage 1, etc.)",
+      "couleur": "couleur/finition (ex: RAL 7016, Gris anthracite, etc.)",
+      "dimensions": "dimensions types (ex: 135x120 cm, Variable selon plans, etc.)",
+      "performanceThermique": "performance thermique (ex: Uw ≤ 1,4 W/m².K, etc.)",
+      "performanceAcoustique": "performance acoustique (ex: Rw ≥ 35 dB, etc.)",
+      "normes": ["liste des normes applicables (ex: DTU 36.5, RE2020, NF Fenêtre, etc.)"],
+      "accessoires": "accessoires inclus (ex: Volets roulants, Grilles de ventilation, etc.)",
+      "specificites": "spécifications particulières (ex: Seuil PMR, Ouverture à la française, etc.)",
+      "delaiLivraison": "délai de livraison (ex: 8 semaines, 2 mois, etc.)",
+      "uniteOeuvre": "unité d'œuvre (ex: À l'unité, Au m², Au ml, etc.)",
+      "montantEstime": "montant estimé en euros (nombre uniquement)",
+      "status": "statut inféré selon le contexte (brouillon, en_attente_fournisseur, pre_devis_recu, etc.)",
+      "technicalDetails": "détails techniques supplémentaires extraits du document"
+    }
+  ]
+}
+
+Règles importantes:
+- Extrais TOUS les lots de menuiserie mentionnés dans le document;
+- Si une information n'est pas trouvée, utilise null;
+- Pour les quantités et montants, extrais uniquement les nombres;
+- Inférer le statut le plus probable selon le contexte du document;
+- Sois très précis sur les spécifications techniques;
+- Inclure tous les détails trouvés dans technicalDetails;
+- Les normes doivent être une liste de strings;
+
+Réponds UNIQUEMENT avec le JSON, sans explication.
+`;
 
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL_STR,
@@ -450,36 +484,36 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length } });
+      logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length }
+
+
+          }
+
+        });
 
       // Parser la réponse JSON
       let jsonText = responseText.trim();
-      const backtick = String.fromCharCode(96);
-      const codeBlockStart = backtick + backtick + backtick + "json";
-      const codeBlockStartAlt = backtick + backtick + backtick;
-      const codeBlockEnd = backtick + backtick + backtick;
-      if (jsonText.startsWith(codeBlockStart)) {
-        jsonText = jsonText.substring(codeBlockStart.length).trim();
-        if (jsonText.endsWith(codeBlockEnd)) {
-          jsonText = jsonText.substring(0, jsonText.length - codeBlockEnd.length).trim();
-        }
-      } else if (jsonText.startsWith(codeBlockStartAlt)) {
-        jsonText = jsonText.substring(codeBlockStartAlt.length).trim();
-        if (jsonText.endsWith(codeBlockEnd)) {
-          jsonText = jsonText.substring(0, jsonText.length - codeBlockEnd.length).trim();
-        }
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
       
       const extractedData = JSON.parse(jsonText);
       
       if (!extractedData.lots || !Array.isArray(extractedData.lots)) {
-        logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename } });
+        logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename }
+
+
+            }
+
+          });
         return [];
       }
 
       // Validation et nettoyage des données des lots
       const cleanedLots: ExtractedLotData[] = extractedData.lots.map((lot: any) => ({
-        numero: lot.numero || "LOT-" + Date.now(),
+        numero: lot.numero || `LOT-${Date.now()}`,
         designation: lot.designation || 'Lot sans désignation',
         quantite: lot.quantite ? parseInt(lot.quantite.toString()) : null,
         materiau: lot.materiau || null,
@@ -497,15 +531,20 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         montantEstime: lot.montantEstime ? parseFloat(lot.montantEstime.toString()) : null,
         status: this.validateLotStatus(lot.status),
         technicalDetails: lot.technicalDetails || null,
-      }));
+      }
+    }));
 
-      logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length } });
+      logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length }
+
+
+          }
+
+
+        });
       return cleanedLots;
-
-    
     },
     {
-      operation: 'Anthropic',
+      operation: 'extractDetailedLots',
       service: 'documentProcessor',
       metadata: {}
     }
@@ -532,139 +571,138 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
    * Contenu réel du document RPAO SCICV BOULOGNE SANDETTIE.
    */
   private getBoulogneDocumentContent(): string {
-    return [
-      "MAITRE D'OUVRAGE: SCICV BOULOGNE SANDETTIE",
-      "RPAO SCICV BOULOGNE SANDETTIE",
-      "",
-      "PROJET: Construction de 98 logements collectifs",
-      "Localisation: 62200 BOULOGNE SUR MER",
-      "Maître d'ouvrage: SCICV BOULOGNE SANDETTIE",
-      "Assistant maître d'ouvrage: SAS NOVALYS, 41 Boulevard AMBROISE PARE, AMIENS",
-      "Bailleur: CDC HABITAT LILLE, 74 rue Gambetta, 59000 LILLE",
-      "",
-      "Architecte: ATELIER Marianne LEEMANN, 2 place Gambetta, 80003 AMIENS",
-      "",
-      "Date limite de remise des offres: Vendredi 16 Mai 2025 avant 16H00",
-      "Délai d'exécution: 18 mois TCE à compter de la date de l'ordre de service",
-      "Délai de validité des offres: 120 jours",
-      "",
-      "Contact: SAS NOVALYS",
-      "41 Boulevard Ambroise Paré – 80000 AMIENS",
-      "gerald.dumetz@sas-novalys.fr",
-      "Tel : 03 22 71 18 93",
-      "",
-      "Caractéristiques:",
-      "- RE 2020 seuil 2025 (avec Cep -10% et Cepnr -10%)",
-      "- NF HABITAT HQE",
-      "- Marché en entreprises séparées",
-      "- Variantes autorisées en plus de la solution de base",
-      "",
-      "Entreprise candidate: JLM Menuiserie (client qui va réaliser les travaux)"
-    ].join("\n");
+    return `
+MAITRE D'OUVRAGE: SCICV BOULOGNE SANDETTIE
+RPAO SCICV BOULOGNE SANDETTIE
+
+PROJET: Construction de 98 logements collectifs
+Localisation: 62200 BOULOGNE SUR MER
+Maître d'ouvrage: SCICV BOULOGNE SANDETTIE
+Assistant maître d'ouvrage: SAS NOVALYS, 41 Boulevard AMBROISE PARE, AMIENS
+Bailleur: CDC HABITAT LILLE, 74 rue Gambetta, 59000 LILLE
+
+Architecte: ATELIER Marianne LEEMANN, 2 place Gambetta, 80003 AMIENS
+
+Date limite de remise des offres: Vendredi 16 Mai 2025 avant 16H00
+Délai d'exécution: 18 mois TCE à compter de la date de l'ordre de service
+Délai de validité des offres: 120 jours
+
+Contact: SAS NOVALYS
+41 Boulevard Ambroise Paré – 80000 AMIENS
+gerald.dumetz@sas-novalys.fr
+Tel : 03 22 71 18 93
+
+Caractéristiques:
+- RE 2020 seuil 2025 (avec Cep -10% et Cepnr -10%)
+- NF HABITAT HQE
+- Marché en entreprises séparées
+- Variantes autorisées en plus de la solution de base
+
+Entreprise candidate: JLM Menuiserie (client qui va réaliser les travaux)
+`;
   }
 
   /**
    * Contenu réel du document AO-2503-2161.
    */
   private getAO2503DocumentContent(): string {
-    return [
-      "Avis n°AO-2503-2161",
-      "SCICV BOULOGNE SANDETTIE",
-      "",
-      "Construction de 98 logements collectifs, rue de Wissant, NF HABITAT HQE RE2020 Seuils 2025 Cep-10% Cep,nr-10%",
-      "",
-      "Localisation: 62 - Boulogne-sur-Mer",
-      "",
-      "Mise en ligne: 21/01/2025",
-      "Limite de réponse: 14/03/2025",
-      "",
-      "Maître d'ouvrage: SCICV Boulogne Sandettie",
-      "Assistance à maîtrise d'ouvrage: Novalys",
-      "41 boulevard Ambroise-Paré, 80000 Amiens",
-      "Siret: 98206593000017",
-      "",
-      "Mode de passation du marché: Appel d'offres ouvert",
-      "",
-      "Objet du marché: Construction de 98 logements collectifs, rue de Wissant, 62200 Boulogne-sur-Mer",
-      "",
-      "Lots concernés:",
-      "02a: Fondations spéciales",
-      "03: Gros oeuvre",
-      "06: Etanchéité",
-      "",
-      "Lot 07.1: Menuiseries extérieures",
-      "Détails techniques:",
-      "- 45 fenêtres aluminium double vitrage - Façade Sud",
-      "- 32 fenêtres PVC double vitrage - Façade Nord",
-      "- 18 portes-fenêtres aluminium double vitrage avec seuil PMR",
-      "- 6 baies coulissantes aluminium triple vitrage - Séjours",
-      "- Couleur: Gris anthracite RAL 7016",
-      "- Performance thermique: Uw ≤ 1,4 W/m².K",
-      "- Performance acoustique: Rw ≥ 35 dB",
-      "- Certification: NF Fenêtre, Acotherm",
-      "- Normes: DTU 36.5, RE2020",
-      "- Dimensions standard: 135x120 cm (fenêtres), 240x215 cm (baies)",
-      "- Accessoires: Volets roulants électriques, grilles de ventilation",
-      "- Délai de livraison: 8 semaines",
-      "- Unité d'œuvre: À l'unité",
-      "- Montant estimé: 185 000 € HT",
-      "",
-      "Lot 08: Menuiserie intérieure",
-      "Détails techniques:",
-      "- 196 portes intérieures stratifiées finition chêne clair",
-      "- 98 blocs-portes d'entrée logements sécurisées",
-      "- 24 portes techniques locaux communs",
-      "- 12 placards intégrés sur mesure",
-      "- Épaisseur: 40 mm (portes logements), 50 mm (portes techniques)",
-      "- Serrurerie: 3 points A2P* pour entrées logements",
-      "- Performances acoustiques: DnT,w ≥ 40 dB",
-      "- Certification: NF Intérieure, PEFC",
-      "- Accessoires: Poignées, gonds, joints d'étanchéité",
-      "- Délai de livraison: 6 semaines",
-      "- Unité d'œuvre: À l'unité",
-      "- Montant estimé: 95 000 € HT",
-      "",
-      "09: Plâtrerie cloisons sèches",
-      "10: Serrurerie",
-      "11: Carrelage faïence",
-      "12: Peinture",
-      "13: Plomberie chauffage VMC",
-      "14: Electricité",
-      "15: Ravalement",
-      "16: VRD",
-      "18: Ascenseur",
-      "20: Espaces verts clôtures",
-      "27: Sols souples",
-      "30: Nettoyage",
-      "",
-      "Entreprise candidate: JLM Menuiserie (spécialiste des lots 07.1 Menuiseries extérieures et 08 Menuiserie intérieure)",
-      "",
-      "Date limite de réception des offres: 14 mars 2025 à 18h00",
-      "Démarrage prévisionnel des travaux: Juin 2025",
-      "Durée des travaux: 18 mois TCE",
-      "",
-      "Date de validité des offres: 120 jours à compter de la date limite de remise des offres",
-      "",
-      "Renseignements techniques et administratifs: 03 22 71 18 00"
-    ].join("\n");
+    return `
+Avis n°AO-2503-2161
+SCICV BOULOGNE SANDETTIE
+
+Construction de 98 logements collectifs, rue de Wissant, NF HABITAT HQE RE2020 Seuils 2025 Cep-10% Cep,nr-10%
+
+Localisation: 62 - Boulogne-sur-Mer
+
+Mise en ligne: 21/01/2025
+Limite de réponse: 14/03/2025
+
+Maître d'ouvrage: SCICV Boulogne Sandettie
+Assistance à maîtrise d'ouvrage: Novalys
+41 boulevard Ambroise-Paré, 80000 Amiens
+Siret: 98206593000017
+
+Mode de passation du marché: Appel d'offres ouvert
+
+Objet du marché: Construction de 98 logements collectifs, rue de Wissant, 62200 Boulogne-sur-Mer
+
+Lots concernés:
+02a: Fondations spéciales
+03: Gros oeuvre
+06: Etanchéité
+
+Lot 07.1: Menuiseries extérieures
+Détails techniques:
+- 45 fenêtres aluminium double vitrage - Façade Sud
+- 32 fenêtres PVC double vitrage - Façade Nord
+- 18 portes-fenêtres aluminium double vitrage avec seuil PMR
+- 6 baies coulissantes aluminium triple vitrage - Séjours
+- Couleur: Gris anthracite RAL 7016
+- Performance thermique: Uw ≤ 1,4 W/m².K
+- Performance acoustique: Rw ≥ 35 dB
+- Certification: NF Fenêtre, Acotherm
+- Normes: DTU 36.5, RE2020
+- Dimensions standard: 135x120 cm (fenêtres), 240x215 cm (baies)
+- Accessoires: Volets roulants électriques, grilles de ventilation
+- Délai de livraison: 8 semaines
+- Unité d'œuvre: À l'unité
+- Montant estimé: 185 000 € HT
+
+Lot 08: Menuiserie intérieure
+Détails techniques:
+- 196 portes intérieures stratifiées finition chêne clair
+- 98 blocs-portes d'entrée logements sécurisées
+- 24 portes techniques locaux communs
+- 12 placards intégrés sur mesure
+- Épaisseur: 40 mm (portes logements), 50 mm (portes techniques)
+- Serrurerie: 3 points A2P* pour entrées logements
+- Performances acoustiques: DnT,w ≥ 40 dB
+- Certification: NF Intérieure, PEFC
+- Accessoires: Poignées, gonds, joints d'étanchéité
+- Délai de livraison: 6 semaines
+- Unité d'œuvre: À l'unité
+- Montant estimé: 95 000 € HT
+
+09: Plâtrerie cloisons sèches
+10: Serrurerie
+11: Carrelage faïence
+12: Peinture
+13: Plomberie chauffage VMC
+14: Electricité
+15: Ravalement
+16: VRD
+18: Ascenseur
+20: Espaces verts clôtures
+27: Sols souples
+30: Nettoyage
+
+Entreprise candidate: JLM Menuiserie (spécialiste des lots 07.1 Menuiseries extérieures et 08 Menuiserie intérieure)
+
+Date limite de réception des offres: 14 mars 2025 à 18h00
+Démarrage prévisionnel des travaux: Juin 2025
+Durée des travaux: 18 mois TCE
+
+Date de validité des offres: 120 jours à compter de la date limite de remise des offres
+
+Renseignements techniques et administratifs: 03 22 71 18 00
+`;
   }
 
   /**
    * Génère un contenu de démonstration basé sur le nom du fichier.
    */
   private generateDemoContent(filename: string): string {
-    return [
-      "Document d'appel d'offres: " + filename,
-      "",
-      "Ce document contient les informations d'un appel d'offres pour des travaux de menuiserie.",
-      "Pour une extraction complète, veuillez vous assurer que le fichier est accessible.",
-      "",
-      "Référence: Extraite du nom de fichier",
-      "Client: À définir selon le contenu",
-      "Localisation: À définir selon le contenu",
-      "Date limite: À définir selon le contenu",
-      "Description: Travaux de menuiserie selon " + filename
-    ].join("\n");
+    return `Document d'appel d'offres: ${filename}
+
+Ce document contient les informations d'un appel d'offres pour des travaux de menuiserie.
+Pour une extraction complète, veuillez vous assurer que le fichier est accessible.
+
+Référence: Extraite du nom de fichier
+Client: À définir selon le contenu
+Localisation: À définir selon le contenu
+Date limite: À définir selon le contenu
+Description: Travaux de menuiserie selon ${filename}
+`;
   }
 
   /**

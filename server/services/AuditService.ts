@@ -602,8 +602,8 @@ export class AuditService {
       const conditions = [];
       
       if (query.type) conditions.push(eq(securityAlerts.type,as unknown)tas unknown));
-      if (query.severity) conditions.push(eq(securityAlerts.severity,as unknown)sas unknown)unknown any));
-      if (query.status) conditions.push(eq(securityAlerts.sas unknown)qas unknown)unknowns as any));
+      if (query.severity) conditions.push(eq(securityAlerts.severity,as unknown)sas unknown)unknown unknown));
+      if (query.status) conditions.push(eq(securityAlerts.sas unknown)qas unknown)unknowns as unknown));
       if (query.userId) conditions.push(eq(securityAlerts.userId, query.userId));
       if (query.assignedToUserId) conditions.push(eq(securityAlerts.assignedToUserId, query.assignedToUserId));
       if (query.correlationId) conditions.push(eq(securityAlerts.correlationId, query.correlationId));
@@ -1090,7 +1090,7 @@ export class AuditService {
   /**
    * Sanitiser les données sensibles pour le logging
    */
-  private sanitizeData(dataunknownnknown): any {
+  private sanitizeData(dataunknownnknown): unknown {
     if (!data) return data;
 
     const sensitiveFields = ['password', 'token', 'secret', 'key', 'auth', 'credential'];

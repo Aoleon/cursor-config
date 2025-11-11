@@ -48,9 +48,9 @@ export class AOBaseExtractor extends BaseExtractor<Partial<InsertAo>> {
           // Traitement spécial pour timeline qui mappe vers 2 champs
           if ((transformedValue as unknown)._timeline) {
             if ((transformedVaas unknown).from) aoData.dateSortieAO = (transformas unknown) as unknown).from;
-            if ((transas unknown)aas unknown).to) aoData.dateLimiteRemise = (tas unknown)mas unknown)unknown any).to;
+            if ((transas unknown)aas unknown).to) aoData.dateLimiteRemise = (tas unknown)mas unknown)unknown unknown).to;
           } else {
-as unknown) as unknown)unknowna as any)[fieldName] = transformedValue;
+as unknown) as unknown)unknowna as unknown)[fieldName] = transformedValue;
           }
           
           this.addDiagnostic(context, 'info', 
@@ -75,7 +75,7 @@ as unknown) as unknown)unknowna as any)[fieldName] = transformedValue;
     // Appliquer valeurs par défaut
     if (!aoData.source) aoData.source = 'other' as unknown;
     if (!aoData.menuiserieType) aoData.menuiserieType = 'autas unknown;unknown;
-    if (!aoData.status) aoData.statuas unknown unknown;unknown;any;
+    if (!aoData.status) aoData.statuas unknown unknown;unknown;unknown;
     
     // Validation champs requis basiques
     const requiredFields = ['intituleOperation', 'menuiserieType', 'source'];
@@ -106,7 +106,7 @@ as unknown) as unknown)unknowna as any)[fieldName] = transformedValue;
   /**
    * Transforme une valeur brute Monday selon le type de mapping
    */
-  private transformValue(value: unknown, map: unknown, unknown, context: SpunknownterContext): any {
+  private transformValue(value: unknown, map: unknown, unknown, context: SpunknownterContext): unknown {
     if (value === null || value === undefined || value === '') return null;
     
     const type = mapping.type;
@@ -266,7 +266,7 @@ as unknown) as unknown)unknowna as any)[fieldName] = transformedValue;
     const missing: string[] = [];
     
     for (const field of requiredFields) {
-    as unknoas unknownlunknownnown) (aoData as any)[field];
+    as unknoas unknownlunknownnown) (aoDas unknunknunknown)any)[field];
       if (value === null || value === undefined || value === '') {
         missing.push(field);
       }

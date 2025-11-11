@@ -334,7 +334,7 @@ export const mondayProjectSchema = z.object({
 /**
  * Normalise les enums case-insensitive pour corriger 'bardage' → 'BARDAGE'
  */
-function normalizeEnums(data: any): any {
+function normalizeEnums(data: unknown): unknown {
   const normalized = { ...data };
   
   // Normalisation aoCategory (AO)

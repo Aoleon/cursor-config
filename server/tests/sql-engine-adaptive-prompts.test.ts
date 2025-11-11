@@ -19,9 +19,9 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
 
   beforeAll(() => {
     // Mock dependencies
-    const mockAI = new AIService({} as any, {} as any);
-    const mockRBAC = new RBACService({} as any);
-    const mockBusinessContext = new BusinessContextService({} as any, {} as any, {} as any);
+    const mockAI = new AIService({} as unknown, {} as unknown);
+    const mockRBAC = new RBACServiceas unknown)unknown);
+    const mockBusinessContext = new BusinessContextServiceas unknown,as unknown, as as unknown) as unknown);
     mockEventBus = new EventBus();
     mockStorage = {} as IStorage;
 
@@ -291,7 +291,7 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
 
       await sqlEngine['trackPromptQuality']('kpi_metrics', 250, true, 0);
       
-      const event = await eventPromise as any;
+      const event = await eventPromise as unknown;
       expect(event.queryType).toBe('kpi_metrics');
       expect(event.generationTime).toBe(250);
       expect(event.success).toBe(true);

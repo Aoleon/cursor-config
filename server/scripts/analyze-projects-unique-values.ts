@@ -14,7 +14,7 @@ async function analyzeUniqueValues() {
   const items = await service.getBoardItemsPaginated(boardId);
   logger.info(`📦 Total items: ${items.length}\n`);
   
-  const uniqueValues = new Map<string, Set<any>>();
+  const uniqueValues = new Map<string, Set<unknown>>();
   
   // Colonnes importantes
   const importantColumns = [

@@ -271,7 +271,7 @@ export class ContactService {
       adresse: extractedData.adresse || null,
       codePostal: extractedData.codePostal || null,
       ville: extractedData.ville || null,
-      departement: extractedData.departement as any || null,
+      departement: extractedData.departement as unknown || null,
       telephone: extractedData.telephone || null,
       email: extractedData.email || null,
       siteWeb: extractedData.siteWeb || null,
@@ -311,7 +311,7 @@ export class ContactService {
       adresse: extractedData.adresse || null,
       codePostal: extractedData.codePostal || null,
       ville: extractedData.ville || null,
-      departement: extractedData.departement as any || null,
+      departement: extractedData.departemas unknown unknown || null,
       telephone: extractedData.telephone || null,
       email: extractedData.email || null,
       siteWeb: extractedData.siteWeb || null,
@@ -556,7 +556,7 @@ export class ContactService {
       email: data.email || null,
       phone: data.phone || null,
       company: data.company || null,
-      poste: data.poste as any || null,
+      poste: datas unknowneunknown |ny || null,
       address: data.address || null,
       notes: data.notes || `Créé automatiquement - Source: ${data.source}`
     };

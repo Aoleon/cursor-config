@@ -49,7 +49,7 @@ export class ContactsRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('ContactsRepository', db, eventBus);
   }
 

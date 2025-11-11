@@ -26,7 +26,7 @@ export abstract class BaseExtractor<unknown>unknown> implements IExtractor<T> {
     });
   }
   
-  protected getColumnValue(context: SplitterContext, columnId: strinunknown any {
+  protected getColumnValue(context: SplitterContext, columnId: strinunknown unknown {
     const column = context.mondayItem.column_values?.find(col => col.id === columnId);
     if (!column) return null;
     

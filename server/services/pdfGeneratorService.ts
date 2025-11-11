@@ -540,7 +540,7 @@ export class PdfGeneratorService {
   /**
    * Get template cache statistics
    */
-  static getTemplateCacheStatsunknown any {
+  static getTemplateCacheStatsunknown unknown {
     const engine = this.getTemplateEngine();
     return engine.getCacheStats();
   }

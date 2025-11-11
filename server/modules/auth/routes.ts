@@ -24,7 +24,7 @@ import { basicLoginSchema } from '../../validation-schemas';
  * Simple auth middleware - checks for session user (basic or Microsoft)
  * Exported to replace old Replit Auth isAuthenticated middleware
  */
-export const isAuthenticated = (req: any, res: Response, next: NextFunction) => {
+export const isAuthenticated = (req: unknown, res: Response, next: NextFunction) => {
   const user = req.session?.user || req.user;
   if (!user) {
     return res.status(401).json({ success: false, message: 'Non authentifié' });
@@ -43,7 +43,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
   /**
    * Middleware pour vérifier permissions administrateur (version simplifiée)
    */
-  const requireAdminForHealth = asyncHandler(async (req: any, res: any, next: any) => {
+  const requireAdminForHealth = asyncHandler(async : unknown,: unknown,es: unknown, next: unknown) => {
     const user = req.user;
     if (!user) {
       throw new AuthenticationError('Authentification requise pour diagnostic health');
@@ -109,7 +109,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         username,
         requestedRole: role,
         validatedRole,
-        hasSession: !!(req as any).session
+        hasSession: !!(req as unknown).session
 
             })
 
@@ -139,10 +139,10 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
 
           );
       
-      (req as any).session.user = adminUser;
+      (as unknown)unknown).session.user = adminUser;
       
       await new Promise<void>((resolve, reject) => {
-        (req as any).session.save((err: any) => {
+     as unknown) as unknown).session.save(: unknunknown)unknown) => {
           if (err) {
             logger.error('[Auth] Erreur sauvegarde session', { metadata: { 
                 route: '/api/login/basic',

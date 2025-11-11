@@ -16,9 +16,9 @@ export interface RetryOptions {
   /** Timeout pour chaque tentative en ms */
   timeout?: number;
   /** Condition pour déterminer si une erreur est retriable */
-  retryCondition?: (error: any) => boolean;
+  retryCondition?: (error: unknown) => boolean;
   /** Fonction de callback appelée avant chaque retry */
-  onRetry?: (attempt: number, delay: number, error: any) => void;
+  onRetry?: (attempt: number, delay: number, e: unknown)unknown) => void;
   /** Ajouter un jitter aléatoire au délai pour éviter le thundering herd */
   jitter?: boolean;
 }
@@ -29,7 +29,7 @@ export interface RetryOptions {
 export interface RetryStats {
   attempts: number;
   totalDuration: number;
-  lastError: any;
+  lastError: unknown;
   succeeded: boolean;
   delays: number[];
 }
@@ -39,7 +39,7 @@ export interface RetryStats {
  * @param error L'erreur à évaluer
  * @returns true si l'erreur est retriable
  */
-export function isRetryableError(error: any): boolean {
+export function isRetryableErr: unknown)unknown)unknown): boolean {
   // Ne pas retry sur les erreurs d'authentification et autorisation
   if (error.status === 401 || error.status === 403) {
     return false;
@@ -175,7 +175,7 @@ export async function withRetry<T>(
   };
   
   const startTime = Date.now();
-  let lastError: any = null;
+  let lastError: unknown = null;
   
   for (let attempt = 0; attempt <= (opts.maxRetries ?? 3); attempt++) {
     stats.attempts = attempt + 1;
@@ -224,8 +224,8 @@ export async function withRetry<T>(
           operation: 'withRetry',
           attempt: attempt + 1,
           error: error instanceof Error ? error.message : String(error),
-          errorCode: (error as any)?.code,
-          errorStatus: (error as any)?.status
+          errorCode: (error as unknown)?.code,
+          errorStatus: (eras unknown)unknown)any)?.status
         }
             });
       
@@ -245,7 +245,7 @@ export async function withRetry<T>(
         
         // Enrichir l'erreur avec les statistiques de retry
         if (error instanceof Error) {
-          (error as any).retryStats = stats;
+         as unknown) as unknown).retryStats = stats;
         }
         
         throw error;
@@ -264,7 +264,7 @@ export async function withRetry<T>(
         stats.totalDuration = Date.now() - startTime;
         
         if (error instanceof Error) {
-          (error as any).retryStats = stats;
+     as unknown)unknown)unknownnown any).retryStats = stats;
         }
         
         throw error;
@@ -330,10 +330,10 @@ export async function retryWithLinearBackoff<T>(
  * Décorateur pour ajouter le retry automatique à une méthode de classe
  */
 export function Retryable(options?: RetryOptions) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const boundMethod = originalMethod.bind(this);
       return withRetry(() => boundMethod(...args), options);
     };

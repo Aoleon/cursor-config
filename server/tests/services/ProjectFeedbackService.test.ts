@@ -45,7 +45,7 @@ describe('ProjectFeedbackService', () => {
       const mockProject = { id: projectId, name: 'Test Project' };
       const mockFeedback = { id: 'feedback-1', ...feedbackData };
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
       vi.mocked(mockStorage.createProjectFeedbackTerrain).mockResolvedValue(mockFeedback as ProjectFeedbackTerrain);
 
       const result = await service.createFeedback(feedbackData);
@@ -85,7 +85,7 @@ describe('ProjectFeedbackService', () => {
       const updatedFeedback = { ...mockFeedback, assignedTo, status: 'en_cours' };
 
       vi.mocked(mockStorage.getProjectFeedbackTerrainById).mockResolvedValue(mockFeedback as ProjectFeedbackTerrain);
-      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as any);
+      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUas unknown)unknown);
       vi.mocked(mockStorage.updateProjectFeedbackTerrain).mockResolvedValue(updatedFeedback as ProjectFeedbackTerrain);
 
       const result = await service.assignFeedback(feedbackId, assignedTo);

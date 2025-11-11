@@ -236,7 +236,7 @@ export const uploadObjectSchema = z.object({
   entityType: z.enum(["offer", "project", "ao", "supplier"]).optional(),
   entityId: z.string().uuid("ID entité invalide").optional(),
   tags: z.array(z.string().trim().max(50)).max(10, "Maximum 10 tags").optional(),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 }).strict();
 
 // POST /api/templates
@@ -261,7 +261,7 @@ export const uploadSupplierDocumentSchema = z.object({
   supplierId: z.string().uuid("ID fournisseur invalide"),
   documentType: z.enum(["devis", "catalogue", "certification", "conditions", "autre"]),
   sessionId: z.string().uuid("ID session invalide").optional(),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string()unknown.any()).optional()
 }).strict();
 
 // POST /api/supplier-documents/:id/analyze

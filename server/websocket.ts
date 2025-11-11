@@ -36,7 +36,7 @@ export class WebSocketManager {
   private wss: WebSocketServer;
   private clients = new Set<AuthenticatedWebSocket>();
   private eventBus: EventBus;
-  private sessionStore: any;
+  private sessionStore: unknown;
   private heartbeatInterval: NodeJS.Timeout | undefined;
 
   constructor(eventBus: EventBus) {
@@ -161,7 +161,7 @@ export class WebSocketManager {
       log(`WebSocket: Looking up session: ${sessionId.substring(0, 8)}...`);
 
       // Récupérer la session depuis le store
-      this.sessionStore.get(sessionId, (err: any, sessionData: SessionData) => {
+      this.sessionStore.get(sessionId, (err: unknown, sessionData: SessionData) => {
         if (err) {
           log(`WebSocket: Session lookup error: ${err}`);
           this.sendMessage(ws, {
@@ -383,7 +383,7 @@ export class WebSocketManager {
     return true;
   }
 
-  public handleUpgrade(request: IncomingMessage, socket: any, head: Buffer) {
+  public handleUpgrade(request: IncomingMessage, so: unknown, unknown, head: Buffer) {
     const { pathname } = parse(request.url || '');
     
     if (pathname === '/ws') {

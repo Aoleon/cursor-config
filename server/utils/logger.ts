@@ -12,7 +12,7 @@ type LogContext = {
   userId?: string;
   traceId?: string;
   correlationId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };
 
 interface LogEntry {
@@ -114,7 +114,7 @@ class Logger {
       entry.error = {
         message: error.message,
         stack: error.stack,
-        code: (error as any).code
+        code: (error as unknown).code
       };
     }
 

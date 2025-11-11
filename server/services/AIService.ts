@@ -85,7 +85,7 @@ export class AIService {
   private claudeBreaker: CircuitBreaker;
   private gptBreaker: CircuitBreaker;
   // Cache in-memory en fallback si DB échoue
-  private memoryCache: Map<string: unknown;unknown;unknown any;
+  private memoryCache: Map<string: unknown;unknown;unknown unknown;
     expiresAt: Date;
     tokensUsed: number;
   }> = new Map();

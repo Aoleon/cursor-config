@@ -2505,7 +2505,7 @@ export class ChatbotOrchestrationService {
    * @returns Liste des filtres détectés
    */
   private detectQueryFilters(qu: unknown[]rinunknown[]ny[] {
- : unknown[]t funknown[unknown any[] = [];
+ : unknown[]t funknown[unknown unknown[] = [];
     const queryLower = query.toLowerCase();
     // Détection des filtres de statut
     const statusPatterns: Record<string, string[]> = {
@@ -2564,11 +2564,11 @@ export class ChatbotOrchestrationService {
   private lruCache = (() => {
     class LRUCache {
     private cache: Map<string, {
-   : unknown;unknownnown;any;
+   : unknown;unknownnown;unknown;
       timestamp: number;
       ttl: number;
       hits: number;
-      q: unknown;unknownnown;n?: any;
+      q: unknown;unknownnown;n?: unknown;
     }>;
     private maxSize: number;
     private readonly DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes par défaut
@@ -2579,7 +2579,7 @@ export class ChatbotOrchestrationService {
     /**
      * Récupère une valeur du cache avec gestion LRU
      */
-    geunknowney: string): any {
+    geunknowney: string): unknown {
       const entry = this.cache.get(key);
       if (!entry) {
         logger.debug('Cache miss', { metadata: {
@@ -2628,7 +2628,7 @@ export class ChatbotOrchestrationService {
     /**
      * Ajoute ou met à jour une entrée dans le cache
      */
-    set(key: s: unknownnown,unknown,ue: any, ttl?: number, queryPattern?: unknown): void {
+    set(key: s: unknownnown,unknown,ue: unknown, ttl?: number, queryPattern?: unknown): void {
       // Éviction si plein (supprime le premier = le plus ancien)
       if (this.cache.size >= this.maxSize) {
         const firstKey = this.cache.keys().next().value;
@@ -2790,7 +2790,7 @@ export class ChatbotOrchestrationService {
   /**
    * Méthodes wrapper pour compatibilité avec le code existant
    */
-  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)any): void {
+  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)unknown): void {
     this.lruCache.set(key, data, undefined, queryPattern);
   }
   private getCacheLRU(key: string): unknown | null {
@@ -2890,7 +2890,7 @@ export class ChatbotOrchestrationService {
    * @param entities Entités métier détectées
    * @returns Template SQL avec hints de performance
    */
-  private generateOptimizedSQunknown unknown,unknown,eryPattern: any, entities: string[]): {
+  private generateOptimizedSQunknown unknown,unknown,eryPat: unknown, unknown, entities: string[]): {
     template: string;
     hints: string[];
     estimatedComplexity: number;
@@ -2977,7 +2977,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les KPIs
    */
-  private gunknown unknown,unknown,e(queryPattern: any, entities: string[]): string {
+  private gunknown unknown,unknown,e(quer: unknown,rn: unknown, entities: string[]): string {
     return `
       -- Template KPI optimisé
       WITH kpi_data AS (
@@ -2995,7 +2995,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les comparaisons
    */
-  private getCunknown unknown,unknown,plate(queryPattern: any, entities: string[]): string {
+  private getCunknown unknown,unknown,plate(: unknown,atteunknunknown,any, entities: string[]): string {
     return `
       -- Template comparaison temporelle optimisé
       WITH period_current AS (
@@ -3020,7 +3020,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les agrégations
    */
-  private gunknown unknown,unknown,nTemplate(queryPattern: any, entities: string[]): string {
+  private gunknown unknown,unknown,nTempl: unknown,eryPunknunknown,rn: any, entities: string[]): string {
     return `
       -- Template agrégation optimisé
       SELECT 
@@ -3040,7 +3040,7 @@ export class ChatbotOrchestrationService {
   /**
    * Template SQL pour les listes
    */
-unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): string {
+unknown unknown,unknown,tListT: unknown,e(quunknunknown,attern: any, entities: string[]): string {
     return `
       -- Template liste optimisé
       SELECT 
@@ -3109,7 +3109,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
   /**
    * Valide la cohérence temporelle
    */
-  privateunknownlidateTemporalCoherence(te: unknown)Cunknown)xt: any): {
+  privateunknownlidateTemporalCoherence(te: unknown)Cunknown)xt: unknown): {
     isValid: boolean;
     warning: string;
     suggestion: string;
@@ -3127,7 +3127,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     return { isValid: true, warning: '', suggestion: '' };
   }
   /**
-   * Analyse le coût estimé d'une requêteunknown */: unknown,unknown, analyzeQueryCost(queryPattern: any, userRole: string): {
+   * Analyse le coût estimé d'une requêteunknown */: unknown,unknown, analy: unknown,yCosunknunknown,eryPattern: any, userRole: string): {
     isExpensive: boolean;
     estimatedTime: number;
     shouldBlock: boolean;
@@ -3161,7 +3161,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
   /**
    * Valide les limites selon le rôle utilisateur
    */
-  privateunknownlidateRoleLimits(userRole: str: unknown)uunknown)attern: any): {
+  privateunknownlidateRoleLimits(userRole: str: unknown)uunknunknown)at: unknunknown)any): {
     isValid: boolean;
     warning: string;
     suggestion: string;
@@ -3215,7 +3215,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
   }
   /**
    * Valide les règles métier spécifiques JLMunknown */
-  private validateJLMBusin: unknown)eunknown)eryPattern: any): {
+  private validateJLMBusin: unknown)eunknunknown)er: unknunknown)rn: any): {
     isValid: boolean;
     warning: string;
     suggestion: string;
@@ -3355,7 +3355,7 @@ unknown unknown,unknown,tListTemplate(queryPattern: any, entities: string[]): st
     userRole: string,
    unknown: unknown[]ring,
     result: unknown)
- unknown): unknowneunknown any
+ unknown): unknunknown)nown unknown
   ): Promise<string[]> {
     const suggestions: string[] = [];
     // Suggestions basées sur le type de requête
@@ -3433,10 +3433,8 @@ case 'detail':;
    * @param executionTime Temps d'exécution
    * @returns Métadonnées contextuelles
  unknown/
-  private generaunknownon: unknown: unknown,dataunknownunknown[]sultsunknownny[],
-    queryPattern: any,
-    sql: string,
-    executionTime: number
+  private generaunknownon: unknown: unknown,dataunknownunknown[]sultsu: unknown,unknown]unknown,  queryPattern: any,
+    sql: string,unknown  executionTime: number
   ): any {
     const : unknown =a: unknown = {
       recordCount: results.length,
@@ -3524,7 +3522,7 @@ case 'detail':;
   /**
    * Évalue lunknownualité des données retournées
    */
-  p: unknown[]assessDataQunknown[]y(results: any[]): string {
+  p: unknown[]assessDataQunknown[]y(results: unknown[]): string {
     if (results.length === 0) return 'no_data';
     // Vérifier les valeurs nulles
     let nullCount = 0;

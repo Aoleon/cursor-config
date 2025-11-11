@@ -526,7 +526,7 @@ describe('AoRepository Integration Tests', () => {
     });
 
     it('should handle empty results', async () => {
-      const nonExistentStatus = 'nonexistent_status' as any;
+      const nonExistentStatus = 'nonexistent_status' as unknown;
       
       const results = await repository.findPaginated(
         { status: nonExistentStatus },

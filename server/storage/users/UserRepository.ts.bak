@@ -415,7 +415,15 @@ export class UserRepository extends BaseRepository<
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
           user: row.user || undefined
-        }));
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
       },
       'getTeamResources',
       { projectId }
@@ -607,7 +615,15 @@ export class UserRepository extends BaseRepository<
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
           user: row.user || undefined
-        }));
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
       },
       'getBeWorkload',
       { weekNumber, year }

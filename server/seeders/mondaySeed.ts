@@ -151,9 +151,9 @@ class DeterministicGenerator {
 export class MondaySeed {
   private generator: DeterministicGenerator;
   private logger = {
-    info: (message: string, data?: any) => logger.info(`[MondaySeed] ${message}`, data || ''),
-    warn: (message: string, data?: any) => logger.warn($1),
-    error: (message: string, error?: any) => logger.error('Erreur', `[MondaySeed] ${message}`, error || '')
+    info: (message: string, data?: unknown) => logger.info(`[MondaySeed] ${message}`, data || ''),
+    warn: (message: string, d: unknown)unknown) => logger.warn($1),
+    error: (message: string: unknown)unknown)unknown) => logger.error('Erreur', `[MondaySeed] ${message}`, error || '')
   };
 
   constructor() {
@@ -310,8 +310,8 @@ service: 'mondaySeed',;
       }
 
       const tempsPoseData: InsertTempsPose = {
-        work_scope: task.category as any,
-        component_type: task.type as any,
+        work_scope: task.category as unknown,
+        component_type: task.tas unknown, unknown,
         unit: task.unit,
         time_per_unit_min: task.timeMin,
         calculation_method: "manual",
@@ -392,8 +392,7 @@ service: 'mondaySeed',;
           lastName: contactData.name.split(' ').slice(1).join(' '),
           email: `${contactData.name.toLowerCase().replace(/\s+/g, '.')}@${contactData.company.toLowerCase().replace(/\s+/g, '-')}.fr`,
           phone: `03 ${this.generator.numberInRange(20, 29, `phone-${i}`)} ${this.generator.numberInRange(10, 99, `phone2-${i}`)} ${this.generator.numberInRange(10, 99, `phone3-${i}`)}`,
-          poste: contactData.role as any
-        });
+          poste: contactData.role as unknown});
         seededCount++;
       
     },
@@ -445,8 +444,8 @@ service: 'mondaySeed',;
         estimatedAmount: this.generator.numberInRange(10000, 500000, `ao-amount-${i}`),
         maitreOeuvre: `Cabinet ${this.generator.selectFromArray(["Architecte", "Technique", "Études"], `ao-mo-${i}`)} ${city}`,
         source: this.generator.selectFromArray(["website", "partner", "mail"], `ao-source-${i}`),
-        operationalStatus: this.generator.selectFromArray(operationalStatuses, `ao-status-${i}`) as any,
-        aoCategory: category as any,
+        operationalStatus: this.generator.selectFromArray(operationalStatuses, `ao-statusas unknown, as unknown,
+        aoCategoras unknown,gas unknown unknown,
         dateOS: this.generator.futureDateInRange(`ao-date-${i}`, 0, 3),
         delaiContractuel: this.generator.numberInRange(30, 180, `ao-delai-${i}`).toString(),
         selectionComment: `AO importé depuis Monday.com - Référence originale: monday-ao-${i}`,
@@ -504,7 +503,7 @@ service: 'mondaySeed',;
         startDatePlanned: startDate,
         endDatePlanned: endDate,
         contractAmount: this.generator.numberInRange(25000, 750000, `proj-amount-${i}`).toString(),
-        status: this.generator.selectFromArray(projectStatuses, `proj-status-${i}`) as any,
+        status: this.generator.selectFromArray(projectStatuses, `proas unknown,sas unknown)unknunknown,any,
         lotCount: this.generator.numberInRange(1, 12, `proj-lots-${i}`),
         notes: `Projet généré depuis Monday.com - Référence: monday-proj-${i}`,
         monday_item_id: `monday-proj-${i}`
@@ -545,8 +544,8 @@ service: 'mondaySeed',;
 
     for (let i = 0; i < targetCount; i++) {
       const metricData: InsertMetricsBusiness = {
-        metric_type: this.generator.selectFromArray(metricTypes, `metric-type-${i}`) as any,
-        entity_type: this.generator.selectFromArray(entityTypes, `metric-entity-${i}`) as any,
+        metric_type: this.generator.selectFromArray(metricTypes, as unknown,-as unknown{unknunknown, as any,
+        entity_type: this.generator.selectFromArray(entityTypesas unknown,ias unknowntunknunknown,i}`) as any,
         entity_id: this.generator.generateId('entity', i),
         period_start: this.generator.futureDateInRange(`metric-start-${i}`, -3, -1),
         period_end: this.generator.futureDateInRange(`metric-end-${i}`, 0, 1),
@@ -591,9 +590,9 @@ service: 'mondaySeed',;
         allContacts.push(...contacts);
       }
       
-      const existingRelations: any[] = []; // Simplified for now
+      const existingRelations: unknown[] = []; // Simplified for now
       
-      const existingPairs = new Set(existingRelations.map((rel: any) => `${rel.ao_id}-${rel.contact_id}`));
+      const existingPairs = new Set(existingRelati: unknunknown)unknown)el: any) => `${rel.ao_id}-${rel.contact_id}`));
 
       // Créer 1-3 contacts par AO (seulement pour les premiers 300 AO pour limiter)
       const limitedAos = aos.slice(0, 300);
@@ -612,10 +611,7 @@ service: 'mondaySeed',;
           const relationData: InsertAoContacts = {
             ao_id: ao.id,
             contact_id: contact.id,
-            link_type: this.generator.selectFromArray(["maitre_ouvrage", "maitre_oeuvre", "autre"], `link-type-${seededCount}`) as any
-          };
-
-          try {
+            link_type: this.generator.selectFromArray(["maitre_ouvrage", "maitre_oeuvre", "autre"], `link-type-${seededCount}`) as anas unknown}        try {
             await storage.createAoContact(relationData);
             seededCount++;
           
@@ -650,9 +646,9 @@ service: 'mondaySeed',;
         allContacts.push(...contacts);
       }
       
-      const existingRelations: any[] = []; // Simplified for now
+      const existingRelat: unknown[]ny[] = []; // Simplified for now
       
-      const existingPairs = new Set(existingRelations.map((rel: any) => `${rel.project_id}-${rel.contact_id}`));
+      const existingPairs = new Set(existingRe: unknunknown)unknown)p((rel: any) => `${rel.project_id}-${rel.contact_id}`));
 
       // Créer 1-2 contacts par projet (seulement premiers 200 projets)
       const limitedProjects = projects.slice(0, 200);
@@ -671,10 +667,8 @@ service: 'mondaySeed',;
           const relationData: InsertProjectContacts = {
             project_id: project.id,
             contact_id: contact.id,
-            link_type: this.generator.selectFromArray(["maitre_ouvrage", "maitre_oeuvre", "autre"], `proj-link-type-${seededCount}`) as any
-          };
-
-          try {
+            link_type: this.generator.selectFromArray(["maitre_ouvrage", "maitre_oeuvre", "autre"], `proj-link-type-${seededCount}`) as unknown
+     as unknown} try {
             await storage.createProjectContact(relationData);
             seededCount++;
           
@@ -811,8 +805,8 @@ export async function runMondaySeed(): Promise<{
   counts: Record<string, number>;
   errors: string[];
   executionTimeMs: number;
-  validation?: any;
-  reconciliation?: any;
+  validation?: unknown;
+  reconciliat: unknown;unknown;
 }> {
   const seeder = new MondaySeed();
   

@@ -7,7 +7,7 @@ import { mondayImportService } from '../../services/MondayImportService';
 import { mondayExportService } from '../../services/MondayExportService';
 import { mondayWebhookService } from '../../services/MondayWebhookService';
 import { syncAuditService } from '../../services/SyncAuditService';
-import { MondayProductionFinalService } from '../../services/MondayProductionFinalService';
+import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess, createError } from '../../middleware/errorHandler';
@@ -18,7 +18,7 @@ import { verifyMondaySignature } from '../../middleware/monday-webhook';
 import { z } from 'zod';
 import { lotExtractor, contactExtractor, masterEntityExtractor, addressExtractor, AOBaseExtractor } from '../../services/monday/extractors';
 import type { SplitterContext, MondaySplitterConfig } from '../../services/monday/types';
-import { MondayDataSplitter } from '../../services/MondayDataSplitter';
+import { MondayDataService } from './consolidated/MondayDataService';
 import { getBoardConfig } from '../../services/monday/defaultMappings';
 import { storage } from '../../storage-poc';
 import type { IStorage } from '../../storage-poc';
@@ -47,13 +47,12 @@ async function calculateMondayUsersCount(storage: IStorage): Promise<number> {
     {
       operation: 'calculateMondayUsersCount',
       service: 'MondayRoutes',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
 }
 
 // Service de migration Monday.com pour les métriques
-const mondayProductionService = new MondayProductionFinalService(storage);
+const mondayProductionService = mondaymigrationService(storage);
 
 const router = Router();
 
@@ -82,8 +81,9 @@ router.get('/api/monday/test',
   asyncHandler(async (req: Request, res: Response) => {
     logger.info('Test connexion Monday.com', {
       service: 'MondayRoutes',
-      metadata: { operation: 'testConnection' }
-    });
+      metadata: { operation: 'testConnection' 
+
+          });
 
     const isConnected = await mondayService.testConnection();
     
@@ -92,9 +92,17 @@ router.get('/api/monday/test',
       message: isConnected 
         ? 'Connexion Monday.com réussie' 
         : 'Échec connexion Monday.com - vérifier MONDAY_API_KEY'
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // GET /api/monday/boards - Récupérer liste boards
 router.get('/api/monday/boards',
@@ -104,8 +112,9 @@ router.get('/api/monday/boards',
 
     logger.info('Récupération boards Monday', {
       service: 'MondayRoutes',
-      metadata: { operation: 'getBoards', limit }
-    });
+      metadata: { operation: 'getBoards', limit 
+
+          });
 
     const boards = await mondayService.getBoards(limit);
 
@@ -113,9 +122,17 @@ router.get('/api/monday/boards',
       success: true,
       data: boards,
       count: boards.length
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // GET /api/monday/boards/:boardId - Récupérer données complètes d'un board
 router.get('/api/monday/boards/:boardId',
@@ -125,17 +142,26 @@ router.get('/api/monday/boards/:boardId',
 
     logger.info('Récupération données board Monday', {
       service: 'MondayRoutes',
-      metadata: { operation: 'getBoardData', boardId }
-    });
+      metadata: { operation: 'getBoardData', boardId 
+
+          });
 
     const boardData = await mondayService.getBoardData(boardId);
 
     res.json({
       success: true,
       data: boardData
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // GET /api/monday/boards/:boardId/preview - Preview import avec mappings suggérés
 router.get('/api/monday/boards/:boardId/preview',
@@ -150,17 +176,25 @@ router.get('/api/monday/boards/:boardId/preview',
         operation: 'previewImport',
         boardId,
         targetEntity
-      }
-    });
+
+          });
 
     const preview = await mondayImportService.previewImport(boardId, targetEntity);
 
     res.json({
       success: true,
       data: preview
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 /**
  * Analyse opportunités éclatement pour un board Monday
@@ -178,15 +212,16 @@ router.get('/api/monday/boards/:boardId/analyze',
     
     logger.info('Analyse board Monday demandée', {
       service: 'MondayRoutes',
-      metadata: { boardId, limit: limit || 'ALL' }
-    });
+      metadata: { boardId, limit: limit || 'ALL' 
+
+          });
     
     // Récupérer items du board
     const boardData = await mondayService.getBoardData(boardId);
     const items = limit ? boardData.items?.slice(0, limit) || [] : boardData.items || [];
     
     // Construire mapping colonnes pour le config
-    const columnMappings = boardData.columns.map(col => ({
+    const columnMappings = boardData.columns.map(col  => ({
       mondayColumnId: col.id,
       saxiumField: col.title,
       type: col.type as any,
@@ -259,7 +294,7 @@ router.get('/api/monday/boards/:boardId/analyze',
         opportunities: {
           lots: {
             count: lots.length,
-            details: lots.map(lot => ({
+            details: lots.map(lot  => ({
               description: lot.description || lot.name || 'Sans description',
               category: lot.category,
               montantHT: lot.montantHT,
@@ -268,7 +303,7 @@ router.get('/api/monday/boards/:boardId/analyze',
           },
           contacts: {
             count: contacts.length,
-            details: contacts.map(c => ({
+            details: contacts.map(c  => ({
               name: c.name,
               email: c.email,
               role: c.role
@@ -276,7 +311,7 @@ router.get('/api/monday/boards/:boardId/analyze',
           },
           addresses: {
             count: addresses.length,
-            details: addresses.map(addr => ({
+            details: addresses.map(addr  => ({
               address: addr.fullAddress || addr.address || '',
               city: addr.city || '',
               postalCode: addr.departmentCode || '',
@@ -286,14 +321,14 @@ router.get('/api/monday/boards/:boardId/analyze',
           masters: {
             maitresOuvrage: {
               count: masters.maitresOuvrage.length,
-              details: masters.maitresOuvrage.map(m => ({
+              details: masters.maitresOuvrage.map(m  => ({
                 nom: m.raisonSociale,
                 siret: m.siret
               }))
             },
             maitresOeuvre: {
               count: masters.maitresOeuvre.length,
-              details: masters.maitresOeuvre.map(m => ({
+              details: masters.maitresOeuvre.map(m  => ({
                 nom: m.raisonSociale,
                 siret: m.siret
               }))
@@ -323,12 +358,20 @@ router.get('/api/monday/boards/:boardId/analyze',
     
     logger.info('Analyse board Monday terminée', {
       service: 'MondayRoutes',
-      metadata: { boardId, stats }
-    });
+      metadata: { boardId, stats 
+
+          });
     
     res.json(response);
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 /**
  * Split Monday item vers entités Saxium (AO + lots + contacts + masters)
@@ -351,8 +394,9 @@ router.post('/api/monday/import/split',
     
     logger.info('Split Monday item demandé', {
       service: 'MondayRoutes',
-      metadata: { boardId, mondayItemId }
-    });
+      metadata: { boardId, mondayItemId 
+
+          });
     
     // Récupérer board data Monday
     const boardData = await mondayService.getBoardData(boardId);
@@ -370,12 +414,20 @@ router.post('/api/monday/import/split',
     let splitterConfig = config;
     if (!splitterConfig) {
       // Build minimal config depuis boardData.columns (comme dans /analyze)
-      const columnMappings = boardData.columns.map(col => ({
+      const columnMappings = boardData.columns.map(col  => ({
         mondayColumnId: col.id,
         saxiumField: col.title,
         type: col.type as any,
         required: false
-      }));
+            }
+
+                      }
+
+
+                                }
+
+
+                              }));
       
       const lotsMappings = columnMappings.filter(m => 
         m.type === 'subitems' || 
@@ -425,7 +477,7 @@ router.post('/api/monday/import/split',
     }
     
     // Invoquer MondayDataSplitter.splitItem()
-    const splitter = new MondayDataSplitter();
+    const splitter = mondaydataService();
     const result = await splitter.splitItem(mondayItemId, boardId, storage, splitterConfig);
     
     logger.info('Split Monday item terminé', {
@@ -439,16 +491,23 @@ router.post('/api/monday/import/split',
           lotsCreated: result.lotsCreated,
           contactsCreated: result.contactsCreated,
           mastersCreated: result.mastersCreated
-        }
-      }
-    });
+
+          });
     
     res.json({
       success: true,
       data: result
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // POST /api/monday/import - Importer données depuis Monday.com
 router.post('/api/monday/import',
@@ -473,8 +532,8 @@ router.post('/api/monday/import',
         boardId,
         targetEntity,
         mappingsCount: columnMappings.length
-      }
-    });
+
+          });
 
     let result;
 
@@ -518,8 +577,8 @@ router.post('/api/monday/import',
         importedCount: result.importedCount,
         errorCount: result.errors.length,
         success: result.success
-      }
-    });
+
+          });
 
     res.json({
       success: result.success,
@@ -532,8 +591,15 @@ router.post('/api/monday/import',
         ? `${result.importedCount} ${targetEntity}(s) importé(s) avec succès`
         : `Import partiel : ${result.importedCount} importés, ${result.errors.length} erreurs`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // EXPORT ENDPOINTS - Saxium → Monday.com
@@ -550,8 +616,8 @@ router.post('/api/monday/export/project/:projectId',
       metadata: { 
         operation: 'exportProject',
         projectId
-      }
-    });
+
+          });
 
     const mondayId = await mondayExportService.exportProject(projectId);
 
@@ -560,8 +626,15 @@ router.post('/api/monday/export/project/:projectId',
       data: { mondayId },
       message: `Projet exporté vers Monday.com avec succès (ID: ${mondayId})`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // POST /api/monday/export/ao/:aoId - Export manuel AO
 router.post('/api/monday/export/ao/:aoId',
@@ -574,8 +647,8 @@ router.post('/api/monday/export/ao/:aoId',
       metadata: { 
         operation: 'exportAO',
         aoId
-      }
-    });
+
+          });
 
     const mondayId = await mondayExportService.exportAO(aoId);
 
@@ -584,8 +657,15 @@ router.post('/api/monday/export/ao/:aoId',
       data: { mondayId },
       message: `AO exporté vers Monday.com avec succès (ID: ${mondayId})`
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // WEBHOOK ENDPOINT - Monday.com → Saxium
@@ -619,8 +699,8 @@ router.post('/api/monday/webhook',
         operation: 'webhook',
         correlationId,
         payloadSize: Buffer.isBuffer(req.body) ? req.body.length : JSON.stringify(req.body).length
-      }
-    });
+
+          });
     
     await mondayWebhookService.processWebhook(req.body);
     
@@ -629,8 +709,15 @@ router.post('/api/monday/webhook',
       message: 'Webhook accepted',
       correlationId
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // SYNC STATUS ENDPOINT - Get sync statuses
@@ -652,8 +739,7 @@ router.get('/api/monday/sync-status',
           operation: 'getSyncStatus',
           entityType: entityType || 'all',
           reason: 'No entityIds provided - returning empty array instead of all statuses'
-        }
-      });
+        });
 
       return res.json({
         success: true,
@@ -666,12 +752,12 @@ router.get('/api/monday/sync-status',
 
     // Filter by entityType if provided (e.g., 'project', 'ao')
     if (entityType) {
-      statuses = statuses.filter((s: { entityType?: string }) => s.entityType === entityType);
+      statuses = statuses.filter((s: ) { entityType?: string }) => s.entityType === entityType);
     }
 
     // Filter by entityIds (optimization pour pagination)
     const ids = (entityIds as string).split(',').filter(id => id.trim());
-    statuses = statuses.filter((s: { entityId: string }) => ids.includes(s.entityId));
+    statuses = statuses.filter((s: ) { entityId: string }) => ids.includes(s.entityId));
     
     logger.info('Statuts synchronisation filtrés (OPTIMISÉ)', {
       service: 'MondayRoutes',
@@ -682,15 +768,23 @@ router.get('/api/monday/sync-status',
         returnedStatuses: statuses.length,
         reductionPercent: Math.round((1 - statuses.length / totalStatuses) * 100),
         entityType: entityType || 'all'
-      }
-    });
+        }
+            );
 
     res.json({
       success: true,
       data: statuses
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // MAPPING COVERAGE ENDPOINT - Get mapping statistics
@@ -702,8 +796,9 @@ router.get('/api/monday/mapping-coverage',
   asyncHandler(async (req: Request, res: Response) => {
     logger.info('Récupération statistiques mapping Monday → Saxium', {
       service: 'MondayRoutes',
-      metadata: { operation: 'getMappingCoverage' }
-    });
+      metadata: { operation: 'getMappingCoverage' 
+
+          });
 
     // Statistiques de mapping (basées sur analysis/MONDAY_TO_SAXIUM_MAPPING_MATRIX.md)
     // Mise à jour : Oct 27, 2025 - 3 colonnes créées (aoCategory, clientRecurrency, selectionComment)
@@ -761,9 +856,17 @@ router.get('/api/monday/mapping-coverage',
     res.json({
       success: true,
       data: mappingStats
-    });
-  })
-);
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // POST /api/monday/re-extract-aos - Ré-extraction massive des AOs Monday
 router.post('/api/monday/re-extract-aos',
@@ -774,8 +877,9 @@ router.post('/api/monday/re-extract-aos',
     
     logger.info('Début ré-extraction AOs Monday', {
       service: 'MondayRoutes',
-      metadata: { operation: 'reExtractAOs', testMode, limit }
-    });
+      metadata: { operation: 'reExtractAOs', testMode, limit 
+
+          });
     
     // Récupérer tous les AOs avec monday_item_id
     const allAOs = await storage.getAos();
@@ -784,15 +888,18 @@ router.post('/api/monday/re-extract-aos',
     
     logger.info(`${aosToProcess.length} AOs à ré-extraire`, {
       service: 'MondayRoutes',
-      metadata: { total: aosToProcess.length, testMode }
-    });
+      metadata: { total: aosToProcess.length, testMode 
+
+          });
     
     if (aosToProcess.length === 0) {
       return res.json({
         success: true,
         message: 'Aucun AO à ré-extraire',
-        stats: { success: 0, errors: 0, skipped: 0, total: 0 }
-      });
+        stats: { success: 0, errors: 0, skipped: 0, total: 0 
+       
+       
+       });
     }
     
     const BATCH_SIZE = 50;
@@ -821,16 +928,18 @@ router.post('/api/monday/re-extract-aos',
           } catch (itemError) {
             logger.warn(`Erreur récupération item ${itemId}`, {
               service: 'MondayRoutes',
-              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) }
-            });
+              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) 
+
+                  });
           }
         }
         
         if (mondayItems.length === 0) {
           logger.warn(`Aucun item récupéré pour le lot ${Math.floor(i / BATCH_SIZE) + 1}`, {
             service: 'MondayRoutes',
-            metadata: { itemIds }
-          });
+            metadata: { itemIds 
+        }
+                  );
           skippedCount += itemIds.length;
           continue;
         }
@@ -843,7 +952,7 @@ router.post('/api/monday/re-extract-aos',
             const itemId = item.id;
             
             // Trouver l'AO correspondant
-            const existingAO = batch.find((ao: { mondayItemId?: string | null }) => ao.mondayItemId === itemId);
+            const existingAO = batch.find((ao: ) { mondayItemId?: string | null }) => ao.mondayItemId === itemId);
             
             if (!existingAO) {
               logger.warn(`AO non trouvé pour item ${itemId}`, {
@@ -857,14 +966,15 @@ router.post('/api/monday/re-extract-aos',
             // splitItem va détecter que l'AO existe déjà (via mondayItemId) et le mettra à jour
             // + créer/mettre à jour les contacts, lots, maîtres, etc.
             // IMPORTANT: On passe mondayItem (déjà fetché) au lieu de itemId pour éviter double fetch
-            const splitter = new MondayDataSplitter();
+            const splitter = mondaydataService();
             const result = await splitter.splitItem(item, boardId, storage as IStorage, undefined, false);
             
             if (!result.success) {
               logger.warn(`Extraction a échoué pour item ${itemId}`, {
                 service: 'MondayRoutes',
-                metadata: { diagnostics: result.diagnostics }
-              });
+                metadata: { diagnostics: result.diagnostics 
+
+                    });
               skippedCount++;
               continue;
             }
@@ -880,15 +990,16 @@ router.post('/api/monday/re-extract-aos',
                 lotsCreated: result.lotsCreated,
                 contactsCreated: result.contactsCreated,
                 mastersCreated: result.mastersCreated
-              }
-            });
+        }
+                    );
           } catch (itemError) {
             errorCount++;
             const itemId = (mondayItem as { id?: string })?.id || 'unknown';
             logger.error(`Erreur traitement item ${itemId}`, {
               service: 'MondayRoutes',
-              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) }
-            });
+              metadata: { error: itemError instanceof Error ? itemError.message : String(itemError) 
+
+                  });
             errors.push({ itemId, error: itemError instanceof Error ? itemError.message : String(itemError) });
           }
         }
@@ -896,13 +1007,13 @@ router.post('/api/monday/re-extract-aos',
         errorCount += batch.length;
         logger.error(`Erreur traitement lot ${Math.floor(i / BATCH_SIZE) + 1}`, {
           service: 'MondayRoutes',
-          metadata: { error: batchError instanceof Error ? batchError.message : String(batchError) }
-        });
+          metadata: { error: batchError instanceof Error ? batchError.message : String(batchError) 
+        }
+                );
         batch.forEach((ao: { mondayItemId?: string | null }) => {
           if (ao.mondayItemId) {
             errors.push({ itemId: ao.mondayItemId, error: batchError instanceof Error ? batchError.message : String(batchError) });
-          }
-        });
+          });
       }
       
       // Pause entre les lots pour ne pas surcharger l'API
@@ -930,8 +1041,15 @@ router.post('/api/monday/re-extract-aos',
       errors: errors.length > 10 ? errors.slice(0, 10) : errors,
       totalErrors: errors.length
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 // ========================================
 // SYNC NEW AO FIELDS - Saxium → Monday.com
@@ -961,8 +1079,8 @@ router.post('/api/monday/sync-ao-fields',
         aoId: aoId || 'all', 
         testMode, 
         limit 
-      }
-    });
+
+          });
     
     // Cas 1: Synchroniser un seul AO
     if (aoId) {
@@ -980,8 +1098,9 @@ router.post('/api/monday/sync-ao-fields',
         
         logger.info('Champs AO synchronisés avec succès', {
           service: 'MondayRoutes',
-          metadata: { aoId, mondayId }
-        });
+          metadata: { aoId, mondayId 
+
+              });
         
         return res.json({
           success: true,
@@ -993,14 +1112,17 @@ router.post('/api/monday/sync-ao-fields',
     {
       operation: 'Router',
       service: 'routes',
-      metadata: {}
-    }
-  );
+      metadata: {
+            })
+
+          );`
+        });
+      }
     }
     
     // Cas 2: Synchroniser tous les AOs (ou N premiers en testMode)
     const allAOs = await storage.getAos();
-    const aosWithMondayId = allAOs.filter((ao: unknown) => ao.mondayId != null);
+    const aosWithMondayId = allAOs.filter((ao: any) => ao.mondayId != null);
     const aosToProcess = limit ? aosWithMondayId.slice(0, limit) : aosWithMondayId;
     
     logger.info(`${aosToProcess.length} AOs à synchroniser`, {
@@ -1010,15 +1132,17 @@ router.post('/api/monday/sync-ao-fields',
         testMode,
         totalWithMondayId: aosWithMondayId.length,
         totalAOs: allAOs.length
-      }
-    });
+
+          });
     
     if (aosToProcess.length === 0) {
       return res.json({
         success: true,
         message: 'Aucun AO à synchroniser (aucun AO avec mondayId)',
-        stats: { success: 0, errors: 0, skipped: 0, total: 0 }
-      });
+        stats: { success: 0, errors: 0, skipped: 0, total: 0 
+       
+       
+       });
     }
     
     let successCount = 0;
@@ -1040,8 +1164,9 @@ router.post('/api/monday/sync-ao-fields',
         errorCount++;
         logger.error(`Erreur synchronisation AO ${ao.id}`, {
           service: 'MondayRoutes',
-          metadata: { error: aoError instanceof Error ? aoError.message : String(aoError) }
-        });
+          metadata: { error: aoError instanceof Error ? aoError.message : String(aoError) 
+
+              });
         errors.push({ aoId: ao.id, error: aoError instanceof Error ? aoError.message : String(aoError) });
       }
       
@@ -1068,8 +1193,15 @@ message: `Synchronisation terminée: ${successCount} succès, ${errorCount} erre
       errors: errors.length > 10 ? errors.slice(0, 10) : errors,
       totalErrors: errors.length
     });
-  })
-);
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
 /**
  * GET /api/monday/migration-stats
@@ -1151,11 +1283,13 @@ router.get('/api/monday/migration-stats',
         {
           operation: 'getMigrationStats',
           service: 'MondayRoutes',
-          metadata: {}
-        }
-      );
-    })
-  );
+          metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
 /**
  * GET /api/monday/all-data
@@ -1202,7 +1336,7 @@ router.get('/api/monday/all-data',
             const totalAOs = aosData.length;
             aosData = aosData.slice(offset as number, (offset as number) + (limit as number));
             
-            mondayData.aos = aosData.map(ao => ({
+            mondayData.aos = aosData.map(ao  => ({
               id: ao.id,
               mondayItemId: ao.mondayItemId,
               reference: ao.reference,
@@ -1216,7 +1350,15 @@ router.get('/api/monday/all-data',
               clientRecurrency: ao.clientRecurrency,
               migrationStatus: 'migré',
               createdAt: ao.createdAt
-            }));
+                  }
+
+                            }
+
+
+                                      }
+
+
+                                    }));
             
             mondayData.aosMeta = {
               total: totalAOs,
@@ -1244,7 +1386,7 @@ router.get('/api/monday/all-data',
             const totalProjects = projectsData.length;
             projectsData = projectsData.slice(offset as number, (offset as number) + (limit as number));
             
-            mondayData.projects = projectsData.map(project => ({
+            mondayData.projects = projectsData.map(project  => ({
               id: project.id,
               mondayProjectId: project.mondayProjectId,
               name: project.name,
@@ -1255,7 +1397,15 @@ router.get('/api/monday/all-data',
               buildingCount: project.buildingCount,
               migrationStatus: 'migré',
               createdAt: project.createdAt
-            }));
+                  }
+
+                            }
+
+
+                                      }
+
+
+                                    }));
             
             mondayData.projectsMeta = {
               total: totalProjects,
@@ -1291,7 +1441,7 @@ router.get('/api/monday/all-data',
             const totalUsers = usersData.length;
             usersData = usersData.slice(offset as number, (offset as number) + (limit as number));
             
-            mondayData.personnel = usersData.map(user => ({
+            mondayData.personnel = usersData.map(user  => ({
               id: user.id,
               mondayPersonnelId: user.mondayPersonnelId,
               firstName: user.firstName,
@@ -1302,7 +1452,15 @@ router.get('/api/monday/all-data',
               certificationExpiry: user.certificationExpiry,
               migrationStatus: 'migré',
               createdAt: user.createdAt
-            }));
+                  }
+
+                            }
+
+
+                                      }
+
+
+                                    }));
             
             mondayData.personnelMeta = {
               total: totalUsers,
@@ -1319,11 +1477,13 @@ router.get('/api/monday/all-data',
         {
           operation: 'getAllData',
           service: 'MondayRoutes',
-          metadata: {}
-        }
-      );
-    })
-  );
+          metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
 /**
  * GET /api/monday/validation
@@ -1343,7 +1503,7 @@ router.get('/api/monday/validation',
           const mondayUsers = usersData.filter(user => user.mondayPersonnelId);
           
           const validationErrors = {
-            aos: mondayAOs.filter(ao => !ao.client || !ao.city).map(ao => ({
+            aos: mondayAOs.filter(ao => !ao.client || !ao.city).map(ao  => ({
               id: ao.id,
               mondayItemId: ao.mondayItemId,
               reference: ao.reference,
@@ -1352,7 +1512,7 @@ router.get('/api/monday/validation',
                 ...(!ao.city ? ['Ville manquante'] : [])
               ]
             })),
-            projects: mondayProjects.filter(project => !project.name || !project.client).map(project => ({
+            projects: mondayProjects.filter(project => !project.name || !project.client).map(project  => ({
               id: project.id,
               mondayProjectId: project.mondayProjectId,
               issues: [
@@ -1360,7 +1520,7 @@ router.get('/api/monday/validation',
                 ...(!project.client ? ['Client manquant'] : [])
               ]
             })),
-            users: mondayUsers.filter(user => !user.email || !user.firstName || !user.lastName).map(user => ({
+            users: mondayUsers.filter(user => !user.email || !user.firstName || !user.lastName).map(user  => ({
               id: user.id,
               mondayPersonnelId: user.mondayPersonnelId,
               issues: [
@@ -1380,16 +1540,20 @@ router.get('/api/monday/validation',
             }
           };
           
-          sendSuccess(res, { summary, errors: validationErrors });
+          sendSuccess(res, { summary, errors: validationErrors 
+
+                });
         },
         {
           operation: 'getValidation',
           service: 'MondayRoutes',
-          metadata: {}
-        }
-      );
-    })
-  );
+          metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
 /**
  * GET /api/monday/logs
@@ -1419,15 +1583,19 @@ message: `Migration Monday.com - ${mondayAOs.length} AOs et ${mondayProjects.len
             }
           ];
           
-          sendSuccess(res, { logs, count: logs.length });
+          sendSuccess(res, { logs, count: logs.length 
+
+                });
         },
         {
           operation: 'getLogs',
           service: 'MondayRoutes',
-          metadata: {}
-        }
-      );
-    })
-  );
+          metadata: {
+            })
+
+          );
+          }
+                                      }
+                                    });
 
 export default router;

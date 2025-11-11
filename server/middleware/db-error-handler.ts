@@ -87,7 +87,7 @@ const PG_ERROR_CODES: Record<string, { status: number; message: string }> = {
 /**
  * Extract error information from various error types
  */
-function extractErrorInfo(error: any): {
+function extractErrorInfo(error: unknown): {
   code?: string;
   message: string;
   detail?: string;
@@ -223,7 +223,7 @@ function getStatusCode(errorInfo: ReturnType<typeof extractErrorInfo>): number {
  * Must be placed after all route handlers
  */
 export function databaseErrorHandler(
-  error: any,
+  error: unknown,
   req: Request,
   res: Response,
   next: NextFunction
@@ -246,7 +246,7 @@ export function databaseErrorHandler(
       table: errorInfo.table,
       column: errorInfo.column,
       constraint: errorInfo.constraint,
-      userId: (req as any).user?.id,
+      userId: (req as unknown).user?.id,
       ip: req.ip,
       userAgent: req.get('user-agent')
     }
@@ -288,7 +288,7 @@ export function databaseErrorHandler(
           message: userMessage,
           statusCode,
           // Include request ID for support reference
-          requestId: (req as any).id || Date.now().toString(36)
+          requestId: (as unknown)unknown).id || Date.now().toString(36)
         }
       });
     }
@@ -302,7 +302,7 @@ export function databaseErrorHandler(
  * Use this to wrap async route handlers
  */
 export function catchDatabaseErrors(
-  handler: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  handler: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -326,7 +326,7 @@ export function catchDatabaseErrors(
  * Create a database error response object
  * Useful for manual error handling in routes
  */
-export function createDatabaseErrorResponse(error: any): {
+export function createDatabaseErrorResponse(e: unknunknown)unknown): {
   success: false;
   error: {
     message: string;
@@ -351,7 +351,6 @@ export function createDatabaseErrorResponse(error: any): {
 /**
  * Middleware to add request ID for tracing
  */
-export function addRequestId(req: Request, res: Response, next: NextFunction): void {
-  (req as any).id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+export function addRequestId(req: Request, res: Response, next: NextFunction): void {as unknown) as unknown).id = Date.now().toString(36) + Math.random().toString(36).substr(2);
   next();
 }

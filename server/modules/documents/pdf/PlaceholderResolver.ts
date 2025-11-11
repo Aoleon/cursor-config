@@ -114,16 +114,16 @@ export class PlaceholderResolver {
    */
   public async resolve(
     placeholders: Placeholder[],
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     customFormatters?: Record<string, PlaceholderFormatter>
   ): Promise<{
-    resolved: { placeholder: Placeholder; value: any }[];
+    resolved: { placeholder: Placeholder; value: unknown}[];
     missing: Placeholder[];
-    data: Record<string, any>;
+    data: Record<st, unknown>unknown>;
   }> {
-    const resolved: { placeholder: Placeholder; value: any }[] = [];
+    const resolved: { placeholder: Placeholder; va: unknown}y }[] = [];
     const missing: Placeholder[] = [];
-    const resolvedData: Record<string, any> = {};
+    const resolvedData: Recor, unknown>unknown>unknown> = {};
 
     for (const placeholder of placeholders) {
       await withErrorHandling(
@@ -261,9 +261,9 @@ export class PlaceholderResolver {
    */
   private async resolvePlaceholder(
     placeholder: Placeholder,
-    data: Record<string, any>,
+    data: R, unknown>unknown>unknown any>,
     customFormatters?: Record<string, PlaceholderFormatter>
-  ): Promise<any> {
+  ): Promise<unknown> {
     // Get raw value from data
     let value = _.get(data, placeholder.path);
 
@@ -279,7 +279,7 @@ export class PlaceholderResolver {
   /**
    * Apply formatter to value
    */
-  private async applyFormatter(value: any, formatter: PlaceholderFormatter): Promise<string> {
+  private async applyFormatter(value: unknown, formatter: PlaceholderFormatter): Promise<string> {
     if (value === null || value === undefined) {
       return '';
     }

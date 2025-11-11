@@ -100,7 +100,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'kpis', { userId: req.user?.id, filters });
       
-      const cached = await cacheService.get<any>(cacheKey);
+      const cached = await cacheService.get<unknown>(cacheKey);
       if (cached) {
         logger.debug('[Analytics] KPIs récupérés depuis cache', { metadata: {
             route: '/api/analytics/kpis',
@@ -157,7 +157,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'metrics', { userId: req.user?.id, params });
       
-      const cached = await cacheService.get<{ metrics: any }>(cacheKey);
+      const cached = await cacheService.get<{ metrics: unknown}>(cacheKey);
       if (cached) {
         logger.debug('[Analytics] Métriques récupérées depuis cache', { metadata: {
             route: '/api/analytics/metrics',
@@ -528,7 +528,7 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       const cacheService = getCacheService();
       const cacheKey = cacheService.buildKey('analytics', 'realtime', { userId: req.user?.id });
       
-      const cached = await cacheService.get<any>(cacheKey);
+      const cached = await cacheService<unknown>unknown>(cacheKey);
       if (cached) {
         logger.debug('[Analytics] Métriques temps réel récupérées depuis cache', { metadata: {
             route: '/api/analytics/realtime',

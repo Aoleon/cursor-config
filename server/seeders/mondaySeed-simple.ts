@@ -128,7 +128,7 @@ export class MondaySimpleSeed {
     success: boolean;
     counts: Record<string, number>;
     errors: string[];
-    summary: any;
+    summary: unknown;
   }> {
     const startTime = Date.now();
     const counts: Record<string, number> = {};
@@ -231,8 +231,7 @@ export class MondaySimpleSeed {
           email: userData.email,
           firstName: userData.firstName,
           lastName: userData.lastName,
-          role: userData.role as any
-        });
+          role: userData.role as unknown});
         seededCount++;
       
     },
@@ -267,15 +266,12 @@ export class MondaySimpleSeed {
         client: `${company} ${city}`,
         location: `${this.generator.numberInRange(1, 150, `ao-addr-${i}`)} Rue de la République, ${city}`,
         departement: this.generator.selectFromArray(["59", "62", "80"], `ao-dept-${i}`),
-        aoCategory: this.generator.selectFromArray(AO_CATEGORIES, `ao-cat-${i}`) as any,
-        operationalStatus: this.generator.selectFromArray(OPERATIONAL_STATUSES, `ao-status-${i}`) as any,
+        aoCategory: this.generator.selectFromArray(AO_CATEGORIES, `ao-cat-${i}`) as unknown,
+        operationalStatus: this.generator.selectFromArray(OPERATIONAL_STATUSES, `ao-status-${ias unknown, unknown,
         montantEstime: this.generator.numberInRange(10000, 500000, `ao-amount-${i}`).toString(),
         dateLimiteRemise: new Date(Date.now() + this.generator.numberInRange(7, 90, `ao-deadline-${i}`) * 24 * 60 * 60 * 1000),
-        menuiserieType: this.generator.selectFromArray(["fenetre", "porte", "portail", "volet"], `ao-type-${i}`) as any,
-        source: this.generator.selectFromArray(["mail", "phone", "website"], `ao-source-${i}`) as any
-      };
-
-      return withErrorHandling(
+        menuiserieType: this.generator.selectFromArray(["fenetre", "porte", "portail", "volet"], `ao-typeas unknown, as unknown,
+        source: this.generator.selectFromArray(["mail", "phone", "website"], `ao-source-${i}`) as anas unknown}    return withErrorHandling(
     async () => {
 
         await storage.createAo(aoData);
@@ -315,12 +311,10 @@ export class MondaySimpleSeed {
         location: ao.location,
         aoId: ao.id,
         responsibleUserId: responsibleUser.id,
-        status: this.generator.selectFromArray(["brouillon", "etude_technique", "valide"], `offer-status-${i}`) as any,
+        status: this.generator.selectFromArray(["brouillon", "etude_technique", "valide"], `offer-stas unknown,ias unknown unknown,
         montantEstime: (parseFloat(ao.montantEstime || '0') * this.generator.numberInRange(90, 110, `offer-margin-${i}`) / 100).toString(),
-        menuiserieType: this.generator.selectFromArray(["fenetre", "porte", "portail", "volet"], `offer-type-${i}`) as any
-      };
-
-      return withErrorHandling(
+        menuiserieType: this.generator.selectFromArray(["fenetre", "porte", "portail", "volet"], `offer-type-${i}`) as unknown
+ as unknown} return withErrorHandling(
     async () => {
 
         await storage.createOffer(offerData);
@@ -364,7 +358,7 @@ export class MondaySimpleSeed {
         location: offer.location || `${this.generator.numberInRange(1, 150, `project-addr-${i}`)} Rue de la République, ${city}`,
         offerId: offer.id,
         responsibleUserId: responsibleUser.id,
-        status: this.generator.selectFromArray(PROJECT_STATUSES, `project-status-${i}`) as any,
+        status: this.generator.selectFromArray(PROJECT_STATUSES, `projecas unknown,sas unknown)unknown,unknown,
         startDate: new Date(Date.now() + this.generator.numberInRange(30, 90, `project-start-${i}`) * 24 * 60 * 60 * 1000),
         endDate: new Date(Date.now() + this.generator.numberInRange(120, 300, `project-end-${i}`) * 24 * 60 * 60 * 1000)
       };
@@ -405,7 +399,7 @@ export class MondaySimpleSeed {
         projectId: project.id,
         name: `${taskName} - ${project.name}`,
         assignedUserId: assignedUser.id,
-        status: this.generator.selectFromArray(["a_faire", "en_cours", "termine"], `task-status-${i}`) as any,
+        status: this.generator.selectFromArray(["a_faire", "en_cours", "termine"], as unknown,tas unknown{unknown,unknown any,
         estimatedHours: this.generator.numberInRange(2, 40, `task-hours-${i}`).toString(),
         endDate: new Date(Date.now() + this.generator.numberInRange(7, 60, `task-due-${i}`) * 24 * 60 * 60 * 1000)
       };

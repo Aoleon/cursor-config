@@ -24,7 +24,7 @@ export interface AlertRule {
   cooldown: number;  // Minutes avant re-alerte
   action: AlertAction | AlertAction[];
   enabled: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Alert {
@@ -39,7 +39,7 @@ export interface Alert {
   acknowledgedBy?: string;
   metrics: AlertMetrics;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<st, unknown>unknown>;
   notificationsSent: number;
   lastNotificationAt?: Date;
 }
@@ -61,7 +61,7 @@ export interface AlertMetrics {
   cpuUsage?: number;
   memoryUsage?: number;
   activeUsers?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ========================================
@@ -415,8 +415,8 @@ export class AlertManager {
   /**
    * Récupère les métriques pertinentes pour une règle
    */
-  private getRelevantMetrics(rule: AlertRule, metrics: AlertMetrics): Record<string, any> {
-    const relevant: Record<string, any> = {};
+  private getRelevantMetrics(rule: AlertRule, metrics: AlertMetrics): Recor, unknown>unknown>unknown> {
+    const relevant: R, unknown>unknown>unknown any> = {};
     
     // Métriques communes
     relevant.errorRate = metrics.errorRate;

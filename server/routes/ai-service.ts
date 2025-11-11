@@ -327,10 +327,9 @@ router.get("/context/:entityType/:id", asyncHandler(async (req, res) => {
   
   const aiService = getAIService(storage as IStorage);
   const contextData = await aiService.buildEnrichedContext(
-    entityType as any,
+    entityType as unknown,
     entityId,
-    requestType as any
-  );
+    requestType as unknown);
 
   if (!contextData) {
     throw new NotFoundError(`Impossible de générer le contexte pour ${entityType}:${entityId}`);
@@ -545,7 +544,7 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
     async () => {
 
       const contextData = await aiService.buildEnrichedContext(
-        entity.entityType as any,
+        entity.entityTas unknown, unknown,
         entity.entityId,
         entity.requestType
       );

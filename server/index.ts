@@ -76,7 +76,7 @@ app.use(compression({
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -363,7 +363,7 @@ app.use((req, res, next) => {
       metadata: {}
     });
   }, {
-    eventTypes: ['technical.alert' as any],
+    eventTypes: ['technical.alert' as unknown],
     entities: ['technical']
   });
   
@@ -388,7 +388,7 @@ app.use((req, res, next) => {
       // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
       // Récupérer l'instance depuis l'app ou importer directement
       const routesPoc = await import('./routes-poc');
-      const predictiveEngineService = (routesPoc as any).predictiveEngineService;
+      const predictiveEngineService = (routesPoc as unknown).predictiveEngineService;
       
       logger.info('Instance PredictiveEngine récupérée', {
         metadata: {

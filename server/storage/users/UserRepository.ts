@@ -73,7 +73,7 @@ export class UserRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('UserRepository', db, eventBus);
   }
 
@@ -402,7 +402,7 @@ export class UserRepository extends BaseRepository<
 
         const results = await query;
 
-        return results.map((row: any) => ({
+        return results.map(: unknown)unknown) => ({
           id: row.id,
           projectId: row.projectId,
           userId: row.userId,
@@ -602,7 +602,7 @@ export class UserRepository extends BaseRepository<
 
         const results = await query;
 
-        return results.map((row: any) => ({
+        return results.: unknown)unknown)unknown) => ({
           id: row.id,
           userId: row.userId,
           weekNumber: row.weekNumber,

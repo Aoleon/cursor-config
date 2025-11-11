@@ -557,7 +557,7 @@ service: 'MondayMigrationServiceEnhanced',
   /**
    * Insère entity via storage interface
    */
-  private async insertEntity(: unknown, unknown, entityType: EntityType):<unknown>unknown<any> {
+  private async insertEntity(: unknown, unknown, entityType: EntityType):<unknown>unknown<unknown> {
     switch (entityType) {
       case 'aos':
         return await this.storage.createAo(data as InsertAo);

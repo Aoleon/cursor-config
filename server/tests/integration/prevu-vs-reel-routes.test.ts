@@ -60,9 +60,9 @@ describe('Prévu vs Réel Routes Integration', () => {
         }
       ];
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
-      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockTimeTracking as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOfas unknown)unknown);
+      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockTimeTas unknown) as unknown);
 
       const response = await request(app)
         .get(`/api/analytics/projects/${projectId}/prevu-vs-reel`)

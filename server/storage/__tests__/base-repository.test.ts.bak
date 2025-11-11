@@ -9,10 +9,10 @@ import { DatabaseError } from '../../utils/error-handler';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
 
 // Mock repository pour tester BaseRepository
-class TestRepository extends BaseRepository<unknown, unknown, unknown, unknown> {
+class TestRepository extends BaseRepository<any, any, any, any> {
   protected readonly tableName = 'test_table';
-  protected readonly table = {} as unknown;
-  protected readonly primaryKey =as unknown;unknown;
+  protected readonly table = {} as any;
+  protected readonly primaryKey = {} as any;
 
   // Expose normalizeId for testing
   public testNormalizeId(id: string | number): string {
@@ -20,28 +20,28 @@ class TestRepository extends BaseRepository<unknown, unknown, unknown, unknown> 
   }
 
   // Implement abstract methods (not used in these tests)
-  async findById(id: string, tx?: DrizzleTransaction): Promise<unknown | undefined> {
+  async findById(id: string, tx?: DrizzleTransaction): Promise<any | undefined> {
     return undefined;
   }
 
-  async findAll(filters?: unknown, tx?: DrizzleTransaction): Promise<unknown[]> {
+  async findAll(filters?: any, tx?: DrizzleTransaction): Promise<any[]> {
     return [];
   }
 
   async findPaginated(
-    filt: unk, unknunknown,unknown,
+    filters?: any,
     pagination?: PaginationOptions,
     sort?: SortOptions,
     tx?: DrizzleTransaction
-  ): Promise<PaginatedResult<unknown>> {
+  ): Promise<PaginatedResult<any>> {
     return { items: [], total: 0, limit: 50, offset: 0, page: 1, totalPages: 0, hasNext: false, hasPrevious: false };
   }
 
-  async deleteMany: unknunknown,unknown unknown, tx?: DrizzleTransaction): Promise<number> {
+  async deleteMany(filters: any, tx?: DrizzleTransaction): Promise<number> {
     return 0;
   }
 
-  async co: unknunknown,unknownrs?: unknown, tx?: DrizzleTransaction): Promise<number> {
+  async count(filters?: any, tx?: DrizzleTransaction): Promise<number> {
     return 0;
   }
 
@@ -55,7 +55,7 @@ describe('BaseRepository - normalizeId()', () => {
 
   beforeEach(() => {
     // Create a fresh repository instance for each test
-    repository = new TestRepository('TestRepository', {} as unknown);
+    repository = new TestRepository('TestRepository', {} as any);
   });
 
   describe('✅ Cas valides - UUID correctement formaté', () => {
@@ -112,51 +112,51 @@ describe('BaseRepository - normalizeId()', () => {
   describe('❌ Cas invalides - Type incorrect', () => {
     it('devrait rejeter un number', () => {
       expect(() => {
-        repository.testNormalizeId(as unknown)unknown);
+        repository.testNormalizeId(123 as any);
       }).toThrow(DatabaseError);
       
       expect(() => {
-        repository.testNormalizas unknown) as unknown);
+        repository.testNormalizeId(123 as any);
       }).toThrow(/Invalid ID type for TestRepository/);
       
       expect(() => {
-        repository.testNormas unknown)(as unknownnunknown)unknown);
+        repository.testNormalizeId(123 as any);
       }).toThrow(/received number/);
     });
 
     it('devrait rejeter null', () => {
       expect(() => {
-        repository.testNas unknown)eas unknownnunknown) as unknown);
+        repository.testNormalizeId(null as any);
       }).toThrow(DatabaseError);
       
       expect(() => {
-        repository.tas unknown)aas unknownnunknown)nas unknunknown)unknown);
+        repository.testNormalizeId(null as any);
       }).toThrow(/Invalid ID type/);
     });
 
     it('devrait rejeter undefined', () => {
       expect(() => {
-        repository.teas unknown)las unknownnunknown)nas unknown) as unknown);
+        repository.testNormalizeId(undefined as any);
       }).toThrow(DatabaseError);
       
       expect(() => {
-        repositoras unknown)oas unknownnunknown)Ias unknown)ias unknown)unknown unknown);
+        repository.testNormalizeId(undefined as any);
       }).toThrow(/Invalid ID type/);
     });
 
     it('devrait rejeter un object', () => {
       expect(() => {
-        repositoras unknown)oas unknownnunknown)Ias unknown) as unknown)unknown} as unknown);
+        repository.testNormalizeId({ id: '123' } as any);
       }).toThrow(DatabaseError);
       
       expect(() => {
-        reposas unknown)eas unknownnunknown)las unknown) as unknown)unknown23as unknunknown)unknown);
+        repository.testNormalizeId({ id: '123' } as any);
       }).toThrow(/Invalid ID type/);
     });
 
     it('devrait rejeter un array', () => {
       expect(() => {
-        repository.testNormalizeId([as unknown)0as unknownnunknown)4as unknown)6as unknown)unknown54as unknown) as unknown);
+        repository.testNormalizeId(['550e8400-e29b-41d4-a716-446655440000'] as any);
       }).toThrow(DatabaseError);
     });
   });
@@ -257,15 +257,18 @@ describe('BaseRepository - normalizeId()', () => {
 
   describe('Messages d\'erreur detailles', () => {
     it('devrait inclure le nom du repository dans le message d\'erreur', () => {
-      expect(() as unknown) as unknownnunknown)pas unknown).as unknown)unknownrmas unknown)(as unknown)unknown any);
+      expect(() => {
+        repository.testNormalizeId(123 as any);
       }).toThrow(/TestRepository/);
     });
 
     it('devrait indiquer le type reçu pour les erreurs de type', () => {
-      expectas unknown){as unknownnunknown) as unknown)tas unknown)unknownstas unknown)zas unknown)unknown3 as any);
+      expect(() => {
+        repository.testNormalizeId(123 as any);
       }).toThrow(/received number/);
       
-      expas unknown)=as unknownnunknown) as unknown)oas unknown)unknown.tas unknown)aas unknown)unknown(true as any);
+      expect(() => {
+        repository.testNormalizeId(true as any);
       }).toThrow(/received boolean/);
     });
 

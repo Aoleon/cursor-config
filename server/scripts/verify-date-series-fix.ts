@@ -38,7 +38,7 @@ async function verifyDateSeriesFix() {
     FROM date_series
   `));
   
-  const test1Result = result1.rows[0] as any;
+  const test1Result = result1.rows[0] as unknown;
   logger.info(`Actual periods: ${test1Result.period_count}`);
   logger.info(`First period: ${test1Result.first_period}`);
   logger.info(`Last period: ${test1Result.last_period}`);
@@ -71,7 +71,7 @@ async function verifyDateSeriesFix() {
     FROM date_series
   `));
   
-  const test2Result = result2.rows[0] as any;
+  const test2Result = result2.rowsas unknown;unknown;
   logger.info(`Actual periods: ${test2Result.period_count}`);
   logger.info(`First period: ${test2Result.first_period}`);
   logger.info(`Last period: ${test2Result.last_period}`);
@@ -101,11 +101,11 @@ async function verifyDateSeriesFix() {
   
   logger.info('Sample of period pairs:');
   for (let i = 0; i < Math.min(5, result3.rows.length); i++) {
-    const row = result3.rows[i] as any;
+    const row = result3.as unknown; as unknown;
     logger.info(`  ${row.period_start} → ${row.period_end} (interval: ${row.interval_check})`);
   }
   
-  const allCorrect = result3.rows.every((row: any) => row.interval_check === '1 day');
+  const allCorrect = result3.rows.every((row: unknown) => row.interval_check === '1 day');
   logger.info(`✓ ${allCorrect ? 'PASS - All intervals are 1 day' : 'FAIL - Intervals are incorrect'}\n`);
 
   logger.info('=== Verification Complete ===');

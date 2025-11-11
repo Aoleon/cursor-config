@@ -56,8 +56,8 @@ export async function safeQuery<T>(
             attempt: attempt + 1,
             maxRetries: retries,
             timeout
-          }
-        });
+        }
+                );
       }
       
       // Create a promise that rejects after timeout
@@ -82,8 +82,8 @@ export async function safeQuery<T>(
             operation,
             duration,
             attempt: attempt + 1
-          }
-        });
+        }
+                );
       }
       
       return result;
@@ -103,8 +103,8 @@ export async function safeQuery<T>(
             maxRetries: retries,
             errorCode: error?.code,
             delay
-          }
-        });
+        }
+                );
         
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -129,8 +129,7 @@ export async function safeQuery<T>(
           errorTable: pgError?.table,
           errorColumn: pgError?.column,
           errorMessage: lastError.message
-        }
-      });
+        });
       
       break;
     }
@@ -167,8 +166,8 @@ export async function safeBatch<T>(
       metadata: {
         operation,
         queryCount: queries.length
-      }
-    });
+        }
+            );
     
     // Execute all queries in parallel with individual error handling
     const results = await Promise.all(
@@ -188,8 +187,8 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         duration
-      }
-    });
+        }
+            );
     
     return results;
   } catch (error) {
@@ -199,8 +198,8 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            );
     throw error;
   }
 }
@@ -235,8 +234,8 @@ export async function executeWithMetrics<T>(
         operation: context.operation,
         ...context.metadata,
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            );
     throw error;
   }
 }
@@ -259,14 +258,13 @@ export async function safeGetOne<T>(
     const result = await safeQuery(queryFn, options);
     return result ?? null;
   } catch (error) {
-    logger.error(`Error getting ${entityName}`, {
-      metadata: {
+    logger.error(`Error getting ${entityName}`, { metadata: {
         service: 'SafeQuery',
         operation: 'safeGetOne',
         entityName,
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            });
     return null;
   }
 }
@@ -286,13 +284,12 @@ export async function safeCount(
   try {
     return await safeQuery(queryFn, options);
   } catch (error) {
-    logger.error('Error counting records', {
-      metadata: {
+    logger.error('Error counting records', { metadata: {
         service: 'SafeQuery',
         operation: 'safeCount',
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            });
     return 0;
   }
 }
@@ -316,13 +313,12 @@ export async function safeExists(
     }
     return result?.exists ?? false;
   } catch (error) {
-    logger.error('Error checking existence', {
-      metadata: {
+    logger.error('Error checking existence', { metadata: {
         service: 'SafeQuery',
         operation: 'safeExists',
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            });
     return false;
   }
 }
@@ -344,13 +340,12 @@ export async function healthCheck(): Promise<boolean> {
     );
     return true;
   } catch (error) {
-    logger.error('Health check failed', {
-      metadata: {
+    logger.error('Health check failed', { metadata: {
         service: 'SafeQuery',
         operation: 'healthCheck',
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+        }
+            });
     return false;
   }
 }
@@ -375,8 +370,7 @@ export async function safeInsert<T>(
         service: 'SafeInsert',
         operation: `insert_${tableName}`,
         error: error instanceof Error ? error.message : String(error)
-      }
-    });
+      });
     throw error;
   }
 }
@@ -404,8 +398,7 @@ export async function safeDelete<T>(
         operation: options.operation || `delete_${tableName}`,
         expectedCount,
         actualCount: result.length
-      }
-    });
+      });
   }
   
   return result;

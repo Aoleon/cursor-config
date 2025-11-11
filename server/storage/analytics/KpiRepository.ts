@@ -410,7 +410,7 @@ export class KpiRepository {
       `));
 
       // Parse JSON result
-      const row = result.rows[0] as any;
+      const row = result.rows[0] as unknown;
       const kpiResult: ConsolidatedKpis = {
         periodSummary: row.period_summary,
         breakdowns: {

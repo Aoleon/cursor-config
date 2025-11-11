@@ -53,7 +53,7 @@ const PATTERNS = {
   person: /^[A-Z][a-z]+\s+[A-Z][A-Z]+$/,
 };
 
-function analyzeColumnType(value: any): string {
+function analyzeColumnType(value: unknown): string {
   if (value === null || value === undefined || value === '') return 'empty';
   
   const strValue = String(value);
@@ -96,7 +96,7 @@ function analyzeMonday(): CompleteAnalysis {
   // Parser chaque fichier Excel exporté
   for (const [fileName, fileData] of Object.entries(mondayData)) {
     // Chaque fichier contient un ou plusieurs boards
-    for (const [boardKey, boardItems] of Object.entries(fileData as any)) {
+    for (const [boardKey, boardItems] of Object.entries(fileData as unknown)) {
       const boardName = boardKey;
       const items = boardItems as MondayItem[];
 
@@ -295,8 +295,8 @@ function analyzeMonday(): CompleteAnalysis {
   return analysis;
 }
 
-function generateAnalysisReport(analysis: CompleteAnalysis): any {
-  const report: any = {
+function generateAnalysisReport(analysis: CompleteAnalysis): unknown {
+  const report: unknown = {
     metadata: {
       analyzedAt: new Date().toISOString(),
       totalBoards: analysis.totalBoards,
@@ -306,10 +306,10 @@ function generateAnalysisReport(analysis: CompleteAnalysis): any {
       totalClients: analysis.clients.size,
     },
     globalStatuses: Array.from(analysis.globalStatuses).sort(),
-    globalColumns: {} as any,
+    globalColumns: {} as unknown,
     cities: Array.from(analysis.cities).sort().slice(0, 100),
     clients: Array.from(analysis.clients).sort(),
-    boards: {} as any,
+    boards:as unknown, unknown,
   };
 
   // Colonnes globales avec leurs types
@@ -322,7 +322,7 @@ function generateAnalysisReport(analysis: CompleteAnalysis): any {
 
   // Détails de chaque board
   for (const [boardName, boardData] of analysis.boards.entries()) {
-    const columns: any = {};
+    const col: unknown =ny = {};
     
     for (const [colName, colInfo] of boardData.columns.entries()) {
       columns[colName] = {
@@ -433,11 +433,11 @@ function generateMarkdownReport(analysis: CompleteAnalysis): string {
   return md;
 }
 
-function generateMondayToSaxiumMapping(analysis: CompleteAnalysis): any {
-  const mapping: any = {
-    boardMappings: {} as any,
-    columnMappings: {} as any,
-    statusMappings: {} as any,
+function generateMondayToSaxiumMapping(analysis: CompleteAnalysiunknown any {
+  const: unknown =g: unknown = {
+    boardMappias unknown, as unknown,
+    columnMas unknown,:as unknown unknown,
+    staas unknown,ias unknown}unknownnown,any,
     recommendations: [] as string[],
   };
 

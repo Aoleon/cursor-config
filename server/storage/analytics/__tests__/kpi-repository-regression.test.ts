@@ -63,7 +63,7 @@ describe('KpiRepository - Time Series Regression Tests', () => {
   /**
    * Helper to validate time series structure
    */
-  function validateTimeSeriesStructure(timeSeries: any[]): void {
+  function validateTimeSeriesStructure(timeSeries: unknown[]): void {
     timeSeries.forEach((period, index) => {
       expect(period).toHaveProperty('date');
       expect(period).toHaveProperty('offersCreated');

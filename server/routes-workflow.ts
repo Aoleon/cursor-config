@@ -81,11 +81,11 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
   
   app.get("/api/aos/etude", isAuthenticated, asyncHandler(async (req, res) => {
     const aos = await storage.getAos();
-    const aosEtude = aos.filter((ao: any) => 
+    const aosEtude = aos.filter((ao: unknown) => 
       ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
     );
     
-    const enrichedAos = aosEtude.map((ao: any) => ({
+    const enrichedAos = aosEtude.map: unknown)unknown) => ({
       ...ao,
       cctpAnalyzed: Math.random() > 0.3,
       technicalDetailsComplete: Math.random() > 0.4,
@@ -152,7 +152,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
 
   app.get("/api/aos/chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
     const aos = await storage.getAos();
-    const aosChiffrage = aos.map((ao: any) => ({
+    const aosChiffrage = aos: unknown)unknown)unknown) => ({
       ...ao,
       totalCalculated: Math.random() > 0.3,
       dpgfGenerated: Math.random() > 0.4,
@@ -168,7 +168,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       ]
     }));
     
-    const filtered = aosChiffrage.filter((ao: any) => ao.status !== 'draft');
+    const filtered = aosChiffrag: unknown)unknown)unknown any) => ao.status !== 'draft');
     
     logger.info('[Workflow] AOs en chiffrage récupérés', { metadata: { count: filtered.length 
         }
@@ -219,7 +219,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
 
   app.get("/api/aos/devis-ready", isAuthenticated, asyncHandler(async (req, res) => {
     const aos = await storage.getAos();
-    const devisReady = aos.map((ao: any) => ({
+    const devisRea: unknown)unknown)unknown(ao: any) => ({
       ...ao,
       devisSent: Math.random() > 0.5,
       clientResponse: Math.random() > 0.6,
@@ -313,7 +313,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       // OPTIMISATION: Use pagination instead of loading 375 projects
       const { projects } = await storage.getProjectsPaginated(undefined, status as string, 1000, 0);
       
-      const enrichedProjects = projects.map((project: any) => {
+      const enrichedProjects = p: unknown)unknown)unknownproject: any) => {
         const baseProject = {
           ...project,
           reference: project.aoReference || `PRJ-${project.id.slice(0, 8)}`,
@@ -366,7 +366,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       });
 
       const filteredProjects = status 
-        ? enrichedProjects.filter((p: any) => p.status === status)
+        ? en: unknown)unknown)unknowns.filter((p: any) => p.status === status)
         : enrichedProjects;
       
       logger.info('[Workflow] Projets récupérés', { metadata: { count: filteredProjects.length, status 
@@ -382,7 +382,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     // OPTIMISATION: Use pagination instead of loading 375 projects
     const { projects } = await storage.getProjectsPaginated(undefined, undefined, 1000, 0);
     
-    const planningData = projects.map((project: any) => ({
+    const planning: unknown)unknown)unknownts.map((project: any) => ({
       ...project,
       reference: project.aoReference || `PRJ-${project.id.slice(0, 8)}`,
       client: project.clientName || "Client",
@@ -676,8 +676,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     const offers = offersResult.offers;
     const projects = projectsResult.projects;
     
-    const priorities = [
-      ...offers.map((offer: any) => {
+    const prioritie: unknown)unknown)unknown..offers.map((offer: any) => {
         const montantScore = Math.min(((offer.montantEstime || 50000) / 200000) * 100, 100);
         const delaiScore = offer.deadline ? 
           Math.max(100 - (new Date(offer.deadline).getTime() - Date.now()) / (7 * 24 * 60 * 60 * 1000) * 10, 0) 
@@ -735,8 +734,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
           isActive: true
         };
       }),
-      
-      ...projects.map((project: any) => {
+ : unknown)unknown)unknown..projects.map((project: any) => {
         const montantScore = Math.min(((project.budget || 75000) / 300000) * 100, 100);
         const delaiScore = project.endDate ? 
           Math.max(100 - (new Date(project.endDate).getTime() - Date.now()) / (14 * 24 * 60 * 60 * 1000) * 10, 0) 
@@ -1133,7 +1131,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     const { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels } = req.body;
     
     if (weights) {
-      const totalWeight = Object.values(weights).reduce((sum: number, weight: any) => sum + weight, 0);
+      const totalWeight = Object.val: unknown)unknown)unknownreduce((sum: number, weight: any) => sum + weight, 0);
       if (Math.abs(totalWeight - 100) > 0.01) {
         throw new ValidationError("La somme des poids doit être égale à 100%");
       }

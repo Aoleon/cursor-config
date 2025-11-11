@@ -1,6 +1,6 @@
 // Charger les variables d'environnement depuis .env en développement
 import { config } from 'dotenv';
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling, AppError } from './utils/error-handler';
 if (process.env.NODE_ENV !== 'production') {
   config();
 }
@@ -69,7 +69,7 @@ app.use(compression({
     if (req.headers['x-no-compression']) {
       return false;
     }
-    return compression.filter(req, res);
+    return true;
   }
 }));
 
@@ -111,14 +111,13 @@ app.use((req, res, next) => {
   const startupCorrelationId = generateCorrelationId('startup');
   setCorrelationId(startupCorrelationId);
   
-  logger.info('Démarrage serveur Saxium', {
-    metadata: {
+  logger.info('Démarrage serveur Saxium', { metadata: {
       module: 'ExpressApp',
       operation: 'startup',
       nodeVersion: process.version,
       environment: process.env.NODE_ENV || 'development'
-    }
-  });
+        }
+            });
   
   // Initialize WebSocket manager with eventBus
   const wsManager = new WebSocketManager(eventBus);
@@ -139,13 +138,12 @@ app.use((req, res, next) => {
   const { PredictiveEngineService } = await import('./services/PredictiveEngineService');
   
   // Créer les instances des services
-  logger.info('Initialisation système détection alertes', {
-    metadata: {
+  logger.info('Initialisation système détection alertes', { metadata: {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateAlertDetectionService'
-    }
-  });
+        }
+            });
   
   // Cast storage to IStorage to resolve TypeScript interface compatibility issues
   const storageInterface = storage as IStorage;
@@ -154,26 +152,24 @@ app.use((req, res, next) => {
   // INITIALISATION SERVICE D'AUDIT SAXIUM - SINGLETON SÉCURISÉ
   // ========================================
   
-  logger.info('Initialisation service audit Saxium', {
-    metadata: {
+  logger.info('Initialisation service audit Saxium', { metadata: {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'AuditService'
-    }
-  });
+        }
+            });
   
   // CORRECTIF SÉCURITÉ : Vérifier qu'aucune instance n'existe déjà
   const existingAuditService = app.get('auditService');
   if (existingAuditService) {
-    logger.error('Tentative ré-initialisation AuditService bloquée', {
-      metadata: {
+    logger.error('Tentative ré-initialisation AuditService bloquée', { metadata: {
         module: 'ExpressApp',
         operation: 'initializeServices',
         service: 'AuditService',
         error: 'SINGLETON VIOLATION: AuditService already initialized',
         stack: undefined
-      }
-    });
+        }
+            });
     throw new AppError('SINGLETON VIOLATION: AuditService already initialized', 500);
   }
   
@@ -200,16 +196,15 @@ app.use((req, res, next) => {
       operation: 'initializeServices',
       service: 'AuditService',
       context: { singleton: true, frozen: true }
-    }
-  });
+                                                                            }
+                                                                          });
   
-  logger.info('Création DateIntelligenceService', {
-    metadata: {
+  logger.info('Création DateIntelligenceService', { metadata: {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateIntelligenceService'
-    }
-  });
+        }
+            });
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
   const analyticsService = getBusinessAnalyticsService(storageInterface, eventBus);
@@ -229,8 +224,8 @@ app.use((req, res, next) => {
         hasEventBus: !!eventBus,
         hasIntegrationMethod: typeof eventBus.integratePredictiveEngine === 'function'
       }
-    }
-  });
+                            }
+                          });
   
   await withErrorHandling(
     async () => {
@@ -238,7 +233,8 @@ app.use((req, res, next) => {
         metadata: {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngine'
-        }
+        
+        
       });
       await eventBus.integratePredictiveEngine(predictiveEngineService);
       logger.info('Intégration PredictiveEngine terminée', {
@@ -249,15 +245,14 @@ app.use((req, res, next) => {
             preloadingActive: true,
             backgroundCycles: ['business_hours', 'peak', 'weekend', 'nightly']
           }
-        }
-      });
+                                      }
+                                    });
     },
     {
       operation: 'integratePredictiveEngine',
       service: 'index',
       metadata: {}
-    }
-  );
+    });
   
   const dateAlertDetectionService = new DateAlertDetectionService(
     storageInterface,
@@ -282,8 +277,8 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       context: { periodicSchedulerActive: true }
-    }
-  });
+                                                                            }
+                                                                          });
   
   // Rendre les services disponibles pour les routes
   app.set('dateAlertDetectionService', dateAlertDetectionService);
@@ -366,8 +361,7 @@ app.use((req, res, next) => {
       operation: 'if',
       service: 'index',
       metadata: {}
-    }
-  );
+    });
   }, {
     eventTypes: ['technical.alert' as any],
     entities: ['technical']
@@ -386,8 +380,8 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'integratePredictiveEngineFinal',
       context: { timing: 'after_registerRoutes' }
-    }
-  });
+                                                                            }
+                                                                          });
   
   await withErrorHandling(
     async () => {
@@ -401,8 +395,8 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngineFinal',
           context: { instanceAvailable: !!predictiveEngineService }
-        }
-      });
+                                                                                }
+                                                                              });
       
       // INTÉGRATION CRITIQUE pour activation preloading background
       eventBus.integratePredictiveEngine(predictiveEngineService);
@@ -416,15 +410,14 @@ app.use((req, res, next) => {
             cacheOptimizationEnabled: true,
             targetLatencyReduction: '25s→10s'
           }
-        }
-      });
+                                                                                }
+                                                                              });
     },
     {
       operation: 'integratePredictiveEngineFinal',
       service: 'index',
       metadata: {}
-    }
-  );
+    });
 
   // ========================================
   // CONFIGURATION VITE/STATIC (AVANT GESTIONNAIRES D'ERREURS)
@@ -434,42 +427,37 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   const env = app.get("env");
-  logger.info(`Configuration Vite/Static - environnement: ${env}`, {
-    metadata: {
+  logger.info(`Configuration Vite/Static - environnement: ${env}`, { metadata: {
       module: 'ExpressApp',
       operation: 'setupViteOrStatic',
       environment: env
-    }
-  });
+        }
+            });
   
   if (env === "development") {
-    logger.info('Appel setupVite...', {
-      metadata: {
+    logger.info('Appel setupVite...', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-      }
-    });
+        }
+            });
     await setupVite(app, server);
-    logger.info('setupVite terminé avec succès', {
-      metadata: {
+    logger.info('setupVite terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-      }
-    });
+        }
+            });
   } else {
-    logger.info('Appel serveStatic...', {
-      metadata: {
+    logger.info('Appel serveStatic...', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-      }
-    });
+        }
+            });
     serveStatic(app);
-    logger.info('serveStatic terminé avec succès', {
-      metadata: {
+    logger.info('serveStatic terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-      }
-    });
+        }
+            });
   }
   
   // ========================================
@@ -514,80 +502,72 @@ app.use((req, res, next) => {
   const { closePool } = await import("./db");
   
   async function gracefulShutdown(signal: string) {
-    logger.info('Signal arrêt reçu - graceful shutdown', {
-      metadata: {
+    logger.info('Signal arrêt reçu - graceful shutdown', { metadata: {
         module: 'ExpressApp',
         operation: 'gracefulShutdown',
         signal
-      }
-    });
+        }
+            });
     
     try {
       // 1. Fermer les nouvelles connexions
-      logger.info('Fermeture serveur HTTP', {
-        metadata: {
+      logger.info('Fermeture serveur HTTP', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'closeHttpServer'
         }
-      });
+            });
       await new Promise<void>((resolve) => {
         server.close(() => {
-          logger.info('Serveur HTTP fermé', {
-            metadata: {
+          logger.info('Serveur HTTP fermé', { metadata: {
               module: 'ExpressApp',
               operation: 'gracefulShutdown',
               step: 'httpServerClosed'
-            }
-          });
+        }
+            });
           resolve();
         });
       });
       
       // 2. Fermer le pool de connexions DB
-      logger.info('Fermeture pool connexions DB', {
-        metadata: {
+      logger.info('Fermeture pool connexions DB', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'closeDbPool'
         }
-      });
+            });
       await closePool();
-      logger.info('Pool DB fermé', {
-        metadata: {
+      logger.info('Pool DB fermé', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'dbPoolClosed'
         }
-      });
+            });
       
       // 3. Fermer les WebSocket connections (géré automatiquement par la fermeture du serveur)
-      logger.info('WebSocket fermés', {
-        metadata: {
+      logger.info('WebSocket fermés', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'websocketsClosed'
         }
-      });
+            });
       
-      logger.info('Arrêt propre terminé avec succès', {
-        metadata: {
+      logger.info('Arrêt propre terminé avec succès', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           signal,
           exitCode: 0
         }
-      });
+            });
       process.exit(0);
     } catch (error) {
-      logger.error('Erreur lors du graceful shutdown', {
-        metadata: {
+      logger.error('Erreur lors du graceful shutdown', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
         }
-      });
+            });
       process.exit(1);
     }
   }
@@ -598,28 +578,26 @@ app.use((req, res, next) => {
   
   // Gestion des erreurs non capturées
   process.on('uncaughtException', (error) => {
-    logger.error('Exception non capturée - FATAL', {
-      metadata: {
+    logger.error('Exception non capturée - FATAL', { metadata: {
         module: 'ExpressApp',
         operation: 'handleUncaughtException',
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         fatal: true
-      }
-    });
+        }
+            });
     gracefulShutdown('UNCAUGHT_EXCEPTION');
   });
   
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Promesse rejetée non gérée - FATAL', {
-      metadata: {
+    logger.error('Promesse rejetée non gérée - FATAL', { metadata: {
         module: 'ExpressApp',
         operation: 'handleUnhandledRejection',
         error: reason instanceof Error ? reason.message : String(reason),
         stack: reason instanceof Error ? reason.stack : undefined,
         fatal: true
-      }
-    });
+        }
+            });
     gracefulShutdown('UNHANDLED_REJECTION');
   });
 })();

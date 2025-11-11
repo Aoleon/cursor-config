@@ -23,7 +23,7 @@ export function correlationMiddleware(req: Request, res: Response, next: NextFun
   // Stocker dans AsyncLocalStorage pour accès global
   correlationStore.run(correlationId, () => {
     // Attacher au request pour accès direct si besoin
-    (req as any).correlationId = correlationId;
+    (req as unknown).correlationId = correlationId;
     
     // Renvoyer dans response header pour traçabilité côté client
     res.setHeader('X-Correlation-ID', correlationId);

@@ -40,7 +40,7 @@ export interface ExtractedFields {
   amount?: number;
   address?: string;
   items?: ExtractedItem[];
-  customFields?: Record<string, unknown>;
+  customFields?: Record<string, any>;
 }
 
 export interface ExtractedItem {
@@ -70,7 +70,7 @@ export interface OCRPattern {
 // PDF generation types
 export interface PDFGenerationRequest {
   template: PDFTemplate;
-  data: unknown;
+  data: any;
   options?: PDFOptions;
 }
 
@@ -87,14 +87,14 @@ export interface PDFTemplate {
 
 export interface PDFSection {
   type: 'text' | 'table' | 'image' | 'chart' | 'pagebreak';
-  con: unknown;unknown;
+  content: any;
   position?: {
     x?: number;
     y?: number;
     width?: number;
     height?: number;
   };
-: unknown;unknown;unknown;
+  style?: any;
 }
 
 export interface PDFStyles {
@@ -111,12 +111,14 @@ export interface PDFStyles {
 }
 
 export interface PDFHeader {
-  height?: numbe: unknown;unknown;unknown unknown;
+  height?: number;
+  content: any;
   showOnFirstPage?: boolean;
 }
 
 export interface PDFFooter {
-  height?: n: unknown;unknown;unknownent: unknown;
+  height?: number;
+  content: any;
   showPageNumber?: boolean;
 }
 
@@ -150,7 +152,7 @@ export interface DocumentUploadRequest {
   category?: string;
   entityType?: 'ao' | 'offer' | 'project' | 'supplier';
   entityId?: string;
-  metadata?: Record<st, unknown>unknown>;
+  metadata?: Record<string, any>;
 }
 
 export interface DocumentAnalysisRequest {
@@ -192,7 +194,8 @@ export interface DocumentAnalysisResult {
     isValid: boolean;
     errors?: string[];
     warnings?: string[];
- : unknown;unknown;unknownedD: unknunknown;unknown;
+  };
+  extractedData?: any;
 }
 
 export interface DocumentSection {
@@ -214,8 +217,10 @@ export interface Document {
   entityId?: string;
   storageUrl?: string;
   publicUrl?: string;
-  metadata?: Recor, unknownnown>unknown>unknown>;
-  ocrProcess: unknown;ooleunknown;  oc: unknown;unknown;unknown  analy: unknunknown;unknown unknown;
+  metadata?: Record<string, any>;
+  ocrProcessed?: boolean;
+  ocrData?: any;
+  analysisData?: any;
   createdAt: Date;
   createdBy?: string;
   updatedAt?: Date;
@@ -229,7 +234,7 @@ export interface ObjectUploadRequest {
   bucket?: string;
   path?: string;
   isPublic?: boolean;
-  metadata?:unknown unknown>unknown>ng, unknown>;
+  metadata?: Record<string, any>;
 }
 
 export interface ObjectUploadResult {
@@ -248,7 +253,7 @@ export interface ObjectMetadata {
   size: number;
   etag?: string;
   lastModified: Date;
-  metadaunknown unknown>unknown>st, unknunknownnown>unknown>;
+  metadata?: Record<string, any>;
 }
 
 export interface SignedUrlRequest {
@@ -272,7 +277,7 @@ export interface DocumentTemplate {
   category?: string;
   content: string;
   variables?: TemplateVariable[];
-  meunknown unknown>unknown>or, unknunknownnown>ng, unknown>;
+  metadata?: Record<string, any>;
   isActive: boolean;
   version?: number;
   createdAt: Date;
@@ -284,15 +289,17 @@ export interface DocumentTemplate {
 export interface TemplateVariable {
   name: string;
   type: 'text' | 'number' | 'date' | 'boolean' | 'list' | 'object';
-  req: unknunknown;unknown;olean;
-  d: unknunknownnown;Value?: unknown;
+  required?: boolean;
+  defaultValue?: any;
   description?: string;
   format?: string;
 }
 
 export interface TemplateRenderRequest {
-  templateId:unknownrin, unknown>unknown> R, unknownnunknown>st, unknunknown>unknown>;
-  format?:: unknownnown;unknown;html' | 't: unknownnunknown;  opti: unknunknunknown;any;
+  templateId: string;
+  data: Record<string, any>;
+  format?: 'pdf' | 'html' | 'text';
+  options?: any;
 }
 
 export interface TemplateRenderResult {
@@ -356,7 +363,7 @@ export interface OCRService {
 
 export interface PDFGenerator {
   generateFromTemplate(request: PDFGenerationRequest): Promise<PDFGenerationResult>;
-  generateDPGF(data: unknown, options?: PDFOptions): Promise<Buffer>;
-  generateReport(: unknown, unknown, template: PDFTemplate): Promise<Buffer>;
+  generateDPGF(data: any, options?: PDFOptions): Promise<Buffer>;
+  generateReport(data: any, template: PDFTemplate): Promise<Buffer>;
   merge(pdfs: Buffer[], options?: PDFOptions): Promise<Buffer>;
 }

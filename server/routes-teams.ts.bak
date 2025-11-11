@@ -17,7 +17,7 @@ export function registerTeamsRoutes(app: Express) {
    */
   app.get("/api/teams", asyncHandler(async (req, res) => {
     logger.info('[Teams] Récupération de toutes les équipes', { 
-      userId: (req.user as unknown)?.id 
+      userId: (req.user as any)?.id 
     });
 
     const allTeams = await db.query.teams.findMany({
@@ -61,11 +61,11 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     // Calculer les statistiques pour chaque équipe
-    const teamsWithStats = allTeams.map((team: unknown) => ({
+    const teamsWithStats = allTeams.map((team: any) => ({
       ...team,
       memberCount: team.members ? team.members.length : 0,
-      internalMembers: team.members ? team.members.filte: unknown)unknown) => m.userId !== null).length : 0,
-      externalMembers: team.members ? team.members.f: unknown)unknown)unknown) => m.userId === null).length : 0,
+      internalMembers: team.members ? team.members.filter((m: any) => m.userId !== null).length : 0,
+      externalMembers: team.members ? team.members.filter((m: any) => m.userId === null).length : 0,
     }));
 
     logger.info('[Teams] Équipes récupérées avec succès', { 
@@ -73,7 +73,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.json(teamsWithStats);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupérer une équipe spécifique avec ses membres
@@ -83,7 +91,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Récupération équipe spécifique', { 
       teamId,
-      userId: (req.uas unknown)unknown)unknown)?.id 
+      userId: (req.user as any)?.id 
     });
 
     const team = await db.query.teams.findFirst({
@@ -125,14 +133,22 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.json(team);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Créer une nouvelle équipe
    */
   app.post("/api/teams", asyncHandler(async (req, res) => {
     logger.info('[Teams] Création nouvelle équipe', { 
-      userId: (ras unknown) as unknown)?.id 
+      userId: (req.user as any)?.id 
     });
 
     const validationResult = insertTeamSchema.safeParse(req.body);
@@ -178,7 +194,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.status(201).json(createdTeam);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Modifier une équipe
@@ -188,7 +212,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Modification équipe', { 
       teamId,
-      userIdas unknown)unknown)unknownnunknown)unknown)?.id 
+      userId: (req.user as any)?.id 
     });
 
     const validationResult = insertTeamSchema.partial().safeParse(req.body);
@@ -255,10 +279,20 @@ export function registerTeamsRoutes(app: Express) {
       },
     });
 
-    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId } });
+    logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId 
+        }
+            });
 
     res.json(team);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Supprimer une équipe (désactivation)
@@ -268,7 +302,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Suppression (désactivation) équipe', { 
       teamId,
-      usas unknown)unknown)unknownnownr as unknown)?.id 
+      userId: (req.user as any)?.id 
     });
 
     const existingTeam = await db.query.teams.findFirst({
@@ -303,8 +337,18 @@ export function registerTeamsRoutes(app: Express) {
       teamName: existingTeam.name 
     });
 
-    res.json({ message: "Équipe désactivée avec succès" });
-  }));
+    res.json({ message: "Équipe désactivée avec succès" 
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   // ========================================
   // GESTION DES MEMBRES D'ÉQUIPE
@@ -318,7 +362,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Ajout membre équipe', { 
       teamId,
-    as unknown)unknown)unknownnown.uas unknown)unknown)any)?.id 
+      userId: (req.user as any)?.id 
     });
     
     const validationResult = insertTeamMemberSchema.extend({
@@ -407,7 +451,15 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     res.status(201).json(createdMember);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Modifier un membre d'équipe
@@ -418,7 +470,7 @@ export function registerTeamsRoutes(app: Express) {
     logger.info('[Teams] Modification membre équipe', { 
       teamId,
       memberId,
-as unknown)unknown)unknownnown(ras unknown) as unknown)?.id 
+      userId: (req.user as any)?.id 
     });
     
     const validationResult = insertTeamMemberSchema.partial().safeParse(req.body);
@@ -474,7 +526,15 @@ as unknown)unknown)unknownnown(ras unknown) as unknown)?.id
     logger.info('[Teams] Membre modifié avec succès', { metadata: { teamId }, memberId });
 
     res.json(member);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Retirer un membre d'une équipe
@@ -484,7 +544,8 @@ as unknown)unknown)unknownnown(ras unknown) as unknown)?.id
     
     logger.info('[Teams] Retrait membre équipe', { 
       teamId,
-      memberas unknown)unknown)unknownnownIdas unknown)unknown)unknownnown any)?.id 
+      memberId,
+      userId: (req.user as any)?.id 
     });
 
     const existingMember = await db.query.teamMembers.findFirst({
@@ -510,8 +571,18 @@ as unknown)unknown)unknownnown(ras unknown) as unknown)?.id
 
     logger.info('[Teams] Membre retiré avec succès', { metadata: { teamId }, memberId });
 
-    res.json({ message: "Membre retiré de l'équipe avec succès" });
-  }));
+    res.json({ message: "Membre retiré de l'équipe avec succès" 
+
+          });
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 
   /**
    * Récupérer les utilisateurs disponibles pour ajout à une équipe
@@ -520,7 +591,8 @@ as unknown)unknown)unknownnown(ras unknown) as unknown)?.id
     const teamId = req.params.teamId;
     
     logger.info('[Teams] Récupération utilisateurs disponibles', { 
-      as unknown)unknown)unknownnownusas unknown)unknown)unknownnownr as any)?.id 
+      teamId,
+      userId: (req.user as any)?.id 
     });
 
     // Récupérer tous les utilisateurs actifs
@@ -559,5 +631,13 @@ as unknown)unknown)unknownnown(ras unknown) as unknown)?.id
     });
 
     res.json(availableUsers);
-  }));
+        }
+
+                  }
+
+
+                            }
+
+
+                          }));
 }

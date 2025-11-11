@@ -138,7 +138,7 @@ const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
 };
 
 // Middleware pour vérifier les rôles autorisés pour validation technique
-const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
+const requireTechnicalValidationRole = (req: unknown,: unknown, unknown, next: unknown) => {
   const userRole = req.session?.user?.role;
   if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
     return res.status(403).json({
@@ -153,8 +153,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
   const router = Router();
   
   // Import services dynamically to avoid circular dependencies
-  let dateAlertDetectionService: any;
-  let periodicDetectionScheduler: any;
+  let dateAlertDetectionService: unknown;
+  let periodicDetectionSched: unknown;unknown;
   
   // Lazy initialization of services
   const getServices = async () => {
@@ -204,7 +204,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       return withErrorHandling(
     async () => {
 
-        const filter = req.query as any;
+        const filter = req.query as unknown;
         const alerts = await storage.listTechnicalAlerts(filter);
         
         sendSuccess(res, alerts);
@@ -523,7 +523,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           );
         
         // Construire les filtres pour le storage
-        const filters: any = {};
+        const filters: unknown = {};
         if (entityType) filters.entityType = entityType;
         if (entityId) filters.entityId = entityId;
         if (status) filters.status = status;
@@ -584,7 +584,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { id } = req.params;
         const { note } = req.body;
-        const userId = (req as any).user?.id || 'unknown';
+        const userId = (req as unknown).user?.id || 'unknown';
         
         logger.info('Acquittement alerte', { metadata: { alertId: id, userId 
 
@@ -661,7 +661,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { id } = req.params;
         const { actionTaken, resolution } = req.body;
-        const userId = (req as any).user?.id || 'unknown';
+        const userId = (as unknown)unknown).user?.id || 'unknown';
         
         logger.info('Résolution alerte', { metadata: { alertId: id, userId 
 
@@ -718,7 +718,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       return withErrorHandling(
     async () => {
 
-        const userId = (req as any).user?.id;
+        const userIdas unknown) as unknown).user?.id;
         logger.info('Récupération dashboard pour utilisateur', { metadata: { userId 
 
       });
@@ -746,8 +746,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }, {} as Record<string, number>);
         
         // Projets à risque élevé
-        const highRiskProjects = projectRiskProfiles.filter((p: any) => p.riskScore >= 70);
-        const deterioratingProjects = projectRiskProfiles.filter((p: any) => p.trendDirection === 'deteriorating');
+        const highRiskProjects = projectRiskProfiles.filte: unknunknown)unknown) => p.riskScore >= 70);
+        const deterioratingProjects = projectRiskProfiles.f: unknunknown)unknown any) => p.trendDirection === 'deteriorating');
         
         // Alertes récentes (24h)
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -772,7 +772,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             totalProjects: projectRiskProfiles.length,
             highRiskProjects: highRiskProjects.length,
             deterioratingProjects: deterioratingProjects.length,
-            averageRiskScore: projectRiskProfiles.reduce((sum: number, p: any) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
+            averageRiskScore: projectRiskProfiles.reduce((su: unknunknown)unknown, p: any) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
           },
           recentAlerts: recentAlerts.slice(0, 10),
           criticalAlerts: criticalAlerts.slice(0, 5),
@@ -840,7 +840,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     async () => {
 
         const { detectionType, projectId, daysAhead } = req.body;
-        const userId = (req as any).user?.id;
+        const usas unknunknown)unknown unknown any).user?.id;
         
         logger.info('Détection manuelle déclenchée', { metadata: { detectionType, userId, projectId 
 
@@ -851,7 +851,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         const services = await getServices();
         
-        let results: any = {};
+        let res: unknown =ny = {};
         const startTime = Date.now();
         
         switch (detectionType) {
@@ -963,7 +963,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { id } = req.params;
         const { escalationLevel, reason, urgency } = req.body;
-        const userId = (req as any).user?.id;
+        consas unknunknown)unknown unknownq as any).user?.id;
         
         logger.info('Escalade alerte', { metadata: { alertId: id, escalationLevel, userId 
 
@@ -1191,7 +1191,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           else if (alert.status === 'resolved') acc[key].resolvedCount++;
           
           return acc;
-        }, {} as Record<string, any>);
+        }, {} as Record<string, unknown>);
         
         // Calculer les statistiques globales
         const totalAlerts = periodAlerts.length;

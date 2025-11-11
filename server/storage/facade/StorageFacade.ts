@@ -65,7 +65,7 @@ export class StorageFacade {
    * Instance de la base de données
    * Utilisée pour instancier les nouveaux repositories modulaires
    */
-  private readonly db: any;
+  private readonly db: unknown;
 
   /**
    * Event bus pour les notifications
@@ -98,7 +98,7 @@ export class StorageFacade {
    * @param dbInstance - Instance de la base de données (par défaut : db global)
    * @param eventBus - Event bus pour les notifications
    */
-  constructor(eventBus: EventBus, dbInstance: any = db) {
+  constructor(eventBus: EventBus, dbInstance: unknown = db) {
     this.db = dbInstance;
     this.eventBus = eventBus;
     // Double cast nécessaire : DatabaseStorage n'implémente pas encore toutes les méthodes de IStorage
@@ -1318,7 +1318,7 @@ export class StorageFacade {
    */
   async getProjects(search?: string, status?: string) {
     try {
-      const filters: any = {};
+      const fil: unknown =ny = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
@@ -1343,7 +1343,7 @@ export class StorageFacade {
    */
   async getProjectsPaginated(search?: string, status?: string, limit: number = 20, offset: number = 0) {
     try {
-      const filters: any = {};
+      const: unknown =s: unknown = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
@@ -1415,7 +1415,7 @@ export class StorageFacade {
    * Crée un nouveau projet
    * Utilise ProductionRepository avec fallback sur legacy
    */
-  async createProject(project: any) {
+  async createProject(project: unknown) {
     try {
       const created = await this.productionRepository.create(project);
       
@@ -1436,7 +1436,7 @@ export class StorageFacade {
    * Met à jour un projet
    * Utilise ProductionRepository avec fallback sur legacy
    */
-  async updateProject(id: string, project: any) {
+  async updateProject(id: string, pro: unknown)unknown) {
     try {
       const updated = await this.productionRepository.update(id, project);
       
@@ -1508,7 +1508,7 @@ export class StorageFacade {
    */
   async getSuppliers(search?: string, status?: string) {
     try {
-      const filters: any = {};
+      c: unknown =lteunknown =ny = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
@@ -1573,7 +1573,7 @@ export class StorageFacade {
    * Crée un nouveau fournisseur
    * Utilise SuppliersRepository avec fallback sur legacy
    */
-  async createSupplier(supplier: any) {
+  async createSupplier(: unknown)unknown)unknown) {
     try {
       const created = await this.suppliersRepository.create(supplier);
       
@@ -1594,7 +1594,7 @@ export class StorageFacade {
    * Met à jour un fournisseur
    * Utilise SuppliersRepository avec fallback sur legacy
    */
-  async updateSupplier(id: string, supplier: any) {
+  async updateSupplier(id: stri: unknown)unknown)unknown any) {
     try {
       const updated = await this.suppliersRepository.update(id, supplier);
       

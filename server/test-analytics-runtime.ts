@@ -84,7 +84,7 @@ async function testEndpoint(endpoint: string): Promise<TestResult> {
       ...(response.ok ? {} : { error: responseText.slice(0, 200) })
     };
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       endpoint,
       status: 0,

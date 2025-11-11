@@ -545,6 +545,8 @@ function shouldLoadTaskDecomposition(task: Task): boolean {
 - `auto-refactoring.md` - Si code dupliqué détecté (auto-refactoring)
 - `code-sentiment-analysis.md` - Si évaluation qualité nécessaire (analyse sentiment)
 - `auto-test-generation.md` - Si génération tests nécessaire (tests automatiques)
+- `tool-call-limit-workaround.md` - Si tool calls > 800 ou limite approchée (contournement limite) (détails)
+- `cursor-limits-workaround.md` - Si approche de toute limite Cursor (système unifié) (IMPÉRATIF)
 
 ### Règles P2 (Sur Demande)
 

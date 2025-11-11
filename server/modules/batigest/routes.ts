@@ -8,7 +8,7 @@
  */
 
 import { Router } from 'express';
-import { withErrorHandling } from './utils/error-handler';
+// Removed unused import - using asyncHandler from middleware instead
 import type { Request, Response } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -62,16 +62,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
     asyncHandler(async (req: Request, res: Response) => {
       const { limit = 50, agentId } = req.query;
       
-      logger.info('[Batigest] Récupération exports en attente', { metadata: {
+      logger.info('[Batigest] Récupération exports en attente', {
+        metadata: {
           route: '/api/batigest/exports/pending',
           method: 'GET',
           limit,
           agentId
-
-            })
-
-
-          );
+        }
+      });
 
       const exports = await storage.getBatigestExportsByStatus('pending', parseInt(limit as string));
 
@@ -99,17 +97,15 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       const { id } = req.params;
       const { batigestReference, agentId, agentVersion, batigestResponse } = req.body;
       
-      logger.info('[Batigest] Marquage export comme synchronisé', { metadata: {
+      logger.info('[Batigest] Marquage export comme synchronisé', {
+        metadata: {
           route: '/api/batigest/exports/:id/mark-synced',
           method: 'POST',
           exportId: id,
           batigestReference,
           agentId
-
-            })
-
-
-          );
+        }
+      });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -130,15 +126,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         exportId: id,
         documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
         documentId: exportItem.documentId,
-        userId: (req as unknown).user?.id
+        userId: (req as unknown as { user?: { id: string } }).user?.id
       });
 
-      sendSuccess(res, { success: true 
-
-            });
-          }
-        })
-      );
+      sendSuccess(res, { success: true });
+    })
+  );
 
   /**
    * POST /api/batigest/exports/:id/mark-error
@@ -150,17 +143,15 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       const { id } = req.params;
       const { errorMessage, errorDetails, agentId } = req.body;
       
-      logger.error('[Batigest] Export en erreur', { metadata: {
+      logger.error('[Batigest] Export en erreur', {
+        metadata: {
           route: '/api/batigest/exports/:id/mark-error',
           method: 'POST',
           exportId: id,
           errorMessage,
           agentId
-
-            })
-
-
-          );
+        }
+      });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -180,15 +171,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         documentType: exportItem.documentType === 'bon_commande' ? 'purchase_order' : 'client_quote',
         documentId: exportItem.documentId,
         error: errorMessage || 'Erreur de synchronisation',
-        userId: (as unknown)unknown).user?.id
+        userId: (req as unknown as { user?: { id: string } }).user?.id
       });
 
-      sendSuccess(res, { success: true 
-
-            });
-          }
-        })
-      );
+      sendSuccess(res, { success: true });
+    })
+  );
 
   /**
    * GET /api/batigest/exports/:id/download
@@ -200,16 +188,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       const { id } = req.params;
       const { format = 'xml' } = req.query;
       
-      logger.info('[Batigest] Téléchargement fichier export', { metadata: {
+      logger.info('[Batigest] Téléchargement fichier export', {
+        metadata: {
           route: '/api/batigest/exports/:id/download',
           method: 'GET',
           exportId: id,
           format
-
-            })
-
-
-          );
+        }
+      });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -234,9 +220,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/xml');
       res.setHeader('Content-Disposition', `attachment; filename="${exportItem.documentReference}.${format}"`);
       res.send(fileContent);
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // DOCUMENT GENERATION ROUTES
@@ -254,25 +239,24 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
     asyncHandler(async (req: Request, res: Response) => {
       const { generatePDF, exportToBatigest, ...orderData } = req.body;
       
-      logger.info('[Batigest] Génération bon de commande', { metadata: {
+      logger.info('[Batigest] Génération bon de commande', {
+        metadata: {
           route: '/api/documents/generate-purchase-order',
           method: 'POST',
           reference: orderData.reference,
           generatePDF,
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
-          userId: req.user?.id
-
-            })
-
-
-          );
+          userId: (req as unknown as { user?: { id: string } }).user?.id
+        }
+      });
 
       // ========================================
       // MODE PREVIEW: Générer PDF sans persister en DB
       // ========================================
       if (generatePDF && !exportToBatigest) {
-        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', { metadata: { reference: orderData.reference 
+        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
+          metadata: { reference: orderData.reference }
         });
 
         try {
@@ -296,22 +280,20 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                 supplierName = supplier.nom;
               }
             } catch (error) {
-              logger.warn('Erreur lors de la récupération du fournisseur', { metadata: {
+              logger.warn('Erreur lors de la récupération du fournisseur', {
+                metadata: {
                   service: 'batigest',
                   operation: 'getSupplierById',
                   supplierId: orderData.supplierId,
                   error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                }
+              });
             }
           }
 
           // Calculer les totaux
           const items = orderData.items || [];
-          const totalHT = items.reduce((sum: number, item: unknown) => sum + Number(item.total ?? 0), 0);
+          const totalHT = items.reduce((sum: number, item: unknown) => sum + Number((item as { total?: number }).total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;
 
@@ -365,34 +347,28 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               backoffMultiplier: 2,
               retryCondition: () => true, // Retry sur toutes les erreurs (Puppeteer init)
               onRetry: (attempt, delay, error) => {
-                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', { metadata: {
+                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
+                  metadata: {
                     reference: orderData.reference,
                     attempt,
                     delay,
                     error: error instanceof Error ? error.message : String(error)
-                  
-            })
-
-                  
-          );
-                  })
-
-                );
+                  }
+                });
+              }
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 
               (result.errors?.map(e => e.message).join(', ') || 'Erreur inconnue'));
           }
 
-          logger.info('[Batigest] PDF preview généré avec succès', { metadata: {
+          logger.info('[Batigest] PDF preview généré avec succès', {
+            metadata: {
               reference: orderData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-
-            })
-
-
-          );
+            }
+          });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -422,7 +398,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       // Créer le bon de commande en base de données
       const order = await storage.createPurchaseOrder({
         ...orderData,
-        createdBy: req.user?.id
+        createdBy: (req as unknown as { user?: { id: string } }).user?.id
       });
 
       // Export Batigest si demandé
@@ -446,7 +422,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             exportId: exportQueue.id,
             documentType: 'purchase_order',
             documentId: order.id,
-            userId: req.user?.id
+            userId: (req as unknown as { user?: { id: string } }).user?.id
           });
         }
       }
@@ -459,9 +435,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       });
 
       sendSuccess(res, order, 201);
-          }
-        })
-      );
+    })
+  );
 
   /**
    * POST /api/documents/generate-client-quote
@@ -475,25 +450,24 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
     asyncHandler(async (req: Request, res: Response) => {
       const { generatePDF, exportToBatigest, ...quoteData } = req.body;
       
-      logger.info('[Batigest] Génération devis client', { metadata: {
+      logger.info('[Batigest] Génération devis client', {
+        metadata: {
           route: '/api/documents/generate-client-quote',
           method: 'POST',
           reference: quoteData.reference,
           generatePDF,
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
-          userId: req.user?.id
-
-            })
-
-
-          );
+          userId: (req as unknown as { user?: { id: string } }).user?.id
+        }
+      });
 
       // ========================================
       // MODE PREVIEW: Générer PDF sans persister en DB
       // ========================================
       if (generatePDF && !exportToBatigest) {
-        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', { metadata: { reference: quoteData.reference 
+        logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
+          metadata: { reference: quoteData.reference }
         });
 
         try {
@@ -510,7 +484,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           // Calculer les totaux avec Number() pour éviter concaténation
           const items = quoteData.items || [];
-          const totalHT = items.reduce((sum: number, : unknunknunknown)any) => sum + Number(item.total ?? 0), 0);
+          const totalHT = items.reduce((sum: number, item: unknown) => sum + Number((item as { total?: number }).total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;
 
@@ -530,7 +504,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             validityDate,
             deliveryDelay: quoteData.deliveryDelay || '',
             createdAt: new Date(),
-            items: items.map((: unknown, unknown, index: number) => ({
+            items: items.map((item: unknown, index: number) => ({
               ...item,
               index: index + 1
             })),
@@ -572,34 +546,28 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               backoffMultiplier: 2,
               retryCondition: () => true, // Retry sur toutes les erreurs (Puppeteer init)
               onRetry: (attempt, delay, error) => {
-                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', { metadata: {
+                logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
+                  metadata: {
                     reference: quoteData.reference,
                     attempt,
                     delay,
                     error: error instanceof Error ? error.message : String(error)
-                  
-            })
-
-                  
-          );
-                  })
-
-                );
+                  }
+                });
+              }
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 
               (result.errors?.map(e => e.message).join(', ') || 'Erreur inconnue'));
           }
 
-          logger.info('[Batigest] PDF preview généré avec succès', { metadata: {
+          logger.info('[Batigest] PDF preview généré avec succès', {
+            metadata: {
               reference: quoteData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-
-            })
-
-
-          );
+            }
+          });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -628,7 +596,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       // Créer le devis client
       const quote = await storage.createClientQuote({
         ...quoteData,
-        createdBy: req.user?.id
+        createdBy: (req as unknown as { user?: { id: string } }).user?.id
       });
 
       // Export Batigest si demandé
@@ -657,7 +625,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             exportId: exportQueue.id,
             documentType: 'client_quote',
             documentId: quote.id,
-            userId: req.user?.id
+            userId: (req as unknown as { user?: { id: string } }).user?.id
           });
         }
       }
@@ -666,13 +634,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         quoteId: quote.id,
         reference: quote.reference,
         clientName: quote.clientName,
-        userId: req.user?.id
+        userId: (req as unknown as { user?: { id: string } }).user?.id
       });
 
       sendSuccess(res, quote, 201);
-          }
-        })
-      );
+    })
+  );
 
   /**
    * GET /api/batigest/status
@@ -681,14 +648,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
   router.get('/api/batigest/status',
     isAuthenticated,
     asyncHandler(async (req: Request, res: Response) => {
-      logger.info('[Batigest] Récupération statut synchronisation', { metadata: {
+      logger.info('[Batigest] Récupération statut synchronisation', {
+        metadata: {
           route: '/api/batigest/status',
           method: 'GET'
-
-            })
-
-
-          );
+        }
+      });
 
       const [pending, ready, downloaded, imported, errors] = await Promise.all([
         storage.getBatigestExportsByStatus('pending'),
@@ -707,9 +672,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         lastSync: imported[0]?.importedAt || null,
         queueHealth: errors.length > 10 ? 'warning' : 'healthy'
       });
-          }
-        })
-      );
+    })
+  );
 
   /**
    * GET /api/batigest/exports/all
@@ -720,10 +684,13 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
     asyncHandler(async (req: Request, res: Response) => {
       const { status, documentType, page, limit } = req.query;
       
-      logger.info('[Batigest] Récupération exports avec filtres', { metadata: {
+      logger.info('[Batigest] Récupération exports avec filtres', {
+        metadata: {
           route: '/api/batigest/exports/all',
           method: 'GET',
-          filters: { status, documentType, page, limit                   }));
+          filters: { status, documentType, page, limit }
+        }
+      });
 
       const result = await storage.getBatigestExportsAll({
         status: status as string,
@@ -733,9 +700,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
       });
 
       sendSuccess(res, result);
-          }
-        })
-      );
+    })
+  );
 
   /**
    * GET /api/batigest/stats
@@ -744,21 +710,18 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
   router.get('/api/batigest/stats',
     isAuthenticated,
     asyncHandler(async (req: Request, res: Response) => {
-      logger.info('[Batigest] Récupération statistiques', { metadata: {
+      logger.info('[Batigest] Récupération statistiques', {
+        metadata: {
           route: '/api/batigest/stats',
           method: 'GET'
-
-            })
-
-
-          );
+        }
+      });
 
       const stats = await storage.getBatigestStats();
 
       sendSuccess(res, stats);
-          }
-        })
-      );
+    })
+  );
 
   return router;
 }

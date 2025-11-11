@@ -18,6 +18,7 @@ Ces règles sont fondamentales et doivent toujours être appliquées, quel que s
 - `core.md` - Règles fondamentales du projet
 - `quality-principles.md` - Philosophie de qualité (robustesse, performance, maintenabilité)
 - `code-quality.md` - Standards stricts de qualité code
+- `request-timeout-prevention.md` - Prévention des abandons de requêtes (IMPÉRATIF - éviter "User aborted request")
 
 **Contenu:**
 - Contexte du projet

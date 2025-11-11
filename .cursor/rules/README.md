@@ -14,6 +14,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── core.md               # Règles fondamentales (P0 - toujours appliquées)
 ├── quality-principles.md # Principes de qualité (P0 - toujours appliquées)
 ├── code-quality.md       # Standards qualité code (P0 - toujours appliquées)
+├── request-timeout-prevention.md # Prévention des abandons de requêtes (P0 - IMPÉRATIF)
 ├── backend.md            # Règles spécifiques backend (P1)
 ├── frontend.md           # Règles spécifiques frontend (P1)
 ├── ai-services.md        # Règles services IA (P1)

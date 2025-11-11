@@ -150,9 +150,7 @@ export class ContextBuilderService {
           operation: 'generateEnrichedContext',
           entityType: config.entityType,
           entityId: config.entityId
-       
-        
-      });
+        } });
 
       // PHASE 3 : Routage vers système tiéré si activé et configuration étendue
       if (this.TIERED_SYSTEM_ENABLED && this.isTieredConfig(config)) {
@@ -186,9 +184,7 @@ export class ContextBuilderService {
           entityType: config.entityType,
           entityId: config.entityId,
           context: { mode: 'tiered' 
-       
-        
-      });
+        } });
       // 1. Initialisation trace performance si service disponible
       if (this.performanceMetricsService && config.enableTierMetrics) {
         traceId = crypto.randomUUID();
@@ -470,9 +466,7 @@ case 'client':;
           service: 'ContextBuilderService',
           operation: 'buildAoContext',
           aoId: config.entityId
-       
-        
-      });
+        } });
       // OPTIMISATION: Requête groupée avec index composite ao_entity_status_priority_idx
       const [aoResults, lotsResults, offersResults] = await Promise.all([
         // Données principales AO avec utilisation index
@@ -512,8 +506,7 @@ case 'client':;
       const aoData = aoResults[0];
       if (!aoData) {
         throw new NotFoundError(`AO ${config.entityId}`);
-      }
-});
+      });
       const lots = lotsResults;
       const relatedOffers = offersResults;
       this.addToMetrics('aos', 'aoLots', 'offers');
@@ -523,7 +516,7 @@ case 'client':;
           operation: 'buildAoContext',
           queryTimeMs: queryTime   
               }
-            });
+             } });
       // OPTIMISATION: Requêtes relationnelles parallèles
       const [maitreouvrage, maitreoeuvreData] = await Promise.all([
         // Maître d'ouvrage
@@ -586,8 +579,7 @@ case 'client':;
           recommendedSuppliers: [],
           blacklistedSuppliers: [],
           strategicPartners: []
-        }
-});
+        });
       };
       // Construction du contexte métier simplifié
       contextData.businessContext = {
@@ -638,9 +630,7 @@ case 'client':;
           service: 'ContextBuilderService',
           operation: 'buildOfferContext',
           offerId: config.entityId
-       
-        
-      });
+        } });
       // OPTIMISATION: Requêtes groupées avec index composites offer_ao_status_idx et offer_status_created_idx
       const [offerResults, chiffrageResults, milestonesResults, beWorkloadResults] = await Promise.all([
         // Offre avec AO associé (JOIN optimisé avec index)
@@ -688,8 +678,7 @@ case 'client':;
       const offerData = offerResults[0];
       if (!offerData) {
         throw new NotFoundError(`Offre ${config.entityId}`);
-      }
-});
+      });
       const chiffrageItems = chiffrageResults;
       const milestones = milestonesResults;
       const beWorkloadData = beWorkloadResults;
@@ -701,7 +690,7 @@ case 'client':;
           queryTimeMs: queryTime,
           chiffrageItemsCount: chiffrageItems.length   
               }
-            });
+             } });
       // Construction contexte métier enrichi avec données optimisées
       contextData.businessContext = {
         currentPhase: offerData.offerStatus,
@@ -758,8 +747,7 @@ case 'client':;
           dimensional: this.extractDimensionalConstraints(chiffrageItems),
           installation: this.extractInstallationConstraints(chiffrageItems),
           environmental: this.extractEnvironmentalConstraints(chiffrageItems)
-        }
-});
+        });
       };
     },
     {
@@ -1079,7 +1067,7 @@ case 'client':;
         operation: 'buildClientContext',
         status: 'in_development'   
               }
-            });
+             } });
   }
   // ========================================
   // ENRICHISSEMENT CONTEXTUEL PAR TYPE
@@ -1610,7 +1598,7 @@ case 'client':;
         tier: profile.tier,
         maxTokens: profile.maxTokens   
               }
-            });
+             } });
     // 1. Initialisation contexte avec profil
     const contextData: AIContextualData = {
       entityType: config.entityType,
@@ -1664,10 +1652,9 @@ case 'client':;
         operation: 'buildSelectiveContext',
         tokenEstimate: contextData.tokenEstimate   
               }
-            });
+             } });
     return contextData;
-  }
-});
+  });
   /**
    * Adapte la configuration selon le profil tier
    */
@@ -1779,8 +1766,7 @@ case 'client':;
           installationMethods: [],
           qualityStandards: [],
           commonIssues: []
-        }
-});
+        });
       };
       // Relations étendues selon profil
       if (profile.maxRelationDepth > 1) {
@@ -1833,10 +1819,9 @@ case 'client':;
         operation: 'buildLimitedOfferContext',
         tier: profile.tier   
               }
-            });
+             } });
     // TODO: Implémenter selon pattern buildAOContextLimited
-  }
-});
+  });
   /**
    * Construction projet avec limitations selon profil
    */
@@ -1851,10 +1836,9 @@ case 'client':;
         operation: 'buildLimitedProjectContext',
         tier: profile.tier   
               }
-            });
+             } });
     // TODO: Implémenter selon pattern buildAOContextLimited
-  }
-});
+  });
   /**
    * Construction fournisseur avec limitations selon profil
    */
@@ -1868,10 +1852,9 @@ case 'client':;
         operation: 'buildLimitedSupplierContext',
         tier: profile.tier   
               }
-            });
+             } });
     // TODO: Implémenter selon pattern buildAOContextLimited
-  }
-});
+  });
   /**
    * Construction équipe avec limitations selon profil
    */
@@ -1885,10 +1868,9 @@ case 'client':;
         operation: 'buildLimitedTeamContext',
         tier: profile.tier   
               }
-            });
+             } });
     // TODO: Implémenter selon pattern buildAOContextLimited
-  }
-});
+  });
   /**
    * Construction client avec limitations selon profil
    */
@@ -1902,10 +1884,9 @@ case 'client':;
         operation: 'buildLimitedClientContext',
         tier: profile.tier   
               }
-            });
+             } });
     // TODO: Implémenter selon pattern buildAOContextLimited
-  }
-});
+  });
   /**
    * Construction contexte relationnel lunknownté
    */
@@ -1964,15 +1945,14 @@ case 'client':;
         operation: 'performSelectiveEnrichment',
         priorityContextTypes: profile.priorityContextTypes.join(', ')   
               }
-            });
+             } });
     // Enrichissement seulement pour types prioritaires
     for (const contextType of profile.priorityContextTypes) {
       switch (contextType) {
         case 'technique':
           if (!contextData.technicalContext) {
             await this.enrichTechnicalContextLimited(contextData, config, profile);
-          }
-});
+          });
           break;
         case 'temporel':
           if (!contextData.temporalContext) {
@@ -2307,8 +2287,7 @@ export function getContextBuilderService(
             });
       }
     }
-  }
-});
+  });
   return globalContextBuilderService;
 }
 /**

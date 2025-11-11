@@ -729,8 +729,29 @@ async function examineInitialRequest(
     effort: await estimateEffort(request, context)
   };
   
-  // 2. Décomposer en composants
+  // 2. Décomposer en composants avec critères de task-decomposition.md
   const components = await decomposeRequest(request, analysis, context);
+  
+  // 2.1. Valider taille optimale de chaque composant (max 50 lignes, max 3 fichiers)
+  const validatedComponents = await Promise.all(
+    components.map(async (component) => {
+      const size = {
+        linesOfCode: await estimateLinesOfCode(component),
+        filesModified: component.files.length,
+        externalDependencies: countDependencies(component),
+        totalEstimatedLines: await estimateTotalLines(component)
+      };
+      
+      // Re-décomposer si trop complexe
+      if (size.linesOfCode > 50 || size.filesModified > 3 || size.externalDependencies > 5 || size.totalEstimatedLines > 200) {
+        return await decomposeRequest(component, analysis, context);
+      }
+      
+      return [component];
+    })
+  );
+  
+  const allComponents = validatedComponents.flat();
   
   // 3. Documenter analyse
   await documentInitialAnalysis(request, analysis, components, context);
@@ -738,7 +759,7 @@ async function examineInitialRequest(
   return {
     request,
     analysis,
-    components,
+    components: allComponents,
     timestamp: Date.now()
   };
 }
@@ -757,23 +778,37 @@ async function examineInitialRequest(
 
 **Pattern:**
 ```typescript
-// Création des todos par l'architecte
+// Création des todos par l'architecte avec pensée séquentielle et listes structurées
 async function createInitialTodos(
   analysis: InitialAnalysis,
   context: Context
-): Promise<Todo[]> {
+): Promise<StructuredTodoList> {
   const todos: Todo[] = [];
   
-  // 1. Créer todos pour chaque composant
-  for (const component of analysis.components) {
-    const componentTodos = await createTodosForComponent(
+  // 1. Créer todos pour chaque composant avec pensée séquentielle
+  const componentTodos: Todo[] = [];
+  for (let i = 0; i < analysis.components.length; i++) {
+    const component = analysis.components[i];
+    const previousComponents = analysis.components.slice(0, i);
+    
+    const componentTodosForComponent = await createTodosForComponent(
       component,
       analysis,
       context
     );
     
-    todos.push(...componentTodos);
+    // Ajouter dépendances explicites selon pensée séquentielle
+    const todosWithDependencies = componentTodosForComponent.map(todo => ({
+      ...todo,
+      dependsOn: previousComponents.map(c => c.id),
+      sequential: true,
+      validateBeforeNext: true
+    }));
+    
+    componentTodos.push(...todosWithDependencies);
   }
+  
+  todos.push(...componentTodos);
   
   // 2. Créer todos de validation
   const validationTodos = await createValidationTodos(
@@ -791,13 +826,37 @@ async function createInitialTodos(
   
   todos.push(...testTodos);
   
-  // 4. Prioriser todos
-  const prioritizedTodos = await prioritizeTodos(todos, analysis, context);
+  // 4. Résoudre dépendances et ordonner
+  const orderedTodos = resolveDependencies(todos);
   
-  // 5. Documenter plan
-  await documentExecutionPlan(prioritizedTodos, analysis, context);
+  // 5. Identifier tâches pouvant être exécutées en arrière-plan (Background Agent)
+  const backgroundTasks = identifyBackgroundTasks(orderedTodos);
   
-  return prioritizedTodos;
+  // 6. Générer liste structurée avec dépendances
+  const structuredList: StructuredTodoList = {
+    todos: orderedTodos.map((todo, index) => ({
+      ...todo,
+      order: index + 1,
+      dependsOn: todo.dependsOn || [],
+      priority: calculatePriority(todo, analysis, context),
+      estimatedDuration: estimateDuration(todo),
+      canRunInBackground: backgroundTasks.some(bt => bt.todoId === todo.id)
+    })),
+    backgroundTasks,
+    totalDuration: calculateTotalDuration(orderedTodos),
+    criticalPath: identifyCriticalPath(orderedTodos)
+  };
+  
+  // 7. Mettre en file d'attente messages pour tâches de longue haleine
+  const longRunningTodos = orderedTodos.filter(t => estimateDuration(t) > 10 * 60 * 1000);
+  if (longRunningTodos.length > 0) {
+    await queueMessagesForLongRunningTasks(longRunningTodos, context);
+  }
+  
+  // 8. Documenter plan
+  await documentExecutionPlan(structuredList, analysis, context);
+  
+  return structuredList;
 }
 ```
 
@@ -1723,6 +1782,59 @@ async function preventBugsWithArchitectSupervision(
 - `@.cursor/rules/bug-prevention.md` - Détection proactive des bugs
 - `@.cursor/rules/quality-checklist.md` - Checklist qualité
 - `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable
+- `@.cursor/rules/task-decomposition.md` - Décomposition des tâches (critères de taille, pensée séquentielle, Background Agent, listes structurées)
+
+### Intégration avec `task-decomposition.md`
+
+**Workflow Collaboratif Architecte Sénior + Décomposition des Tâches:**
+
+**Étapes:**
+1. **Architecte Sénior** : Examine demande initiale complètement
+2. **Task Decomposition** : Décompose avec critères de taille optimale (max 50 lignes, max 3 fichiers)
+3. **Pensée Séquentielle** : Structure todos avec dépendances explicites
+4. **Background Agent** : Identifie tâches pouvant être exécutées en arrière-plan
+5. **Listes Structurées** : Génère listes de tâches avec dépendances
+6. **Validation** : Valide taille de chaque sous-tâche créée
+
+**Pattern:**
+```typescript
+// Intégration task-decomposition dans workflow architecte
+async function architectWorkflowWithDecomposition(
+  request: UserRequest,
+  context: Context
+): Promise<ArchitectResult> {
+  // 1. Examen initial par architecte
+  const initialAnalysis = await examineInitialRequest(request, context);
+  
+  // 2. Décomposition avec critères task-decomposition.md
+  const decomposition = await decomposeComplexTask(
+    { ...request, analysis: initialAnalysis },
+    context
+  );
+  
+  // 3. Création todos avec pensée séquentielle et listes structurées
+  const structuredTodos = await createInitialTodos(
+    { ...initialAnalysis, components: decomposition.subtasks },
+    context
+  );
+  
+  // 4. Planification exécution avec Background Agent
+  const executionPlan = await planExecution(
+    structuredTodos.todos,
+    structuredTodos.backgroundTasks,
+    context
+  );
+  
+  return {
+    analysis: initialAnalysis,
+    decomposition,
+    structuredTodos,
+    executionPlan
+  };
+}
+```
+
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor
 
 ---
 

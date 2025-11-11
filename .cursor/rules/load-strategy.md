@@ -66,8 +66,8 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 | Modifier service | 3 | backend (1) | - | 4 |
 | Modifier service IA | 3 | ai-services + backend (2) | - | 5 |
 | Modifier schéma DB | 3 | database + backend (2) | - | 5 |
-| Tâche complexe | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + similar-code-detection (1) + preventive-validation (1) | pre-task-evaluation (1) | 14-15 |
-| Run autonome | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + learning-memory (1) + similar-code-detection (1) + preventive-validation (1) | autonomous-workflows + agent-optimization (2) | 15-16 |
+| Tâche complexe | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + task-decomposition (1) + similar-code-detection (1) + preventive-validation (1) | pre-task-evaluation (1) | 15-16 |
+| Run autonome | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + hard-coding-specialist (1) + todo-completion (1) + iterative-perfection (1) + persistent-execution (1) + advanced-iteration-and-role-coordination (1) + task-decomposition (1) + learning-memory (1) + similar-code-detection (1) + preventive-validation (1) | autonomous-workflows + agent-optimization (2) | 16-17 |
 | Migration/Refactoring | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + migration-refactoring-manager (1) + hard-coding-specialist (1) + preventive-validation (1) + dependency-intelligence (1) | pre-task-evaluation (1) | 10-11 |
 | Consolidation/Dette technique | 3 | selon domaine (1-2) + senior-architect-oversight (1) + client-consultant-oversight (1) + tech-debt-manager (1) + migration-refactoring-manager (1) + hard-coding-specialist (1) + similar-code-detection (1) | pre-task-evaluation (1) | 10-11 |
 | Tâche avec tests qui échouent | 3 | selon domaine (1-2) + iterative-perfection (1) + preventive-validation (1) | automated-testing-debugging (1) | 7-8 |
@@ -139,6 +139,20 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 - P1: `iterative-perfection.md` (IMPÉRATIF si itération nécessaire) (1)
 - P1: `persistent-execution.md` (IMPÉRATIF - éviter arrêts prématurés, runs longs) (1)
 - P1: `advanced-iteration-and-role-coordination.md` (IMPÉRATIF - maximiser autonomie, durée, qualité) (1)
+- P1: `task-decomposition.md` (IMPÉRATIF - décomposition avec critères de taille, pensée séquentielle, Background Agent, listes structurées) (1)
+- P1: `intelligent-task-detection.md` (détection automatique complexité) (1)
+- P1: `rule-cache.md` (cache intelligent des règles) (1)
+- P1: `rule-feedback-loop.md` (ajustement automatique selon résultats) (1)
+- P1: `auto-documentation.md` (si création/modification nécessitant documentation) (1)
+- P1: `cost-optimization.md` (si utilisation services IA) (1)
+- P1: `timeout-management.md` (si opérations longues ou timeouts) (1)
+- P1: `intelligent-preloading.md` (si optimisation performance) (1)
+- P1: `context-compression.md` (si contexte saturé) (1)
+- P1: `validation-pipeline.md` (si validation stricte) (1)
+- P1: `predictive-problem-detection.md` (si analyse risques) (1)
+- P1: `auto-refactoring.md` (si code dupliqué) (1)
+- P1: `code-sentiment-analysis.md` (si évaluation qualité) (1)
+- P1: `auto-test-generation.md` (si génération tests) (1)
 - P1: `similar-code-detection.md` (si création/modification) (1)
 - P1: `learning-memory.md` (si tâche récurrente) (1)
 - P1: `preventive-validation.md` (IMPÉRATIF avant modification) (1)
@@ -146,7 +160,7 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 - P2: `autonomous-workflows.md` (si run autonome) (1)
 - P2: `agent-optimization.md` (si optimisation) (1)
 
-**Total:** 11-14 fichiers (pour runs autonomes complexes)
+**Total:** 12-15 fichiers (pour runs autonomes complexes)
 
 ### Tests
 

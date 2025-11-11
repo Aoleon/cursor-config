@@ -9,36 +9,67 @@
 **Principe:** L'agent doit être capable de planifier et exécuter des séquences de tâches complexes de manière autonome avec optimisation transversale.
 
 **TOUJOURS:**
-- ✅ Décomposer les tâches complexes en sous-tâches
-- ✅ Identifier les dépendances entre tâches
+- ✅ Décomposer les tâches complexes en sous-tâches avec critères de taille optimale (max 50 lignes, max 3 fichiers)
+- ✅ Utiliser pensée séquentielle pour structurer les sous-tâches
+- ✅ Identifier les dépendances entre tâches explicitement
+- ✅ Générer listes de tâches structurées avec dépendances
+- ✅ Identifier opportunités Background Agent pour tâches différées
 - ✅ Comprendre relations transversales entre modules
-- ✅ Planifier l'ordre d'exécution optimal avec parallélisation
+- ✅ Planifier l'ordre d'exécution optimal avec parallélisation et Background Agent
 - ✅ Optimiser performances avec cache intelligent
 - ✅ Valider chaque étape avant de continuer
 - ✅ Documenter le plan d'exécution
 
-**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie
+**Référence:** `@.cursor/rules/transversal-performance.md` - Performance transversale et autonomie  
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor
 
 **Pattern:**
 ```typescript
 // 1. Analyser la tâche
 const task = analyzeTask(userRequest);
 
-// 2. Décomposer en sous-tâches
-const subtasks = decomposeTask(task);
+// 2. Décomposer en sous-tâches avec critères task-decomposition.md
+const decomposition = await decomposeComplexTask(task, context);
 
-// 3. Identifier dépendances
-const dependencies = identifyDependencies(subtasks);
+// 2.1. Valider taille optimale (max 50 lignes, max 3 fichiers)
+const validatedSubtasks = decomposition.subtasks.map(subtask => {
+  if (!validateSubtaskSize(subtask)) {
+    return decomposeComplexTask(subtask, context);
+  }
+  return [subtask];
+}).flat();
 
-// 4. Planifier ordre d'exécution
-const executionPlan = planExecution(subtasks, dependencies);
+// 3. Identifier dépendances avec pensée séquentielle
+const dependencies = resolveDependencies(validatedSubtasks);
 
-// 5. Exécuter avec validation à chaque étape
-for (const subtask of executionPlan) {
-  const result = await executeSubtask(subtask);
-  validateResult(result);
-  if (!result.success) {
-    await handleError(result, subtask);
+// 4. Identifier tâches Background Agent
+const backgroundTasks = identifyBackgroundTasks(validatedSubtasks);
+
+// 5. Générer liste structurée avec dépendances
+const structuredList = await generateStructuredTaskList(
+  { ...task, subtasks: validatedSubtasks },
+  context
+);
+
+// 6. Planifier ordre d'exécution avec Background Agent
+const executionPlan = await planExecution(
+  validatedSubtasks,
+  backgroundTasks,
+  dependencies,
+  context
+);
+
+// 7. Exécuter avec validation à chaque étape et Background Agent
+for (const subtask of executionPlan.orderedSubtasks) {
+  // Exécuter en arrière-plan si identifié comme background task
+  if (subtask.canRunInBackground) {
+    await executeBackgroundTaskWithResume(subtask, context);
+  } else {
+    const result = await executeSubtask(subtask);
+    validateResult(result);
+    if (!result.success) {
+      await handleError(result, subtask);
+    }
   }
 }
 ```
@@ -717,6 +748,7 @@ async function validateMultiLevel(code: string): Promise<ValidationResult> {
 - `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
 - `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 - `@.cursor/rules/transversal-performance.md` - **NOUVEAU** Performance transversale et autonomie
+- `@.cursor/rules/task-decomposition.md` - **NOUVEAU** Décomposition des tâches conforme documentation Cursor (critères de taille, pensée séquentielle, Background Agent, listes structurées)
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
 - `@.cursor/rules/workflows.md` - Workflows détaillés
 - `@.cursor/rules/troubleshooting.md` - Guide résolution problèmes

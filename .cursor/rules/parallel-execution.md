@@ -4,7 +4,7 @@
 
 ## 🎯 Principe Fondamental
 
-**IMPÉRATIF:** L'agent DOIT exécuter plusieurs opérations indépendantes en parallèle pour améliorer les performances et réduire la latence.
+**IMPÉRATIF:** L'agent DOIT exécuter plusieurs opérations indépendantes en parallèle pour améliorer les performances et réduire la latence, avec intégration du Background Agent de Cursor pour les tâches différées.
 
 **Bénéfices:**
 - ✅ Réduit la latence totale
@@ -12,6 +12,10 @@
 - ✅ Optimise l'utilisation des ressources
 - ✅ Accélère le développement
 - ✅ Améliore l'expérience utilisateur
+- ✅ Exécution en arrière-plan pour tâches différées (Background Agent)
+
+**Référence:** `@Docs Cursor Background Agent` - Documentation officielle Cursor  
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches (identification opportunités Background Agent)
 
 ## 📋 Règles d'Exécution Parallèle
 
@@ -198,6 +202,52 @@ async function executeOperationsInParallel(
 }
 ```
 
+## 🤖 Intégration Background Agent
+
+### Principe
+
+**IMPÉRATIF:** Identifier et planifier les tâches pouvant être exécutées en arrière-plan avec le Background Agent de Cursor.
+
+**TOUJOURS:**
+- ✅ Identifier tâches pouvant être exécutées en arrière-plan (non bloquantes, > 5 minutes)
+- ✅ Planifier exécution avec Background Agent
+- ✅ Gérer état et reprise après interruption
+- ✅ Surveiller progression des tâches background
+
+**Pattern:**
+```typescript
+// Intégration Background Agent dans exécution parallèle
+async function executeWithBackgroundAgent(
+  operations: Operation[],
+  context: Context
+): Promise<ExecutionResult[]> {
+  // 1. Identifier tâches background
+  const backgroundTasks = identifyBackgroundTasks(operations);
+  
+  // 2. Séparer tâches normales et background
+  const normalTasks = operations.filter(op => !backgroundTasks.some(bt => bt.operationId === op.id));
+  
+  // 3. Exécuter tâches normales en parallèle
+  const normalResults = await Promise.all(
+    normalTasks.map(op => executeOperation(op, context))
+  );
+  
+  // 4. Planifier tâches background
+  const backgroundPlan = await planBackgroundTasks(backgroundTasks, context);
+  
+  // 5. Exécuter tâches background avec reprise
+  const backgroundResults = await Promise.all(
+    backgroundPlan.plan.map(plan => 
+      executeBackgroundTaskWithResume(plan.task, context)
+    )
+  );
+  
+  return [...normalResults, ...backgroundResults];
+}
+```
+
+**Référence:** `@.cursor/rules/task-decomposition.md` - Identification opportunités Background Agent
+
 ## ⚠️ Règles d'Exécution Parallèle
 
 ### Ne Jamais:
@@ -207,12 +257,14 @@ async function executeOperationsInParallel(
 - ❌ Ignorer les limites de parallélisation
 - ❌ Ne pas gérer les erreurs en parallèle
 - ❌ Paralléliser opérations qui doivent être séquentielles
+- ❌ Ignorer opportunités Background Agent
 
 **TOUJOURS:**
 - ✅ Paralléliser opérations indépendantes
 - ✅ Respecter les limites de parallélisation
 - ✅ Gérer les erreurs en parallèle
 - ✅ Analyser dépendances avant parallélisation
+- ✅ Identifier opportunités Background Agent pour tâches différées
 
 ## 📊 Checklist Exécution Parallèle
 
@@ -241,6 +293,8 @@ async function executeOperationsInParallel(
 - `@.cursor/rules/performance.md` - Optimisations performance
 - `@.cursor/rules/auto-performance-detection.md` - Détection automatique des problèmes de performance
 - `@.cursor/rules/context-optimization.md` - Gestion intelligente du contexte
+- `@.cursor/rules/task-decomposition.md` - Décomposition des tâches (identification opportunités Background Agent)
+- `@Docs Cursor Background Agent` - Documentation officielle Cursor
 
 ---
 

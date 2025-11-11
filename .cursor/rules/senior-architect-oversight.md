@@ -169,7 +169,8 @@ async function pilotStrategicDevelopment(
 - **Maintenabilité** : Facilité de maintenance
 - **Performance** : Optimisations appliquées
 
-**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable
+**Référence:** `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable  
+**Référence:** `@.cursor/rules/senior-architect-oversight.md` - Recherche préalable approfondie (section "Recherche Préalable Approfondie et Prise de Décision Optimisée")
 
 ### 4. Code Review Automatique
 
@@ -230,18 +231,411 @@ async function performArchitectCodeReview(
 
 **Référence:** `@.cursor/rules/quality-checklist.md` - Checklist qualité
 
-## 🔄 Workflow de Supervision Architecte Sénior
+## 🔍 Recherche Préalable Approfondie et Prise de Décision Optimisée
 
-### Workflow: Superviser Tâche jusqu'à Perfection
+### Principe Fondamental
+
+**IMPÉRATIF:** L'architecte DOIT effectuer une recherche préalable approfondie avant toute prise de décision architecturale pour garantir des décisions optimales basées sur des données complètes.
+
+**Bénéfices:**
+- ✅ Décisions basées sur recherche approfondie
+- ✅ Réduction des biais cognitifs
+- ✅ Analyse multi-critères complète
+- ✅ Documentation complète des décisions
+- ✅ Validation des décisions avec feedback loop
+
+### 1. Recherche Préalable Approfondie
+
+**IMPÉRATIF:** Avant toute décision architecturale, l'architecte DOIT effectuer une recherche approfondie systématique.
+
+**TOUJOURS:**
+- ✅ Rechercher solutions existantes dans le codebase (codebase_search)
+- ✅ Rechercher patterns similaires dans le projet
+- ✅ Rechercher fichiers similaires (glob_file_search)
+- ✅ Analyser historique des décisions similaires
+- ✅ Consulter documentation technique (docs/)
+- ✅ Analyser contraintes techniques et métier
+- ✅ Identifier dépendances et impacts
+- ✅ Évaluer alternatives avec recherche approfondie
+
+**Pattern:**
+```typescript
+// Recherche préalable approfondie avant décision
+async function performDeepResearch(
+  decisionContext: DecisionContext,
+  context: Context
+): Promise<DeepResearchResult> {
+  const research: DeepResearchResult = {
+    codebaseAnalysis: [],
+    patternAnalysis: [],
+    fileAnalysis: [],
+    historicalDecisions: [],
+    documentation: [],
+    constraints: {},
+    dependencies: [],
+    alternatives: []
+  };
+  
+  // 1. Rechercher solutions existantes dans codebase
+  research.codebaseAnalysis = await Promise.all([
+    codebase_search(
+      `How is ${decisionContext.objective} implemented?`,
+      []
+    ),
+    codebase_search(
+      `What are the patterns for ${decisionContext.objective}?`,
+      []
+    ),
+    codebase_search(
+      `What are similar implementations to ${decisionContext.objective}?`,
+      []
+    )
+  ]);
+  
+  // 2. Rechercher fichiers similaires
+  research.fileAnalysis = await glob_file_search(
+    `**/*${decisionContext.keywords.join('*')}*.ts`
+  );
+  
+  // 3. Analyser patterns établis
+  research.patternAnalysis = await analyzeEstablishedPatterns(
+    decisionContext,
+    context
+  );
+  
+  // 4. Consulter historique des décisions similaires
+  research.historicalDecisions = await analyzeHistoricalDecisions(
+    decisionContext,
+    context
+  );
+  
+  // 5. Consulter documentation technique
+  research.documentation = await Promise.all([
+    read_file('docs/ARCHITECTURE.md'),
+    read_file('systemPatterns.md'),
+    read_file('activeContext.md'),
+    read_file('decision-log.md')
+  ]);
+  
+  // 6. Analyser contraintes
+  research.constraints = await analyzeConstraints(
+    decisionContext,
+    context
+  );
+  
+  // 7. Identifier dépendances et impacts
+  research.dependencies = await identifyDependenciesAndImpacts(
+    decisionContext,
+    context
+  );
+  
+  // 8. Évaluer alternatives avec recherche approfondie
+  research.alternatives = await evaluateAlternativesWithResearch(
+    decisionContext,
+    research,
+    context
+  );
+  
+  return research;
+}
+```
+
+### 2. Analyse Multi-Critères Avancée
+
+**IMPÉRATIF:** L'architecte DOIT analyser chaque approche selon des critères multiples et pondérés.
+
+**Critères d'Analyse:**
+1. **Robustesse** (Pondération: 30%) - Critère bloquant
+2. **Maintenabilité** (Pondération: 25%) - Critère important
+3. **Performance** (Pondération: 20%) - Critère d'optimisation
+4. **Rapidité** (Pondération: 15%) - Critère d'optimisation
+5. **Cohérence Architecturale** (Pondération: 10%) - Critère de qualité
+
+**Pattern:**
+```typescript
+// Analyse multi-critères avancée
+async function performMultiCriteriaAnalysis(
+  approaches: Approach[],
+  research: DeepResearchResult,
+  context: Context
+): Promise<MultiCriteriaAnalysis> {
+  const analyses = await Promise.all(
+    approaches.map(async (approach) => {
+      // 1. Analyser robustesse (30%)
+      const robustness = await analyzeRobustness(approach, research, context);
+      
+      // 2. Analyser maintenabilité (25%)
+      const maintainability = await analyzeMaintainability(approach, research, context);
+      
+      // 3. Analyser performance (20%)
+      const performance = await analyzePerformance(approach, research, context);
+      
+      // 4. Analyser rapidité (15%)
+      const speed = await analyzeSpeed(approach, research, context);
+      
+      // 5. Analyser cohérence architecturale (10%)
+      const architecturalCoherence = await analyzeArchitecturalCoherence(
+        approach,
+        research,
+        context
+      );
+      
+      // 6. Calculer score pondéré
+      const weightedScore = (
+        robustness.score * 0.30 +
+        maintainability.score * 0.25 +
+        performance.score * 0.20 +
+        speed.score * 0.15 +
+        architecturalCoherence.score * 0.10
+      );
+      
+      // 7. Vérifier critères bloquants
+      const blockingIssues = [];
+      if (robustness.score < 6) {
+        blockingIssues.push({
+          criterion: 'robustness',
+          score: robustness.score,
+          threshold: 6,
+          reason: 'Robustesse insuffisante (critère bloquant)'
+        });
+      }
+      if (maintainability.score < 5) {
+        blockingIssues.push({
+          criterion: 'maintainability',
+          score: maintainability.score,
+          threshold: 5,
+          reason: 'Maintenabilité insuffisante (critère important)'
+        });
+      }
+      
+      return {
+        approach,
+        robustness,
+        maintainability,
+        performance,
+        speed,
+        architecturalCoherence,
+        weightedScore,
+        blockingIssues,
+        eligible: blockingIssues.length === 0
+      };
+    })
+  );
+  
+  // 8. Trier par score pondéré
+  const sorted = analyses
+    .filter(a => a.eligible)
+    .sort((a, b) => b.weightedScore - a.weightedScore);
+  
+  return {
+    analyses,
+    sorted,
+    bestApproach: sorted[0],
+    recommendation: generateRecommendation(sorted, research, context)
+  };
+}
+```
+
+### 3. Gestion des Biais Cognitifs
+
+**IMPÉRATIF:** L'architecte DOIT identifier et atténuer les biais cognitifs dans les décisions.
+
+**Biais à Détecter:**
+- **Biais de confirmation** : Privilégier informations confirmant hypothèses
+- **Biais d'ancrage** : S'appuyer trop sur première information
+- **Biais de disponibilité** : Privilégier solutions récentes/familières
+- **Biais de surconfiance** : Surestimer qualité des décisions
+
+**Pattern:**
+```typescript
+// Détection et atténuation des biais cognitifs
+async function detectAndMitigateBiases(
+  analysis: MultiCriteriaAnalysis,
+  research: DeepResearchResult,
+  context: Context
+): Promise<BiasMitigationResult> {
+  const biases: DetectedBias[] = [];
+  
+  // 1. Détecter biais de confirmation
+  const confirmationBias = await detectConfirmationBias(analysis, research);
+  if (confirmationBias.detected) {
+    biases.push(confirmationBias);
+  }
+  
+  // 2. Détecter biais d'ancrage
+  const anchoringBias = await detectAnchoringBias(analysis, research);
+  if (anchoringBias.detected) {
+    biases.push(anchoringBias);
+  }
+  
+  // 3. Détecter biais de disponibilité
+  const availabilityBias = await detectAvailabilityBias(analysis, research);
+  if (availabilityBias.detected) {
+    biases.push(availabilityBias);
+  }
+  
+  // 4. Détecter biais de surconfiance
+  const overconfidenceBias = await detectOverconfidenceBias(analysis, research);
+  if (overconfidenceBias.detected) {
+    biases.push(overconfidenceBias);
+  }
+  
+  // 5. Atténuer biais détectés
+  const mitigatedAnalysis = await mitigateBiases(
+    analysis,
+    biases,
+    research,
+    context
+  );
+  
+  return {
+    biases,
+    originalAnalysis: analysis,
+    mitigatedAnalysis,
+    recommendations: generateBiasMitigationRecommendations(biases)
+  };
+}
+```
+
+### 4. Documentation Complète des Décisions
+
+**IMPÉRATIF:** L'architecte DOIT documenter complètement chaque décision avec raisonnement et recherche.
+
+**Pattern:**
+```typescript
+// Documentation complète des décisions
+async function documentArchitecturalDecision(
+  decision: ArchitecturalDecision,
+  research: DeepResearchResult,
+  analysis: MultiCriteriaAnalysis,
+  biasMitigation: BiasMitigationResult,
+  context: Context
+): Promise<DecisionDocumentation> {
+  const documentation: DecisionDocumentation = {
+    decision,
+    timestamp: Date.now(),
+    research: {
+      codebaseAnalysis: research.codebaseAnalysis.length,
+      patternAnalysis: research.patternAnalysis.length,
+      fileAnalysis: research.fileAnalysis.length,
+      historicalDecisions: research.historicalDecisions.length,
+      documentation: research.documentation.length
+    },
+    analysis: {
+      approachesEvaluated: analysis.analyses.length,
+      bestApproach: analysis.bestApproach.approach.id,
+      weightedScore: analysis.bestApproach.weightedScore,
+      criteria: {
+        robustness: analysis.bestApproach.robustness.score,
+        maintainability: analysis.bestApproach.maintainability.score,
+        performance: analysis.bestApproach.performance.score,
+        speed: analysis.bestApproach.speed.score,
+        architecturalCoherence: analysis.bestApproach.architecturalCoherence.score
+      }
+    },
+    biasMitigation: {
+      biasesDetected: biasMitigation.biases.length,
+      biases: biasMitigation.biases.map(b => b.type),
+      mitigationApplied: biasMitigation.mitigatedAnalysis !== analysis
+    },
+    reasoning: generateDecisionReasoning(
+      decision,
+      research,
+      analysis,
+      biasMitigation,
+      context
+    ),
+    alternatives: analysis.analyses
+      .filter(a => a.approach.id !== decision.approach.id)
+      .map(a => ({
+        approach: a.approach.id,
+        score: a.weightedScore,
+        reason: `Score: ${a.weightedScore.toFixed(2)} vs ${analysis.bestApproach.weightedScore.toFixed(2)}`
+      }))
+  };
+  
+  // Sauvegarder documentation
+  await saveDecisionDocumentation(documentation, context);
+  
+  return documentation;
+}
+```
+
+### 5. Validation des Décisions avec Feedback Loop
+
+**IMPÉRATIF:** L'architecte DOIT valider les décisions avec un feedback loop pour amélioration continue.
+
+**Pattern:**
+```typescript
+// Validation des décisions avec feedback loop
+async function validateDecisionWithFeedbackLoop(
+  decision: ArchitecturalDecision,
+  documentation: DecisionDocumentation,
+  context: Context
+): Promise<DecisionValidation> {
+  // 1. Valider décision initiale
+  const initialValidation = await validateDecision(decision, documentation, context);
+  
+  // 2. Implémenter décision
+  const implementation = await implementDecision(decision, context);
+  
+  // 3. Évaluer résultats
+  const results = await evaluateDecisionResults(implementation, context);
+  
+  // 4. Comparer avec prédictions
+  const comparison = await compareResultsWithPredictions(
+    results,
+    documentation.analysis,
+    context
+  );
+  
+  // 5. Apprendre et ajuster
+  const learning = await learnFromDecision(
+    decision,
+    documentation,
+    results,
+    comparison,
+    context
+  );
+  
+  // 6. Mettre à jour documentation avec résultats
+  await updateDecisionDocumentationWithResults(
+    documentation,
+    results,
+    comparison,
+    learning,
+    context
+  );
+  
+  return {
+    decision,
+    initialValidation,
+    implementation,
+    results,
+    comparison,
+    learning,
+    validated: results.success && comparison.accuracy > 0.8
+  };
+}
+```
+
+## 🔄 Workflow de Supervision Architecte Sénior Optimisé
+
+### Workflow: Superviser Tâche jusqu'à Perfection avec Recherche Préalable
 
 **Étapes:**
-1. **Évaluation Préalable** : Évaluer approches selon 4 critères (rapidité, performance, robustesse, maintenabilité)
-2. **Priorisation** : Prioriser tâches selon impact, urgence, dette technique
-3. **Pilotage** : Superviser architecture, valider décisions, guider développements
-4. **Implémentation** : Implémenter avec supervision continue
-5. **Code Review** : Review automatique avec critères d'architecte
-6. **Itération** : Itérer jusqu'à perfection (iterative-perfection.md)
-7. **Évaluation** : Évaluer performances, documenter apprentissages
+1. **Recherche Préalable Approfondie** : Recherche systématique avant décision
+2. **Analyse Multi-Critères** : Analyse approfondie selon critères pondérés
+3. **Gestion Biais Cognitifs** : Détection et atténuation des biais
+4. **Sélection Approche Optimale** : Sélection basée sur recherche et analyse
+5. **Documentation Décision** : Documentation complète avec raisonnement
+6. **Priorisation** : Prioriser tâches selon impact, urgence, dette technique
+7. **Pilotage** : Superviser architecture, valider décisions, guider développements
+8. **Implémentation** : Implémenter avec supervision continue
+9. **Code Review** : Review automatique avec critères d'architecte
+10. **Validation Feedback Loop** : Valider décision avec feedback loop
+11. **Itération** : Itérer jusqu'à perfection (iterative-perfection.md)
+12. **Évaluation** : Évaluer performances, documenter apprentissages
 
 **Pattern:**
 ```typescript
@@ -249,27 +643,62 @@ async function superviseTaskToPerfection(
   task: Task,
   context: Context
 ): Promise<SupervisionResult> {
-  // 1. Évaluation préalable
-  const evaluation = await evaluateApproaches(task, context);
-  const bestApproach = selectBestApproach(evaluation);
+  // 1. Recherche préalable approfondie
+  const research = await performDeepResearch(
+    { objective: task.objective, keywords: task.keywords },
+    context
+  );
   
-  // 2. Priorisation
+  // 2. Identifier approches possibles
+  const approaches = await identifyApproaches(task, research, context);
+  
+  // 3. Analyse multi-critères avancée
+  const analysis = await performMultiCriteriaAnalysis(approaches, research, context);
+  
+  // 4. Gestion biais cognitifs
+  const biasMitigation = await detectAndMitigateBiases(analysis, research, context);
+  
+  // 5. Sélection approche optimale
+  const bestApproach = biasMitigation.mitigatedAnalysis.bestApproach.approach;
+  
+  // 6. Documentation décision
+  const decision = {
+    approach: bestApproach,
+    task,
+    timestamp: Date.now()
+  };
+  const documentation = await documentArchitecturalDecision(
+    decision,
+    research,
+    biasMitigation.mitigatedAnalysis,
+    biasMitigation,
+    context
+  );
+  
+  // 7. Priorisation
   const prioritized = await prioritizeTasks([task], context);
   
-  // 3. Pilotage
+  // 8. Pilotage
   const pilot = await pilotStrategicDevelopment(task, bestApproach, context);
   if (!pilot.approved) {
     return { success: false, reason: 'Architectural validation failed' };
   }
   
-  // 4. Implémentation avec supervision continue
+  // 9. Implémentation avec supervision continue
   let code = await implementWithSupervision(task, bestApproach, context);
   
-  // 5. Code Review (Architecte Sénior + Consultant Client)
+  // 10. Code Review (Architecte Sénior + Consultant Client)
   let architectReview = await performArchitectCodeReview(code, context);
   let clientReview = await validateClientAlignment({ code, task }, context);
   
-  // 6. Itération jusqu'à perfection (validation conjointe)
+  // 11. Validation feedback loop
+  const decisionValidation = await validateDecisionWithFeedbackLoop(
+    decision,
+    documentation,
+    context
+  );
+  
+  // 12. Itération jusqu'à perfection (validation conjointe)
   let iteration = 0;
   const maxIterations = 10;
   
@@ -288,7 +717,7 @@ async function superviseTaskToPerfection(
     iteration++;
   }
   
-  // 7. Évaluation performances
+  // 13. Évaluation performances
   const performance = await evaluateAgentPerformance(task, { code, iteration }, context);
   
   return {
@@ -297,7 +726,11 @@ async function superviseTaskToPerfection(
     architectReview,
     clientReview,
     performance,
-    iterations: iteration
+    iterations: iteration,
+    research,
+    analysis: biasMitigation.mitigatedAnalysis,
+    decisionDocumentation: documentation,
+    decisionValidation
   };
 }
 ```
@@ -1718,6 +2151,35 @@ async function preventBugsWithArchitectSupervision(
   };
 }
 ```
+
+## 📊 Checklist Recherche Préalable et Prise de Décision
+
+### Avant Toute Décision Architecturale
+
+- [ ] Effectuer recherche préalable approfondie (codebase_search, glob_file_search)
+- [ ] Analyser solutions existantes dans le codebase
+- [ ] Rechercher patterns similaires
+- [ ] Consulter documentation technique
+- [ ] Analyser contraintes techniques et métier
+- [ ] Identifier dépendances et impacts
+- [ ] Évaluer au moins 2-3 alternatives
+
+### Pendant Analyse
+
+- [ ] Analyser chaque approche selon 5 critères pondérés
+- [ ] Vérifier critères bloquants (robustesse ≥ 6, maintenabilité ≥ 5)
+- [ ] Détecter biais cognitifs
+- [ ] Atténuer biais détectés
+- [ ] Calculer scores pondérés
+- [ ] Comparer alternatives objectivement
+
+### Après Décision
+
+- [ ] Documenter décision complète avec raisonnement
+- [ ] Inclure recherche, analyse, biais détectés
+- [ ] Valider décision avec feedback loop
+- [ ] Apprendre des résultats
+- [ ] Mettre à jour documentation avec résultats
 
 ## ⚠️ Règles de Supervision
 

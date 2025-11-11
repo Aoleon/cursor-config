@@ -15,7 +15,7 @@ async function analyzeUniqueValues() {
   logger.info(`📦 Total items: ${items.length}\n`);
   
   // Map pour stocker valeurs uniques par colonne
-  const uniqueValues = new Map<string, Set<any>>();
+  const uniqueValues = new Map<string, Set<unknown>>();
   
   // Colonnes status importantes
   const importantColumns = [

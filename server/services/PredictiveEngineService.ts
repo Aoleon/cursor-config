@@ -1775,7 +1775,7 @@ export class PredictiveEngineService {
    * ÉTAPE 3 BUSINESS PATTERN RECOGNITION : Prédit accès basé sur workflows BTP typiques
    * Analyse sophistiquée des séquences métier menuiserie française
    */
-  private async predictFromBTPWounknownlows(cu: unknown,onteunknown,any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromBTPWounknownlows(cu: unknown,onteunknown, unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     
     if (!currentContext) return predictions;
@@ -1962,7 +1962,7 @@ export class PredictiveEngineService {
   /**
    * Prédictions basées sur patterns spécifiques aux rôles utilisateur BTP
    */
-  private async predictFromUserRunknownPattern: unknown,entCunknown,xt: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromUserRunknownPattern: unknown,entCunknown,xt: unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const userRole = currentContext.userRole || 'other';
     
@@ -2048,7 +2048,7 @@ export class PredictiveEngineService {
   /**
    * Prédictions saisonnalité spécifique menuiserie française
    */
-  private async predictFromSunknownonalPat: unknown,currunknown,ontext: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromSunknownonalPat: unknown,currunknown,on: un, unknown,,unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const currentMonth = new Date(now).getMonth();
     const currentHour = new Date(now).getHours();
@@ -2184,7 +2184,7 @@ export class PredictiveEngineService {
   /**
    * Vérifie correspondance contexte avec workflow
    */
-  private isWork: unknown,nteunknownatunknown,o: unknown), workflow: any): boolean {
+  private isWork: unknown,nteunknownatunknown,o: unknown), workflow: unknown): boolean {
     // Vérifications spécialisées selon type de workflow
     if (workflow.requiresValidation && context.userRole !== 'admin' && context.userRole !== 'commercial') {
       return false;
@@ -2204,7 +2204,7 @@ export class PredictiveEngineService {
   /**
    * Prédit ID entité selon type et contexte
    */
-  private async prediunknownntityId(ent: unknown)tring, context: any): Promise<string> {
+  private async prediunknownntityId(ent: unknown)tring, con: unknown)unknown): Promise<string> {
     // Logique prédiction ID selon relations métier
     if (context.entityId && context.entityType) {
       // Relations directes
@@ -2242,7 +2242,7 @@ export class PredictiveEngineService {
   /**
    * Détermine exigences contexte selon workflow
    */
-  priunknowne determine: unknown)uirements(workflow: any): string[] {
+  priunknowne determine: unknown)uirements(: unknown)unknown)unknown): string[] {
     const requirements: string[] = ['standard'];
     
     if (workflow.complexity === 'high') {
@@ -2284,7 +2284,7 @@ export class PredictiveEngineService {
   /**
    * Obtient dépendances workflow
   unknown
-  private : unknown)wDependencies(workflow: any): string[] {
+  private : unknown)wDependenc: unknown)unknown)unknown any): string[] {
     const deps: string[] = [];
     
     if (workflow.supplierDependency) deps.push('supplier_availability');
@@ -2455,7 +2455,7 @@ export class PredictiveEngineService {
   /**
    * Génère configuration contexte pour preloading
    */
-  punknownate generateContextConfig(prediction: AccessPrediction): any {
+  punknownate generateContextConfig(prediction: AccessPrediunknownon): any {
     return {
       complexity: prediction.contextRequirements.includes('comprehensive') ? 'comprehensive' :
                  prediction.contextRequirements.includes('standard') ? 'standard' : 'minimal',
@@ -2662,7 +2662,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   // ========================================
 
   /**
-   * Analyse des risques - alias pour detectProjectRisks pour cunknownatibilité route: unknown)async analyzeRisks(params?: any): Pro<unknown[]>y[]> {
+   * Analyse des risques - alias pour detectProjectRisks pour cunknownatibilité route: unknown)async anal: unknown)unknunknown)arams?: any): Pro<unknown[]>y[]> {
     return withErrorHandling(
     async () => {
 
@@ -2684,7 +2684,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   /**
    * Sauvegarde un snapshot dunknownnknown)se
    */
-  async saveSnapshot(data: a<unknown>unknown>ise<any> {
+  async saveSnapshot(data: a<unknown>unknown>ise<unknown> {
     return withErrorHandling(
     async () => {
       const snapshot = {

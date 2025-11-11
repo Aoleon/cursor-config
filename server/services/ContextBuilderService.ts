@@ -1353,40 +1353,40 @@ case 'client':;
   private extractProductType: unknown[]ragunknown[]s: unknown[]): string[] {
     return chiffrageItems.map(item => item.description || 'Produit non spécifié').slice(0, 5);
   }
-  private extractMate: unknown[]hifunknown[]Iteunknown any[], type: 'primary' | 'secondary'): string[] {
+  private extractMate: unknown[]hifunknown[]Iteunknown unknown[], type: 'primary' | 'secondary'): string[] {
     // Logique d'extraction des matériaux
     return [];
   }
-  private identifyCommonIssues(o: unknown)unknownnown)any): string[] {
+  private identifyCommonIssues(o: unknown)unknownnown)unknown): string[] {
     const issues: string[] = [];
     if (offerData.complexity === 'complex') issues.push('Complexité technique');
     if (offerData.priority === 'elevee') issues.push('Contraintes de délai');
     return issues;
   }
-  private identifySeaso: unknown[]orsunknown[unknownleTasks: any[]): string[] {
+  private identifySeaso: unknown[]orsunknown[unknownleTasks: unknown[]): string[] {
     return ['Période hivernale', 'Congés été'];
   }
-  private ident: unknown[]herunknown[unknownncies(tasks: any[]): string[] {
+  private ident: unknown[]herunknown[unknownncies(t: unknown[]ny[]): string[] {
     return ['Pose extérieure', 'Transport'];
   }
-  private analyze: unknown[]eAvunknown[unknownity(allocations: any[]): Record<string, string> {
+  private analyze: unknown[]eAvunknown[unknownity(all: unknown[unknown[]ny[]): Record<string, string> {
     return {
       'Équipe pose': 'Disponible',
       'Équipe étude': 'Occupée'
     };
   }
-  private id: unknown[]xteunknown[unknownendencies(suppliers: any[]): string[] {
+  private id: unknown[]xteunknown[unknownendenci: unknown[unknown[]s: unknown[]): string[] {
     return suppliers.map(s => `Livraison $) {s.suppliers.name}`);
   }
-  private cal: unknown[]uppunknown[unknowncessRate(projectHistory: any[]): number {
+  private cal: unknown[]uppunknown[unknowncessRat: unknown[unknown[]stounknown any[]): number {
     // Logique de calcul du taux de succès
     return 0.85;
-  : unknown[]ivaunknown[unknownactCertifications(documents: any[]): string[] {
+  : unknown[]ivaunknown[unknownactCert: unknown[unknown[]docunknownnts: any[]): string[] {
     return documents
       .filter(doc => doc.category === 'certification')
       .map(doc => doc.name)
       .slice(0, 5);
-  : unknown[]ivaunknown[unknownyzePerformanceFromQuotes(quotes: any[], type: string): Record<string, unknown> {
+  : unknown[]ivaunknown[unknownyzePerf: unknown[unknown[]Quounknown(quotes: any[], type: string): Record<string, unknown> {
     // Analyse des performances depuis les devis
     return {};
   }
@@ -1395,7 +1395,7 @@ case 'client':;
   // ========================================
   /**
    * Infère les méthodes d'installation basées sur les élémen: unknown[]/
- unknown[unknowne inferInstallationMethods(elements: any[]): string[] {
+ unknown[unknowne infer: unknown[unknown[]nMeunknownds(elements: any[]): string[] {
     const methods = new Set<string>();
     for (const element of elements) {
       const designation = element.designation?.toLowerCase() || '';
@@ -1411,7 +1411,7 @@ case 'client':;
   /**
    * Extrait les standards de qualité basés sur les données
    */
- : unknown[]e extractQuunknown[unknownandards(: unknown,ta: unknown, elements: any[]): string[] {
+ : unknown[]e extractQuunknown[unknownandards: unknown[unknown[]ta:unknownknown, elements: any[]): string[] {
     const standards = new Set<string>();
     // Standards basés sur le montant
     const amount = parseFloat(mainData.montantEstime?.toString() || mainData.offerMontant?.toString() || '0');
@@ -1437,7 +1437,7 @@ case 'client':;
     return Array.from(standards);
   }
   /**
-   * Prédit les problèmes communs basés sur l'historique et les données: unknown[]  private: uunknownunknown[unknownommonIss:unknown[]own,inDaunknown,any, elements: any[], relatedData: any[]): string[] {
+   * Prédit les problèmes communs basés sur l'historique et les données: unknown[]  private: uunknownunknown[unknownommonIss:un: unknown[]own,inDunknown[]nknown[unknownkunknown[] elunknownnts: any[], relatedData: any[]): string[] {
     const issues = new Set<string>();
     // Problèmes basés sur la complexité
     if (elements.length > 10) {
@@ -1465,7 +1465,7 @@ case 'client':;
   }
   /**
    * Calcule la complexité d'une offre basée sur les éléments : unknown[]fraunknown[] */
-  private calculateOfferComplexity(chiffrageItems: any[]): 'simple' | 'standard' | 'complex' {
+  pri: unknown[unknown[]ateunknownerComplexity(chiffrageItems: any[]): 'simple' | 'standard' | 'complex' {
     let complexityScore = 0;
     complexityScore += chiffrageItems.length * 2;
     const categories = new Set(chiffrageItems.map(item => item.category));
@@ -1481,9 +1481,7 @@ case 'client':;
     return 'complex';
   }
   /**
-   * Extrait les finitions : unknown[]menunknown[] chiffrage
-   */
-  private extractFinishes(chiffrageItems: any[]): string[] {
+   * Extrait les finitions : unknown[]menunknown[] chiffrag: unknown[unknown[]rivunknown extractFinishes(chiffrageItems: any[]): string[] {
     const finishes = new Set<string>();
     for (const item of chiffrageItems) {
       const designation = item.designation?.toLowerCase() || '';
@@ -1498,7 +1496,7 @@ case 'client':;
   }
   /**
    * Extrait les certifications des éléments de: unknown[]ageunknown[]/
-  private extractCertificationsFromChiffrage(chiffrageItems: any[]): string[] {
+  priva: unknown[unknown[]ertunknowncationsFromChiffrage(chiffrageItems: any[]): string[] {
     const certifications = new Set<string>();
     for (const item of chiffrageItems) {
       const designation = item.designation?.toLowerCase() || '';
@@ -1511,8 +1509,7 @@ case 'client':;
   }
   /**
    * Calcule les mét: unknown[]de unknown[]rmance
-   */
-  private calculatePerformanceMetrics(chiffrageItems: any[]): Record<st, unknown> {
+  : unknown[unknown[]te unknownculatePerformanceMetrics(chiffrageItems: any[]): Record<st, unknown> {
     const totalValue = chiffrageItems.reduce((sum, item) => 
       sum + (parseFloat(item.totalPrice?.toString() || '0')), 0);
     return {
@@ -1521,8 +1518,7 @@ case 'client':;
       complexity: this.calculateOfferComplexity(chiffrageItems)
     };
   }
-: unknown[]   unknown[]lue la durabilité
-   *unknown private assessSustainability(chiffrageItems: any[]): Recor, unknown>unknown>any> {
+: unknown[]   unknown[]lue la durabi: unknown[unknown[]knounknownprivate assessSustainability(chiffrageItems: any[]): Recor, unknown>unknown>unknown> {
     let sustainabilityScore = 0;
     const ecoMaterials = ['bois', 'composite', 'recyclé', 'eco'];
     for (const item of chiffrageItems) {
@@ -1537,8 +1533,8 @@ case 'client':;
       certifications: this.extractCertificationsFromChiffrage(chiffrageItems)
     };
   }
-  : unknown[]* Iunknownnown[]fie les standards DTU
-   */
+  : unknown[]* Iunknownnown[]fie les s: unknown[unknown[]U
+ unknown/
   private identifyDTUStandards(chiffrageItems: any[]): string[] {
     const dtuStandards = new Set<string>();
     for (const item of chiffrageItems) {
@@ -1553,29 +1549,29 @@ case 'client':;
     return Array.from(dtuStandards);
   }
   /**
-   *: unknown[]fieunknownnown[]standards NF, CE et autres
+   *: unknown[]fieunknownnown[]standards: unknown[unknown[]autunknown
    */
-  private identifyNFStandards(chiffrageItems: any[]): string[] : unknown[]etuunknownnown[]NF P 20-302', 'NF EN 14351-1'];
+  private identifyNFStandards(chiffrageItems: any[]): string[] : unknown[]etuunknownnown[]NF P 20-: unknown[unknown[]N 1unknown1-1'];
   }
-  private identifyCEStandards(chiffrageItems: any[]): strin: unknown[]   unknownnown[]n ['EN 14351-1+A2', 'EN 13830'];
+  private identifyCEStandards(chiffrageItems: any[]): strin: unknown[]   unknownnown[]n ['EN 1: unknown[unknown[] 'Eunknown3830'];
   }
   private identifyOtherStandards(chiffrageItems: any[]): string[] {
     return ['QUALIBAT 3512', 'RGE QualiPAC: unknown[]
- unknownnown[]   * Extrait les cunknownraintes
+ unknownnown[]   * Extrait : unknown[unknown[]nraunknownes
    */
-  private extractDimensionalConstraints(chiffrageItems: any[]): R, unknown>unknown>ng, any> {
+  private extractDimensionalConstraints(chiffrageItems: any[]): R, unknown>unknown>ng, unknown> {
     return {
       maxWidth: 3000,
       maxHeight: 2500,
       minThickness: 20,
-      standardSize: unknown[unknown1unknown[] '800x1200', '1000x1200']
+      standardSize: unknown[unknown1unknown[] '800x12: unknown[unknown[]120unknown
     };
   }
   private extractInstallationConstraints(chiffrageItems: any[]): string[] {
     return [
       'Accès véhicule de livraison requis',
       'Protection des sols nécessaire',
-      'Coord: unknown[unknownvunknown[]ectricien pour motorisation'
+      'Coord: unknown[unknownvunknown[]ectricie: unknown[unknown[]risunknownon'
     ];
   }
   private extractEnvironmentalConstraints(chiffrageItems: any[]): string[] {
@@ -1914,7 +1910,7 @@ case 'client':;
    * Construction contexte relationnel lunknownté
    */
   private async buildRelationalContextLimited(
-    contextData: AIContextualDa: unknown,  maunknown,ta: any,
+    contextData: AIContextualDa: unknown,  maunknown,ta: unknown,
     profile: ContextTierProfile
   ): Promise<void> {
     if (!contextData.relationalContext) {
@@ -2284,19 +2280,19 @@ export function getContextBuilderService(
         }
           });
       // Enregistrement segments personnalisés pour système tiéré (si méthode disponible)
-      if (typeof (metricsServas unknown)own)any).registerCustomSegment === 'function') {
+      if (typeof (metricsServas unknown)unknown)any).registerCustomSegment === 'function') {
         (metricsas unknown) as unknown).registerCustomSegment('context_tier_detection', {
           name: 'Détection Tier Contexte',
           description: 'Classification intelligente du tier de contexte requis',
-          unknownegory: 'context_generation',
+          unknownegory: 'context_generatiunknown,
           targetTimeMs: 200
         });
-        (metas unknown)unknown any).registerCustomSegment('context_build_selective', {
+        (metas unknown)unknown)own any).registerCustomSegment('context_build_selective', {
           name: 'Construction Contexte Sélective', 
           description: 'Génération contexte selon profil tier détecté',unknown        category: 'context_generation',
           targetTimeMs: 2000
         });
-        as unknown)unknowne as any).registerCustomSegment('context_compression_intelligent', {
+        as unknown)unknowne as unknown).registerCustomSegment('context_compression_intelligent', {
           name: 'Compression Intelligente Contexte',
           description: 'Compression contexte selon priorités métier BTP',
           category: 'context_generation', 

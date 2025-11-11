@@ -166,7 +166,7 @@ describe('MondayValidator', () => {
         mondayItemId: 'ao_invalid',
         clientName: '', // Invalide
         city: 'BOULOGNE',
-        aoCategory: 'INVALID' as any, // Invalide
+        aoCategory: 'INVALID' as unknown, // Invalide
         operationalStatus: 'AO EN COURS' as const
       }
     ];

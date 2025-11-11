@@ -57,7 +57,7 @@ export class DocumentsRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('DocumentsRepository', db, eventBus);
   }
 
@@ -783,7 +783,7 @@ export class DocumentsRepository extends BaseRepository<
     tx?: DrizzleTransaction
   ): Promise<PurchaseOrder[]> {
     const dbToUse = this.getDb(tx);
-    const conditions: any[] = [];
+    const conditions: unknown[] = [];
 
     if (filters?.supplierId) {
       const normalizedSupplierId = this.normalizeId(filters.supplierId);
@@ -791,7 +791,7 @@ export class DocumentsRepository extends BaseRepository<
     }
 
     if (filters?.status) {
-      conditions.push(eq(purchaseOrders.status, filters.status) as any);
+      conditions.push(eq(purchaseOrders.status, filters.status) as unknown);
     }
 
     return this.executeQuery(
@@ -799,7 +799,7 @@ export class DocumentsRepository extends BaseRepository<
         let query = dbToUse.select().from(purchaseOrders);
 
         if (conditions.length > 0) {
-          query = query.where(and(...conditions)) as any;
+          query = query.where(and(...conditions)) as unknown;
         }
 
         return await query.orderBy(desc(purchaseOrders.createdAt));
@@ -990,14 +990,14 @@ export class DocumentsRepository extends BaseRepository<
     tx?: DrizzleTransaction
   ): Promise<ClientQuote[]> {
     const dbToUse = this.getDb(tx);
-    const conditions: any[] = [];
+    const condit: unknown[]ny[] = [];
 
     if (filters?.clientName) {
       conditions.push(ilike(clientQuotes.clientName, `%${filters.clientName}%`));
     }
 
     if (filters?.status) {
-      conditions.push(eq(clientQuotes.status, filters.status) as any);
+      conditions.push(eq(clientQuotes.status, filters.statas unknown)unknown);
     }
 
     return this.executeQuery(
@@ -1005,7 +1005,7 @@ export class DocumentsRepository extends BaseRepository<
         let query = dbToUse.select().from(clientQuotes);
 
         if (conditions.length > 0) {
-          query = query.where(and(...conditions)) as any;
+          query = query.where(and(...conditionas unknown;unknown;
         }
 
         return await query.orderBy(desc(clientQuotes.createdAt));

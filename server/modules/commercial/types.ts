@@ -309,5 +309,5 @@ export interface AoDocumentUploadResponse {
 export interface AoDocumentConfirmation {
   documentId: string;
   objectKey: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }

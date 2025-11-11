@@ -270,7 +270,7 @@ service: 'dateIntelligenceRulesSeeder',;
       const requiredPhases = ['etude', 'planification', 'approvisionnement', 'chantier'];
       const coveredPhases = new Set(allRules.filter(r => r.phase).map(r => r.phase));
       
-      const missingPhases = requiredPhases.filter(phase => !coveredPhases.has(phase as any));
+      const missingPhases = requiredPhases.filter(phase => !coveredPhases.has(phase as unknown));
       if (missingPhases.length > 0) {
         warnings.push(`Phases sans règles spécifiques: ${missingPhases.join(', ')}`);
       }

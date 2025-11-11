@@ -7,9 +7,9 @@ declare global {
   namespace Express {
     interface Request {
       validated?: {
-        query?: any;
-        params?: any;
-        body?: any;
+        query?: unknown;
+        par: unknown;unknown;
+     : unknown;unknown;unknown;
       };
     }
   }
@@ -39,7 +39,7 @@ type ValidationSource = 'body' | 'params' | 'query';
  * 1. Vider toutes les propriétés existantes du target
  * 2. Copier directement toutes les propriétés du source (inclut nested objects déjà transformés)
  */
-function deepMutate(target: any, source: any): void {
+function deepMutate(target: unknown, source: unknown): void {
   // 1. Vider toutes les propriétés existantes
   for (const key in target) {
     if (Object.prototype.hasOwnProperty.call(target, key)) {
@@ -83,7 +83,7 @@ export function validate(
         // Pour le mode strict, nous devons nous assurer que le schema est un ZodObject
         // Sinon, nous utilisons parse standard avec passthrough
         if ('strict' in schema && typeof schema.strict === 'function') {
-          validatedData = (schema as any).strict().parse(dataToValidate);
+          validatedData = (schema as unknown).strict().parse(dataToValidate);
         } else {
           validatedData = schema.parse(dataToValidate);
         }
@@ -105,7 +105,7 @@ export function validate(
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const validationError = fromZodError(error as ZodError<any>);
+        const validationError = fromZodError(error as ZodError<unknown>);
         return res.status(400).json({
           success: false,
           error: 'Erreur de validation',
@@ -195,7 +195,7 @@ export function validateRequest(validations: {
   query?: ZodSchema;
 }, options?: ValidationOptions) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const errors: any[] = [];
+    const errors: unknown[] = [];
 
     // Initialiser req.validated si nécessaire
     if (!req.validated) {
@@ -266,11 +266,11 @@ export function validateRequest(validations: {
         error: 'Erreurs de validation',
         details: errors.map(err  => ({
           source: err.source,
-          issues: err.issues.map((issue: any) => ({
+          issues: err.issues.map((i: unknown)unknown) => ({
             field: issue.path.join('.'),
             message: issue.message,
             code: issue.code,
-            received: 'received' in issue ? (issue as any).received : 'undefined'
+            received: 'received' in issue ? (isas unknunknown)any).received : 'undefined'
           }))
         }))
       });

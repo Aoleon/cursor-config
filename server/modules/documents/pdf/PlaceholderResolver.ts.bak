@@ -75,8 +75,7 @@ export class PlaceholderResolver {
           column: this.getColumnNumber(template, match.index),
           index: match.index,
           length: match[0].length
-        }
-      });
+        });
     }
 
     logger.debug('Extracted conditionals', { count: conditionals.length });
@@ -103,8 +102,7 @@ export class PlaceholderResolver {
           column: this.getColumnNumber(template, match.index),
           index: match.index,
           length: match[0].length
-        }
-      });
+        });
     }
 
     logger.debug('Extracted loops', { count: loops.length });
@@ -116,44 +114,47 @@ export class PlaceholderResolver {
    */
   public async resolve(
     placeholders: Placeholder[],
-    data: Record<string, unknown>,
+    data: Record<string, any>,
     customFormatters?: Record<string, PlaceholderFormatter>
   ): Promise<{
-    resolved: { placeholder: Placeholder; value: unknown}[];
+    resolved: { placeholder: Placeholder; value: any }[];
     missing: Placeholder[];
-    data: Record<st, unknown>unknown>;
+    data: Record<string, any>;
   }> {
-    const resolved: { placeholder: Placeholder; va: unknown}y }[] = [];
+    const resolved: { placeholder: Placeholder; value: any }[] = [];
     const missing: Placeholder[] = [];
-    const resolvedData: Recor, unknown>unknown>unknown> = {};
+    const resolvedData: Record<string, any> = {};
 
     for (const placeholder of placeholders) {
       await withErrorHandling(
-        async () => {
-          const value = await this.resolvePlaceholder(placeholder, data, customFormatters);
-          
-          if (value !== undefined) {
-            resolved.push({ placeholder, value });
-            _.set(resolvedData, placeholder.path, value);
-          } else if (placeholder.isRequired) {
-            missing.push(placeholder);
-            logger.warn('Required placeholder missing', { 
-              path: placeholder.path,
-              raw: placeholder.raw 
-            });
-          } else {
-            // Use default value if available
-            const defaultValue = placeholder.defaultValue ?? '';
-            resolved.push({ placeholder, value: defaultValue });
-            _.set(resolvedData, placeholder.path, defaultValue);
-          }
-        },
-        {
-          operation: 'resolvePlaceholder',
-          service: 'PlaceholderResolver',
-          metadata: { placeholder: placeholder.path }
+    async () => {
+
+        const value = await this.resolvePlaceholder(placeholder, data, customFormatters);
+        
+        if (value !== undefined) {
+          resolved.push({ placeholder, value });
+          _.set(resolvedData, placeholder.path, value);
+        } else if (placeholder.isRequired) {
+          missing.push(placeholder);
+          logger.warn('Required placeholder missing', { 
+            path: placeholder.path,
+            raw: placeholder.raw 
+          });
+        } else {
+          // Use default value if available
+          const defaultValue = placeholder.defaultValue ?? '';
+          resolved.push({ placeholder, value: defaultValue });
+          _.set(resolvedData, placeholder.path, defaultValue);
         }
-      );
+      
+    },
+    {
+      operation: 'Logger',
+      service: 'PlaceholderResolver',
+      metadata: {
+                                                                                }
+                                                                              });
+      }
     }
 
     logger.info('Placeholders resolved', {
@@ -260,9 +261,9 @@ export class PlaceholderResolver {
    */
   private async resolvePlaceholder(
     placeholder: Placeholder,
-    data: R, unknown>unknown>unknown any>,
+    data: Record<string, any>,
     customFormatters?: Record<string, PlaceholderFormatter>
-  ): Promise<unknown> {
+  ): Promise<any> {
     // Get raw value from data
     let value = _.get(data, placeholder.path);
 
@@ -278,7 +279,7 @@ export class PlaceholderResolver {
   /**
    * Apply formatter to value
    */
-  private async applyFormatter(value: unknown, formatter: PlaceholderFormatter): Promise<string> {
+  private async applyFormatter(value: any, formatter: PlaceholderFormatter): Promise<string> {
     if (value === null || value === undefined) {
       return '';
     }

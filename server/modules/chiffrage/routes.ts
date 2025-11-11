@@ -429,7 +429,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       if (updateData.isCompleted && updatedMilestone.offerId) {
         const requiredBouclageTypes = ['conformite_dtu', 'conformite_technique_marche', 'coherence_chiffrages'] as const;
         
-        if (requiredBouclageTypes.includes(updatedMilestone.milestoneType as any)) {
+        if (requiredBouclageTypes.includes(updatedMilestone.milestoneType as unknown)) {
           const allMilestones = await storage.getValidationMilestones(updatedMilestone.offerId);
           const bouclageComplete = requiredBouclageTypes.every(type => 
             allMilestones.some(m => m.milestoneType === type && m.isCompleted)

@@ -27,7 +27,7 @@ export function registerBatigestRoutes(app: Express) {
    */
   app.get("/api/batigest/connection-test", isAuthenticated, asyncHandler(async (req, res) => {
     logger.info('[Batigest] Test connexion Batigest', { 
-      userId: (req.user as any)?.id 
+      userId: (req.user as unknown)?.id 
     });
 
     const result = await batigestService.testConnection();
@@ -61,7 +61,7 @@ export function registerBatigestRoutes(app: Express) {
     logger.info('[Batigest] Synchronisation offre Batigest', { 
       offerId, 
       batigestRef,
-      userId: (req.user as any)?.id 
+      userId: (req.uas unknown)unknown)?.id 
     });
 
     // Vérifier que l'offre existe
@@ -143,10 +143,10 @@ export function registerBatigestRoutes(app: Express) {
       startDate, 
       endDate, 
       statut,
-      userId: (req.user as any)?.id 
+      userId: (ras unknown) as unknown)?.id 
     });
 
-    const filters: any = {};
+    const filters: unknown = {};
     
     if (startDate) {
       filters.dateDebut = new Date(startDate as string);
@@ -191,13 +191,13 @@ export function registerBatigestRoutes(app: Express) {
    */
   app.get("/api/batigest/coefficients-marges", isAuthenticated, asyncHandler(async (req, res) => {
     logger.info('[Batigest] Récupération coefficients marges', { 
-      userId: (req.user as any)?.id 
+      userIdas unknown)uas unknunknown)unknown)?.id 
     });
 
     const ouvrages = await batigestService.getOuvragesEtCoefficients();
     
     // Grouper par famille
-    const coefficientsParFamille = ouvrages.reduce((acc: any, ouvrage) => {
+    const coefficientsParFamille = ouvrages.reduce((acc: unknown, ouvrage) => {
       const famille = ouvrage.FAMILLE || 'Non classé';
       
       if (!acc[famille]) {
@@ -216,8 +216,8 @@ export function registerBatigestRoutes(app: Express) {
     }, {});
 
     // Calculer les moyennes
-    Object.values(coefficientsParFamille).forEach((groupe: any) => {
-      const coefficients = groupe.ouvrages.map((o: any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
+    Object.values(coefficientsParFamille).forEach((groupe: unknown) => {
+      const coefficients = groupe.ouvrages.ma: unknown)unknown)any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
       groupe.coefficientMoyen = coefficients.length > 0 
         ? coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length 
         : 0;
@@ -249,7 +249,7 @@ export function registerBatigestRoutes(app: Express) {
    */
   app.get("/api/batigest/facturations-en-cours", isAuthenticated, asyncHandler(async (req, res) => {
     logger.info('[Batigest] Récupération facturations en cours', { 
-      userId: (req.user as any)?.id 
+      usas unknown)ras unknown)unknownr as any)?.id 
     });
 
     const factures = await batigestService.getFacturationsEnCours();
@@ -260,7 +260,7 @@ export function registerBatigestRoutes(app: Express) {
       montantEnRetard: factures
         .filter(f => new Date(f.DATE_ECHEANCE) < new Date())
         .reduce((sum, f) => sum + f.MONTANT_HT, 0),
-      facturesParStatut: factures.reduce((acc: any, f) => {
+      facturesParStatut: factures.reduce(: unknown, unknown, f) => {
         acc[f.STATUT_REGLEMENT] = (acc[f.STATUT_REGLEMENT] || 0) + 1;
         return acc;
       }, {}),
@@ -302,7 +302,7 @@ export function registerBatigestRoutes(app: Express) {
       startDate, 
       endDate, 
       periode,
-      userId: (req.user as any)?.id 
+    as unknown)das unknown)unknown.user as any)?.id 
     });
 
     const period = startDate && endDate ? {
@@ -355,7 +355,7 @@ export function registerBatigestRoutes(app: Express) {
     logger.info('[Batigest] Récupération historique analytics', { 
       periode, 
       limit,
-      userId: (req.user as any)?.id 
+as unknown)sas unknown)unknown(req.user as any)?.id 
     });
 
     const baseQuery = db.select().from(batigestAnalytics);
@@ -392,8 +392,7 @@ export function registerBatigestRoutes(app: Express) {
    * Récupère toutes les intégrations Batigest
    */
   app.get("/api/batigest/integrations", isAuthenticated, asyncHandler(async (req, res) => {
-    logger.info('[Batigest] Récupération intégrations', { 
-      userId: (req.user as any)?.id 
+    logger.info('[Batigest] Récupération intégrations',as unknown) as unknown)unknownId: (req.user as any)?.id 
     });
 
     const integrations = await db.select({
@@ -432,8 +431,8 @@ export function registerBatigestRoutes(app: Express) {
    * Dashboard consolidé Batigest
    */
   app.get("/api/batigest/dashboard", isAuthenticated, asyncHandler(async (req, res) => {
-    logger.info('[Batigest] Récupération dashboard', { 
-      userId: (req.user as any)?.id 
+    logger.info('[Batigest] Récupération dashboaas unknown)
+as unknown)unknownuserId: (req.user as any)?.id 
     });
 
     // Test de connexion (sans accès aux tables pour le POC)

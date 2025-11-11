@@ -91,7 +91,7 @@ export class PDFTemplateEngine {
     });
 
     // Date formatter
-    this.handlebars.registerHelper('date', (date: unknown, format = 'short') => {
+    this.handlebars.registerHelper('date', (date: any, format = 'short') => {
       if (!date) return '';
       const d = new Date(date);
       const options: Intl.DateTimeFormatOptions = 
@@ -102,7 +102,7 @@ export class PDFTemplateEngine {
     });
 
     // Number formatter
-    this.handlebars.registerHelper('number', : unknown, unknown, decimals = 2) => {
+    this.handlebars.registerHelper('number', (num: any, decimals = 2) => {
       return new Intl.NumberFormat(this.config.defaultLocale, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
@@ -110,20 +110,18 @@ export class PDFTemplateEngine {
     });
 
     // Conditional helper
-    this.handlebars.registerHelper('when', (c: unknown,on: unknown, options: unknown) => {
+    this.handlebars.registerHelper('when', (condition: any, options: any) => {
       if (condition) {
         return options.fn(this);
       } else if (options.inverse) {
         return options.inverse(this);
-      }
-    });
+      });
 
     // Loop helper with separator
-    this.handlebars.registerHelper('each_with_separator', (context: unknown[], separator: string, opt: unknown)unknown) => {
+    this.handlebars.registerHelper('each_with_separator', (context: any[], separator: string, options: any) => {
       return context.map((item, index) => {
         const result = options.fn(item, {
-          data: { index, first: index === 0, last: index === context.length - 1 }
-        });
+          data: { index, first: index === 0, last: index === context.length - 1 });
         return index < context.length - 1 ? result + separator : result;
       }).join('');
     });
@@ -188,7 +186,7 @@ export class PDFTemplateEngine {
       };
 
       // Store compiled template function
-      (compiled as unknown).renderFunction = compiledHandlebars;
+      (compiled as any).renderFunction = compiledHandlebars;
 
       // Cache if enabled
       if (this.config.cacheEnabled) {
@@ -209,9 +207,9 @@ export class PDFTemplateEngine {
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -305,7 +303,7 @@ export class PDFTemplateEngine {
       };
 
       // Render with Handlebars
-      const renderFunction = (compias unknunknown)unknown).renderFunction;
+      const renderFunction = (compiled as any).renderFunction;
       if (!renderFunction) {
         throw new TemplateError('Template not properly compiled', 'RENDER_FUNCTION_MISSING');
       }
@@ -347,13 +345,26 @@ export class PDFTemplateEngine {
         pdf: pdfBuffer,
         metadata: renderMetadata
       };
+    
     },
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {}
+      metadata: {
+                                                                                }
+                                                                              });
+      }
+
+      return {
+        success: false,
+        errors: [{
+          type: 'syntax',
+          message: errorMessage,
+          severity: 'error'
+        }],
+        metadata: renderMetadata
+      };
     }
-  );
   }
 
   /**

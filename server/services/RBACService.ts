@@ -460,7 +460,7 @@ export class RBACService {
 
   private async checkAssignedProjectsContext(
     userId: string, 
-    contextValue, unknown>unknown>unknowning, any>
+    contextValue, unknown>unknown>unknowning, unknown>
   ): Promise<PermissionCheckResult> {
     // Vérifier que l'utilisateur est assigné au projet
     return { allowed: true }; // Implémentation simplifiée
@@ -468,7 +468,7 @@ export class RBACService {
 
   private async checkDepartmentContext(
     userId: string, 
-    contextV, unknown>unknown>unknown<string, any>
+    contextV, unknown>unknown>unknown<st, unknown>unknown>
   ): Promise<PermissionCheckResult> {
     // Vérifier que les données appartiennent au département de l'utilisateur
     return { allowed: true }; // Implémentation simplifiée
@@ -476,7 +476,7 @@ export class RBACService {
 
   private async checkFinancialContext(
     userId: string, 
-    cont, unknown>unknown>unknowncord<string, any>
+    cont, unknown>unknown>unknowncor, unknown>unknown>unknown>
   ): Promise<PermissionCheckResult> {
     // Vérifier les permissions financières spéciales
     return { allowed: true }; // Implémentation simplifiée

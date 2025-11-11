@@ -40,7 +40,7 @@ declare module 'express-serve-static-core' {
         first_name?: string;
         last_name?: string;
         profile_image_url?: string | null;
-        [key: string]: any;
+        [key: string]: unknown;
       };
       isOIDC?: boolean;
     };
@@ -56,7 +56,7 @@ export interface AuthUser {
   role: string;
   isBasicAuth?: boolean;
   isOIDC?: boolean;
-  claims?: any;
+  cla: unknown;unknown;
   access_token?: string;
   refresh_token?: string;
   expires_at?: number;

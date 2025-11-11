@@ -91,7 +91,7 @@ export interface SplitterContext {
 export interface SplitterDiagnostic {
   level: 'info' | 'warning' | 'error';
   extractor: string;
-  message: string;: unknown;unknown;any;
+  message: string;: unknown;unknown;unknown;
 }
 
 // Résultat de l'éclatement
@@ -108,7 +108,7 @@ export interface SplitResult {
    : unknown[]ny;
     lot: unknown[][];
     contacts?: unknown[];
-    maitresOuunknown[unknownown[]any[];
-    m: uunknown[]n[]euvre?: anyunknown[]   unknownresses?: any[];
+    maitresOuunknown[unknownown[]unknown[];
+    m: uunknown[]n[]euvre?: anyunknown[]   unknownresses?: unknown[];
   };
 }

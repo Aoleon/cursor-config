@@ -110,7 +110,7 @@ interface OCRResult {
   processedFields: AOFieldsExtracted;
   technicalScoring?: TechnicalScoringResult; // Résultat du scoring technique
   contextualResult?: ContextualOCRResult; // Résultat du moteur contextuel
-  rawData: any;
+  rawData: unknown;
 }
 
 // ========================================
@@ -124,7 +124,7 @@ export interface SupplierQuoteOCRResult {
   qualityScore: number;
   completenessScore: number;
   contextualResult?: ContextualOCRResult; // Résultat du moteur contextuel
-  rawData: any;
+  raw: unknown;unknown;
 }
 
 // REMARQUE: Les patterns d'extraction (AO_PATTERNS, MATERIAL_PATTERNS, COLOR_PATTERNS, LINE_ITEM_PATTERNS)
@@ -350,7 +350,7 @@ const SUPPLIER_QUOTE_PATTERNS: Record<string, RegExp[]> = {
 };
 
 export class OCRService {
-  private tesseractWorker: any = null;
+  private tesseractWorker: unknown = null;
   private isInitializingTesseract = false;
 
   /**
@@ -728,7 +728,7 @@ export class OCRService {
   /**
    * Mappe une finition bois vers l'enum approprié
    */
-  private mapWoodFinishToEnum(finish: string): any {
+  private mapWoodFinishToEnum(finish: string): unknown {
     const finishLower = finish.toLowerCase();
     // Retourner la finition bois appropriée
     return finishLower;
@@ -737,7 +737,7 @@ export class OCRService {
   /**
    * Mappe une finition spéciale vers l'enum approprié
    */
-  private mapSpecialFinishToEnum(finish: string): any {
+  private mapSpecialFinishToEnum(finish: strinunknown any {
     const finishLower = finish.toLowerCase();
     // Retourner la finition spéciale appropriée
     return finishLower;
@@ -2171,12 +2171,12 @@ Réponses publiées au plus tard le 22/03/2025
           if (isMenuiserieContext) confidence += 0.2; // Boost pour contexte menuiserie
           
           materials.push({
-            material: materialKey as any,
+            material: materialKey as unknown,
             color: associatedColor,
             evidences: matches.map(m => m[0]),
             confidence: Math.min(1.0, confidence),
             context: isMenuiserieContext ? 'menuiserie' : 'general'
-          } as any);
+          } as unknown);
           
           logger.info('Matériau détecté', { metadata: {
               service: 'OCRService',
@@ -2201,7 +2201,7 @@ Réponses publiées au plus tard le 22/03/2025
           finish: associatedFinish.standard || associatedFinish.wood || associatedFinish.special,
           evidences: [match[0]],
           confidence: isMenuiserieContext ? 0.9 : 0.7
-        } as any);
+      as unknown)unknown);
         
         logger.info('Couleur RAL détectée', { metadata: {
             service: 'OCRService',
@@ -2223,7 +2223,7 @@ Réponses publiées au plus tard le 22/03/2025
           finish: associatedFinishes.standard || associatedFinishes.wood || associatedFinishes.special,
           evidences: [match[0]],
           confidence: isMenuiserieContext ? 0.8 : 0.6
-        } as any);
+  as unknown) as unknown);
         
         logger.info('Couleur nommée détectée', { metadata: {
             service: 'OCRService',
@@ -2284,8 +2284,8 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Extrait toutes les finitions disponibles depuis le contexte - VERSION OPTIMISÉE
    */
-  private extractAllFinishesFromContext(context: string): { standard?: any; wood?: any; special?: any } {
-    const finishes: { standard?: any; wood?: any; special?: any } = {};
+  private extractAllFinishesFromContext(context: string): { s: unknown;d?: unknown; woounknownnown;any; special?: unknown} {
+    const finis: unknown; s: unknunknown;d?: unknunknown; wood?: any; speci: unknown}y } = {};
     
     // Finitions standards
     const standardFinishMatch = this.safeMatch(context, COLOR_PATTERNS.finishes);
@@ -2311,7 +2311,7 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Extrait une finition depuis le contexte - VERSION MAINTENUE POUR COMPATIBILITÉ
    */
-  private extractFinishFromContext(context: string): any {
+  private extractFinishFromContext(counknownxt: string): any {
     const allFinishes = this.extractAllFinishesFromContext(context);
     return allFinishes.standard || allFinishes.wood || allFinishes.special;
   }
@@ -2319,7 +2319,7 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Mappe une finition standard vers l'enum approprié
    */
-  private mapFinishToEnum(finish: string): any {
+  private mapFinishToEnunknownfinish: string): any {
     const finishLower = finish.toLowerCase();
     // Mapper vers les enums valides
     const finishMapping: Record<string, string> = {
@@ -3113,8 +3113,7 @@ l.bernard@menuiseries-moderne.fr
     documentId: string, 
     sessionId: string, 
     aoLotId: string, 
-    error: any
-  ): Promise<void> {
+    error: unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 

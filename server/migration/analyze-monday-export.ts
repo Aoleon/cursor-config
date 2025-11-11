@@ -3,14 +3,14 @@ import { logger } from './utils/logger';
 import path from 'path';
 
 interface MondayItem {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface BoardAnalysis {
   count: number;
   columns: string[];
   groups: string[];
-  sample_items: any[];
+  sample_items: unknown[];
   statuses: Set<string>;
   dates: string[];
   subitems_count: number;
@@ -63,7 +63,7 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
   
   if (typeof fileContent !== 'object' || fileContent === null) continue;
   
-  for (const [boardName, boardItems] of Object.entries(fileContent as Record<string, any>)) {
+  for (const [boardName, boardItems] of Object.entries(fileContent as Record<string, unknown>)) {
     if (!Array.isArray(boardItems)) continue;
     
     logger.info(`  📋 Board: ${boardName} (${boardItems.length} items)`);
@@ -195,7 +195,7 @@ analysis.project_patterns.clients = Array.from(allClients).sort();
 analysis.project_patterns.types = Array.from(allTypes).sort();
 
 // Clean up board analysis for JSON output
-const cleanedBoards: any = {};
+const cleanedBoards: unknown = {};
 for (const [key, board] of Object.entries(analysis.boards)) {
   cleanedBoards[key] = {
     count: board.count,

@@ -17,7 +17,7 @@ export function registerTeamsRoutes(app: Express) {
    */
   app.get("/api/teams", asyncHandler(async (req, res) => {
     logger.info('[Teams] Récupération de toutes les équipes', { 
-      userId: (req.user as any)?.id 
+      userId: (req.user as unknown)?.id 
     });
 
     const allTeams = await db.query.teams.findMany({
@@ -61,11 +61,11 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     // Calculer les statistiques pour chaque équipe
-    const teamsWithStats = allTeams.map((team: any) => ({
+    const teamsWithStats = allTeams.map((team: unknown) => ({
       ...team,
       memberCount: team.members ? team.members.length : 0,
-      internalMembers: team.members ? team.members.filter((m: any) => m.userId !== null).length : 0,
-      externalMembers: team.members ? team.members.filter((m: any) => m.userId === null).length : 0,
+      internalMembers: team.members ? team.members.filte: unknown)unknown) => m.userId !== null).length : 0,
+      externalMembers: team.members ? team.members.f: unknown)unknown)unknown) => m.userId === null).length : 0,
     }));
 
     logger.info('[Teams] Équipes récupérées avec succès', { 
@@ -91,7 +91,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Récupération équipe spécifique', { 
       teamId,
-      userId: (req.user as any)?.id 
+      userId: (req.uas unknown)unknown)any)?.id 
     });
 
     const team = await db.query.teams.findFirst({
@@ -148,7 +148,7 @@ export function registerTeamsRoutes(app: Express) {
    */
   app.post("/api/teams", asyncHandler(async (req, res) => {
     logger.info('[Teams] Création nouvelle équipe', { 
-      userId: (req.user as any)?.id 
+      userId: (ras unknown) as unknown)?.id 
     });
 
     const validationResult = insertTeamSchema.safeParse(req.body);
@@ -212,7 +212,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Modification équipe', { 
       teamId,
-      userId: (req.user as any)?.id 
+      userIdas unknown)unknown)unknownnown any)?.id 
     });
 
     const validationResult = insertTeamSchema.partial().safeParse(req.body);
@@ -302,7 +302,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Suppression (désactivation) équipe', { 
       teamId,
-      userId: (req.user as any)?.id 
+      usas unknown)unknown)unknownnownr as any)?.id 
     });
 
     const existingTeam = await db.query.teams.findFirst({
@@ -362,7 +362,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Ajout membre équipe', { 
       teamId,
-      userId: (req.user as any)?.id 
+    as unknown)unknown)unknownnown.user as any)?.id 
     });
     
     const validationResult = insertTeamMemberSchema.extend({
@@ -470,7 +470,7 @@ export function registerTeamsRoutes(app: Express) {
     logger.info('[Teams] Modification membre équipe', { 
       teamId,
       memberId,
-      userId: (req.user as any)?.id 
+as unknown)unknown)unknownnown(req.user as any)?.id 
     });
     
     const validationResult = insertTeamMemberSchema.partial().safeParse(req.body);
@@ -544,8 +544,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Retrait membre équipe', { 
       teamId,
-      memberId,
-      userId: (req.user as any)?.id 
+      memberas unknown)unknown)unknownnownId: (req.user as any)?.id 
     });
 
     const existingMember = await db.query.teamMembers.findFirst({
@@ -591,8 +590,7 @@ export function registerTeamsRoutes(app: Express) {
     const teamId = req.params.teamId;
     
     logger.info('[Teams] Récupération utilisateurs disponibles', { 
-      teamId,
-      userId: (req.user as any)?.id 
+      as unknown)unknown)unknownnownuserId: (req.user as any)?.id 
     });
 
     // Récupérer tous les utilisateurs actifs

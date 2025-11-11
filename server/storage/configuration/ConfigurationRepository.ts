@@ -49,7 +49,7 @@ export class ConfigurationRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('ConfigurationRepository', db, eventBus);
   }
 

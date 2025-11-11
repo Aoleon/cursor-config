@@ -52,7 +52,7 @@ describe('PrevuVsReelService', () => {
 
       vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject);
       vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer);
-      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockTimeTracking as any);
+      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockTimeTracking as unknown);
 
       const result = await service.compareProject(projectId);
 

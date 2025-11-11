@@ -127,7 +127,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           );
 
       // JSON replacer pour gérer BigInt serialization de manière globale
-      const safeJsonReplacer = (_: string, value: any) => {
+      const safeJsonReplacer = (_: string, value: unknown) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
@@ -168,7 +168,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
           
           // Enrichir la réponse avec le debug_info si demandé
           const shouldIncludeDebug = requestBody.options?.includeDebugInfo === true;
-          const errorResponse: any = {
+          const errorResponse: unknown = {
             success: false,
             error: result.error,
             ...(shouldIncludeDebug ? { debug_info: result.debug_info } : {})
@@ -607,7 +607,7 @@ export function createChatbotRouter(storage: IStorage, eventBus: EventBus): Rout
       if (result.success) {
         res.status(200).json(result);
       } else {
-        const errorType = (result.error as any)?.type;
+        const errorType = (result.error as unknown)?.type;
         const statusCode = errorType === 'permission' ? 403 :
                           errorType === 'validation' ? 400 :
                           errorType === 'business_rule' ? 422 : 500;

@@ -496,9 +496,9 @@ export class ContextualOCREngine {
       // Niveau 3: Même département + même type de menuiserie 
  : unknown) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
       // Niveau 4: Client connu avec localisation proche (correspondance floue)
-   unknown)unknown any) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
+   unknown)unknown unknown) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
       // Niveau 5: Type de menuiserie similaire même région
-   unknown(ao: any) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
+   unknown(ao: unknown) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
     ];
     let bestMatch: unknown = null;
     let matchStrategy = -1;
@@ -992,7 +992,7 @@ case 'volet':;
   /**
    * Génère des patterns adaptatifs basés sur le contexte
    */
-  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknown)ntext?: any): Record<string, RegExp[]> {
+  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknown)nt: unknunknown)unknown): Record<string, RegExp[]> {
     if (!this.context) return {};
 
     const adaptivePatterns: Record<string, RegExp[]> = {};
@@ -1157,7 +1157,7 @@ case 'volet':;
    * Calcule le score de détection des critères spéciaux
    */
   private calculateSpecialCriteriaScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
-    const fields = extras unknown;unknown unknown;any;
+    const fields = extras unknown;unknown unknown;unknown;
     if (!fields.specialCriteria) return 0;
     
     const criteria = fields.specialCriteria;

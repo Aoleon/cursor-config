@@ -84,7 +84,7 @@ export interface SearchFilters {
   /**
    * Filtres additionnels spécifiques au domaine
    */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -149,7 +149,7 @@ export interface TransactionContext {
   /**
    * Métadonnées additionnelles
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -194,7 +194,7 @@ export interface OperationResult<T> {
   /**
    * Métadonnées additionnelles
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<st, unknown>unknown>;
 }
 
 /**

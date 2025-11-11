@@ -10,7 +10,7 @@ export class MasterEntityExtractor extends BaseExtractor<{
   
   async extract(context: SplitterContext): Promise<{ maitre: unknown[]e: unknown[]; m: unknown[]euvunknown[]ny[] }> {
     cons: unknown[]esOunknown[]e: unknown[] = [];
-   : unknown[]maiunknown[]euvunknown any[] = [];
+   : unknown[]maiunknown[]euvunknown unknown[] = [];
     
     const masterMappings = context.config.mappings.masterEntities || [];
     

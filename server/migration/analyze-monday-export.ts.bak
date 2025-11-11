@@ -96,8 +96,7 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
       Object.keys(item).forEach(key => {
         if (key && key !== 'undefined') {
           columnSet.add(key);
-        }
-      });
+        });
       
       // Extract values
       const values = Object.values(item);
@@ -156,8 +155,7 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
           typeKeywords.forEach(keyword => {
             if (firstValue.includes(keyword)) {
               allTypes.add(keyword);
-            }
-          });
+            });
           
           // Extract client names (usually in caps after -)
           const clientMatch = firstValue.match(/\s-\s([A-Z\s&]+?)(?:\s-|$)/);
@@ -256,8 +254,7 @@ for (const [boardKey, board] of Object.entries(analysis.boards)) {
       const name = item[firstKey];
       if (name && name !== 'Name' && name.length > 2) {
         mdReport += `${idx + 1}. ${name}\n`;
-      }
-    });
+      });
   }
 }
 

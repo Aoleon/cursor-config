@@ -20,7 +20,7 @@ const dpgfQuerySchema = z.object({
 });
 
 // Helper pour récupérer l'utilisateur authentifié
-function getAuthenticatedUserId(req: any): string {
+function getAuthenticatedUserId(req: unknown): string {
   const user = req.user;
   if (!user || !user.claims) {
     throw new ValidationError("User not authenticated");
@@ -34,7 +34,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Récupération éléments chiffrage', { 
-      userId: (req.user as any)?.id,
+      userId: (req.user as unknown)?.id,
       metadata: { offerId 
         }
             );
@@ -62,7 +62,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Création élément chiffrage', { 
-      userId: (req.user as any)?.id,
+      userId: (req.uas unknown)unknown)?.id,
       metadata: { offerId 
         }
             );
@@ -99,7 +99,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Modification élément chiffrage', { 
-      userId: (req.user as any)?.id,
+      userId: (ras unknown) as unknown)?.id,
       metadata: { offerId, elementId 
         }
             );
@@ -133,7 +133,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Suppression élément chiffrage', { 
-      userId: (req.user as any)?.id,
+      userIdas unknown)uas unknunknown)unknown)?.id,
       metadata: { offerId, elementId 
         }
             );
@@ -162,7 +162,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Récupération DPGF', { 
       offerId,
-      userId: (req.user as any)?.id 
+      usas unknown)ras unknunknown)unknown any)?.id 
     });
     
     const dpgf = await storage.getDpgfDocumentByOffer(offerId);
@@ -312,7 +312,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       offerId,
       includeOptional,
       tvaPercentage,
-      userId: (req.user as any)?.id 
+    as unknown)das unknunknown)unknownr as any)?.id 
     });
 
     // Récupérer les éléments de chiffrage
@@ -373,7 +373,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       offerId,
       includeOptional,
       tvaPercentage,
-      userId: (req.user as any)?.id 
+as unknown)sas unknunknown)unknown.user as any)?.id 
     });
 
     // Récupérer les éléments de chiffrage

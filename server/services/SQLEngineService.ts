@@ -1380,7 +1380,7 @@ service: 'SQLEngineService',
   /**
    * Vérifie la présence de sous-requêtes suspectes
    */
-  private hasNestedSelectionsWithSuspiciousPatt: unknown)unknown any): boolean {
+  private hasNestedSelectionsWithSuspiciousPatt: unknown)unknown unknown): boolean {
     // TODO: Implémenter détection patterns sophistiqués
     return false;
   }
@@ -1396,7 +1396,7 @@ service: 'SQLEngineService',
   /**
    * Vérifie la présence d'un filtre user_id
    */
-  private hasUser: unknown)unknownast: any): boolean {
+  private hasUser: unknown)unknownast: unknown): boolean {
     // TODO: Analyser WHERE clauses pour user_id
     return false;
   }
@@ -1710,7 +1710,7 @@ service: 'SQLEngineService',
     return warnings;
   }
 
-  private generateSuggestions(sql: string, s: unknown,yCheck:: unknown)unknowncResult: any): string[] {
+  private generateSuggestions(sql: string, s: unknown,yCheck:: unknown)unknowncRe: unknunknown)unknown): string[] {
     const suggestions: string[] = [];
 
     if (!securityCheck.isSecure) {
@@ -1840,11 +1840,11 @@ Contraintes:
    * Sanitize SQL results pour JSON serialization
    * Convertit BigInt → string, Date → ISO, Buffer → base64
    */
-  private sanitizeResultsFor: unknow: unknown[unknown[unknown[]): any[] {
+  private sanitizeResultsFor: unknow: unknown[unknown[unknown[]): unknown[] {
     return results.map(row => this.sanitizeValueForJSON(row));
   }
 
-  private saniti: unknunknunknowunknownForJSON(value: any): any {
+  private saniti: unknunknunknowunknownForJS: unknunknown)unknowunknownny): any {
     if (value === null || value === undefined) {
       return value;
     }

@@ -112,16 +112,13 @@ export class BusinessContextService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Génération contexte métier', {
-        metadata: {
+      logger.info('Génération contexte métier', { metadata: {
           service: 'BusinessContextService',
           operation: 'generateBusinessContext',
           contextId,
           userId: request.userId,
           userRole: request.user_role
-        }
       });
-
       // 1. Validation de la requête
       const validationResult = businessContextRequestSchema.safeParse(request);
       if (!validationResult.success) {
@@ -140,10 +137,8 @@ export class BusinessContextService {
           }
         };
       }
-
       // 2. Génération de clé de cache intelligente
       const cacheKey = this.generateCacheKey(request);
-      
       // 3. Vérification cache (mémoire puis DB)
       const cachedContext = await this.getCachedContext(cacheKey, request.cache_duration_minutes || DEFAULT_CACHE_TTL_MINUTES);
       if (cachedContext) {
@@ -159,16 +154,12 @@ export class BusinessContextService {
           }
         };
       }
-
       // 4. Construction du contexte métier enrichi
       const businessContext = await this.buildEnrichedBusinessContext(request);
-      
       // 5. Mise en cache du résultat
       await this.cacheContext(cacheKey, businessContext, request.cache_duration_minutes || DEFAULT_CACHE_TTL_MINUTES);
-      
       // 6. Logging des métriques
       await this.logMetrics(request, Date.now() - startTime, false, businessContext);
-      
       // 7. Événement pour apprentissage adaptatif
       await this.eventBus.publish('business_context.generated', {
         userId: request.userId,
@@ -177,7 +168,6 @@ export class BusinessContextService {
         generationTime: Date.now() - startTime,
         cacheHit: false
       });
-
       return {
         success: true,
         context: businessContext,
@@ -188,19 +178,13 @@ export class BusinessContextService {
           examples_included: businessContext.businessExamples.length
         }
       };
-
-    
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
-      
+    } );
       await this.logMetrics(request, Date.now() - startTime, false, null, error);
-      
       return {
         success: false,
         performance_metrics: {
@@ -284,12 +268,10 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       
       return {
         success: false,
@@ -414,12 +396,10 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       
       return {
         success: false,
@@ -626,16 +606,13 @@ export class BusinessContextService {
       const memoryEntry = this.memoryCache.get(cacheKey);
       if (memoryEntry && memoryEntry.expiresAt > new Date()) {
         memoryEntry.hitCount++;
-        logger.info('Cache mémoire hit', {
-          metadata: {
+        logger.info('Cache mémoire hit', { metadata: {
             service: 'BusinessContextService',
             operation: 'getCachedContext',
             cacheKey
-          }
-        });
+      });
         return memoryEntry.data;
       }
-
       // 2. Vérification cache DB
       const dbEntry = await db
         .select()
@@ -645,11 +622,9 @@ export class BusinessContextService {
           gte(businessContextCache.expiresAt, new Date())
         ))
         .limit(1);
-
       if (dbEntry.length > 0) {
         const cached = dbEntry[0];
         const contextData = cached.contextData as BusinessContext;
-        
         // Mise à jour stats d'accès
         await db
           .update(businessContextCache)
@@ -658,7 +633,6 @@ export class BusinessContextService {
             lastAccessed: new Date()
           })
           .where(eq(businessContextCache.id, cached.id));
-
         // Ajout au cache mémoire
         this.memoryCache.set(cacheKey, {
           data: contextData,
@@ -666,26 +640,22 @@ export class BusinessContextService {
           hitCount: 1
         });
 
-        logger.info('Cache DB hit', {
-          metadata: {
+        logger.info('Cache DB hit', { metadata: {
             service: 'BusinessContextService',
             operation: 'getCachedContext',
-            cacheKey
-          }
-        });
+            cacheKey 
+              }
+            });
         return contextData;
       }
-
       return null;
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return null;
     }
   }
@@ -729,12 +699,10 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Non bloquant - continue sans cache
     }
   }
@@ -754,70 +722,55 @@ export class BusinessContextService {
     }
 
     if (cleanedCount > 0) {
-      logger.info('Nettoyage cache', {
-        metadata: {
+      logger.info('Nettoyage cache', { metadata: {
           service: 'BusinessContextService',
           operation: 'cleanupExpiredCache',
-          cleanedCount
-        }
-      });
+          cleanedCount 
+              }
+            });
     }
-
     // Nettoyage DB en arrière-plan
     db.delete(businessContextCache)
       .where(lte(businessContextCache.expiresAt, now))
-      .then(() => logger.info('Cache DB nettoyé', {
-        metadata: {
+      .then(() => logger.info('Cache DB nettoyé', { metadata: {
           service: 'BusinessContextService',
           operation: 'cleanupExpiredCache'
-        }
-      }))
-      .catch(err => logger.error('Erreur nettoyage DB', {
-        metadata: {
+        })
+      .catch(err => logger.error('Erreur nettoyage DB', { metadata: {
           service: 'BusinessContextService',
           operation: 'cleanupExpiredCache',
           error: err instanceof Error ? err.message : String(err),
           stack: err instanceof Error ? err.stack : undefined
         }
-      }));
+       );
   }
-
   // ========================================
   // BASE DE CONNAISSANCES MENUISERIE FRANÇAISE
   // ========================================
-
   /**
    * Initialise la base de connaissances menuiserie en différé
    */
   private async initializeDomainKnowledge(): Promise<void> {
     return withErrorHandling(
     async () => {
-
       this.domainKnowledge = await this.loadMenuiserieDomainKnowledge();
-      logger.info('Base de connaissances menuiserie initialisée', {
-        metadata: {
+      logger.info('Base de connaissances menuiserie initialisée', { metadata: {
           service: 'BusinessContextService',
           operation: 'initializeDomainKnowledge'
-        }
       });
-    
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Fallback vers une base minimale
       this.domainKnowledge = this.getMinimalDomainKnowledge();
     }
   }
-
   // ========================================
   // MÉTADONNÉES ENRICHIES JLM - PHASE 3
   // ========================================
-
   /**
    * Retourne des métadonnées enrichies complètes sur toutes les tables JLM
    * @returns Métadonnées détaillées incluant descriptions métier, exemples, relations, index
@@ -860,7 +813,6 @@ export class BusinessContextService {
       businessDictionary: this.getJLMBusinessDictionary(),
       domainContexts: this.getDomainSpecializedContexts()
     };
-
     // Table OFFERS - Offres commerciales
     metadata.tables.offers = {
       tableName: 'offers',
@@ -973,7 +925,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table PROJECTS - Projets de chantier
     metadata.tables.projects = {
       tableName: 'projects',
@@ -1114,7 +1065,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table AOS - Appels d'offres
     metadata.tables.aos = {
       tableName: 'aos',
@@ -1195,13 +1145,10 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Plus de tables enrichies...
     await this.enrichRemainingTables(metadata);
-    
     return metadata;
   }
-
   /**
    * Enrichit les tables restantes avec métadonnées
    */
@@ -1270,7 +1217,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table PROJECT_TIMELINES - Plannings projets
     metadata.tables.project_timelines = {
       tableName: 'project_timelines',
@@ -1354,7 +1300,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table DATE_ALERTS - Alertes temporelles
     metadata.tables.date_alerts = {
       tableName: 'date_alerts',
@@ -1430,7 +1375,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table BUSINESS_ALERTS - Alertes métier
     metadata.tables.business_alerts = {
       tableName: 'business_alerts',
@@ -1489,7 +1433,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table CHIFFRAGE_ELEMENTS
     metadata.tables.chiffrage_elements = {
       tableName: 'chiffrage_elements',
@@ -1574,7 +1517,6 @@ export class BusinessContextService {
         }
       ]
     };
-
     // Table TEAM_RESOURCES  
     metadata.tables.team_resources = {
       tableName: 'team_resources',
@@ -1654,16 +1596,13 @@ export class BusinessContextService {
         }
       ]
     };
-
-    logger.info('Métadonnées enrichies générées', {
-      metadata: {
+    logger.info('Métadonnées enrichies générées', { metadata: {
         service: 'BusinessContextService',
         operation: 'getEnrichedSchemaMetadata',
-        tablesCount: Object.keys(metadata.tables).length
-      }
-    });
+        tablesCount: Object.keys(metadata.tables).length 
+              }
+            });
   }
-
   /**
    * Dictionnaire métier JLM complet
    */
@@ -1699,7 +1638,6 @@ export class BusinessContextService {
       'validation': 'validation_milestones',
       'contrôle': 'validation_milestones',
       'VISA': 'validation_milestones WHERE milestone_type=\'visa_architecte\'',
-      
       // Statuts métier → Valeurs enum
       'en cours': 'IN (\'en_cours\', \'etude\', \'chantier\')',
       'terminé': '= \'termine\'',
@@ -1707,7 +1645,6 @@ export class BusinessContextService {
       'signé': '= \'signe\'',
       'en attente': 'LIKE \'%attente%\'',
       'urgent': 'WITH HIGH PRIORITY OR critical severity',
-      
       // Indicateurs métier
       'rentabilité': '((montant_final - budget) / montant_final * 100)',
       'marge': 'margin_percentage OR ((montant_final - budget) / montant_final * 100)',
@@ -1716,11 +1653,10 @@ export class BusinessContextService {
       'disponibilité': 'availability_percentage'
     };
   }
-
   /**
    * Contextes spécialisés par domaine métier
    */
-  private getDomainSpecializedContexts(): Record<st, unknown>unknown> {
+  private getDomainSpecializedContexts(): Record<st, unknown> {
     return {
       financier: {
         description: 'Contexte pour analyses financières et chiffrage',
@@ -1738,7 +1674,6 @@ export class BusinessContextService {
           'Top 10 projets par valeur'
         ]
       },
-      
       temporel: {
         description: 'Contexte pour planning et gestion des délais',
         tables: ['project_timelines', 'date_alerts', 'projects', 'aos'],
@@ -1755,7 +1690,6 @@ export class BusinessContextService {
           'Jalons critiques du mois'
         ]
       },
-      
       ressources: {
         description: 'Contexte pour gestion des équipes et charge',
         tables: ['team_resources', 'users', 'project_tasks'],
@@ -1771,7 +1705,6 @@ export class BusinessContextService {
           'Répartition tâches par équipe'
         ]
       },
-      
       fournisseurs: {
         description: 'Contexte pour achats et consultations fournisseurs',
         tables: ['suppliers', 'supplier_quote_sessions', 'supplier_documents', 'supplier_quote_analysis'],
@@ -1787,7 +1720,6 @@ export class BusinessContextService {
           'Historique prix matériaux'
         ]
       },
-      
       qualite: {
         description: 'Contexte pour validations et conformité',
         tables: ['validation_milestones', 'business_alerts', 'date_alerts'],
@@ -1805,7 +1737,6 @@ export class BusinessContextService {
       }
     };
   }
-
   /**
    * Système de synonymes métier enrichi
    */
@@ -1817,7 +1748,6 @@ export class BusinessContextService {
       'offres': 'offers',
       'proposition': 'offers',
       'propositions': 'offers',
-      
       'chantier': 'projects',
       'chantiers': 'projects',
       'projet': 'projects',
@@ -1826,7 +1756,6 @@ export class BusinessContextService {
       'réalisations': 'projects',
       'affaire': 'projects',
       'affaires': 'projects',
-      
       'appel d\'offres': 'aos',
       'appels d\'offres': 'aos',
       'AO': 'aos',
@@ -1835,14 +1764,12 @@ export class BusinessContextService {
       'marché': 'aos',
       'marchés': 'aos',
       'tender': 'aos',
-      
       'planning': 'project_timelines',
       'plannings': 'project_timelines',
       'calendrier': 'project_timelines',
       'échéancier': 'project_timelines',
       'jalons': 'project_timelines',
       'phases': 'project_timelines',
-      
       'fournisseur': 'suppliers',
       'fournisseurs': 'suppliers',
       'sous-traitant': 'suppliers',
@@ -1850,7 +1777,6 @@ export class BusinessContextService {
       'prestataire': 'suppliers',
       'prestataires': 'suppliers',
       'partenaire': 'suppliers',
-      
       'équipe BE': 'team_resources',
       'bureau d\'études': 'team_resources',
       'technicien': 'team_resources',
@@ -1859,7 +1785,6 @@ export class BusinessContextService {
       'équipes': 'team_resources',
       'ressource': 'team_resources',
       'ressources': 'team_resources',
-      
       'retard': 'date_alerts',
       'retards': 'date_alerts',
       'alerte': 'alerts',
@@ -1868,21 +1793,18 @@ export class BusinessContextService {
       'dépassements': 'date_alerts',
       'échéance': 'date_alerts',
       'échéances': 'date_alerts',
-      
       'chiffrage': 'chiffrage_elements',
       'chiffrages': 'chiffrage_elements',
       'DPGF': 'chiffrage_elements',
       'bordereau': 'chiffrage_elements',
       'devis détaillé': 'chiffrage_elements',
       'lignes de chiffrage': 'chiffrage_elements',
-      
       'validation': 'validation_milestones',
       'validations': 'validation_milestones',
       'contrôle': 'validation_milestones',
       'contrôles': 'validation_milestones',
       'VISA': 'validation_milestones',
       'jalon': 'validation_milestones',
-      
       // Termes d'action → Clauses SQL
       'en retard': 'WHERE date_livraison_prevue < NOW()',
       'urgent': 'WHERE severity = \'critical\' OR priority = \'high\'',
@@ -1894,7 +1816,6 @@ export class BusinessContextService {
       'validé': 'WHERE status = \'valide\' OR validation_status = \'approved\'',
       'à valider': 'WHERE status = \'en_attente_validation\'',
       'signé': 'WHERE status = \'signe\'',
-      
       // Métriques métier
       'rentabilité': '((montant_final - budget) / montant_final * 100) as rentabilite_pct',
       'marge': 'margin_percentage',
@@ -1904,7 +1825,6 @@ export class BusinessContextService {
       'délai moyen': 'AVG(DATE_PART(\'day\', end_date - start_date))'
     };
   }
-
   /**
    * Récupère la base de connaissances (lazy-loading)
    */
@@ -1914,40 +1834,32 @@ export class BusinessContextService {
     }
     return this.domainKnowledge!;
   }
-
   /**
    * Charge la base de connaissances menuiserie complète
    */
   private async loadMenuiserieDomainKnowledge(): Promise<MenuiserieDomain> {
     return withErrorHandling(
     async () => {
-
       // Import dynamique de la base de connaissances
       const { MENUISERIE_KNOWLEDGE_BASE } = await import('./MenuiserieKnowledgeBase');
-      logger.info('Base de connaissances menuiserie chargée', {
-        metadata: {
+      logger.info('Base de connaissances menuiserie chargée', { metadata: {
           service: 'BusinessContextService',
           operation: 'loadMenuiserieDomainKnowledge',
           materialsCount: MENUISERIE_KNOWLEDGE_BASE.materials.length,
           processesCount: MENUISERIE_KNOWLEDGE_BASE.processes.length,
           normsCount: MENUISERIE_KNOWLEDGE_BASE.norms.length
-        }
       });
       return MENUISERIE_KNOWLEDGE_BASE;
-    
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Fallback vers base minimale
       return this.getMinimalDomainKnowledge();
     }
   }
-
   /**
    * Base de connaissances minimale en fallback
    */
@@ -2013,17 +1925,14 @@ export class BusinessContextService {
       }
     };
   }
-
   // ========================================
   // MÉTHODES AUXILIAIRES
   // ========================================
-
   /**
    * Charge les schémas de DB enrichis selon le rôle
    */
   private async loadEnrichedDatabaseSchemas(userRole: string): Promise<SchemaWithDescriptions[]> {
     const schemas: SchemaWithDescriptions[] = [];
-
     // Schema PROJECTS - Adapté selon le rôle
     schemas.push({
       tableName: "projects",
@@ -2128,7 +2037,6 @@ export class BusinessContextService {
         }
       ]
     });
-
     // Schema OFFERS
     schemas.push({
       tableName: "offers",
@@ -2197,7 +2105,6 @@ export class BusinessContextService {
         }
       ]
     });
-
     // Schema MATERIALS - Spécialisé menuiserie
     schemas.push({
       tableName: "materials",
@@ -2262,7 +2169,6 @@ export class BusinessContextService {
         }
       ]
     });
-
     // Filtrage selon le rôle utilisateur
     if (userRole === "technicien_be") {
       return schemas.filter(schema => 
@@ -2273,10 +2179,8 @@ export class BusinessContextService {
         ["offers", "aos", "projects"].includes(schema.tableName)
       );
     }
-
     return schemas; // Admin et autres rôles : accès complet
   }
-
   /**
    * Sélectionne les exemples métier pertinents
    */
@@ -2326,7 +2230,6 @@ export class BusinessContextService {
         business_value: "Optimisation des ressources BE et répartition équilibrée de la charge",
         typical_results: "Charge par technicien BE avec nombre de projets urgents"
       },
-
       // === FINANCES ===
       {
         id: "finances-marge-projets",
@@ -2350,7 +2253,6 @@ export class BusinessContextService {
         business_value: "Optimisation achats et négociation fournisseurs basée sur volumes",
         typical_results: "Prix moyens par combinaison matériau/type menuiserie"
       },
-
       // === RESSOURCES ===
       {
         id: "ressources-disponibilite-equipes",
@@ -2363,7 +2265,6 @@ export class BusinessContextService {
         business_value: "Optimisation planning équipes et allocation rapide nouveaux projets",
         typical_results: "Équipes disponibles avec leur spécialité (pose PVC, alu, etc.)"
       },
-
       // === QUALITÉ ===
       {
         id: "qualite-validations-be-attente",
@@ -2387,7 +2288,6 @@ export class BusinessContextService {
         business_value: "Assurance conformité réglementaire et évitement non-conformités",
         typical_results: "Projets nécessitant vérification/ajustement performances thermiques"
       },
-
       // === PERFORMANCE ===
       {
         id: "performance-taux-transformation",
@@ -2400,7 +2300,6 @@ export class BusinessContextService {
         business_value: "Optimisation processus commercial et formation équipes",
         typical_results: "Taux de transformation par commercial sur 6 mois"
       },
-
       // === ALERTES ===
       {
         id: "alertes-livraisons-urgentes",
@@ -2414,18 +2313,15 @@ export class BusinessContextService {
         typical_results: "Matériaux à commander avec dates limites et fournisseurs"
       }
     ];
-
     // Ajout d'exemples adaptatifs selon patterns d'apprentissage
     const adaptiveExamples = await this.getAdaptiveExamples(userRole);
     allExamples.push(...adaptiveExamples);
-
     // Filtrage selon le rôle et les préférences
     let filteredExamples = allExamples.filter(example => 
       example.applicable_roles.includes(userRole) &&
       (!complexity || example.complexity === complexity) &&
       (!focusAreas || focusAreas.some(area => example.category === area))
     );
-
     // Priorisation selon le rôle
     if (userRole === "chef_projet") {
       filteredExamples = filteredExamples.sort((a, b) => {
@@ -2442,17 +2338,14 @@ export class BusinessContextService {
         ["qualite", "planning"].includes(example.category)
       );
     }
-
     return filteredExamples.slice(0, MAX_EXAMPLES_PER_CATEGORY * (focusAreas?.length || 3));
   }
-
   /**
    * Récupère des exemples adaptatifs basés sur l'apprentissage
    */
   private async getAdaptiveExamples(userRole: string): Promise<QueryExample[]> {
     return withErrorHandling(
     async () => {
-
       const learnedPatterns = await db
         .select()
         .from(adaptiveLearningPatterns)
@@ -2463,9 +2356,8 @@ export class BusinessContextService {
         ))
         .orderBy(desc(adaptiveLearningPatterns.usageCount))
         .limit(3);
-
       return learnedPatterns.map(pattern => ({
-        id: `adaptive-${pattern.id}`,
+        id: `adaptive-$) {pattern.id}`,
         category: "performance", // Catégorie générique pour exemples appris
         user_query: pattern.queryPattern,
         sql_example: "-- Exemple appris automatiquement par le système",
@@ -2474,16 +2366,16 @@ export class BusinessContextService {
         complexity: pattern.successRate > "4.0" ? "expert" : "complex",
         business_value: "Pattern optimisé par l'usage répété",
         typical_results: "Résultats basés sur l'historique d'utilisation"
-      }));
-    
+            }
+                      }
+                                }
+                              }));
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       return [];
     }
   }
@@ -2516,12 +2408,10 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Fallback sécuritaire
       return {
         user_role: userRole,
@@ -2590,14 +2480,13 @@ export class BusinessContextService {
     BTP_CALENDAR_2025.weather_constraints.forEach(constraint => {
       if (constraint.months.includes(currentMonth)) {
         activeConstraints.push(`Contraintes météo sur phases: ${constraint.affected_phases.join(", ")}`);
-      }
-    });
+      });
 
     return {
       current_season: currentSeason,
       active_constraints: activeConstraints,
       upcoming_deadlines: [], // À implémenter avec données réelles
-      peak_periods: BTP_CALENDAR_2025.peak_seasons.map(season => ({
+      peak_periods: BTP_CALENDAR_2025.peak_seasons.map(season  => ({
         start: new Date(2025, season.months[0] - 1, 1),
         end: new Date(2025, season.months[season.months.length - 1], 0),
         factor: season.demand_factor
@@ -2762,12 +2651,10 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -2796,30 +2683,24 @@ export class BusinessContextService {
       const cacheKey = `sql_context_${userRole}_${queryAnalysis.primaryDomain}_${crypto.createHash('md5').update(naturalLanguageQuery.toLowerCase()).digest('hex')}`;
       const cachedContext = await this.getCachedSQLContext(cacheKey);
       if (cachedContext) {
-        logger.info('Cache SQL hit', {
-          metadata: {
+        logger.info('Cache SQL hit', { metadata: {
             service: 'BusinessContextService',
             operation: 'buildIntelligentContextForSQL',
             domain: queryAnalysis.primaryDomain,
             cacheKey
-          }
-        });
+      });
         return cachedContext;
       }
-      
       // 3. Récupération des métadonnées enrichies
       const enrichedMetadata = await this.getEnrichedSchemaMetadata();
-      
       // 4. Construction du contexte spécialisé par domaine
       const contextSections: string[] = [];
-      
       // Header avec version et domaine
       contextSections.push('=== CONTEXTE SQL INTELLIGENT JLM V3 ===');
       contextSections.push(`Domaine principal: ${queryAnalysis.primaryDomain}`);
       contextSections.push(`Entités détectées: ${queryAnalysis.detectedEntities.join(', ')}`);
       contextSections.push(`Rôle utilisateur: ${userRole}`);
       contextSections.push('');
-      
       // 5. Synonymes métier pertinents
       contextSections.push('=== SYNONYMES MÉTIER ===');
       const relevantSynonyms = this.getRelevantSynonyms(queryAnalysis.keywords);
@@ -2931,29 +2812,23 @@ export class BusinessContextService {
       // 12. Mise en cache du contexte généré
       await this.cacheSQLContext(cacheKey, finalContext, 30); // Cache 30 minutes
       
-      logger.info('Contexte SQL enrichi généré', {
-        metadata: {
+      logger.info('Contexte SQL enrichi généré', { metadata: {
           service: 'BusinessContextService',
           operation: 'buildIntelligentContextForSQL',
           domain: queryAnalysis.primaryDomain,
           tablesIncluded: relevantTables.length,
           examplesIncluded: relevantExamples.length,
           generationTime: Date.now() - startTime,
-          contextSize: finalContext.length
-        }
-      });
-      
+          contextSize: finalContext.length 
+              }
+            });
       return finalContext;
-      
-    
     },
     {
-      operation: 'Map',
+      operation: 'forEach',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
       // Fallback vers méthode basique
       return "Contexte métier JLM: tables offers, projects, aos, suppliers disponibles. Utilisez les jointures standards.";
     }
@@ -3044,7 +2919,7 @@ export class BusinessContextService {
    */
   private selectRelevantTables(
     query: unknown,unknown,unknown,
-    allTables: Recor, unknown>unknunknown>any>
+    allTables: Recor, unknown>unknown>any>
   ): string[] {
     const relevantTables = new Set<string>();
     
@@ -3052,8 +2927,7 @@ export class BusinessContextService {
     queryAnalysis.detectedEntities.forEach((entity: string) => {
       if (allTables[entity]) {
         relevantTables.add(entity);
-      }
-    });
+      });
     
     // Ajouter les tables du domaine principal
     const domainTables: Record<string, string[]> = {
@@ -3077,7 +2951,7 @@ export class BusinessContextService {
    * Filtre les colonnes selon le rôle et le domaine
    */
   private filterColumnsForRole: unknown[]s: unknown[], userRole: string, dom: unknown[]rinunknown[]ny[] {
-    return columns.filter(col => {
+    return columns.filter(col  => {
       // Exclure les colonnes sensibles selon le rôle
       if (col.name.includes('margin') && userRole !== 'admin' && userRole !== 'chef_projet') {
         return false;
@@ -3103,7 +2977,7 @@ export class BusinessContextService {
    * Sélectionne les exemples SQL pertinents
    */
   private async selectRelevantSQLExamples(
-    q: unknown,unknunknown,is: any,
+    q: unknown,unknown,is: any,
     allTables: R, unknown>unknownnown>ng, any>,
     relevantTables: string[]
   ): Promise<Array<{description: string; sql: string; explanation: string}>> {
@@ -3134,7 +3008,7 @@ export class BusinessContextService {
   /**
    * Génère les jointures recommandées
    */
-  private getRecommendedJoins(tables: string[], allTable, unknunknown>unknown>string, any>): string[] {
+  private getRecommendedJoins(tables: string[], allTable, unknown>unknown>string, any>): string[] {
     const joins: string[] = [];
     
     // Jointures standards
@@ -3212,19 +3086,17 @@ export class BusinessContextService {
 
       // Cache en mémoire simplifié pour SQL
       this.memoryCache.set(key, {
-        data: { contextData: coas unknown, as unknown,
+        data: { contextData: (cached.data as unknown).contextData
         expiresAt: new Date(Date.now() + ttlMinutes * 60 * 1000),
         hitCount: 0
       });
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
       metadata: {}
-    }
-  );
-      });
+    } );
     }
   }
 
@@ -3243,11 +3115,9 @@ export class BusinessContextService {
     
     },
     {
-      operation: 'Map',
+      operation: 'async',
       service: 'BusinessContextService',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       // Métriques par défaut
       return {

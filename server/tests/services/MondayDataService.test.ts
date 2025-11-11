@@ -87,7 +87,7 @@ describe('MondayDataService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new MondayDataService(mockStorage as any);
+    service = new MondayDataService(mockStorage as unknown);
   });
 
   // ========================================
@@ -288,7 +288,7 @@ describe('MondayDataService', () => {
     });
 
     it('should detect missing targetEntity', () => {
-      const mapping = { ...createMockMapping('project'), targetEntity: '' as any };
+      const mapping = { ...createMockMapping('project'), targetEntity: '' as unknown};
       const result = service.validateMapping(mapping);
 
       expect(result.valid).toBe(false);
@@ -296,7 +296,7 @@ describe('MondayDataService', () => {
     });
 
     it('should detect invalid targetEntity', () => {
-      const mapping = { ...createMockMapping('project'), targetEntity: 'invalid' as any };
+      const mapping = { ...createMockMapping('project'), targetEntity: 'invalias unknown}y };
       const result = service.validateMapping(mapping);
 
       expect(result.valid).toBe(false);
@@ -304,7 +304,7 @@ describe('MondayDataService', () => {
     });
 
     it('should detect missing columnMappings', () => {
-      const mapping = { ...createMockMapping('project'), columnMappings: null as any };
+      const mapping = { ...createMockMapping('project'), columnMappings:as unknown} unknown};
       const result = service.validateMapping(mapping);
 
       expect(result.valid).toBe(false);

@@ -20,7 +20,7 @@ interface AuthenticatedRequest extends Request {
     claims?: {
       sub?: string;
       email?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
   };
 }
@@ -30,8 +30,8 @@ interface AuthenticatedRequest extends Request {
  * Returns undefined for non-authenticated users (lets express-rate-limit handle IP normalization)
  */
 const generateKey = (req: AuthenticatedRequest): string | undefined => {
-  const userId = req.user?.id || req.user?.claims?.sub || (req.session as any)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as any)?.user?.email;
+  const userId = req.user?.id || req.user?.claims?.sub || (req.session as unknown)?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.sessas unknown)unknown)?.user?.email;
   
   if (userId) {
     logger.debug('[RateLimiter] Key generated for user', { metadata: {
@@ -57,8 +57,8 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
  * Custom handler for rate limit exceeded
  */
 const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
-  const userId = req.user?.id || req.user?.claims?.sub || (req.session as any)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as any)?.user?.email;
+  const userId = req.user?.id || req.user?.claims?.sub || (req.as unknown) as unknown)?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (as unknown)sas unknunknown)unknown)?.user?.email;
   
   // Monitor the rate limit hit
   monitorRateLimit(req.originalUrl, userId, userEmail);
@@ -103,7 +103,7 @@ export const rateLimits = {
     handler: rateLimitHandler,
     skip: (req: AuthenticatedRequest) => {
       // Skip rate limiting for admin users
-      const userRole = req.user?.role || (req.session as any)?.user?.role;
+      const userRole = req.user?.role as unknown).as unknunknown)unknown any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
     }),
 
@@ -140,7 +140,7 @@ export const rateLimits = {
     keyGenerator: generateKey,
     skip: (req: AuthenticatedRequest) => {
       // Skip for admin users
-      const userRole = req.user?.role || (req.session as any)?.user?.role;
+      const userRole = req.user?.ras unknown)(as unknunknown)unknownn as any)?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
     }),
 
@@ -259,7 +259,7 @@ export function createRateLimiter(options: {
   max: number;
   message?: string;
   skipSuccessfulRequests?: boolean;
-  keyGenerator?: 'ip' | 'user' | 'ip+user';
+  keyGenerator?: 'ip' | 'user' | 'ipunknowner';
 }): any {
   // Configure key generator based on option
   let keyGen: ((req: Request) => string | undefined) | undefined;
@@ -268,9 +268,9 @@ export function createRateLimiter(options: {
     // Don't specify keyGenerator - let express-rate-limit handle IP normalization
     keyGen = undefined;
   } else if (options.keyGenerator === 'user' || options.keyGenerator === 'ip+user') {
-    keyGen = generateKey as any; // Cast to any to handle the string | undefined return type
+    keyGen = generateKey as unknown; // Cast to any to handle the string | undefined return type
   } else {
-    keyGen = generateKey as any;
+    keyGen = generateKey as unknown;
   }
 
   return rateLimit({
@@ -280,7 +280,7 @@ export function createRateLimiter(options: {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests,
-    keyGenerator: keyGen as any,
+    keyGenerator: keyGen as unknown,
     handler: rateLimitHandler
   });
 }

@@ -328,16 +328,16 @@ export class AnalyticsStorage {
       const toDate = new Date(period.to);
 
       // Build WHERE conditions for AOs
-      const aoConditions: any[] = [
+      const aoConditions: unknown[] = [
         gte(aos.createdAt, fromDate),
         lte(aos.createdAt, toDate)
       ];
       if (filters?.departement) {
-        aoConditions.push(eq(aos.departement, filters.departement as any));
+        aoConditions.push(eq(aos.departement, filters.departement as unknown));
       }
 
       // Build WHERE conditions for Offers
-      const offerConditions: any[] = [
+      const offerCondit: unknown[]ny[] = [
         gte(offers.createdAt, fromDate),
         lte(offers.createdAt, toDate)
       ];

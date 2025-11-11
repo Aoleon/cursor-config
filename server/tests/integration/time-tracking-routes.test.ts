@@ -48,9 +48,9 @@ describe('Time Tracking Routes Integration', () => {
         date: new Date()
       };
 
-      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as any);
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
-      vi.mocked(mockStorage.createTimeTracking).mockResolvedValue(mockTracking as any);
+      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as unknown);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown)unknown);
+      vi.mocked(mockStorage.createTimeTracking).mockResolvedValue(mockTas unknown) as unknown);
 
       const response = await request(app)
         .post('/api/time-tracking')
@@ -82,8 +82,8 @@ describe('Time Tracking Routes Integration', () => {
         }
       ];
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
-      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockEntries as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(as unknown)jas unknunknown)unknown);
+      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedVaas unknown)kas unknunknown)unknown any);
 
       const response = await request(app)
         .get(`/api/projects/${projectId}/time-tracking/summary`)

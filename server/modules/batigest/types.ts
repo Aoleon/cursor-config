@@ -19,7 +19,7 @@ export interface BatigestExportParams {
   exportData: {
     xml?: string;
     csv?: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   };
 }
 

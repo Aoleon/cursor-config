@@ -45,8 +45,8 @@ describe('TimeTrackingService', () => {
       const mockProject = { id: 'project-1', name: 'Test Project' };
       const mockTracking = { id: 'tracking-1', ...timeData };
 
-      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as any);
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
+      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as unknown);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown)unknown);
       vi.mocked(mockStorage.createTimeTracking).mockResolvedValue(mockTracking as TimeTracking);
 
       const result = await service.recordTime(timeData);
@@ -94,7 +94,7 @@ describe('TimeTrackingService', () => {
         } as TimeTracking
       ];
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockas unknown) as unknown);
       vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedValue(mockEntries);
 
       const result = await service.getProjectTimeSummary(projectId);

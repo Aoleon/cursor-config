@@ -22,7 +22,7 @@ export function setupMondayExport(
         });
 
   // Auto-export sur création de projet
-  eventBus.on('project:created', async (event: any) => {
+  eventBus.on('project:created', async (event: unknown) => {
     const projectId = event.entityId || event.id;
     
     if (!projectId) {
@@ -76,7 +76,7 @@ export function setupMondayExport(
     });
 
   // Auto-export sur création d'AO
-  eventBus.on('ao:created', async (event: any) => {
+  eventBus.on('ao:created', async (e: unknown)unknown) => {
     const aoId = event.entityId || event.id;
     
     if (!aoId) {

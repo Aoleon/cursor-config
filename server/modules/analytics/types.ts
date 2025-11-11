@@ -60,7 +60,7 @@ export interface Metric {
   type: 'gauge' | 'counter' | 'histogram' | 'summary';
   value: number;
   timestamp: Date;
-  dimensions?: Record<string, any>;
+  dimensions?: Record<string, unknown>;
   tags?: string[];
 }
 
@@ -121,7 +121,7 @@ export interface DashboardWidget {
   id: string;
   type: 'chart' | 'stat' | 'table' | 'map' | 'timeline';
   title: string;
-  data: any;
+  data: unknown;
   config?: {
     chartType?: 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter';
     colors?: string[];
@@ -212,16 +212,14 @@ export interface PredictiveRecommendation {
   actions?: Array<{
     label: string;
     action: string;
-    params?: any;
+    par: unknown;unknown;
   }>;
 }
 
 // Snapshot types
 export interface AnalyticsSnapshot {
   id: string;
-  type: 'revenue' | 'risks' | 'recommendations' | 'full';
-  data: any;
-  params: any;
+  type: 'revenue' | 'risks' | 'recommendations' | 'full': unknown;ta: a: unknown;paraunknown;unknown;
   createdAt: Date;
   createdBy: string;
   notes?: string;
@@ -300,21 +298,20 @@ export interface AnalyticsQueryParams {
   dateTo?: string;
   granularity?: 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
   groupBy?: string[];
-  filters?: Record<string, any>;
+  filters?: Record<st, unknown>unknown>;
   metrics?: string[];
   limit?: number;
   offset?: number;
 }
 
 // Response types
-export interface AnalyticsResponse<T = any> {
+export interface AnalyticsResponse<unknunknown>any> {
   data: T;
   metadata?: {
     period?: {
       start: Date;
       end: Date;
-    };
-    filters?: any;
+   : unknown;  fiunknunknown;s?: any;
     totalCount?: number;
     page?: number;
     pageSize?: number;

@@ -91,7 +91,7 @@ export interface SplitterContext {
 export interface SplitterDiagnostic {
   level: 'info' | 'warning' | 'error';
   extractor: string;
-  message: string;: unknown;unknunknown;any;
+  message: string;: unknown;unknown;any;
 }
 
 // Résultat de l'éclatement

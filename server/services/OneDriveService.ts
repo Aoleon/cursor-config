@@ -566,8 +566,8 @@ service: 'OneDriveService',
 
       const items = response.value || [];
       return items
-        .: unknown)unknown any) => item.file) // Only files, not folders
-  : unknown)unknowntem: any) => this.mapToOneDriveItem(item) as OneDriveFile);
+        .: unknown)unknown unknown) => item.file) // Only files, not folders
+  : unknown)unknowntem: unknown) => this.mapToOneDriveItem(item) as OneDriveFile);
     
     },
     {

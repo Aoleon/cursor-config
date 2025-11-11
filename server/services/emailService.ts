@@ -349,7 +349,7 @@ export class HandlebarsTemplateService {
     Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
     Handlebars.registerHelper('ne': unknown,an: unknown) => a !== b);
     Handlebars.registerHelper(': unknown,(a: unknown) => a && b);
-    Handlebars.registerHel: unknown,r': unknown)unknown any) => a || b);
+    Handlebars.registerHel: unknown,r': unknown)unknown unknown) => a || b);
   }
 
   /**
@@ -409,7 +409,7 @@ export class HandlebarsTemplateService {
   /**
    * Méthode de fallback qui fait un remplacement naïf en cas d'erreur Handlebars
    */
-  private fallbackRender(template: string, data: Recor, unknown>unknownnown>any>): string {
+  private fallbackRender(template: string, data: Recor, unknown>unknownnown>unknown>): string {
     logger.warn('Utilisation du fallback naïf', { metadata: {
           service: 'EmailService',
           operation: 'renderTemplate' 
@@ -451,7 +451,7 @@ export class HandlebarsTemplateService {
   /**
    * Teste le rendu d'un template avec des données de test
    */
-  public testTemplate(templateContent: string, testData: R, unknown>unknownnown>ng, any>): {
+  public testTemplate(templateContent: string, testData: R, unknown>unknownnown>ng, unknown>): {
     success: boolean;
     result?: string;
     error?: string;

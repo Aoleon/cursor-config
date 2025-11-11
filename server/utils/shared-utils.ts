@@ -14,7 +14,7 @@ import { withRetry } from './utils/retry-helper';
  * Parse une date de manière sécurisée avec fallback
  */
 export function parseDateSafely(
-  dateValue: any, 
+  dateValue: unknown, 
   fallback: Date = new Date()
 ): Date {
   if (!dateValue) return fallback;
@@ -99,7 +99,7 @@ export function addWorkingDays(startDate: Date, daysToAdd: number): Date {
  * Parse un montant de manière sécurisée
  */
 export function parseAmountSafely(
-  value: any, 
+  v: unknown, unknown, 
   fallback: number = 0
 ): Decimal {
   if (value === null || value === undefined || value === '') {
@@ -362,7 +362,7 @@ export function chunk<T>(array: T[], size: number): T[][] {
 /**
  * Retire les doublons d'un array
  */
-export function unique<T>(array: T[], keyGetter?: (item: T) => any): T[] {
+export function unique<T>(array: T[], keyGetter?: (item: T) => unknown): T[] {
   if (!keyGetter) {
     return Array.from(new Set(array));
   }
@@ -403,7 +403,7 @@ export class BusinessError extends Error {
     message: string,
     public code: string,
     public statusCode: number = 400,
-    public metadata?: Record<string, any>
+    public metadata?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'BusinessError';

@@ -112,14 +112,12 @@ export class ContextualOCREngine {
   private readonly contextualThreshold = 0.8; // Seuil pour validation contextuelle
 
   constructor() {
-    logger.info('Initializing Contextual OCR Engine', {
-      metadata: {
+    logger.info('Initializing Contextual OCR Engine', { metadata: {
         service: 'ContextualOCREngine',
-        operation: 'constructor'
-      }
-    });
+        operation: 'constructor' 
+              }
+            });
   }
-
   /**
    * Initialise le contexte en chargeant les données existantes
    */
@@ -127,19 +125,15 @@ export class ContextualOCREngine {
     return withErrorHandling(
     async () => {
 
-      logger.info('Loading contextual data', {
-        metadata: {
+      logger.info('Loading contextual data', { metadata: {
           service: 'ContextualOCREngine',
           operation: 'initializeContext'
-        }
       });
-
       // Charger les données existantes
       const [aos, projects] = await Promise.all([
         storage.getAos(),
         storage.getProjects()
       ]);
-
       // Extraire les valeurs uniques pour mapping
       const knownClients = Array.from(new Set(aos.map(ao => ao.client).filter(Boolean)));
       const knownLocations = Array.from(new Set([
@@ -150,7 +144,6 @@ export class ContextualOCREngine {
       const menuiserieTypes = Array.from(new Set(aos.map(ao => ao.menuiserieType).filter(Boolean)));
       const bureauEtudesOptions = Array.from(new Set(aos.map(ao => ao.bureauEtudes).filter(Boolean))) as string[];
       const bureauControleOptions = Array.from(new Set(aos.map(ao => ao.bureauControle).filter(Boolean))) as string[];
-
       this.context = {
         existingAos: aos,
         existingProjects: projects,
@@ -161,27 +154,21 @@ export class ContextualOCREngine {
         bureauEtudesOptions,
         bureauControleOptions
       };
-
-      logger.info('Context initialized', {
-        metadata: {
+      logger.info('Context initialized', { metadata: {
           service: 'ContextualOCREngine',
           operation: 'initializeContext',
           aosCount: aos.length,
           projectsCount: projects.length,
           clientsCount: knownClients.length,
-          locationsCount: knownLocations.length
-        }
-      });
-
-    
+          locationsCount: knownLocations.length 
+              }
+            });
     },
     {
       operation: 'constructor',
       service: 'ContextualOCREngine',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -197,21 +184,17 @@ export class ContextualOCREngine {
       await this.initializeContext();
     }
 
-    logger.info('Enhancing fields with contextual data', {
-      metadata: {
+    logger.info('Enhancing fields with contextual data', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'enhanceOCRFields',
-        documentType
-      }
-    });
-
+        documentType 
+              }
+            });
     const mappingResults: FieldMappingResult[] = [];
     const validationErrors: ValidationError[] = [];
     const autoCompletedFields: string[] = [];
     const suggestedCorrections: FieldCorrection[] = [];
-
     let enhancedFields = { ...extractedFields };
-
     if (documentType === 'ao') {
       enhancedFields = await this.enhanceAOFields(
         extractedFields as AOFieldsExtracted,
@@ -229,7 +212,6 @@ export class ContextualOCREngine {
         suggestedCorrections
       );
     }
-
     // Calculer les scores de confiance
     const confidence = this.calculateConfidenceScore(mappingResults);
     const contextualScore = this.calculateContextualScore(mappingResults, validationErrors);
@@ -462,15 +444,14 @@ export class ContextualOCREngine {
     // Recherche par mot-clé avec priorité aux correspondances exactes
     for (const [keyword, dept] of Object.entries(departementMappings)) {
       if (locationLower === keyword || locationLower.includes(' ' + keyword + ' ') || locationLower.startsWith(keyword + ' ') || locationLower.endsWith(' ' + keyword)) {
-        logger.info('Département inféré', {
-          metadata: {
+        logger.info('Département inféré', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'inferDepartmentFromLocation',
             department: dept,
             keyword,
-            location
-          }
-        });
+            location 
+              }
+            });
         return dept;
       }
     }
@@ -478,15 +459,14 @@ export class ContextualOCREngine {
     // Recherche par inclusion partielle (moins prioritaire)
     for (const [keyword, dept] of Object.entries(departementMappings)) {
       if (locationLower.includes(keyword)) {
-        logger.info('Département inféré (partiel)', {
-          metadata: {
+        logger.info('Département inféré (partiel)', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'inferDepartmentFromLocation',
             department: dept,
             keyword,
-            location
-          }
-        });
+            location 
+              }
+            });
         return dept;
       }
     }
@@ -502,46 +482,37 @@ export class ContextualOCREngine {
     autoCompletedFields: string[],
     mappingResults: FieldMappingResult[]
   ): Promise<void> {
-    logger.info('Auto-complétion intelligente des contacts pour JLM', {
-      metadata: {
+    logger.info('Auto-complétion intelligente des contacts pour JLM', { metadata: {
         service: 'ContextualOCREngine',
-        operation: 'autoCompleteContactsFromMaster'
-      }
-    });
-    
+        operation: 'autoCompleteContactsFromMaster' 
+              }
+            });
     // Stratégie multi-niveau pour trouver des AOs similaires
     const similarityStrategies = [
       // Niveau 1: Client + localisation exacte (priorité max)
       (ao: unknown) => ao.client === fields.client && ao.location === fields.location,
-      
       // Niveau 2: Même client + même département
-     : unknown)unknown) => ao.client === fields.client && ao.departement === fields.departement,
-      
+     : unknown) => ao.client === fields.client && ao.departement === fields.departement,
       // Niveau 3: Même département + même type de menuiserie 
- : unknown)unknown)unknown) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
-      
+ : unknown) => ao.departement === fields.departement && ao.menuiserieType === fields.menuiserieType,
       // Niveau 4: Client connu avec localisation proche (correspondance floue)
    unknown)unknown any) => ao.client === fields.client && this.isLocationProximate(ao.location, fields.location),
-      
       // Niveau 5: Type de menuiserie similaire même région
    unknown(ao: any) => ao.menuiserieType === fields.menuiserieType && this.isSameRegion(ao.departement, fields.departement)
     ];
-    
     let bestMatch: unknown = null;
     let matchStrategy = -1;
-    
     // Appliquer les stratégies par ordre de priorité
     for (let i = 0; i < similarityStrategies.length && !bestMatch; i++) {
       bestMatch = this.context!.existingAos.find(similarityStrategies[i]);
       if (bestMatch) {
         matchStrategy = i;
-        logger.info('Correspondance trouvée', {
-          metadata: {
+        logger.info('Correspondance trouvée', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
-            strategyLevel: i + 1
-          }
-        });
+            strategyLevel: i + 1 
+              }
+            });
       }
     }
 
@@ -564,16 +535,14 @@ export class ContextualOCREngine {
             `Localisation: ${bestMatch.location}`
           ]
         });
-        logger.info('Bureau d\'Études auto-complété', {
-          metadata: {
+        logger.info('Bureau d\'Études auto-complété', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
             bureauEtudes: bestMatch.bureauEtudes,
-            confidence
-          }
-        });
+            confidence 
+              }
+            });
       }
-
       // Auto-compléter Bureau de Contrôle avec validation
       if (!fields.bureauControle && bestMatch.bureauControle) {
         fields.bureauControle = bestMatch.bureauControle;
@@ -589,16 +558,14 @@ export class ContextualOCREngine {
             `Similarité client/projet détectée`
           ]
         });
-        logger.info('Bureau de Contrôle auto-complété', {
-          metadata: {
+        logger.info('Bureau de Contrôle auto-complété', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
             bureauControle: bestMatch.bureauControle,
-            confidence
-          }
-        });
+            confidence 
+              }
+            });
       }
-      
       // Auto-compléter département si manquant
       if (!fields.departement && bestMatch.departement && matchStrategy <= 2) {
         fields.departement = bestMatch.departement;
@@ -610,21 +577,19 @@ export class ContextualOCREngine {
           source: 'auto_completed',
           contextualEvidence: [`Inféré depuis AO similaire: ${bestMatch.reference}`]
         });
-        logger.info('Département auto-complété', {
-          metadata: {
+        logger.info('Département auto-complété', { metadata: {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
-            departement: bestMatch.departement
-          }
-        });
+            departement: bestMatch.departement 
+              }
+            });
       }
     } else {
-      logger.info('Aucune correspondance trouvée pour auto-complétion', {
-        metadata: {
+      logger.info('Aucune correspondance trouvée pour auto-complétion', { metadata: {
           service: 'ContextualOCREngine',
-          operation: 'autoCompleteContactsFromMaster'
-        }
-      });
+          operation: 'autoCompleteContactsFromMaster' 
+              }
+            });
     }
   }
 
@@ -957,27 +922,22 @@ case 'volet':;
     contextualResult: ContextualOCRResult,
     documentType: 'ao' | 'supplier_quote'
   ): OCRPerformanceMetrics {
-    logger.info('Génération des métriques de performance', {
-      metadata: {
+    logger.info('Génération des métriques de performance', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'generatePerformanceMetrics',
-        documentType
-      }
-    });
-    
+        documentType 
+              }
+            });
     const startTime = Date.now();
-    
     // Métriques de base
     const extractionAccuracy = this.calculateExtractionAccuracy(contextualResult.mappingResults);
     const fieldCompleteness = this.calculateFieldCompleteness(contextualResult.extractedFields, documentType);
     const contextualRelevance = contextualResult.contextualScore;
     const autoCompletionEfficiency = contextualResult.autoCompletedFields.length / this.getTotalExpectedFields(documentType);
-    
     // Métriques spécialisées menuiserie JLM
     const jlmSpecificScore = this.calculateJLMSpecificScore(contextualResult.extractedFields, contextualResult.mappingResults);
     const departmentRecognitionAccuracy = this.calculateDepartmentAccuracy(contextualResult.extractedFields);
     const materialExtractionScore = this.calculateMaterialExtractionScore(contextualResult.extractedFields);
-    
     // Score global pondéré pour JLM
     const globalScore = this.calculateGlobalJLMScore({
       extractionAccuracy,
@@ -1020,22 +980,19 @@ case 'volet':;
       }
     };
     
-    logger.info('Métriques générées', {
-      metadata: {
+    logger.info('Métriques générées', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'generatePerformanceMetrics',
         globalScore: globalScore.toFixed(2),
-        jlmScore: jlmSpecificScore.toFixed(2)
-      }
-    });
-    
+        jlmScore: jlmSpecificScore.toFixed(2) 
+              }
+            });
     return metrics;
   }
-
   /**
    * Génère des patterns adaptatifs basés sur le contexte
    */
-  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknunknown)ntext?: any): Record<string, RegExp[]> {
+  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknown)ntext?: any): Record<string, RegExp[]> {
     if (!this.context) return {};
 
     const adaptivePatterns: Record<string, RegExp[]> = {};
@@ -1200,7 +1157,7 @@ case 'volet':;
    * Calcule le score de détection des critères spéciaux
    */
   private calculateSpecialCriteriaScore(extractedFields: AOFieldsExtracted | SupplierQuoteFields): number {
-    const fields = extras unknown;unknown unknunknown;any;
+    const fields = extras unknown;unknown unknown;any;
     if (!fields.specialCriteria) return 0;
     
     const criteria = fields.specialCriteria;

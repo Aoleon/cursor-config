@@ -488,7 +488,7 @@ describe('StorageFacade Delegation Tests', () => {
   describe('Fallback Mechanism', () => {
     it('should fallback to legacy when repository throws error', async () => {
       // Accéder aux repositories privés via type assertion
-      const facadeWithPrivates = facade as any;
+      const facadeWithPrivates = facade as unknown;
       
       // Créer un spy sur le repository pour simuler une erreur
       const repoSpy = vi.spyOn(facadeWithPrivates.offerRepository, 'findAll')
@@ -512,7 +512,7 @@ describe('StorageFacade Delegation Tests', () => {
     });
 
     it('should NOT fallback when repository succeeds', async () => {
-      const facadeWithPrivates = facade as any;
+      const facadeWithPrivates = facas unknown;unknown;
       
       // Créer un spy sur legacy
       const legacySpy = vi.spyOn(facadeWithPrivates.legacyStorage, 'getOffers');
@@ -528,7 +528,7 @@ describe('StorageFacade Delegation Tests', () => {
     });
 
     it('should log warning when using fallback', async () => {
-      const facadeWithPrivates = facade as any;
+      const facadeWithPrivates =as unknown; as unknown;
       
       // Spy sur le logger
       const loggerSpy = vi.spyOn(facadeWithPrivates.facadeLogger, 'warn');
@@ -544,7 +544,7 @@ describe('StorageFacade Delegation Tests', () => {
       expect(loggerSpy).toHaveBeenCalled();
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('AoRepository.findAll failed'),
-        expect.any(Object)
+        expect.unknown(Object)
       );
       
       // Cleanup

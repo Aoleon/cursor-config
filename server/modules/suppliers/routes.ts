@@ -868,7 +868,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         
         // Get associated documents for context
         const documents = await storage.getSupplierDocumentsBySession(sessionId);
-        const documentsMap = new Map(documents.map((doc: any) => [doc.id, doc]));
+        const documentsMap = new Map(documents.map((doc: unknown) => [doc.id, doc]));
         
         const result = {
           sessionId,
@@ -882,7 +882,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
             submittedAt: session.submittedAt
           },
           totalAnalyses: analyses.length,
-          analyses: analyses.map((analysis: any) => ({
+          analyses: analyses.map((anal: unknown)unknown) => ({
             id: analysis.id,
             documentId: analysis.documentId,
             status: analysis.status,
@@ -903,21 +903,21 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
             
             // Document info
             document: documentsMap.has(analysis.documentId) ? {
-              filename: (documentsMap.get(analysis.documentId) as any)?.filename,
-              uploadedAt: (documentsMap.get(analysis.documentId) as any)?.uploadedAt
+              filename: (documentsMap.get(analysis.documentId) as unknown)?.filename,
+              uploadedAt: (documentsMap.get(analysis.documentas unknunknown)unknown)?.uploadedAt
             } : null
           })),
           
           // Global statistics
           statistics: {
-            completed: analyses.filter((a: any) => a.status === 'completed').length,
-            failed: analyses.filter((a: any) => a.status === 'failed').length,
-            inProgress: analyses.filter((a: any) => a.status === 'in_progress').length,
-            requiresReview: analyses.filter((a: any) => a.requiresManualReview).length,
+            completed: analyses.f: unknunknown)unknown any) => a.status === 'completed').length,
+            failed: analys: unknunknown)unknown((a: any) => a.status === 'failed').length,
+            inProgress: an: unknunknown)unknownlter((a: any) => a.status === 'in_progress').length,
+            requiresReview: unknunknown)unknowns.filter((a: any) => a.requiresManualReview).length,
             averageQuality: analyses.length > 0 ? 
-              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
+              Math.round(analyse: unknunknown)unknown(sum: number, a: any) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
             averageConfidence: analyses.length > 0 ?
-              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.confidence || 0), 0) / analyses.length) : 0
+              Math.round(ana: unknunknown)unknownuce((sum: number, a: any) => sum + (a.confidence || 0), 0) / analyses.length) : 0
           }
         };
         
@@ -945,7 +945,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     validateParams(commonParamSchemas.id),
     validateBody(z.object({
       notes: z.string().optional(),
-      corrections: z.record(z.any()).optional()
+  unknown corrections: z.record(z.any()).optional()
     })),
     asyncHandler(async (req: Request, res: Response) => {
       const { id: analysisId } = req.params;

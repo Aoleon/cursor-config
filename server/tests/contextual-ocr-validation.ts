@@ -253,7 +253,7 @@ export class ContextualOCRValidator {
   /**
    * Calcule un score de précision des champs
    */
-  private calculateFieldAccuracy(original: any, enhanced: any): number {
+  private calculateFieldAccuracy(original: unknown, enhanced: unknown): number {
     const originalFields = Object.keys(original).filter(k => original[k]);
     const enhancedFields = Object.keys(enhanced).filter(k => enhanced[k]);
     

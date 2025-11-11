@@ -1,6 +1,6 @@
 # Rapport Automatisé d'Élimination de la Dette Technique
 
-**Date:** 2025-11-11T09:48:21.897Z
+**Date:** 2025-11-11T09:52:28.790Z
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **Services dupliqués:** 0 groupes
 - **Fichiers monolithiques:** 82 fichiers
-- **Types 'any':** 371 occurrences
+- **Types 'any':** 69 occurrences
 - **Code deprecated:** 693 occurrences
 - **TODO/FIXME:** 75 occurrences
 - **Corrections automatiques:** 0 fichiers
@@ -18,10 +18,10 @@
 ### ./server/services/MondayImportService.ts
 
 - **Lignes:** 997
-- **Méthodes:** 217
-- **Responsabilités:** Query/Read, Delete, Update, Create, Import/Export
+- **Méthodes:** 216
+- **Responsabilités:** Query/Read, Delete, Update, Import/Export, Create
 - **Plan de réduction:**
-  - Séparer en 5 modules: Query/Read, Delete, Update, Create, Import/Export
+  - Séparer en 5 modules: Query/Read, Delete, Update, Import/Export, Create
 - **Priorité:** 3
 
 ### ./server/services/DateIntelligenceService.ts
@@ -44,7 +44,7 @@
 
 ### ./server/routes/monitoring.ts
 
-- **Lignes:** 841
+- **Lignes:** 839
 - **Méthodes:** 179
 - **Responsabilités:** Query/Read
 - **Plan de réduction:**
@@ -52,16 +52,16 @@
 
 ### ./server/seeders/mondaySeed.ts
 
-- **Lignes:** 832
-- **Méthodes:** 260
+- **Lignes:** 826
+- **Méthodes:** 259
 - **Responsabilités:** Create, Update, Query/Read
 - **Plan de réduction:**
 - **Priorité:** 3
 
 ### ./server/storage/date-intelligence/DateIntelligenceRepository.ts
 
-- **Lignes:** 821
-- **Méthodes:** 247
+- **Lignes:** 820
+- **Méthodes:** 246
 - **Responsabilités:** Query/Read, Create, Update, Delete
 - **Plan de réduction:**
   - Séparer en 4 modules: Query/Read, Create, Update, Delete
@@ -95,8 +95,8 @@
 
 ### ./server/replitAuth.ts
 
-- **Lignes:** 797
-- **Méthodes:** 222
+- **Lignes:** 793
+- **Méthodes:** 220
 - **Responsabilités:** Query/Read, Create, Update
 - **Plan de réduction:**
 - **Priorité:** 3
@@ -138,7 +138,7 @@
 ### ./server/batigestService.ts
 
 - **Lignes:** 761
-- **Méthodes:** 241
+- **Méthodes:** 238
 - **Responsabilités:** Query/Read, Analytics
 - **Plan de réduction:**
 - **Priorité:** 3
@@ -184,21 +184,21 @@
 - **Plan de réduction:**
 - **Priorité:** 3
 
-## ⚠️ Types 'any' (371 occurrences)
+## ⚠️ Types 'any' (69 occurrences)
 
 **Impact:** Perte de type safety, erreurs runtime potentielles
 
 **Fichiers principaux:**
-- ./server/batigestService.ts: 7 occurrences
-- ./server/config/monday-migration-mapping.ts: 13 occurrences
-- ./server/documentProcessor.ts: 2 occurrences
-- ./server/eventBus.ts: 3 occurrences
-- ./server/middleware/db-error-handler.ts: 3 occurrences
-- ./server/middleware/errorHandler.ts: 9 occurrences
-- ./server/middleware/rate-limiter.ts: 2 occurrences
-- ./server/middleware/security.ts: 1 occurrences
-- ./server/middleware/validation.ts: 7 occurrences
-- ./server/migration/analyze-monday-complete.ts: 6 occurrences
+- ./server/batigestService.ts: 1 occurrences
+- ./server/config/monday-migration-mapping.ts: 8 occurrences
+- ./server/middleware/errorHandler.ts: 2 occurrences
+- ./server/middleware/rate-limiter.ts: 1 occurrences
+- ./server/modules/alerts/routes.ts: 1 occurrences
+- ./server/modules/analytics/types.ts: 1 occurrences
+- ./server/modules/documents/pdf/PDFTemplateEngine.ts: 1 occurrences
+- ./server/modules/documents/pdf/types.ts: 1 occurrences
+- ./server/modules/documents/types.ts: 5 occurrences
+- ./server/modules/suppliers/routes.ts: 5 occurrences
 
 ## ⚠️ Code Deprecated/Legacy (693 occurrences)
 

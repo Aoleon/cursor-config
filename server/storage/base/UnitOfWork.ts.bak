@@ -75,12 +75,11 @@ export class UnitOfWork {
    * ```
    */
   async execute<T>(fn: (tx: DrizzleTransaction) => Promise<T>): Promise<T> {
-    logger.info('Démarrage d\'une Unit of Work', {
-      metadata: {
+    logger.info('Démarrage d\'une Unit of Work', { metadata: {
         module: 'UnitOfWork',
         operation: 'execute'
-      }
-    });
+        }
+            });
 
     return withErrorHandling(
     async () => {
@@ -91,12 +90,11 @@ export class UnitOfWork {
         return await fn(tx);
       }, this.options);
 
-      logger.info('Unit of Work complétée avec succès', {
-        metadata: {
+      logger.info('Unit of Work complétée avec succès', { metadata: {
           module: 'UnitOfWork',
           operation: 'execute'
         }
-      });
+            });
 
       return result;
     
@@ -104,9 +102,9 @@ export class UnitOfWork {
     {
       operation: 'begin',
       service: 'UnitOfWork',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 }
 

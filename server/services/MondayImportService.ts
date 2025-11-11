@@ -148,8 +148,8 @@ export class MondayImportService {
               ? (validation.das unknown).montantFinal.toString()
               : (validatias unknown) as unknown).montantFinal,
             budget: typeof (valias unknown)das unknown).budget === 'number'
-              ? (as unknown)ias unknown)unknown any).budget.toString()
-             as unknown)ias unknown)unknowna as any).budget
+              ? (as unknown)ias unknown)unknown unknown).budget.toString()
+             as unknown)ias unknown)unknowna as unknown).budget
           });
           
           logger.info('🔍 [DEBUG] Data for storage', {
@@ -174,7 +174,7 @@ export class MondayImportService {
                 itemId: item.id
 
                   });
-            project = await storage.updateProject(existingProas unknown),as unknown)unknownorage as any);
+            project = await storage.updateProject(existingProas unknown),as unknown)unknownoras unknunknown)unknown);
             wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -195,7 +195,7 @@ export class MondayImportService {
 
                   });
             
-            project = await storage.cas unknown)oas unknown)unknownorStorage as any);
+            project = await storage.cas unknown)oas unknown)unknownoras unknown) as unknown);
             
             logger.info('✅ [DEBUG] Projet créé depuis Monday', {
               service: 'MondayImportService',
@@ -249,7 +249,7 @@ service: 'MondayImportService',
             });
 
       return result;
-unknown)unknownatch (e: unknown)any) {
+unknown)unknownatch (e: unknown)unknown)any) {
       logger.error('Erreur import Monday', {
         service: 'MondayImportService',
         metadata: {
@@ -349,7 +349,7 @@ unknown)unknownatch (e: unknown)any) {
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
               : validation.data.montantEstime,
-            amountEsas unknown) as unknown)unknown (validation.data as any).amountEstimate === 'numbeas unknown) as unknown)unknown   ? (validation.data as any).amountEstimate.toStas unknown) as unknown)unknown       : (validation.data as any).amountEstimate
+            amountEsas unknown) as unknown)unknown (valias unknown)unknown)unknownnown any).amountEstimate === 'numbeas unknown) as unknown)unknown   ? (as unknown)unknown)unknownnowna as any).amountEstimate.toStas unknown) as unknown)unknown      as unknown)unknown)unknownnown.data as any).amountEstimate
           });
 
           let ao;
@@ -357,7 +357,7 @@ unknown)unknownatch (e: unknown)any) {
           
           if (existingAo) {
             // Update existing AO
-            ao = await stoas unknown)das unknown)unknownexistingAo.id, dataForStorage as any);
+            ao = await stoas unknown)das unknown)unknownexistias unknown)unknown)unknownnownorStorage as any);
             wasUpdate = true;
             logger.info('AO mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -370,7 +370,7 @@ unknown)unknownatch (e: unknown)any) {
                   });
           } else {
             // Create new AO
-       as unknown) as unknown)unknownt storage.createAo(dataForStorage as any);
+       as unknown) as unknown)unknownt storas unknown)unknown)unknownnownataForStorage as any);
             logger.info('AO créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -412,7 +412,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           result.success = false;
         }
       unknown)unknown  return result;
-    } catc: unknown)or: any) {
+    } catc: unknown)or: unknown) {
       logger.error('Erreur import Monday AOs', {
         service: 'MondayImportService',
         metadata: {
@@ -514,7 +514,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           
           if (existingSupplier) {
             // Update existing Supplier
-            supplier = await storageas unknown)unknownnownr(existingSupplier.id, dataForStorage as any);
+            supplier = await storageas unknown)unknownnownr(exisas unknown)unknown)unknownnownd, dataForStorage as any);
             wasUpdate = true;
             logger.info('Fournisseur mis à jour depuis Monday', {
               service: 'MondayImportService',
@@ -527,7 +527,7 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
                   });
           } else {
             // Create new Supplier
-           as unknown)unknownnownait storage.createSupplier(dataForStorage as any);
+           as unknown)unknownnownait stas unknown)unknown)unknownnownpplier(dataForStorage as any);
             logger.info('Fournisseur créé depuis Monday', {
               service: 'MondayImportService',
               metadata: {
@@ -550,8 +550,8 @@ service: 'MondayImportService',
           result.success = false;
     unknown)unknown     }
 
-      return result;
-    } : unknown)(error: any) {
+      retunknown)unknownult;
+    } : unknown)(e: unknown)any) {
       logger.error('Erreur import Monday Fournisseurs', {
         service: 'MondayImportService',
         metadata: {
@@ -688,7 +688,7 @@ service: 'MondayImportService',
    : unknown[]s: unknown[],
     targetEntity: 'project' | 'ao' | 'supplierunknown unknown[]'
  unknown[]ny[] {
-  : unknown[] maunknown[]s: any[] = [];
+  : unknown[] maunknown[]s: unknown[] = [];
 
     const mappingRules: Record<string, Record<string, string[]>> = {
       project: {

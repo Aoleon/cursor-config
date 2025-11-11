@@ -613,7 +613,7 @@ class MondayService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.map((p: any) => ({
+            return parsed.personsAndTeams?.map((p: unknown) => ({
               id: p.id,
               name: p.name,
               email: p.email
@@ -644,7 +644,7 @@ class MondayService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.map((item: any) => ({
+              linkedItems: parsed.linkedPulseIds?.map((: unknown)unknown) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -653,7 +653,7 @@ class MondayService {
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseIds?.map((item: any) => 
+              subitemIds: parsed.linkedPulseIds?.m: unknown)unknown)unknown) => 
                 item.linkedPulseId || item
               ) || [],
               count: parsed.linkedPulseIds?.length || 0

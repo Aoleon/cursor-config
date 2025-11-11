@@ -9,7 +9,7 @@
  * - Orchestration complète avec dry-run
  */
 
-import { MondayService, type MondayItem, type MondayColumnValue } from './MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 import { withErrorHandling } from './utils/error-handler';
 import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
 import { IMigrationStorage } from '../storage-migration';
@@ -82,7 +82,7 @@ export class MondayMigrationServiceEnhanced {
   private mondayService: MondayService;
 
   constructor(private storage: IMigrationStorage) {
-    this.mondayService = new MondayService();
+    this.mondayService = mondayintegrationService();
   }
 
   /**
@@ -92,17 +92,15 @@ export class MondayMigrationServiceEnhanced {
   async migrate(options: MigrationOptions): Promise<MigrationReport> {
     const startedAt = new Date();
     
-    logger.info('Démarrage migration Monday → Saxium', {
-      metadata: {
+    logger.info('Démarrage migration Monday → Saxium', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
         operation: 'migrate',
         entityType: options.entityType,
         boardId: options.boardId,
         dryRun: options.dryRun,
-        verbose: options.verbose
-      }
-    });
-
+        verbose: options.verbose 
+              }
+            });
     const report: MigrationReport = {
       entityType: options.entityType,
       boardId: options.boardId || getMappingConfig(options.entityType).boardId || '',
@@ -122,10 +120,8 @@ export class MondayMigrationServiceEnhanced {
       isDryRun: options.dryRun || false,
       preview: options.dryRun ? [] : undefined
     };
-
     return withErrorHandling(
     async () => {
-
       // Étape 1: Fetch items depuis Monday.com
       const items = await this.fetchAllItems(
         report.boardId, 
@@ -133,14 +129,12 @@ export class MondayMigrationServiceEnhanced {
         options.verbose
       );
       report.totalFetched = items.length;
-
-      logger.info('Items fetched depuis Monday', {
-        metadata: {
+      logger.info('Items fetched depuis Monday', { metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'migrate',
-          totalFetched: report.totalFetched
-        }
-      });
+          totalFetched: report.totalFetched 
+              }
+            });
 
       // Étape 2: Transform & Validate
       const transformedI: unknown[]ny[] = [];
@@ -161,11 +155,9 @@ export class MondayMigrationServiceEnhanced {
     },
     {
       operation: 'API',
-service: 'MondayMigrationServiceEnhanced',;
+service: 'MondayMigrationServiceEnhanced',
       metadata: {}
-    }
-  );
-            });
+    } );
           }
         }
       }
@@ -174,15 +166,13 @@ service: 'MondayMigrationServiceEnhanced',;
       if (options.dryRun) {
         report.preview = transformedItems.slice(0, 10).map(t => t.transformed);
         
-        logger.info('Mode dry-run: migration simulée', {
-          metadata: {
+        logger.info('Mode dry-run: migration simulée', { metadata: {
             service: 'MondayMigrationServiceEnhanced',
             operation: 'migrate',
             totalValidated: report.totalValidated,
-            previewCount: report.preview.length
-          }
-        });
-
+            previewCount: report.preview.length 
+              }
+            });
       } else {
         // Bulk insert avec skip doublons
         const insertResult = await this.bulkInsert(
@@ -206,31 +196,26 @@ service: 'MondayMigrationServiceEnhanced',;
       report.completedAt = new Date();
       report.duration = report.completedAt.getTime() - startedAt.getTime();
 
-      logger.info('Migration terminée', {
-        metadata: {
+      logger.info('Migration terminée', { metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'migrate',
           duration: report.duration,
           totalInserted: report.totalInserted,
           totalErrors: report.totalErrors,
-          totalSkipped: report.totalSkipped
-        }
-      });
-
+          totalSkipped: report.totalSkipped 
+              }
+            });
       return report;
-
     } catch (error) {
       report.completedAt = new Date();
       report.duration = report.completedAt.getTime() - startedAt.getTime();
-
-      logger.error('Erreur migration Monday → Saxium', {
-        metadata: {
+      logger.error('Erreur migration Monday → Saxium', { metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'migrate',
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
-      });
+          stack: error instanceof Error ? error.stack : undefined 
+              }
+            });
 
       throw error;
     }
@@ -245,18 +230,15 @@ service: 'MondayMigrationServiceEnhanced',;
     entityType: EntityType,
     verbose?: boolean
   ): Promise<MondayItem[]> {
-    logger.info('Fetch items Monday.com avec pagination', {
-      metadata: {
+    logger.info('Fetch items Monday.com avec pagination', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
         operation: 'fetchAllItems',
         boardId,
-        entityType
-      }
-    });
-
+        entityType 
+              }
+            });
     return withErrorHandling(
     async () => {
-
       // Utiliser la méthode paginée avec curseur du MondayService
       const items = await withRetry(
         () => this.mondayService.getBoardItemsPaginated(boardId),
@@ -266,29 +248,21 @@ service: 'MondayMigrationServiceEnhanced',;
           retryCondition: (error: unknown) => {
             // Retry sur rate limits et erreurs serveur
             return error?.response?.status === 429 || error?.response?.status >= 500;
-          }
-        }
-      );
+          });
 
-      logger.info('Fetch terminé', {
-        metadata: {
+      logger.info('Fetch terminé', { metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'fetchAllItems',
-          totalItems: items.length
-        }
-      });
-
+          totalItems: items.length 
+              }
+            });
       return items;
-
-    
     },
     {
       operation: 'API',
       service: 'MondayMigrationServiceEnhanced',
       metadata: {}
-    }
-  );
-      });
+    } );
       throw error;
     }
   }
@@ -381,9 +355,8 @@ service: 'MondayMigrationServiceEnhanced',;
     {
       operation: 'API',
       service: 'MondayMigrationServiceEnhanced',
-      metadata: {}
-    }
-  );
+      metadata: {
+      });
       throw error;
     }
   }
@@ -417,31 +390,26 @@ service: 'MondayMigrationServiceEnhanced',;
       errors: [] as Array<{ mondayId: string; error: string }>
     };
 
-    logger.info('Démarrage bulk insert (parallel batches)', {
-      metadata: {
+    logger.info('Démarrage bulk insert (parallel batches)', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
         operation: 'bulkInsert',
         totalItems: items.length,
         parallelBatchSize: PARALLEL_BATCH_SIZE,
-        skipExisting: options.skipExisting
-      }
-    });
-
+        skipExisting: options.skipExisting 
+              }
+            });
     const totalBatches = Math.ceil(items.length / PARALLEL_BATCH_SIZE);
     let batchNumber = 0;
-
     // Traiter par batches parallèles
     for (let i = 0; i < items.length; i += PARALLEL_BATCH_SIZE) {
       batchNumber++;
       const batch = items.slice(i, i + PARALLEL_BATCH_SIZE);
-
       // Process batch items in parallel using Promise.allSettled
       const results = await Promise.allSettled(
         batch.map(async (item) => {
           // Check for duplicates if skip enabled
           if (options.skipExisting && item.mondayId) {
             const exists = await this.checkIfExists(item.mondayId, entityType);
-            
             if (exists) {
               return {
                 status: 'skipped' as const,
@@ -458,8 +426,15 @@ service: 'MondayMigrationServiceEnhanced',;
             id: created.id,
             mondayId: item.mondayId
           };
-        })
-      );
+              }
+
+                        }
+
+
+                                  }
+
+
+                                }));
 
       // Process settled results
       for (let j = 0; j < results.length; j++) {
@@ -488,14 +463,13 @@ service: 'MondayMigrationServiceEnhanced',;
           });
 
           if (options.verbose) {
-            logger.warn('Erreur insertion item', {
-              metadata: {
+            logger.warn('Erreur insertion item', { metadata: {
                 service: 'MondayMigrationServiceEnhanced',
                 operation: 'bulkInsert',
                 mondayId: item.mondayId,
                 error: settledResult.reason instanceof Error 
                   ? settledResult.reason.message 
-                  : String(settledResult.reason)
+                  : String(settledResult.reason) 
               }
             });
           }
@@ -506,8 +480,7 @@ service: 'MondayMigrationServiceEnhanced',;
       const processedSoFar = Math.min(i + PARALLEL_BATCH_SIZE, items.length);
       const percentage = ((processedSoFar / items.length) * 100).toFixed(1);
 
-      logger.info(`Batch ${batchNumber}/${totalBatches}: ${processedSoFar}/${items.length} items (${percentage}%)`, {
-        metadata: {
+      logger.info(`Batch ${batchNumber}/${totalBatches}: ${processedSoFar}/${items.length} items (${percentage}%)`, { metadata: {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'bulkInsert',
           batchNumber,
@@ -517,29 +490,25 @@ service: 'MondayMigrationServiceEnhanced',;
           percentage,
           inserted: result.inserted,
           skipped: result.skipped,
-          errors: result.errors.length
-        }
-      });
+          errors: result.errors.length 
+              }
+            });
     }
-
-    logger.info('Bulk insert terminé', {
-      metadata: {
+    logger.info('Bulk insert terminé', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
         operation: 'bulkInsert',
         inserted: result.inserted,
         skipped: result.skipped,
-        errors: result.errors.length
-      }
-    });
-
+        errors: result.errors.length 
+              }
+            });
     return result;
   }
-
   /**
    * Extrait valeurs colonnes Monday en Map
    */
   private extractColumnValues(item: MondayItem): Map<string, unknown> {
-    const values = new Map<st, unknunknown>unknown>();
+    const values = new Map<st, unknown>unknown>();
 
     for (const columnValue of item.column_values || []) {
       // Utiliser la méthode extractColumnValue de MondayService
@@ -579,9 +548,7 @@ service: 'MondayMigrationServiceEnhanced',;
     {
       operation: 'API',
       service: 'MondayMigrationServiceEnhanced',
-      metadata: {}
-    }
-  );
+      metadata: {
       });
       return false;
     }
@@ -590,7 +557,7 @@ service: 'MondayMigrationServiceEnhanced',;
   /**
    * Insère entity via storage interface
    */
-  private async insertEntity(: unknown, unknown, entityType: EntityType):<unknunknown>unknown<unknown> {
+  private async insertEntity(: unknown, unknown, entityType: EntityType):<unknown>unknown<any> {
     switch (entityType) {
       case 'aos':
         return await this.storage.createAo(data as InsertAo);
@@ -609,7 +576,7 @@ let enhancedService: MondayMigrationServiceEnhanced | null = null;
 
 export function getMondayMigrationServiceEnhanced(storage: IMigrationStorage): MondayMigrationServiceEnhanced {
   if (!enhancedService) {
-    enhancedService = new MondayMigrationServiceEnhanced(storage);
+    enhancedService = mondaymigrationServiceEnhanced(storage);
   }
   return enhancedService;
 }

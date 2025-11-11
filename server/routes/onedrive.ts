@@ -22,8 +22,8 @@ const upload = multer({
 // MIDDLEWARE D'AUTHENTIFICATION
 // ========================================
 
-const requireAuth = (req: Request, res: Response, next: any) => {
-  const user = (req as any).user || (req as any).session?.user;
+const requireAuth = (req: Request, res: Response, next: unknown) => {
+  const user = (req as unknown).user || (as unknown)unknown).session?.user;
   
   if (!user) {
     return res.status(401).json({
@@ -207,7 +207,7 @@ router.get('/download/:itemId', requireAuth, asyncHandler(async (req: Request, r
   // Récupérer les informations du fichier
   const item = await oneDriveService.getItem(itemId);
   
-  if ((item as any).isFolder) {
+  ifas unknown) as unknown).isFolder) {
     return res.status(400).json({
       success: false,
       error: 'Impossible de télécharger un dossier'
@@ -218,7 +218,7 @@ router.get('/download/:itemId', requireAuth, asyncHandler(async (req: Request, r
   const fileBuffer = await oneDriveService.downloadFile(itemId);
   
   // Déterminer le type MIME
-  const mimeType = (item as any).mimeType || 'application/octet-stream';
+  const mimeTas unknown)ias unknunknown)unknown).mimeType || 'application/octet-stream';
   
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Content-Disposition', `attachment; filename="${item.name}"`);

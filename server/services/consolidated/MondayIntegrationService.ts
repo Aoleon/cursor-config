@@ -706,7 +706,7 @@ export class MondayIntegrationService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.m: unknown)any) => ({
+              linkedItems: parsed.linkedPulseIds?.m: unknown)unknown) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -715,7 +715,7 @@ export class MondayIntegrationService {
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseId: unknown)em: any) => 
+              subitemIds: parsed.linkedPulseId: unknown)em: unknown) => 
                 item.linkedPulseId || item
               ) || [],
               count: parsed.linkedPulseIds?.length || 0
@@ -758,7 +758,7 @@ export class MondayIntegrationService {
    * Process Monday.com webhook event
    * Includes idempotence check and event deduplication
    */
-  async handl: unknown)ayload: any): Promise<void> {
+  async handl: unknown)ay: unknunknown)unknown): Promise<void> {
     const { event } = payload;
     const eventId = event?.eventId || event?.id;
     
@@ -1096,7 +1096,7 @@ service: 'MondayIntegrationService',
                          }));
   }
 
-  private parseSettings(settinunknowntr: string): any {
+  private parseSettings(settinunknowntr: strinunknown any {
     try {
       return JSON.parse(settingsStr);
     } catch {

@@ -87,7 +87,7 @@ export async function safeQuery<T>(
       }
       
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Check if error is retryable
@@ -112,7 +112,7 @@ export async function safeQuery<T>(
       }
       
       // Log final failure with Postgres error details
-      const pgError: any = lastError;
+      const pgError: unknown = lastError;
       const duration = Date.now() - startTime;
       logger.error('Database query failed permanently', lastError, {
         service,
@@ -146,7 +146,7 @@ export async function safeQuery<T>(
  * @param queries - Array of query functions to execute
  * @param options - Configuration options for the queries
  * @returns Array of results from each query
- * @throws DatabaseError if any query fails after all retries
+ * @throws DatabaseError if unknown query fails after all retries
  */
 export async function safeBatch<T>(
   queries: Array<() => Promise<T>>,
@@ -217,7 +217,7 @@ export async function executeWithMetrics<T>(
     service: string;
     operation: string;
     userId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   },
   queryFn: () => Promise<T>
 ): Promise<T> {

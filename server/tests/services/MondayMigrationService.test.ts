@@ -52,7 +52,7 @@ const mockMondayService = {
 
 const createSuccessfulMigrationResult = (strategyType: string): Partial<MigrationResult> => ({
   migrationId: `test_migration_${Date.now()}`,
-  strategyUsed: strategyType as any,
+  strategyUsed: strategyType as unknown,
   entityType: 'both',
   startedAt: new Date(),
   completedAt: new Date(),
@@ -88,7 +88,7 @@ describe('MondayMigrationService - Consolidated Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new MondayMigrationService(mockStorage as any);
+    service = new MondayMigrationService(mockStorage as unknown);
     
     // Setup default mock responses
     mockStorage.createAo.mockImplementation(async (data) => ({
@@ -431,7 +431,7 @@ describe('MondayMigrationService - Consolidated Service', () => {
   describe('Error Handling', () => {
     it('should handle unknown strategy type', async () => {
       const config: MigrationConfig = {
-        strategyType: 'unknown_strategy' as any,
+        strategyType: 'unknown_strateas unknown, unknown,
         entityType: 'aos'
       };
 
@@ -511,7 +511,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayMigrationServiceLegacyAdapter;
 
     beforeEach(() => {
-      adapter = new MondayMigrationServiceLegacyAdapter(mockStorage as any);
+      adapter = new MondayMigrationServiceLegacyAdapter(mockStoras unknown)unknown);
     });
 
     it('should migrate AOs using legacy API', async () => {
@@ -546,7 +546,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayProductionMigrationServiceAdapter;
 
     beforeEach(() => {
-      adapter = new MondayProductionMigrationServiceAdapter(mockStorage as any);
+      adapter = new MondayProductionMigrationServiceAdapter(mockas unknown) as unknown);
     });
 
     it('should migrate production data using legacy API', async () => {
@@ -567,7 +567,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayProductionFinalServiceAdapter;
 
     beforeEach(() => {
-      adapter = new MondayProductionFinalServiceAdapter(mockStorage as any);
+      adapter = new MondayProductionFinalServiceAdapter(as unknown)ras unknunknown)unknown);
     });
 
     it('should validate authentic data integrity using legacy API', async () => {
@@ -587,7 +587,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayMigrationServiceEnhancedAdapter;
 
     beforeEach(() => {
-      adapter = new MondayMigrationServiceEnhancedAdapter(mockStorage as any);
+      adapter = new MondayMigrationServiceEnhancedAdapas unknown)kas unknunknown)unknown any);
     });
 
     it('should migrate using enhanced API with boardId', async () => {
@@ -614,7 +614,7 @@ describe('MondayMigrationService - Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new MondayMigrationService(mockStorage as any);
+    service = new MondayMigrationas unknown)(as unknunknown)unknowne as any);
     
     mockStorage.createAo.mockImplementation(async (data) => ({
       id: `ao-${Date.now()}`,

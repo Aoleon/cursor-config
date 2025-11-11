@@ -44,7 +44,7 @@ async function testOCRAndCreateAO() {
       
       if (extractedData.lots && extractedData.lots.length > 0) {
         logger.info('\n📦 Lots détectés:', extractedData.lots.length);
-        extractedData.lots.forEach((lot: any, index: number) => {
+        extractedData.lots.forEach((lot: unknown, index: number) => {
           logger.info(`  Lot ${index + 1}: ${lot.numero} - ${lot.designation}`);
           if (lot.montantEstime) {
             logger.info(`    Montant: ${lot.montantEstime}€`);
@@ -123,7 +123,7 @@ async function testOCRAndCreateAO() {
       logger.info(`\n🎉 AO "${aoData.reference}" créé avec succès!`);
       logger.info(`   URL: http://localhost:5000/offers#ao-${createdAo.id}`);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Erreur', `❌ Erreur lors du traitement: ${error.message}`);
     }
   }

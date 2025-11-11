@@ -1,5 +1,5 @@
 import type { SplitterContext, SplitterDiagnostic } from '../types';
-import { MondayService } from '../../MondayService';
+import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
 
 export interface IExtractor<T = unknown> {
   name: string;
@@ -30,7 +30,7 @@ export abstract class BaseExtractor<unknown>unknown> implements IExtractor<T> {
     const column = context.mondayItem.column_values?.find(col => col.id === columnId);
     if (!column) return null;
     
-    const mondayService = new MondayService();
+    const mondayService = mondayintegrationService();
     return mondayService.extractColumnValue(column);
   }
 }

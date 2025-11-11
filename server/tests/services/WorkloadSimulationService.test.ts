@@ -45,8 +45,8 @@ describe('WorkloadSimulationService', () => {
         }
       ];
 
-      vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWorkload as any);
-      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTimeTracking as any);
+      vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWorkload as unknown);
+      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTimeTrackas unknown)unknown);
 
       const result = await service.simulateCharge(startDate, endDate);
 
@@ -80,8 +80,8 @@ describe('WorkloadSimulationService', () => {
         }
       ];
 
-      vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWorkload as any);
-      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTimeTracking as any);
+      vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWas unknown) as unknown);
+      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTas unknown)kas unknunknown)unknown);
 
       const result = await service.simulateCharge(startDate, endDate);
 

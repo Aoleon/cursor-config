@@ -356,17 +356,14 @@ export class ErrorCollector {
   private triggerAlerts(event: ErrorEvent): void {
     this.alertCallbacks.forEach(callback => {
       return withErrorHandling(
-    async () => {
-
-        callback(event);
-      
-    },
-    {
-      operation: 'constructor',
-      service: 'error-collector',
-      metadata: {}
-    }
-  );
+        async () => {
+          callback(event);
+        },
+        {
+          operation: 'triggerAlerts',
+          service: 'error-collector',
+          metadata: {
+      });
     });
   }
 
@@ -442,7 +439,7 @@ export class ErrorCollector {
     const topErrors = Array.from(this.errorGroups.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
-      .map(e => ({
+      .map(e  => ({
         fingerprint: e.fingerprint,
         message: e.message,
         count: e.count,

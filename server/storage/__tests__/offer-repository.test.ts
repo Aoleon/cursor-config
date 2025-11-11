@@ -505,8 +505,8 @@ describe('OfferRepository Integration Tests', () => {
 
   describe('EventBus Integration', () => {
     it('should emit offers:created event', async () => {
-      const eventPromise = new Promise<any>((resolve) => {
-        eventBus.once('event', (event: any) => {
+      const eventPromise = new Promise<unknown>((resolve) => {
+        eventBus.once('event', (event: unknown) => {
           if (event.entity === 'offers' && event.type === 'created') {
             resolve(event);
           }
@@ -549,8 +549,8 @@ describe('OfferRepository Integration Tests', () => {
                               }));
       createdOfferIds.push(offer.id);
 
-      const eventPromise = new Promise<any>((resolve) => {
-        eventBus.once('event', (event: any) => {
+      const eventPromise = new Pro<unknown>unknown>((resolve) => {
+        eventBus.once('event', (e: unknown)unknown) => {
           if (event.entity === 'offers' && event.type === 'updated') {
             resolve(event);
           }
@@ -581,8 +581,8 @@ describe('OfferRepository Integration Tests', () => {
 
                               }));
 
-      const eventPromise = new Promise<any>((resolve) => {
-        eventBus.once('event', (event: any) => {
+      const eventPromise = new<unknown>unknown>unknown>((resolve) => {
+        eventBus.once('event': unknown)unknunknown)any) => {
           if (event.entity === 'offers' && event.type === 'deleted') {
             resolve(event);
           }

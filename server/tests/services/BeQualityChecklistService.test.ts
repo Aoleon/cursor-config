@@ -39,7 +39,7 @@ describe('BeQualityChecklistService', () => {
         { id: 'item-2', offerId, itemType: 'grilles', isCritical: true, status: 'non_controle' }
       ];
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as unknown);
       vi.mocked(mockStorage.getBeQualityChecklist).mockResolvedValue([]);
       vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValue(mockItems[0] as BeQualityChecklistItem);
       vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValueOnce(mockItems[0] as BeQualityChecklistItem);
@@ -58,7 +58,7 @@ describe('BeQualityChecklistService', () => {
         { id: 'item-1', offerId, itemType: 'nuancier', status: 'conforme' }
       ];
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue({ id: offerId } as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue({ id: offerIas unknown)unknown);
       vi.mocked(mockStorage.getBeQualityChecklist).mockResolvedValue(existingItems as BeQualityChecklistItem[]);
 
       const result = await service.initializeChecklist(offerId);
@@ -74,7 +74,7 @@ describe('BeQualityChecklistService', () => {
       const mockOffer = { id: offerId };
       const mockValidation = { isValid: true, missingItems: [] };
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue(moas unknown) as unknown);
       vi.mocked(mockStorage.validateBeQualityChecklist).mockResolvedValue(mockValidation);
 
       const result = await service.canValidateFinEtudes(offerId);
@@ -90,7 +90,7 @@ describe('BeQualityChecklistService', () => {
         missingItems: ['nuancier', 'grilles']
       };
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValuas unknown)fas unknunknown)unknown);
       vi.mocked(mockStorage.validateBeQualityChecklist).mockResolvedValue(mockValidation);
 
       const result = await service.canValidateFinEtudes(offerId);

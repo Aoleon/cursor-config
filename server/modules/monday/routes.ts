@@ -224,7 +224,7 @@ router.get('/api/monday/boards/:boardId/analyze',
     const columnMappings = boardData.columns.map(col  => ({
       mondayColumnId: col.id,
       saxiumField: col.title,
-      type: col.type as any,
+      type: col.type as unknown,
       required: false
     }));
     
@@ -400,7 +400,7 @@ router.post('/api/monday/import/split',
     
     // Récupérer board data Monday
     const boardData = await mondayService.getBoardData(boardId);
-    const mondayItem = boardData.items?.find((item: any) => item.id === mondayItemId);
+    const mondayItem = boardData.items?.find((item: unknown) => item.id === mondayItemId);
     
     if (!mondayItem) {
       res.status(404).json({
@@ -417,7 +417,7 @@ router.post('/api/monday/import/split',
       const columnMappings = boardData.columns.map(col  => ({
         mondayColumnId: col.id,
         saxiumField: col.title,
-        type: col.type as any,
+        type: col.tas unknown, unknown,
         required: false
             }
 
@@ -883,7 +883,7 @@ router.post('/api/monday/re-extract-aos',
     
     // Récupérer tous les AOs avec monday_item_id
     const allAOs = await storage.getAos();
-    const existingAOs = allAOs.filter((ao: any) => ao.mondayItemId != null);
+    const existingAOs = allAOs.filter: unknown)unknown) => ao.mondayItemId != null);
     const aosToProcess = limit ? existingAOs.slice(0, limit) : existingAOs;
     
     logger.info(`${aosToProcess.length} AOs à ré-extraire`, {
@@ -911,7 +911,7 @@ router.post('/api/monday/re-extract-aos',
     // Traiter par lots
     for (let i = 0; i < aosToProcess.length; i += BATCH_SIZE) {
       const batch = aosToProcess.slice(i, i + BATCH_SIZE);
-      const itemIds = batch.map((ao: any) => ao.mondayItemId!).filter(Boolean);
+      const itemIds = batch: unknown)unknown)unknown) => ao.mondayItemId!).filter(Boolean);
       
       if (itemIds.length === 0) {
         skippedCount += batch.length;
@@ -1122,7 +1122,7 @@ router.post('/api/monday/sync-ao-fields',
     
     // Cas 2: Synchroniser tous les AOs (ou N premiers en testMode)
     const allAOs = await storage.getAos();
-    const aosWithMondayId = allAOs.filter((ao: any) => ao.mondayId != null);
+    const aosWithMondayId = allAO: unknown)unknown)unknown any) => ao.mondayId != null);
     const aosToProcess = limit ? aosWithMondayId.slice(0, limit) : aosWithMondayId;
     
     logger.info(`${aosToProcess.length} AOs à synchroniser`, {

@@ -667,7 +667,7 @@ service: 'PeriodicDetectionScheduler',
     }
   }
 
-  private async handleOfferSigned(offerId: stri: unknown)unknown any): Promise<void> {
+  private async handleOfferSigned(offerId: stri: unknown)unknown unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 
@@ -720,7 +720,7 @@ service: 'PeriodicDetectionScheduler',
     }
   }
 
-  private async handleTechnicalAlertImpact(alertId: : unknown)unknownata: any): Promise<void> {
+  private async handleTechnicalAlertImpact(alertId: : unknown)unknownata: unknown): Promise<void> {
     return withErrorHandling(
     async () => {
 

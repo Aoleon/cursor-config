@@ -28,7 +28,7 @@ import { ScoringService } from '../../services/scoringService';
 /**
  * Middleware: Check if user is admin or responsable
  */
-const isAdminOrResponsible = (req: any, res: any, next: any) => {
+const isAdminOrResponsible = (req: unknown,: unknown, unknown, next: unknown) => {
   const user = req.user || req.session?.user;
   
   if (!user) {
@@ -49,7 +49,7 @@ const isAdminOrResponsible = (req: any, res: any, next: any) => {
 /**
  * Middleware: Check if user is responsable_be or admin
  */
-const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
+const requireTechnicalValidationRol: unknown,: unknown,y, res: unknown, : unknown)unknown) => {
   const userRole = req.session?.user?.role;
   if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
     return res.status(403).json({
@@ -78,7 +78,7 @@ const scorePreviewSchema = z.object({
 /**
  * Factory function to create Configuration routes with dependency injection
  */
-export function createConfigurationRoutes(storage: IStorage, eventBus: any) {
+export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)unknown) {
   const router = Router();
 
   // ========================================

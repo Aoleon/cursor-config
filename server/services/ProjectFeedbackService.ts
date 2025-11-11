@@ -47,7 +47,7 @@ export class ProjectFeedbackService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'project:feedback:created' as any,
+            type: 'project:feedback:created' as unknown,
             entity: 'project',
             entityId: data.projectId,
             message: `Nouveau feedback terrain créé: ${feedback.title}`,
@@ -109,7 +109,7 @@ export class ProjectFeedbackService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'project:feedback:assigned' as any,
+            type: 'project:feedback:assignas unknown, unknown,
             entity: 'project',
             entityId: feedback.projectId,
             message: `Feedback assigné à ${user.email}`,
@@ -175,7 +175,7 @@ export class ProjectFeedbackService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'project:feedback:resolved' as any,
+            type: 'project:feedback:reas unknown, as unknown,
             entity: 'project',
             entityId: feedback.projectId,
             message: `Feedback résolu: ${feedback.title}`,

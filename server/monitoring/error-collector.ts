@@ -21,7 +21,7 @@ export interface ErrorContext {
   ip?: string;
   userAgent?: string;
   sessionId?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface ErrorEvent {
@@ -90,7 +90,7 @@ export class ErrorCollector {
   /**
    * Capture une nouvelle erreur
    */
-  capture(error: Error | any, context?: ErrorContext): ErrorEvent {
+  capture(error: Error | unknown, context?: ErrorContext): ErrorEvent {
     const event = this.createEvent(error, context);
     
     // Ajouter à la liste des événements
@@ -117,7 +117,7 @@ export class ErrorCollector {
   /**
    * Crée un événement d'erreur à partir d'une erreur
    */
-  private createEvent(error: Error | any, context?: ErrorContext): ErrorEvent {
+  private createEvent(error: Errounknown,unknown, context?: ErrorContext): ErrorEvent {
     const message = error?.message || String(error);
     const stack = error?.stack;
     const errorCode = error?.code;
@@ -149,7 +149,7 @@ export class ErrorCollector {
   /**
    * Détermine le niveau de sévérité d'une erreur
    */
-  private determineErrorLevel(error: any, context?: ErrorContext): ErrorLevel {
+  private determineErrorLevel(error: unknown, context?: ErrorContext): ErrorLevel {
     // Critical : Erreurs système, DB down, services critiques
     if (
       error?.fatal ||
@@ -180,7 +180,7 @@ export class ErrorCollector {
   /**
    * Détermine la catégorie d'une erreur
    */
-  private determineErrorCategory(error: any, message: string, context?: ErrorContext): ErrorCategory {
+  private determineErrorCategory(e: unknown, unknown, message: string, context?: ErrorContext): ErrorCategory {
     const lowerMessage = message.toLowerCase();
     const endpoint = context?.endpoint?.toLowerCase() || '';
     
@@ -289,7 +289,7 @@ export class ErrorCollector {
   private updateTimeWindows(event: ErrorEvent): void {
     // Ajouter à toutes les fenêtres
     Object.keys(this.timeWindows).forEach(window => {
-      (this.timeWindows as any)[window].push(event);
+      (this.timeWindows as unknown)[window].push(event);
     });
   }
 
@@ -480,8 +480,8 @@ export class ErrorCollector {
     const duration = windowDurations[window];
     const startTime = new Date(now.getTime() - duration);
     
-    const errorsByCategory: Record<ErrorCategory, number> = {} as any;
-    const errorsByLevel: Record<ErrorLevel, number> = {} as any;
+    const errorsByCategory: Record<ErrorCategory, number> = {} as unknown;
+    const errorsByLevel: Record<ErrorLevel, number> =as unknown;unknown;
     
     events.forEach(event => {
       errorsByCategory[event.category] = (errorsByCategory[event.category] || 0) + 1;
@@ -552,7 +552,7 @@ export class ErrorCollector {
     this.errorGroups.clear();
     this.metrics.clear();
     Object.keys(this.timeWindows).forEach(window => {
-      (this.timeWindows as any)[window] = [];
+      (this.timeWindas unknown)unknown)[window] = [];
     });
   }
 

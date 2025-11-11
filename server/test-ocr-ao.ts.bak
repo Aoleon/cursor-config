@@ -48,8 +48,7 @@ async function testOCRAndCreateAO() {
           logger.info(`  Lot ${index + 1}: ${lot.numero} - ${lot.designation}`);
           if (lot.montantEstime) {
             logger.info(`    Montant: ${lot.montantEstime}€`);
-          }
-        });
+          });
       }
       
       // Créer l'AO via l'API

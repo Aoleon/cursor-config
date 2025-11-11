@@ -512,7 +512,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       }
 
       // Validation et nettoyage des données des lots
-      const cleanedLots: ExtractedLotData[] = extractedData.lots.map((lot: any) => ({
+      const cleanedLots: ExtractedLotData[] = extractedData.lots.map((lot: unknown) => ({
         numero: lot.numero || `LOT-${Date.now()}`,
         designation: lot.designation || 'Lot sans désignation',
         quantite: lot.quantite ? parseInt(lot.quantite.toString()) : null,
@@ -753,7 +753,7 @@ Description: Travaux de menuiserie selon ${filename}
   /**
    * Valide et convertit un montant.
    */
-  private validateAmount(amount: any): number | undefined {
+  private validateAmount(am: unknown)unknown): number | undefined {
     if (amount === null || amount === undefined) return undefined;
     
     const numAmount = typeof amount === 'string' ? 

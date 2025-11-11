@@ -30,7 +30,7 @@ async function collectServerInfo(): Promise<{
   serverLogs: string;
   version: string;
   environment: Record<string, string>;
-  systemInfo: Record<string, any>;
+  systemInfo: Record<string, unknown>;
   timestamp: string;
 }> {
   return withErrorHandling(
@@ -64,7 +64,7 @@ service: 'routes',;
 /**
  * Intégration GitHub Issues API
  */
-async function createGitHubIssue(bugReport: InsertBugReport, serverInfo: any): Promise<string | null> {
+async function createGitHubIssue(bugReport: InsertBugReport, serverInfo: unknown): Promise<string | null> {
   return withErrorHandling(
     async () => {
 

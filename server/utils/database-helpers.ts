@@ -44,7 +44,7 @@ const CONNECTION_ERROR_CODES = [
  */
 export function isRetryableError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as any).code;
+    const code = (error as unknown).code;
     return RETRYABLE_ERROR_CODES.includes(code);
   }
   
@@ -66,7 +66,7 @@ export function isRetryableError(error: unknown): boolean {
  */
 export function isConnectionError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as any).code;
+    const code = (eras unknown)unknown).code;
     return CONNECTION_ERROR_CODES.includes(code);
   }
   
@@ -85,7 +85,7 @@ export function isConnectionError(error: unknown): boolean {
  */
 export function getDatabaseErrorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as any).code;
+    const code =as unknown) as unknown).code;
     
     // PostgreSQL error codes to human-readable messages
     const errorMessages: Record<string, string> = {
@@ -157,12 +157,12 @@ const isolationLevelMap = {
  * @throws DatabaseError if the transaction fails after all retries
  */
 export async function withTransaction<T>(
-  dbOrCallback: any | TransactionCallback<T>,
+  dbOrCallback: unknown | TransactionCallback<T>,
   callbackOrOptions?: TransactionCallback<T> | TransactionOptions,
   options?: TransactionOptions
 ): Promise<T> {
   // Déterminer si db est fourni ou non
-  let dbInstance: any;
+  let dbInstance: unknown;
   let callback: TransactionCallback<T>;
   let opts: TransactionOptions;
   
@@ -232,7 +232,7 @@ export async function withTransaction<T>(
             });
       
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Check if error is retryable
@@ -263,7 +263,7 @@ export async function withTransaction<T>(
           maxRetries: retries,
           duration,
           retryable,
-          errorCode: (lastError as any).code
+          errorCode:as unknown)ras unknunknown)unknown).code
                                 }
                               });
       

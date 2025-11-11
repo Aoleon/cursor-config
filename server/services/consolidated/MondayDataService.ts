@@ -1052,7 +1052,7 @@ service: 'MondayDataService',
 
         const existingAO = await this.storage.getAOByMondayItemId(mondayItemId, tx);
         
-        let c: unknown;unknownnown;any;
+        let c: unknown;unknownnown;unknown;
         
         if (existingAO) {
           const cleanedAoData = this.cleanEnumFields(aoData);
@@ -1194,7 +1194,7 @@ service: 'MondayDataService',
     item: MondayItem,
     mapping: ImportMapping,
     options: TransformOptionunknown {}
-  ): any {
+  ): unknown {
     const transformed: unknown = {
       name: item.name
     };
@@ -1340,7 +1340,7 @@ service: 'MondayDataService',
   }
 
   private suggestColumnMappings(: unknown[]lumunknown[]ny[],
-    targetEntity: 'project' | 'ao' | 'suppli: unknown[unknownsunknown[]): any[] : unknown[unknownsunknown[]pings: any[] = [];
+    targetEntity: 'project' | 'ao' | 'suppli: unknown[unknownsunknown[]): unknown[] : unknown[unknownsunknown[]p: unknown[]ny[] = [];
 
     const mappingRules: Record<string, Record<string, string[]>> = {
       project: {
@@ -1396,7 +1396,7 @@ service: 'MondayDataService',
     return mappings;
   }
 
-  private extractColumnValueunknownlumnValue: unknown): any {
+  private extractColumnValueunknownlumnValue: unknowunknown any {
     if (columnValue.type === 'text') {
       return columnValue.text || columnValue.value;
     } else if (columnValue.type === 'numbers') {
@@ -1498,7 +1498,7 @@ service: 'MondayDataService',
     };
   }
 
-  private clunknowunknownumFie: unknown)any): any {
+  private clunknowunknownumFie: unknown)ununknownwn): any {
     const cleaned = { ...data };
     
     if (typeof cleaned.operationalStatus === 'number') {

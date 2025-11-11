@@ -121,8 +121,8 @@ export class BatigestExportService {
         montantHT: item.total
       })),
       totalHT: parseFloat(oras unknown)aas unknown),
-      totalTVA: parseFloatas unknown)tas unknown)unknown any),
-      totalTTC: parseFas unknown)das unknown)unknownC as any),
+      totalTVA: parseFloatas unknown)tas unknown)unknown unknown),
+      totalTTC: parseFas unknown)das unknown)unknownC as unknown),
       dateEchue: order.expectedDeliveryDate?.toISOString().split('T')[0] || undefined,
       modePaiement: order.paymentTerms || undefined
     };
@@ -223,9 +223,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      index === 0 ? pas unknoas unknownqunknown)unknowntalHT as any).toFixed(2) : '',
-      index === 0 as unknoas unknownaunknown)unknown.totalTVA as any).toFixed(2) : '',
-      index ==as unknoas unknowneunknown)unknownuote.totalTTC as any).toFixed(2) : ''
+      index === 0 ? pas unknoas unknownqunknown)unknowntaas unknunknown)unknown).toFixed(2) : '',
+      index === 0 as unknoas unknownaunknown)unknown.tas unknown) as unknown).toFixed(2) : '',
+      index ==as unknoas unknowneunknown)unknownuoas unknown)las unknown)unknown any).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');
@@ -247,9 +247,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      indas uas unknown)0 ? unknown)unknownoat(order.totalHT as any).toFixed(2) : '',
-      as uas unknown)== 0unknown)unknowneFloat(order.totalTVA as any).toFixed(2) : '',
-  as uas unknown)ex =unknown)unknownparseFloat(order.totalTTC as any).toFixed(2) : ''
+      indas uas unknown)0 ? unknown)unknownoaas unknown).as unknown)unknownT as any).toFixed(2) : '',
+      as uas unknown)== 0unknown)unknowneFas unknown)das unknown)unknownalTVA as any).toFixed(2) : '',
+  as uas unknown)ex =unknown)unknownpaas unknown)tas unknown)unknown.totalTTC as any).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');

@@ -16,7 +16,7 @@ import { Alert } from './alert-manager';
 export interface NotificationChannel {
   type: 'email' | 'slack' | 'webhook' | 'log';
   enabled: boolean;
-  config?: any;
+  config?: unknown;
 }
 
 export interface NotificationTemplate {
@@ -415,7 +415,7 @@ case 'medium':;
   /**
    * Formate le message Slack
    */
-  private formatSlackMessage(alert: Alert): any {
+  private formatSlackMessage(alert: Alert): unknown {
     const emoji = this.getSeverityEmoji(alert.severity);
     const color = this.getSeverityColor(alert.severity);
     const timestamp = Math.floor(alert.triggeredAt.getTime() / 1000);

@@ -98,7 +98,7 @@ vi.mock('axios', () => ({
 
 describe('MondayIntegrationService', () => {
   let service: MondayIntegrationService;
-  let mockPost: any;
+  let mockPost: unknown;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -228,7 +228,7 @@ describe('MondayIntegrationService', () => {
         expect.objectContaining({
           variables: { limit: 100 }
         }),
-        expect.any(Object)
+        expect.unknown(Object)
       );
     });
   });

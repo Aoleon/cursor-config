@@ -64,7 +64,7 @@ export class BeQualityChecklistService {
         for (const itemType of CRITICAL_ITEMS) {
           const item = await this.storage.createBeQualityChecklistItem({
             offerId,
-            itemType: itemType as any,
+            itemType: itemType as unknown,
             isCritical: true,
             status: 'non_controle' as const
           });
@@ -75,7 +75,7 @@ export class BeQualityChecklistService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'be:checklist:initialized' as any,
+            type: 'be:checklist:initializas unknown, unknown,
             entity: 'offer',
             entityId: offerId,
             message: `Checklist qualité BE initialisée pour offre ${offer.reference}`,
@@ -134,7 +134,7 @@ export class BeQualityChecklistService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'be:checklist:item:checked' as any,
+            type: 'be:checklist:item:cas unknown, as unknown,
             entity: 'offer',
             entityId: updated.offerId,
             message: `Item checklist ${updated.itemType} marqué comme ${status}`,
@@ -172,7 +172,7 @@ export class BeQualityChecklistService {
         if (result.isValid && this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'be:checklist:validated' as any,
+            type: 'be:checklistas unknown,tas unknown unknown,
             entity: 'offer',
             entityId: offerId,
             message: `Checklist qualité BE validée pour offre`,

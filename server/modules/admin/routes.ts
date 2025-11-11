@@ -525,7 +525,7 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
           );
         
         // Construire les filtres pour le storage
-        const filters: any = {};
+        const filters: unknown = {};
         if (phase) filters.phase = phase as typeof projectStatusEnum.enumValues[number];
         if (projectType) filters.projectType = projectType;
         

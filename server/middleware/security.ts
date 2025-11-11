@@ -82,7 +82,7 @@ export function rateLimit(options: RateLimitOptions) {
 
     // Gérer les options de skip si nécessaire
     const originalSend = res.send;
-    res.send = function(this: Response, body: any) {
+    res.send = function(this: Response, body: unknown) {
       const statusCode = this.statusCode;
       
       if (

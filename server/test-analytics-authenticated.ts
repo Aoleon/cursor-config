@@ -40,13 +40,13 @@ async function loginBasicAuth(): Promise<string | null> {
     logger.info('❌ Pas de cookie de session reçu');
     return null;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.info(`❌ Erreur auth: ${error.message}`);
     return null;
   }
 }
 
-async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string): Promise<any> {
+async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string): Promise<unknown> {
   try {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 5000);
@@ -76,7 +76,7 @@ async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string
       hasValidStructure: responseData?.success !== undefined || responseData?.data !== undefined
     };
     
-  } catch (error: any) {
+  } catch (e: unknown)unknown) {
     return {
       endpoint,
       status: 0,

@@ -86,7 +86,7 @@ export class ExternalServiceError extends AppError {
  * Wrapper pour fonctions async qui gère automatiquement les erreurs
  * Évite les try-catch répétitifs dans les routes
  */
-export function asyncHandler<T extends any[], R>(
+export function asyncHandler<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>
 ): (...args: T) => Promise<R> {
   return async (...args: T): Promise<R> => {
@@ -107,7 +107,7 @@ export async function withErrorHandling<T>(
     operation: string;
     service: string;
     userId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }
 ): Promise<T> {
   const startTime = Date.now();
@@ -187,7 +187,7 @@ export function normalizeError(error: unknown): AppError {
     
     // Erreurs de validation Zod
     if (error.name === 'ZodError') {
-      return new ValidationError('Erreur de validation', (error as any).flatten?.()?.fieldErrors);
+      return new ValidationError('Erreur de validation', (error as unknown).flatten?.()?.fieldErrors);
     }
     
     // Erreur générique

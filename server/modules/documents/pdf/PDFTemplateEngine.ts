@@ -91,7 +91,7 @@ export class PDFTemplateEngine {
     });
 
     // Date formatter
-    this.handlebars.registerHelper('date', (date: any, format = 'short') => {
+    this.handlebars.registerHelper('date', (date: unknown, format = 'short') => {
       if (!date) return '';
       const d = new Date(date);
       const options: Intl.DateTimeFormatOptions = 
@@ -102,7 +102,7 @@ export class PDFTemplateEngine {
     });
 
     // Number formatter
-    this.handlebars.registerHelper('number', (num: any, decimals = 2) => {
+    this.handlebars.registerHelper('number', : unknown, unknown, decimals = 2) => {
       return new Intl.NumberFormat(this.config.defaultLocale, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
@@ -110,7 +110,7 @@ export class PDFTemplateEngine {
     });
 
     // Conditional helper
-    this.handlebars.registerHelper('when', (condition: any, options: any) => {
+    this.handlebars.registerHelper('when', (c: unknown,on: unknown, options: unknown) => {
       if (condition) {
         return options.fn(this);
       } else if (options.inverse) {
@@ -118,7 +118,7 @@ export class PDFTemplateEngine {
       });
 
     // Loop helper with separator
-    this.handlebars.registerHelper('each_with_separator', (context: any[], separator: string, options: any) => {
+    this.handlebars.registerHelper('each_with_separator', (context: unknown[], separator: string, opt: unknown)unknown) => {
       return context.map((item, index) => {
         const result = options.fn(item, {
           data: { index, first: index === 0, last: index === context.length - 1 });
@@ -186,7 +186,7 @@ export class PDFTemplateEngine {
       };
 
       // Store compiled template function
-      (compiled as any).renderFunction = compiledHandlebars;
+      (compiled as unknown).renderFunction = compiledHandlebars;
 
       // Cache if enabled
       if (this.config.cacheEnabled) {
@@ -303,7 +303,7 @@ export class PDFTemplateEngine {
       };
 
       // Render with Handlebars
-      const renderFunction = (compiled as any).renderFunction;
+      const renderFunction = (compias unknunknown)unknown).renderFunction;
       if (!renderFunction) {
         throw new TemplateError('Template not properly compiled', 'RENDER_FUNCTION_MISSING');
       }

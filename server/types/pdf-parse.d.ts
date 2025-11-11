@@ -6,8 +6,8 @@ declare module 'pdf-parse' {
     text: string;
     numpages: number;
     numrender: number;
-    info: any;
-    metadata: any;
+    info: unknown;
+    meta: unknown;unknown;
     version: string;
   }
 

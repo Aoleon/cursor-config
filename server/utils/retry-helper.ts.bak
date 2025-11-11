@@ -16,9 +16,9 @@ export interface RetryOptions {
   /** Timeout pour chaque tentative en ms */
   timeout?: number;
   /** Condition pour déterminer si une erreur est retriable */
-  retryCondition?: (error: unknown) => boolean;
+  retryCondition?: (error: any) => boolean;
   /** Fonction de callback appelée avant chaque retry */
-  onRetry?: (attempt: number, delay: number, e: unknown)unknown) => void;
+  onRetry?: (attempt: number, delay: number, error: any) => void;
   /** Ajouter un jitter aléatoire au délai pour éviter le thundering herd */
   jitter?: boolean;
 }
@@ -29,7 +29,7 @@ export interface RetryOptions {
 export interface RetryStats {
   attempts: number;
   totalDuration: number;
-  lastError: unknown;
+  lastError: any;
   succeeded: boolean;
   delays: number[];
 }
@@ -39,7 +39,7 @@ export interface RetryStats {
  * @param error L'erreur à évaluer
  * @returns true si l'erreur est retriable
  */
-export function isRetryableErr: unknown)unknown)unknown): boolean {
+export function isRetryableError(error: any): boolean {
   // Ne pas retry sur les erreurs d'authentification et autorisation
   if (error.status === 401 || error.status === 403) {
     return false;
@@ -175,7 +175,7 @@ export async function withRetry<T>(
   };
   
   const startTime = Date.now();
-  let lastError: unknown = null;
+  let lastError: any = null;
   
   for (let attempt = 0; attempt <= (opts.maxRetries ?? 3); attempt++) {
     stats.attempts = attempt + 1;
@@ -183,15 +183,14 @@ export async function withRetry<T>(
     try {
       // Log de la tentative
       if (attempt > 0) {
-        logger.info('Retry attempt', {
-          metadata: {
+        logger.info('Retry attempt', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             maxRetries: (opts.maxRetries ?? 3) + 1,
             delay: stats.delays[stats.delays.length - 1] || 0
-          }
-        });
+        }
+            });
       }
       
       // Exécuter la fonction avec timeout si spécifié
@@ -203,15 +202,14 @@ export async function withRetry<T>(
       stats.totalDuration = Date.now() - startTime;
       
       if (attempt > 0) {
-        logger.info('Retry succeeded', {
-          metadata: {
+        logger.info('Retry succeeded', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             totalDuration: stats.totalDuration,
             totalAttempts: stats.attempts
-          }
-        });
+        }
+            });
       }
       
       return result;
@@ -221,35 +219,33 @@ export async function withRetry<T>(
       stats.lastError = error;
       
       // Log de l'erreur
-      logger.warn('Retry attempt failed', {
-        metadata: {
+      logger.warn('Retry attempt failed', { metadata: {
           service: 'RetryHelper',
           operation: 'withRetry',
           attempt: attempt + 1,
           error: error instanceof Error ? error.message : String(error),
-          errorCode: (error as unknown)?.code,
-          errorStatus: (eras unknown)unknown)any)?.status
+          errorCode: (error as any)?.code,
+          errorStatus: (error as any)?.status
         }
-      });
+            });
       
       // Vérifier si c'est la dernière tentative
       if (attempt >= (opts.maxRetries ?? 3)) {
         stats.totalDuration = Date.now() - startTime;
         
-        logger.error('All retry attempts exhausted', {
-          metadata: {
+        logger.error('All retry attempts exhausted', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             totalAttempts: stats.attempts,
             totalDuration: stats.totalDuration,
             delays: stats.delays,
             lastError: error instanceof Error ? error.message : String(error)
-          }
-        });
+        }
+            });
         
         // Enrichir l'erreur avec les statistiques de retry
         if (error instanceof Error) {
-         as unknown) as unknown).retryStats = stats;
+          (error as any).retryStats = stats;
         }
         
         throw error;
@@ -257,19 +253,18 @@ export async function withRetry<T>(
       
       // Vérifier si l'erreur est retriable
       if (!(opts.retryCondition ?? isRetryableError)(error)) {
-        logger.warn('Error not retriable, stopping retry', {
-          metadata: {
+        logger.warn('Error not retriable, stopping retry', { metadata: {
             service: 'RetryHelper',
             operation: 'withRetry',
             attempt: attempt + 1,
             error: error instanceof Error ? error.message : String(error)
-          }
-        });
+                                }
+                              });
         
         stats.totalDuration = Date.now() - startTime;
         
         if (error instanceof Error) {
-     as unknown)unknown)unknownnown any).retryStats = stats;
+          (error as any).retryStats = stats;
         }
         
         throw error;
@@ -282,15 +277,14 @@ export async function withRetry<T>(
       // Callback avant le retry
       (opts.onRetry ?? (() => {}))(attempt + 1, delay, error);
       
-      logger.info('Waiting before retry', {
-        metadata: {
+      logger.info('Waiting before retry', { metadata: {
           service: 'RetryHelper',
           operation: 'withRetry',
           nextAttempt: attempt + 2,
           delayMs: delay,
           jitterEnabled: opts.jitter ?? true
         }
-      });
+            });
       
       // Attendre avant le prochain retry
       await sleep(delay);
@@ -336,10 +330,10 @@ export async function retryWithLinearBackoff<T>(
  * Décorateur pour ajouter le retry automatique à une méthode de classe
  */
 export function Retryable(options?: RetryOptions) {
-  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     
-    descriptor.value = async function (...args: unknown[]) {
+    descriptor.value = async function (...args: any[]) {
       const boundMethod = originalMethod.bind(this);
       return withRetry(() => boundMethod(...args), options);
     };

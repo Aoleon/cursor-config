@@ -419,8 +419,8 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
       // Save timeline to database
       await storage.createProjectTimeline({
         projectId: id,
-        phases: timeline.phases as any,
-        milestones: timeline.milestones as any,
+        phases: timeline.phases as unknown,
+        milestones: timeline.milestoas unknown, unknown,
         totalDuration: timeline.totalDuration,
         estimatedEndDate: timeline.estimatedEndDate,
         criticalPath: timeline.criticalPath
@@ -516,7 +516,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
 
           );
 
-      const update: any = {};
+      const update: unknown = {};
       if (estimatedDays !== undefined) update.estimatedStudyDays = estimatedDays;
       if (actualDays !== undefined) update.actualStudyDays = actualDays;
 
@@ -830,7 +830,7 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
       // For warranty claims, we need to query all SAV interventions first
       // then get claims for each intervention
       // For now, return empty array if no specific intervention ID is provided
-      const claims: any[] = [];
+      const claims: unknown[] = [];
       sendSuccess(res, claims);
           }
         })

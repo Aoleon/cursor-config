@@ -2919,7 +2919,7 @@ export class BusinessContextService {
    */
   private selectRelevantTables(
     query: unknown,unknown,unknown,
-    allTables: Recor, unknown>unknown>any>
+    allTables: Recor, unknown>unknown>unknown>
   ): string[] {
     const relevantTables = new Set<string>();
     
@@ -2977,8 +2977,8 @@ export class BusinessContextService {
    * Sélectionne les exemples SQL pertinents
    */
   private async selectRelevantSQLExamples(
-    q: unknown,unknown,is: any,
-    allTables: R, unknown>unknownnown>ng, any>,
+    q: unknown,unknown,is: unknown,
+    allTables: R, unknown>unknownnown>ng, unknown>,
     relevantTables: string[]
   ): Promise<Array<{description: string; sql: string; explanation: string}>> {
     const examples: Array<{description: string; sql: string; explanation: string}> = [];
@@ -2988,7 +2988,7 @@ export class BusinessContextService {
       const table = allTables[tableName];
       if (table?.sqlExamples) {
         // Filtrer les exemples selon les mots-clés de la requête
-        const relevantExamples = table.sqlExamples.: ununknownwn)((unknown)any) => {
+        const relevantExamples = table.sqlExamples.: ununknownwn)((unknown)unknown) => {
           const exampleText = `${ex.description} ${ex.sql}`.toLowerCase();
           return queryAnalysis.keywords.some((keyword: string) => exampleText.includes(keyword));
         });
@@ -3008,7 +3008,7 @@ export class BusinessContextService {
   /**
    * Génère les jointures recommandées
    */
-  private getRecommendedJoins(tables: string[], allTable, unknown>unknown>string, any>): string[] {
+  private getRecommendedJoins(tables: string[], allTable, unknown>unknown>st, unknunknown>unknown>): string[] {
     const joins: string[] = [];
     
     // Jointures standards

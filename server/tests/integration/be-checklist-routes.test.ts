@@ -43,9 +43,9 @@ describe('BE Checklist Routes Integration', () => {
         { id: 'item-1', offerId, itemType: 'nuancier', status: 'non_controle' }
       ];
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as unknown);
       vi.mocked(mockStorage.getBeQualityChecklist).mockResolvedValue([]);
-      vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValue(mockItems[0] as any);
+      vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValue(mockItemsas unknown)unknown);
 
       const response = await request(app)
         .post(`/api/offers/${offerId}/be-checklist/initialize`)
@@ -61,7 +61,7 @@ describe('BE Checklist Routes Integration', () => {
       const mockOffer = { id: offerId };
       const mockValidation = { isValid: true, missingItems: [] };
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as any);
+      vi.mocked(mockStorage.getOffer).mockResolvedValue(moas unknown) as unknown);
       vi.mocked(mockStorage.validateBeQualityChecklist).mockResolvedValue(mockValidation);
 
       const response = await request(app)

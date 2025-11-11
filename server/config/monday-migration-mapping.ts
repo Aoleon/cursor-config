@@ -11,8 +11,8 @@
 export interface EntityMappingConfig {
   boardId?: string; // ID du board Monday.com (à configurer)
   columnMappings: Record<string, string>; // monday_column_id → saxium_field
-  enumMappings: Record<string, Record<string, any>>; // field → { MondayValue: saxiumValue }
-  transformations?: Record<string, (value: any, item?: any) => any>; // Transformations custom
+  enumMappings: Record<string, Record<string, unknown>>; // field → { MondayValue: saxiumValue }
+  transformations?: Record<string, (value: unknown, item?: unknown) => unknown>; // Transformations custom
   requiredFields: string[]; // Champs obligatoires Saxium
   mondayFields: string[]; // Champs Monday.com à préserver
 }
@@ -88,7 +88,7 @@ export const aosMappingConfig: EntityMappingConfig = {
   transformations: {
     // CRITIQUE: Générer référence unique basée sur Monday item ID
     // TOUJOURS utiliser mondayItemId pour éviter doublons (35 noms dupliqués dans Monday)
-    reference: (value: string | undefined, item: any) => {
+    reference: (value: string | undefined, : unknown)unknown) => {
       // TOUJOURS utiliser Monday item ID pour garantir unicité
       const mondayId = item.mondayItemId || item.id;
       if (mondayId) {
@@ -102,7 +102,7 @@ export const aosMappingConfig: EntityMappingConfig = {
 
     // CRITIQUE: Extraire client depuis text7 (MOA - Maître d'Ouvrage)
     // Si vide, fallback vers "Client inconnu"
-    client: (value: string | undefined, item: any) => {
+    client: (value: string | undefin: unknown)unknown)unknown) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback vers maitreOeuvre si MOA vide
@@ -127,35 +127,31 @@ export const aosMappingConfig: EntityMappingConfig = {
     },
 
     // DATES: Convertir strings ISO Monday → Date objects Saxium
-    dueDate: (value: any) => {
+    due: unknown)unknown)unknown any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
     },
 
-    dateButoir: (value: any) => {
+    da: unknown)unknown)unknownlue: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
     },
 
-    dateVisite: (value: any) => {
+  : unknown)unknown)unknown (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
-    },
-
-    dateAccord: (value: any) => {
+    },: unknown)unknown)unknownord: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
-    },
-
-    dateDemarrage: (value: any) => {
+    }: unknown)unknown)unknownmarrage: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
@@ -222,7 +218,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
 
   transformations: {
     // CRITIQUE: Transformation du nom (required)
-    name: (value: string | undefined, item: any) => {
+    name: : unknown)unknown)unknowng | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback: utiliser codeDevis ou codeChantier
@@ -243,7 +239,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
     },
 
     // CRITIQUE: Transformation client (required avec fallback)
-    client: (value: string | undefined, item: any) => {
+    clie: unknown)unknown)unknowntring | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback vers maitreOeuvre si MOA vide
@@ -256,7 +252,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
     },
 
     // CRITIQUE: Transformation location (required avec fallback)
-    location: (value: string | undefined, item: any) => {
+    lo: unknown)unknown)unknowne: string | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback: location par défaut
@@ -368,8 +364,8 @@ export function isBoardConfigured(entityType: EntityType): boolean {
  * Valide que tous les champs requis sont présents
  */
 export function validateRequiredFields(
-  entityType: EntityType,
-  data: Record<string, any>
+  entityType: EntityTunknown,
+  data: Record<st, unknunknown>any>
 ): { valid: boolean; missingFields: string[] } {
   const config = getMappingConfig(entityType);
   const missingFields = config.requiredFields.filter(field => !data[field]);

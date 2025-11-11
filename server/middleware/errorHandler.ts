@@ -15,14 +15,14 @@ interface MulterError extends Error {
 export interface ErrorResponse {
   success: false;
   error: string;
-  details?: any;
+  details?: unknown;
   timestamp: string;
   path: string;
   method: string;
 }
 
 // Interface pour les réponses de succès standardisées
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   data: T;
   timestamp?: string;
@@ -52,14 +52,14 @@ export enum ErrorType {
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly type: ErrorType;
-  public readonly details?: any;
+  public readonly deta: unknown;unknown;
   public readonly isOperational: boolean;
 
   constructor(
     message: string,
     statusCode: number = 500,
     type: ErrorType = ErrorType.INTERNAL,
-    details?: any,
+    details?: unknown,
     isOperational: boolean = true
   ) {
     super(message);
@@ -76,7 +76,7 @@ export class AppError extends Error {
 
 // Helper pour créer des erreurs communes
 export const createError = {
-  validation: (message: string, details?: any) => 
+  validation: (message: string, details?: unknown) => 
     new AppError(message, 400, ErrorType.VALIDATION, details),
   
   notFound: (resource: string, id?: string) => 
@@ -92,16 +92,16 @@ export const createError = {
   forbidden: (message: string = 'Accès interdit') => 
     new AppError(message, 403, ErrorType.AUTHORIZATION),
   
-  conflict: (message: string, details?: any) => 
+  conflict: (message: string, deta: unknown)unknown) => 
     new AppError(message, 409, ErrorType.CONFLICT, details),
   
-  badRequest: (message: string, details?: any) => 
+  badRequest: (message: string, : unknown)unknown)unknown) => 
     new AppError(message, 400, ErrorType.BAD_REQUEST, details),
   
-  fileUpload: (message: string, details?: any) => 
+  fileUpload: (message: stri: unknown)unknown)unknown any) => 
     new AppError(message, 400, ErrorType.FILE_UPLOAD, details),
   
-  database: (message: string = 'Erreur de base de données', details?: any) => 
+  database: (message: string = 'Erreur de base de do: unknown)unknown)unknownls?: any) => 
     new AppError(message, 500, ErrorType.DATABASE, details),
   
   externalAPI: (service: string, message?: string) => 
@@ -114,7 +114,7 @@ export const createError = {
 
 // Logger d'erreurs avec différents niveaux
 export class ErrorLogger {
-  static logError(error: Error, req?: Request, additionalInfo?: any) {
+  static logError(error: Error, req?: Requ: unknown)unknown)unknownalInfo?: any) {
     const errorInfo = {
       message: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
@@ -213,7 +213,7 @@ export function errorHandler(
           field: issue.path.join('.'),
           message: issue.message,
           code: issue.code,
-          ...(('received' in issue) && { received: (issue as any).received })
+          ...(('received' in issue) && { received: (issue as unknown).received })
         }))
       },
       timestamp,
@@ -336,7 +336,7 @@ export function notFoundHandler(req: Request, res: Response): void {
 }
 
 // Wrapper pour les gestionnaires async pour éviter les erreurs non capturées
-export function asyncHandler<T = any>(
+export function asyncunknowndler<unknown>any>(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {

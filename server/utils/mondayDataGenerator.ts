@@ -249,7 +249,7 @@ function weightedRandomChoice<T>(choices: T[], weights: number[]): T | undefined
 /**
  * Sélection pondérée depuis array avec poids
  */
-function weightedRandomFromArray<T extends { weight: number }>(items: (T & { status?: any, stage?: any })[]): any {
+function weightedRandomFromArray<T extends { weight: number }>(items: (T & { status?: unknown, stage?: unknown})[]): unknown {
   const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
   const randomNum = Math.random() * totalWeight;
   

@@ -49,7 +49,7 @@ export class ChiffrageRepository extends BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(db: any, eventBus?: any) {
+  constructor(db: unknown, eventBus?: unknown) {
     super('ChiffrageRepository', db, eventBus);
   }
 
@@ -673,7 +673,7 @@ export class ChiffrageRepository extends BaseRepository<
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
-  async findAll(filters?: any, tx?: DrizzleTransaction): Promise<ChiffrageElement[]> {
+  async findAll(filt: unknown, unknown, tx?: DrizzleTransaction): Promise<ChiffrageElement[]> {
     throw new ValidationError('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
   }
 
@@ -681,18 +681,18 @@ export class ChiffrageRepository extends BaseRepository<
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
   async findPaginated(
-    filters?: any,
-    pagination?: any,
-    sort?: any,
+    : unknown,s?: unknown,
+   : unknown,ation?: unknown,
+    sorunknown,unknown,
     tx?: DrizzleTransaction
-  ): Promise<any> {
+  ): Promise<unknown> {
     throw new ValidationError('Use getChiffrageElementsByOffer, getDpgfDocumentByOffer, or getValidationMilestones instead');
   }
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
    */
-  async deleteMany(filters: any, tx?: DrizzleTransaction): Promise<number> {
+  asyn: unknown,teMany(funknown,unknown any, tx?: DrizzleTransaction): Promise<number> {
     throw new ValidationError('Use deleteChiffrageElement, deleteDpgfDocument, or deleteValidationMilestone instead');
   }
 
@@ -705,8 +705,7 @@ export class ChiffrageRepository extends BaseRepository<
 
   /**
    * @deprecated Ce repository gère plusieurs entités - utiliser les méthodes spécifiques
-   */
-  async count(filters?: any, tx?: DrizzleTransaction): Promise<number> {
+   *: unknown,ync coununknown,unknownrs?: any, tx?: DrizzleTransaction): Promise<number> {
     throw new AppError('Count not implemented for multi-entity repository', 500);
   }
 }

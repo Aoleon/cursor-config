@@ -35,8 +35,8 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
     (req: Request, res: Response) => {
       logger.info('[MicrosoftAuth] User successfully authenticated', { metadata: {
           route: '/auth/microsoft/callback',
-          userId: (req.user as any)?.id,
-          email: (req.user as any)?.email
+          userId: (req.user as unknown)?.id,
+          email: (req.uas unknown)unknown)?.email
 
         }
                 });

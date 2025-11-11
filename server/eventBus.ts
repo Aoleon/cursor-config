@@ -256,7 +256,7 @@ export class EventBus extends EventEmitter {
     entityType: string;
     entityId: string;
     changeType: 'update' | 'delete' | 'status_change';
-    additionalContext?: Record<string, any>;
+    additionalContext?: Record<string, unknown>;
   } | null {
     switch (event.type) {
       // Événements AO
@@ -371,7 +371,7 @@ export class EventBus extends EventEmitter {
     alertId: string;
     action: 'acknowledged' | 'validated' | 'bypassed';
     userId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<st, unknown>unknown>;
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.TECHNICAL_ALERT,
@@ -514,7 +514,7 @@ export class EventBus extends EventEmitter {
   }
 
   // Événements Analytics
-  public publishAnalyticsCalculated(metadata: any): void {
+  public publishAnalyticsCalculated(metadata: unknown): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.ANALYTICS_CALCULATED, // Type strict 
       entity: "analytics",
@@ -737,7 +737,7 @@ export class EventBus extends EventEmitter {
     triggeredCriteria: string[];
     aoId?: string;
     userId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Recor, unknown>unknown>unknown>;
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.TECHNICAL_ALERT,
@@ -1180,7 +1180,7 @@ export class EventBus extends EventEmitter {
     
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: params.entity as any,
+      entity: params.entity as unknown,
       entityId: params.entityId,
       severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
       title: `${severityIcon[params.severity]} Alerte Détectée`,
@@ -1223,7 +1223,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
-      entity: params.entity as any,
+      entity: params.entas unknown, unknown,
       entityId: params.entityId,
       severity: 'info',
       title: '✅ Alerte Accusée Réception',
@@ -1263,7 +1263,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_RESOLVED,
-      entity: params.entity as any,
+      entity: paramsas unknown, as unknown,
       entityId: params.entityId,
       severity: 'success',
       title: '🎉 Alerte Résolue',
@@ -1301,7 +1301,7 @@ export class EventBus extends EventEmitter {
   }): void {
     const event = createRealtimeEvent({
       type: EventTypeEnum.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
-      entity: params.entity as any,
+      entity: paas unknown,tas unknown unknown,
       entityId: params.entityId,
       severity: 'error',
       title: '🚨 ESCALADE CRITIQUE',
@@ -1830,7 +1830,7 @@ export class EventBus extends EventEmitter {
   // ========================================
 
   // Intégration services prédictifs
-  private predictiveEngine: any = null;
+  private predictiveEngine: unknown = null;
   private predictiveTriggersEnabled = true;
   private businessHoursPreloadingEnabled = true;
   private weekendWarmingEnabled = true;
@@ -1856,7 +1856,7 @@ export class EventBus extends EventEmitter {
   /**
    * Configure l'intégration avec PredictiveEngine pour déclencheurs automatiques
    */
-  public integratePredictiveEngine(predictiveEngine: any): void {
+  public integratePredictiveEngine(predictiveEn: unknown)unknown): void {
     this.predictiveEngine = predictiveEngine;
     
     logger.info('Intégration PredictiveEngine activée', {
@@ -2291,7 +2291,7 @@ export class EventBus extends EventEmitter {
   /**
    * Prédit les workflows du matin pour préparation nocturne
    */
-  private async predictMorningWorkflows(): Promise<any[]> {
+  private async predictMorningWorkflows(): Promise<unknown[]> {
     // Simulation prédictions workflows matinaux
     const tomorrowMorning = new Date();
     tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);

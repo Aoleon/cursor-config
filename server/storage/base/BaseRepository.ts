@@ -86,12 +86,12 @@ export abstract class BaseRepository<
   /**
    * Instance de la base de données
    */
-  protected readonly db: any;
+  protected readonly db: unknown;
 
   /**
    * Event bus optionnel pour notifications
    */
-  protected readonly eventBus?: any;
+  protected readonly event: unknown;unknown;
 
   /**
    * Nom de la table (doit être défini par les classes dérivées)
@@ -106,7 +106,7 @@ export abstract class BaseRepository<
    * protected readonly table = offers; // import { offers } from '@shared/schema'
    * ```
    */
-  protected abstract readonly table: any;
+  protected abstract readon: unknown;unknown;unknown;
 
   /**
    * Colonne de clé primaire (doit être définie par les classes dérivées)
@@ -116,7 +116,7 @@ export abstract class BaseRepository<
    * protected readonly primaryKey = offers.id;
    * ```
    */
-  protected abstract readonly primaryKey: any;
+  protected abstract readonl: unknown;unknown;unknown any;
 
   /**
    * Constructeur de base
@@ -125,7 +125,7 @@ export abstract class BaseRepository<
    * @param db - Instance Drizzle de la base de données
    * @param eventBus - Event bus optionnel pour notifications
    */
-  constructor(repositoryName: string, db: any, eventBus?: any) {
+  constructor(repositoryName: string, db: unknown, eventBus?: unknown) {
     this.repositoryName = repositoryName;
     this.db = db;
     this.eventBus = eventBus;
@@ -135,7 +135,7 @@ export abstract class BaseRepository<
   /**
    * Retourne l'instance DB appropriée (transaction ou DB principale)
    */
-  protected getDb(tx?: DrizzleTransaction): any {
+  protected getDb(tx?: DrizzleTransaunknownon): any {
     return tx || this.db;
   }
 
@@ -149,7 +149,7 @@ export abstract class BaseRepository<
   protected async executeQuery<R>(
     queryFn: () => Promise<R>,
     operation: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<R> {
     return withErrorHandling(
     async () => {
@@ -276,7 +276,7 @@ export abstract class BaseRepository<
   /**
    * Émet un événement via l'event bus si disponible
    */
-  protected emitEvent(eventName: string, data: any): void {
+  protected emitEvent(eventName: string, : unknown)unknown): void {
     if (this.eventBus) {
       return withErrorHandling(
     async () => {
@@ -521,7 +521,7 @@ export abstract class BaseRepository<
       this.tableName,
       () => dbInstance
         .update(this.table)
-        .set({ deletedAt: new Date() } as any)
+        .set({ deletedAt: new Date() } as unknown)
         .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1,
@@ -583,7 +583,7 @@ export abstract class BaseRepository<
       this.tableName,
       () => dbInstance
         .update(this.table)
-        .set({ deletedAt: null } as any)
+        .set({ deletedAt: nulas unknownnunknown)any)
         .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1,
@@ -744,7 +744,7 @@ export abstract class BaseRepository<
    * const activeCount = await offerRepository.count({ status: 'active' });
    * ```
    */
-  async count(filters?: Record<string, any>, tx?: DrizzleTransaction): Promise<number> {
+  async count(filters?: Record<st, unknown>unknown>, tx?: DrizzleTransaction): Promise<number> {
     this.logger.debug('Counting entities', { metadata: {
         module: this.repositoryName,
         operation: 'count',
@@ -817,7 +817,7 @@ export abstract class BaseRepository<
       this.tableName,
       () => dbInstance
         .update(this.table)
-        .set({ isArchived: true } as any)
+        .set({ isArchived:as unknown) as unknown)
         .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1,
@@ -869,7 +869,7 @@ export abstract class BaseRepository<
       this.tableName,
       () => dbInstance
         .update(this.table)
-        .set({ isArchived: false } as any)
+        .set({ isArchivas unknown)unknown unknown)own any)
         .where(eq(this.primaryKey, normalizedId))
         .returning(),
       1,

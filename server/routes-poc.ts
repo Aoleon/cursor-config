@@ -81,7 +81,7 @@ declare module 'express-serve-static-core' {
         first_name?: string;
         last_name?: string;
         profile_image_url?: string | null;
-        [key: string]: any;
+        [key: string]: unknown;
       };
       isOIDC?: boolean;
     };

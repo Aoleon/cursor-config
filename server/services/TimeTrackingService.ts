@@ -71,7 +71,7 @@ export class TimeTrackingService {
         if (this.eventBus) {
           this.eventBus.publish({
             id: crypto.randomUUID(),
-            type: 'time:tracking:recorded' as any,
+            type: 'time:tracking:recorded' as unknown,
             entity: data.projectId ? 'project' : 'offer',
             entityId: data.projectId || data.offerId || '',
             message: `${data.hours}h enregistrées pour ${data.taskType}`,

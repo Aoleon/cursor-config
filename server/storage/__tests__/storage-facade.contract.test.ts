@@ -13,7 +13,7 @@ import { eventBus } from '../../eventBus';
 
 // Désactiver le mock auto pour importer le vrai module
 vi.mock('../../storage-poc', async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = await importOriginal() as unknown;
   return {
     ...actual
   };
@@ -21,8 +21,8 @@ vi.mock('../../storage-poc', async (importOriginal) => {
 
 describe('StorageFacade Contract Tests', () => {
   let facade: StorageFacade;
-  let legacyStorage: any;
-  let DatabaseStorage: any;
+  let legacyStorage: unknown;
+  let DatabaseSto: unknown;unknown;
   
   beforeAll(async () => {
     // Importer dynamiquement le module pour éviter les problèmes de mock
@@ -101,7 +101,7 @@ describe('StorageFacade Contract Tests', () => {
     ];
     
     criticalMethods.forEach(methodName => {
-      expect(typeof (facade as any)[methodName]).toBe('function');
+      expect(typeof (facade as unknown)[methodName]).toBe('function');
     });
   });
 
@@ -121,7 +121,7 @@ describe('StorageFacade Contract Tests', () => {
     ];
     
     asyncMethods.forEach(methodName => {
-      const method = (facade as any)[methodName];
+      const method = (facas unknown)unknown)[methodName];
       expect(method).toBeDefined();
       expect(typeof method).toBe('function');
     });
@@ -304,7 +304,7 @@ describe('StorageFacade Contract Tests', () => {
    */
   it('should provide comprehensive method coverage report', () => {
     const legacyMethods = Object.getOwnPropertyNames(DatabaseStorage.prototype)
-      .filter(name => name !== 'constructor' && typeof (legacyStorage as any)[name] === 'function');
+      .filter(name => name !== 'constructor' && typeof (legacyStorage as unknown)[name] === 'function');
     
     const facadeDescriptors = Object.getOwnPropertyDescriptors(StorageFacade.prototype);
     const facadeGetters = Object.keys(facadeDescriptors)

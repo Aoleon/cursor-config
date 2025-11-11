@@ -242,7 +242,7 @@ export interface BatigestAnalytics {
 }
 
 export class BatigestService {
-  private pool: unknown = null;
+  private pool: any = null;
   private isConnected = false;
 
   /**
@@ -272,9 +272,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -368,7 +368,7 @@ export class BatigestService {
     query += ' ORDER BY d.DATE_CREATION DESC';
     
     const result = await request.query(query);
-    return result.recordset.map((record: unknown) => BatigestDevisSchema.parse(record));
+    return result.recordset.map((record: any) => BatigestDevisSchema.parse(record));
   }
 
   /**
@@ -406,7 +406,7 @@ export class BatigestService {
     `;
     
     const result = await this.pool!.request().query(query);
-    return result.recordset.map((re: unknown)unknown) => BatigestOuvrageSchema.parse(record));
+    return result.recordset.map((record: any) => BatigestOuvrageSchema.parse(record));
   }
 
   /**
@@ -440,7 +440,7 @@ export class BatigestService {
     `;
     
     const result = await this.pool!.request().query(query);
-    return result.recordset.map: unknown)unknown)unknown) => BatigestFactureSchema.parse(record));
+    return result.recordset.map((record: any) => BatigestFactureSchema.parse(record));
   }
 
   /**
@@ -529,9 +529,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**
@@ -561,7 +561,7 @@ export class BatigestService {
         .reduce((sum, d) => sum + d.MONTANT_HT * 0.8, 0); // 80% réalisé simulé
       
       // Coefficients par famille
-      const familleStats = simulatedOuvrages.reduce((acc: unknown, ouvrage) => {
+      const familleStats = simulatedOuvrages.reduce((acc: any, ouvrage) => {
         const famille = ouvrage.FAMILLE || 'Non classé';
         if (!acc[famille]) {
           acc[famille] = { coefficients: [], famille };
@@ -570,7 +570,7 @@ export class BatigestService {
         return acc;
       }, {});
       
-      const coefficientsParFamille = Object.values(familleStat: unknown)unknown)unknown any) => {
+      const coefficientsParFamille = Object.values(familleStats).map((stat: any) => {
         const coefficients = stat.coefficients;
         const moyenne = coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length;
         const variance = coefficients.reduce((acc: number, val: number) => acc + Math.pow(val - moyenne, 2), 0) / coefficients.length;
@@ -674,7 +674,7 @@ export class BatigestService {
       margeReelleMoyenne: 0, // À calculer selon la logique métier
       margePrevueMoyenne: 0, // À calculer selon la logique métier
       
-      coefficientsParFamille: coeffResult.re: unknown)unknown)unknownrow: any) => ({
+      coefficientsParFamille: coeffResult.recordset.map((row: any) => ({
         famille: row.famille,
         coefficientMoyen: row.coefficientMoyen || 0,
         nombreElements: row.nombreElements,
@@ -722,9 +722,9 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {}
-    }
-  );
+      metadata: {
+                                                                                }
+                                                                              });
   }
 
   /**

@@ -71,7 +71,7 @@ export interface AoLotSupplierResponse extends AoLotSupplier {
 
 export interface SupplierDocumentResponse extends SupplierDocument {
   analysisStatus?: 'pending' | 'processing' | 'completed' | 'failed';
-  extractedData?: any;
+  extractedData?: unknown;
   ocrConfidence?: number;
 }
 

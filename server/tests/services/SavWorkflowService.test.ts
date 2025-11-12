@@ -56,7 +56,6 @@ describe('SavWorkflowService', () => {
       expect(mockStorage.createSavDemande).toHaveBeenCalled();
       expect(result.reference).toMatch(/^SAV-\d{4}-\d{2}-\d{4}$/);
     });
-  });
 
   describe('commandeMateriel', () => {
     it('should update demande with material order', async () => {
@@ -84,7 +83,6 @@ describe('SavWorkflowService', () => {
       expect(result.status).toBe('materiel_commande');
       expect(result.materielId).toBe(materielId);
     });
-  });
 
   describe('planifierRdv', () => {
     it('should schedule appointment successfully', async () => {
@@ -127,7 +125,6 @@ describe('SavWorkflowService', () => {
         service.planifierRdv(demandeId, new Date())
       ).rejects.toThrow(ValidationError);
     });
-  });
 
   describe('validerQuitus', () => {
     it('should validate quitus successfully', async () => {
@@ -156,6 +153,4 @@ describe('SavWorkflowService', () => {
       expect(result.quitusRecu).toBe(true);
       expect(result.reserveLevee).toBe(true);
     });
-  });
-});
 

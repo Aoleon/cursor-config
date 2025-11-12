@@ -55,11 +55,11 @@ export class MondaySchemaAnalyzer {
         operation: 'analyzeBoards',
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
     return withErrorHandling(
     async () => {
       // Récupérer les boards à analyser
@@ -79,11 +79,11 @@ export class MondaySchemaAnalyzer {
           operation: 'analyzeBoards',
           totalBoards: result.totalBoards,
           totalColumns: result.totalColumns 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
 
       return result;
 
@@ -96,7 +96,6 @@ export class MondaySchemaAnalyzer {
     } );
       throw error;
     }
-  }
 
   /**
    * Analyse la structure d'un board spécifique avec cache
@@ -115,11 +114,11 @@ export class MondaySchemaAnalyzer {
           operation: 'analyzeBoardStructure',
           boardId,
           cacheHit: true 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
       return cached;
     }
     logger.info('Analyse structure board', { metadata: {
@@ -128,7 +127,7 @@ export class MondaySchemaAnalyzer {
         boardId,
         boardName 
               
-              }
+            }
  
               
             });
@@ -144,7 +143,6 @@ export class MondaySchemaAnalyzer {
         settings: col.settings_str ? this.parseSettings(col.settings_str) : undefined,
         description: this.getColumnDescription(col)
             }
-                      }
 
 
                                 }
@@ -168,11 +166,11 @@ export class MondaySchemaAnalyzer {
           boardId,
           columnCount: enrichedColumns.length,
           cacheTTL: this.CACHE_TTL 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
       return structure;
     },
     {
@@ -182,7 +180,6 @@ export class MondaySchemaAnalyzer {
     } );
       throw error;
     }
-  }
 
   /**
    * Compare colonnes Monday.com avec champs Saxium entity
@@ -200,11 +197,11 @@ export class MondaySchemaAnalyzer {
         boardId: boardStructure.boardId,
         mondayColumns: boardStructure.columns.length,
         saxiumFields: saxiumFields.length 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
     const suggestions = new Map<string, { saxiumField: string; confidence: number; reason: string }>();
     for (const column of boardStructure.columns) {
       const match = this.findBestMatch(column, saxiumFields);
@@ -212,28 +209,27 @@ export class MondaySchemaAnalyzer {
         suggestions.set(column.id, match);
         logger.debug('Mapping suggéré', { metadata: {
             service: 'MondaySchemaAnalyzer',
-            operation: 'suggestMappings',
+                  operation: 'suggestMappings',
             mondayColumn: column.title,
             saxiumField: match.saxiumField,
             confidence: match.confidence 
-              
-              }
+
+                }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
       }
-    }
 
     logger.info('Suggestions mapping générées', { metadata: {
         service: 'MondaySchemaAnalyzer',
         operation: 'suggestMappings',
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
     return suggestions;
   }
   /**
@@ -271,14 +267,13 @@ export class MondaySchemaAnalyzer {
       logger.warn('Impossible de parser settings JSON', { metadata: {
           service: 'MondaySchemaAnalyzer',
           operation: 'parseSettings' 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
       return {};
     }
-  }
 
   /**
    * Génère description de la colonne basée sur type et settings
@@ -320,8 +315,8 @@ export class MondaySchemaAnalyzer {
       const normalizedField = saxiumField.toLowerCase().trim();
       
       // Exact match
-      if (normalizedTitle === normalizedField) {
-        return {
+      if (normalizedTitle === normalizedField) {}
+return{
           saxiumField,
           confidence: 1.0,
           reason: 'Exact match'
@@ -360,7 +355,6 @@ export class MondaySchemaAnalyzer {
           reason: 'Common mapping pattern'
         };
       }
-    }
 
     return bestMatch;
   }
@@ -400,12 +394,11 @@ export class MondaySchemaAnalyzer {
         operation: 'invalidateBoardCache',
         boardId 
               
-              }
+            }
  
               
             });
   }
-}
 
 // Export singleton
 let schemaAnalyzer: MondaySchemaAnalyzer | null = null;

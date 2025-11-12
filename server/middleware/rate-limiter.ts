@@ -22,7 +22,6 @@ interface AuthenticatedRequest extends Request {
       email?: string;
       [key: string]: unknown;
     };
-  };
 }
 
 /**
@@ -31,15 +30,13 @@ interface AuthenticatedRequest extends Request {
  */
 const generateKey = (req: AuthenticatedRequest): string | undefined => {
   const userId = req.user?.id || req.user?.claims?.sub || (req.session as unknown)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (req.sessas unknown)unknown)?.user?.email;
-  
-  if (userId) {
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.sessas unknown)?.user?.email;
     logger.debug('[RateLimiter] Key generated for user', { metadata: {
         userId,
         userEmail,
         path: req.originalUrl,
         ip: req.ip
-              }
+            }
 
             });
     return `user:${userId}`;
@@ -48,7 +45,7 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
   logger.debug('[RateLimiter] Using IP-based rate limiting', { metadata: {
       ip: req.ip,
       path: req.originalUrl
-              }
+          }
 
             });
   // Let express-rate-limit handle IP normalization (IPv4/IPv6 compatible)
@@ -60,8 +57,7 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
  */
 const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
   const userId = req.user?.id || req.user?.claims?.sub || (req.as unknown) as unknown)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (as unknown)sas unknunknown)unknown)?.user?.email;
-  
+  const userEmail = req.user?.email || req.user?.claims?.email || (as unknown)sas unknunknown)?.user?.email;
   // Monitor the rate limit hit
   monitorRateLimit(req.originalUrl, userId, userEmail);
   
@@ -73,7 +69,7 @@ const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
       userEmail,
       ip: req.ip,
       userAgent: req.get('user-agent')
-              }
+          }
 
             });
   

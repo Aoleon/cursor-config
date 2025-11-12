@@ -75,9 +75,9 @@ class MondayService {
     this.apiKey = process.env.MONDAY_API_KEY || '';
     
     if (!this.apiKey) {
-      logger.warn('MONDAY_API_KEY not configured', { 
-        service: 'MondayService',
-        metadata: { operation: 'constructor'       }
+      logger.warn('MONDAY_API_KEY not configured', {
+      metadata: {
+        module: 'MondayService', { operation: 'constructor'       }
      });
     }
 
@@ -100,9 +100,9 @@ class MondayService {
     async () => {
 
           logger.info('Exécution requête Monday.com GraphQL', {
-            service: 'MondayService',
-            metadata: {
-              operation: 'executeQuery',
+      metadata: {
+        module: 'MondayService', {
+                operation: 'executeQuery',
               queryLength: query.length,
               hasVariables: !!variables
 
@@ -119,8 +119,8 @@ class MondayService {
 
           if (response.data.errors) {
             logger.error('Erreurs GraphQL Monday.com', {
-              service: 'MondayService',
-              metadata: {
+      metadata: {
+        module: 'MondayService', {
                 operation: 'executeQuery',
                 errors: response.data.errors
 
@@ -148,8 +148,8 @@ class MondayService {
     const cached = await cacheService.get<MondayBoard[]>(cacheKey);
     if (cached) {
       logger.debug('Boards récupérés depuis cache', {
-        service: 'MondayService',
-        metadata: {
+      metadata: {
+        module: 'MondayService', {
           operation: 'getBoards',
           cacheHit: true,
           count: cached.length
@@ -177,8 +177,8 @@ class MondayService {
     await cacheService.set(cacheKey, boards, TTL_CONFIG.MONDAY_BOARDS_LIST);
     
     logger.info('Boards Monday.com récupérés et mis en cache', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
@@ -208,8 +208,8 @@ class MondayService {
     const columns = result.boards?.[0]?.columns || [];
 
     logger.info('Colonnes board récupérées', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
@@ -257,8 +257,8 @@ class MondayService {
     const items = result.boards?.[0]?.items_page?.items || [];
 
     logger.info('Items board récupérés', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
@@ -279,8 +279,8 @@ class MondayService {
     let pageCount = 0;
 
     logger.info('Démarrage pagination Monday.com', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
@@ -336,9 +336,9 @@ class MondayService {
       
       if (!itemsPage) {
         logger.warn('Aucune page items_page trouvée', {
-          service: 'MondayService',
-          metadata: {
-            operation: 'getBoardItemsPaginated',
+      metadata: {
+        module: 'MondayService', {
+                operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
 
@@ -355,8 +355,8 @@ class MondayService {
       hasMore = cursor !== null && cursor !== undefined && cursor !== '';
 
       logger.debug('Page récupérée', {
-        service: 'MondayService',
-        metadata: {
+      metadata: {
+        module: 'MondayService', {
           operation: 'getBoardItemsPaginated',
           pageCount,
           itemsInPage: items.length,
@@ -369,9 +369,9 @@ class MondayService {
       // Sécurité: éviter boucle infinie
       if (pageCount > 100) {
         logger.error('Trop de pages, arrêt de la pagination', {
-          service: 'MondayService',
-          metadata: {
-            operation: 'getBoardItemsPaginated',
+      metadata: {
+        module: 'MondayService', {
+                operation: 'getBoardItemsPaginated',
             boardId,
             pageCount,
             totalItems: allItems.length
@@ -382,8 +382,8 @@ class MondayService {
     }
 
     logger.info('Pagination terminée', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoardItemsPaginated',
         boardId,
         totalItems: allItems.length,
@@ -401,8 +401,8 @@ class MondayService {
     const cached = await cacheService.get<MondayBoardData>(cacheKey);
     if (cached) {
       logger.debug('Board data récupérées depuis cache', {
-        service: 'MondayService',
-        metadata: {
+      metadata: {
+        module: 'MondayService', {
           operation: 'getBoardData',
           boardId,
           cacheHit: true
@@ -459,8 +459,8 @@ class MondayService {
     await cacheService.set(cacheKey, response, TTL_CONFIG.MONDAY_BOARD_DETAIL);
 
     logger.info('Données complètes board récupérées et mises en cache', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getBoardData',
         boardId,
         columnCount: response.columns.length,
@@ -489,8 +489,8 @@ class MondayService {
       const result = await this.executeQuery<{ me: unknown}>(query);
       
       logger.info('Connexion Monday.com testée avec succès', {
-        service: 'MondayService',
-        metadata: {
+      metadata: {
+        module: 'MondayService', {
           operation: 'testConnection',
           userId: result.me?.id,
           userName: result.me?.name
@@ -545,8 +545,8 @@ class MondayService {
     }
 
     logger.info('Item Monday.com récupéré', {
-      service: 'MondayService',
       metadata: {
+        module: 'MondayService', {
         operation: 'getItem',
         itemId,
         itemName: item.name
@@ -564,8 +564,8 @@ class MondayService {
         case 'status':
           // DEBUG: Log ce que Monday retourne
           logger.debug('extractColumnValue status column', {
-            service: 'MondayService',
-            metadata: {
+      metadata: {
+        module: 'MondayService', {
               columnId: columnValue.id,
               type: columnValue.type,
               hasDirectLabel: !!columnValue.label,
@@ -582,8 +582,8 @@ class MondayService {
           if (columnValue.value) {
             const parsed = JSON.parse(columnValue.value);
             logger.debug('extractColumnValue status parsed', {
-              service: 'MondayService',
-              metadata: {
+      metadata: {
+        module: 'MondayService', {
                 parsed,
                 label: parsed.label,
                 index: parsed.index
@@ -616,9 +616,9 @@ class MondayService {
           
           case 'people':
             return parsed.personsAndTeams?.map((p: unknown) => ({
-              id: p.id,
-              name: p.name,
-              email: p.email
+                id: p.id,
+                name: p.name,
+                email: p.email
             })) || [];
           
           case 'email':
@@ -635,7 +635,7 @@ class MondayService {
           
           case 'location':
             return {
-              address: parsed.address,
+                address: parsed.address,
               city: parsed.city,
               country: parsed.country,
               countryShort: parsed.countryShort,
@@ -646,19 +646,16 @@ class MondayService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.map((: unknown)unknown) => ({
-                id: item.linkedPulseId || item,
-                boardId: item.boardId
+              linkedItems: parsed.linkedPulseIds?.map((: unknown) => ({
+              linkedItems: parsed.linkedPulseIds?.map((: unknown) => ({
               })) || []
             };
           
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseIds?.m: unknown)unknown)unknown) => 
-                item.linkedPulseId || item
-              ) || [],
-              count: parsed.linkedPulseIds?.length || 0
+              subitemIds: parsed.linkedPulseIds?.m: unknown) => 
+              subitemIds: parsed.linkedPulseIds?.m: unknown) => 
             };
           
           case 'long-text':

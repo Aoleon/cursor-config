@@ -70,8 +70,6 @@ function parseArgs(): Partial<MigrationOptions> & { help?: boolean; analyze?: bo
       } else if (key === 'batch-size') {
         options.batchSize = parseInt(value, 10);
       }
-    }
-  }
 
   return options;
 }
@@ -172,19 +170,12 @@ ${report.successful.length > 0 ? `✅ SUCCÈS (${report.successful.length} items
 ` : ''}
 
 ${report.skipped.length > 0 ? `⏭️  SKIPPED (${report.skipped.length} items)
-${report.skipped.slice(0, 5).ma: unknown)unknown) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
-${report.skipped.length > 5 ? `   ... et ${report.skipped.length - 5} autres` : ''}
-` : ''}
+${report.skipped.slice(0, 5).ma: unknown) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
 
 ${report.errors.length > 0 ? `❌ ERREURS (${report.errors.length} items)
-${report.errors.slice(0, 5: unknown)unknown)unknown) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
-${report.errors.length > 5 ? `   ... et ${report.errors.length - 5} autres` : ''}
-` : ''}
-
+${report.errors.slice(0, 5: unknown) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
 ${report.missingFields.length > 0 ? `⚠️  CHAMPS MANQUANTS (${report.missingFields.length} items)
-${report.missingFields.slice(: unknown)unknown)unknown any) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
-${report.missingFields.length > 3 ? `   ... et ${report.missingFields.length - 3} autres` : ''}
-` : ''}
+${report.missingFields.slice(: unknown)unknown any) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
 
 ${report.isDryRun && report.preview ? `
 🔍 PREVIEW DONNÉES TRANSFORMÉES (10 premiers items)
@@ -228,7 +219,6 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
       for (const col of board.columns) {
         logger.info(`      - ${col.id.padEnd(20)} ${col.title.padEnd(30)} [${col.type}]${col.description ? ` - ${col.description}` : ''}`);
       }
-    }
 
   
     },
@@ -242,7 +232,6 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
             );\n`);
     process.exit(1);
   }
-}
 
 /**
  * Fonction principale
@@ -334,7 +323,6 @@ async function main() {
     
     process.exit(1);
   }
-}
 
 // Exécuter script
 main().catch((error) => {

@@ -50,11 +50,11 @@ export class SyncScheduler {
           operation: 'start',
           cronExpression,
           nextRun: this.getNextRun() 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
       await this.storage.updateSyncConfig({
         nextSyncAt: this.getNextRun()
       });
@@ -67,7 +67,6 @@ export class SyncScheduler {
     } );
       throw error;
     }
-  }
 
   stop(): void {
     if (this.cronJob) {
@@ -75,7 +74,6 @@ export class SyncScheduler {
       this.cronJob = null;
       logger.info('[SyncScheduler] Synchronisation automatique arrêtée', { metadata: { service: 'SyncScheduler', operation: 'stop' 
     }
-  }
 
   async restart(): Promise<void> {
     this.stop();
@@ -130,15 +128,15 @@ export class SyncScheduler {
           errors.push(...result.errors);
           
           logger.debug('[SyncScheduler] AO synchronisé', { metadata: {
-              aoId: ao.id,
+                    aoId: ao.id,
               aoReference: ao.reference,
               documentsAdded: result.documentsAdded,
               documentsUpdated: result.documentsUpdated 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
     },
     {
       operation: 'constructor',
@@ -192,15 +190,14 @@ service: 'SyncScheduler',
           service: 'SyncScheduler',
           operation: 'runSync',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                        });
     } finally {
       this.isRunning = false;
     }
-  }
 
   private getNextRun(): Date | null {
     if (!this.cronJob) return null;
@@ -225,7 +222,6 @@ service: 'SyncScheduler',
       });
       return null;
     }
-  }
 
   getStatus() {
     return {
@@ -234,4 +230,3 @@ service: 'SyncScheduler',
       nextRun: this.getNextRun()
     };
   }
-}

@@ -123,7 +123,6 @@ export function generateRealisticJLMData(count: number, type: 'aos' | 'projects'
   } else {
     return generateProjectData(count);
   }
-}
 
 /**
  * Génère données AO basées sur 911 lignes AO_Planning analysées
@@ -224,7 +223,6 @@ function generateMondayDate(): string {
   } else {
     return randomChoice(MONDAY_LEGACY_DATE_FORMATS);
   }
-}
 
 /**
  * Sélection aléatoire pondérée
@@ -238,10 +236,9 @@ function weightedRandomChoice<T>(choices: T[], weights: number[]): T | undefined
   let accumulatedWeight = 0;
   for (let i = 0; i < choices.length; i++) {
     accumulatedWeight += weights[i];
-    if (randomNum <= accumulatedWeight) {
-      return choices[i];
+    if (randomNum <= accumulatedWeight) {}
+returnchoices[i];
     }
-  }
   
   return choices[0];
 }
@@ -256,10 +253,9 @@ function weightedRandomFromArray<T extends { weight: number }>(items: (T & { sta
   let accumulatedWeight = 0;
   for (const item of items) {
     accumulatedWeight += item.weight;
-    if (randomNum <= accumulatedWeight) {
-      return item.status || item.stage;
+    if (randomNum <= accumulatedWeight) {}
+returnitem.status || item.stage;
     }
-  }
   
   return items[0].status || items[0].stage;
 }
@@ -298,7 +294,6 @@ export function getGenerationStats(data: (MondayAoData | MondayProjectData)[], t
       withBuildingCount: projects.filter(p => p.buildingCount).length
     };
   }
-}
 
 function countByField<T>(array: T[], field: keyof T): Record<string, number> {
   return array.reduce((acc, item) => {

@@ -182,19 +182,19 @@ export class MondayProductionMigrationService {
     logger.info('Début migration complète 1911 lignes JLM Menuiserie', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     logger.info('Utilisation données analysées réelles (non synthétiques)', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     
     this.resetWarnings();
     
@@ -209,7 +209,7 @@ export class MondayProductionMigrationService {
           operation: 'migrateProductionData',
           aosCount: jlmData.aos.length,
           projectsCount: jlmData.projects.length
-      });
+            });
       // Migration par batch avec gestion erreurs
       const aosResult = await this.migrateAnalyzedAOs(jlmData.aos);
       const projectsResult = await this.migrateAnalyzedProjects(jlmData.projects);
@@ -233,19 +233,19 @@ export class MondayProductionMigrationService {
           totalLines,
           totalErrors,
           duration: result.duration 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
       if (this.warnings.length > 0) {
         logger.info('Warnings non bloquants', { metadata: {
             service: 'MondayProductionMigrationService',
-            operation: 'migrateProductionData',
+                  operation: 'migrateProductionData',
             warningsCount: this.warnings.length,
             warnings: this.warnings.slice(0, 5) 
               
-              }
+                }
  
               
             });
@@ -259,7 +259,6 @@ export class MondayProductionMigrationService {
     } );
       throw new AppError(`Migration production échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
-  }
 
   /**
    * CHARGEMENT DONNÉES BASÉES ANALYSES RÉELLES JLM
@@ -269,11 +268,11 @@ export class MondayProductionMigrationService {
     logger.info('Génération données basées analyses JLM réelles', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'loadJLMAnalyzedData' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     return {
       aos: this.generateJLMRealisticAOs(911),      // Basé analyse AO_Planning  
       projects: this.generateJLMRealisticProjects(1000)  // Basé analyse CHANTIERS
@@ -313,7 +312,7 @@ export class MondayProductionMigrationService {
         operation: 'generateJLMRealisticAOs',
         count 
               
-              }
+            }
  
               
             });
@@ -352,7 +351,7 @@ export class MondayProductionMigrationService {
         operation: 'generateJLMRealisticProjects',
         count 
               
-              }
+            }
  
               
             });
@@ -394,11 +393,11 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedAOs',
         count: aoData.length 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     const results: BatchResult[] = [];
     for (const [index, ao] of aoData.entries()) {
       await withErrorHandling(
@@ -418,15 +417,15 @@ export class MondayProductionMigrationService {
         if ((index + 1) % 100 === 0) {
           logger.info('Migration AO Progress', { metadata: {
               service: 'MondayProductionMigrationService',
-              operation: 'migrateAnalyzedAOs',
+                    operation: 'migrateAnalyzedAOs',
               progress: index + 1,
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100) 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
         }
     },
     {
@@ -435,7 +434,6 @@ export class MondayProductionMigrationService {
       metadata: {       }
      });
       }
-    }
     
     return this.analyzeBatchResults('AO_Planning', results, aoData.length);
   }
@@ -448,11 +446,11 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedProjects',
         count: projectData.length 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     const results: BatchResult[] = [];
     for (const [index, project] of projectData.entries()) {
       await withErrorHandling(
@@ -472,15 +470,15 @@ export class MondayProductionMigrationService {
         if ((index + 1) % 100 === 0) {
           logger.info('Migration Projects Progress', { metadata: {
               service: 'MondayProductionMigrationService',
-              operation: 'migrateAnalyzedProjects',
+                    operation: 'migrateAnalyzedProjects',
               progress: index + 1,
               total: projectData.length,
               percentage: Math.round(((index + 1) / projectData.length) * 100) 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
         }
     },
     {
@@ -489,7 +487,6 @@ export class MondayProductionMigrationService {
       metadata: {       }
      });
       }
-    }
     
     return this.analyzeBatchResults('CHANTIERS', results, projectData.length);
   }
@@ -542,7 +539,6 @@ export class MondayProductionMigrationService {
     } catch (error) {
       throw new AppError(`Validation AO échouée (${aoData.mondayItemId}, 500): ${error instanceof Error ? error.message : String(error)}`);
     }
-  }
 
   /**
    * VALIDATION ET TRANSFORMATION PROJECT MONDAY.COM → SAXIUM
@@ -586,7 +582,6 @@ export class MondayProductionMigrationService {
     } catch (error) {
       throw new AppError(`Validation Project échouée (${projectData.mondayProjectId}, 500): ${error instanceof Error ? error.message : String(error)}`);
     }
-  }
 
   /**
    * MAPPING STATUTS MONDAY.COM → SAXIUM
@@ -682,11 +677,11 @@ export class MondayProductionMigrationService {
         migrated: successful.length,
         totalLines,
         validationRate: Math.round(migrationResult.validationRate * 100) 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     if (failed.length > 0) {
       logger.info('Erreurs migration batch', { metadata: {
           service: 'MondayProductionMigrationService',
@@ -707,11 +702,11 @@ export class MondayProductionMigrationService {
     logger.info('Début validation dry-run sans insertion BDD', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'validateProductionData' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     let totalWarnings = 0;
     let totalErrors = 0;
     let dateFormatIssues = 0;
@@ -750,11 +745,11 @@ export class MondayProductionMigrationService {
         errors: result.errors,
         warnings: result.warnings,
         dateFormatIssues: result.dateFormatIssues 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     return result;
   }
   /**
@@ -835,10 +830,9 @@ export class MondayProductionMigrationService {
     let accumulatedWeight = 0;
     for (let i = 0; i < choices.length; i++) {
       accumulatedWeight += weights[i];
-      if (randomNum <= accumulatedWeight) {
-        return choices[i];
+      if (randomNum <= accumulatedWeight) {}
+returnchoices[i];
       }
-    }
     
     return choices[0];
   }
@@ -850,11 +844,9 @@ export class MondayProductionMigrationService {
     let accumulatedWeight = 0;
     for (const item of items) {
       accumulatedWeight += item.weight;
-      if (randomNum <= accumulatedWeight) {
-        return item.status || item.stage;
+      if (randomNum <= accumulatedWeight) {}
+returnitem.status || item.stage;
       }
-    }
     
     return items[0].status || items[0].stage;
   }
-}

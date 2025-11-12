@@ -328,7 +328,8 @@ export class PredictiveEngineService {
     logger.info('Service initialisé avec preloading prédictif', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'constructor'
-        } } });;
+        }       }
+     });
   }
   // ========================================
   // MÉTHODES PRINCIPALES
@@ -344,8 +345,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'forecastRevenue',
         cacheHit: true
-          } } });;
-      return cached;
+          }       }
+     });;      return cached;
     }
     return withErrorHandling(
       async () => {
@@ -353,8 +354,8 @@ export class PredictiveEngineService {
           service: 'PredictiveEngineService',
           operation: 'forecastRevenue',
           params
-            } } });;
-        // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
+            }       }
+     });;;       // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
         const historicalData = await this.getMonthlyRevenueHistory({
           start_date: params.start_date,
           end_date: params.end_date
@@ -363,8 +364,9 @@ export class PredictiveEngineService {
           logger.info('Aucune donnée historique trouvée', { metadata: {
           service: 'PredictiveEngineService',
           operation: 'forecastRevenue'
-              } } });;
-          return [];
+              }       }
+     });;
+;        return [];
         }
         // 2. ALGORITHMES FORECASTING
         let forecasts: ForecastPoint[] = [];
@@ -404,15 +406,16 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'forecastRevenue',
         forecastCount: results.length
-          } } });;
-      return results;
+          }       }
+     });;
+ ;   return results;
     },
     {
       operation: 'forecastRevenue',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
-  }
-  /**
+      metadata: {}       }
+     });;
+  ;  /**
    * Détection de risques projets avec scoring algorithmique
    */
   async detectProjectRisks(params: RiskQueryParams): Promise<ProjectRiskAssessment[]> {
@@ -423,8 +426,9 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         cacheHit: true
-          } } });;
-      return cached;
+          }       }
+     });;
+   ; return cached;
     }
     return withErrorHandling(
     async () => {
@@ -432,8 +436,9 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         params
-          } } });;
-      // 1. DONNÉES HISTORIQUES DÉLAIS
+          }       }
+     });;
+    ;// 1. DONNÉES HISTORIQUES DÉLAIS
       const delayHistory = await this.getProjectDelayHistory({
         start_date: subMonths(new Date(), 12).toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0]
@@ -447,10 +452,8 @@ export class PredictiveEngineService {
         filters: {
           // Filter only active/in-progress projects for risk analysis
           status: params.project_status
-                                                                                }
-                                                                              });
-      const activeProjects = allProjectsResult.projects;
-      const filteredProjects = this.filterProjectsByParams(activeProjects, params);
+                                                                                            }
+                                                                                          });
       const riskyProjects: ProjectRiskAssessment[] = [];
       // 3. ANALYSE DE CHAQUE PROJET
       for (const project of filteredProjects) {
@@ -473,7 +476,6 @@ export class PredictiveEngineService {
             next_review_date: addMonths(new Date(), 1).toISOString()
           });
         }
-      }
       // 4. TRI ET LIMITATION
       const results = riskyProjects
         .sort((a, b) => b.risk_score - a.risk_score)
@@ -486,15 +488,17 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         risksCount: results.length
-          } } });;
-      return results;
+          }       }
+     });;
+     ;eturn results;
     },
     {
       operation: 'detectProjectRisks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
-  /**
+  ;*
    * Génération de recommandations business actionables
    */
   async generateRecommendations(context: BusinessContext): Promise<BusinessRecommendation[]> {
@@ -505,8 +509,9 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         cacheHit: true
-          } } });;
-      return cached;
+          }       }
+     });;
+      r;urn cached;
     }
     return withErrorHandling(
     async () => {
@@ -514,8 +519,9 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         context
-          } } });;
-      const recommendations: BusinessRecommendation[] = [];
+          }       }
+     });;
+      co;t recommendations: BusinessRecommendation[] = [];
       // 1. ANALYSE KPIs ACTUELS via AnalyticsService
       const currentKPIs = await this.getCurrentKPIs(context.analysis_period);
       // 2. BENCHMARKS SECTEUR
@@ -557,15 +563,17 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         recommendationsCount: filteredRecs.length
-          } } });;
-      return filteredRecs;
+          }       }
+     });;
+      ret;n filteredRecs;
     },
     {
       operation: 'generateBusinessRecommendations',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
-  // ========================================
+  // =;=====================================
   // ALGORITHMES FORECASTING
   // ========================================
   /**
@@ -844,7 +852,6 @@ export class PredictiveEngineService {
             expected_risk_reduction: 15
           });
       }
-    }
 
     return actions;
   }
@@ -889,7 +896,6 @@ export class PredictiveEngineService {
       case 'high': return 60;
       default: return 30; // 'all' ou undefined
     }
-  }
 
   // ========================================
   // MÉTHODES POUR RECOMMANDATIONS BUSINESS
@@ -926,7 +932,8 @@ export class PredictiveEngineService {
     {
       operation: 'getBenchmarks',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     // Fallback avec valeurs par défaut
     return {
       conversion_rate: 25,
@@ -947,10 +954,11 @@ export class PredictiveEngineService {
     {
       operation: 'getSectorBenchmarks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Génère recommandations revenue/conversion
+ ;* Génère recommandations revenue/conversion
    */
   private async generateRevenueRecommendations(currentKPIs: unknown, benchmarks: unknown): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
@@ -1048,10 +1056,11 @@ export class PredictiveEngineService {
     {
       operation: 'generateCostOptimizationRecommendations',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Génère recommandations qualité
+  ; Génère recommandations qualité
    */
   private async generateQualityRecommendations(currentKPIs: unknown): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];
@@ -1144,7 +1153,6 @@ export class PredictiveEngineService {
       } else {
         factors.push('Stabilité revenue');
       }
-    }
     
     // Analyse saisonnalité (très simplifiée)
     const currentMonth = new Date().getMonth();
@@ -1231,8 +1239,9 @@ export class PredictiveEngineService {
         operation: 'getCachedEntry',
         cacheKey: key,
         hitCount: entry.hit_count
-        } } });;
-    return entry.data;
+        }       }
+     });;
+    return en;y.data;
   }
   /**
    * Stocke entrée dans le cache
@@ -1255,10 +1264,11 @@ export class PredictiveEngineService {
         operation: 'setCacheEntry',
         cacheKey: key,
         ttlMinutes
-        } } });;
+        }       }
+     });;
   }
   /**
-   * Nettoyage intelligent du cache
+   *;ettoyage intelligent du cache
    */
   private cleanupCache(): void {
     const now = Date.now();
@@ -1269,7 +1279,6 @@ export class PredictiveEngineService {
         this.cache.delete(key);
         deletedCount++;
       }
-    }
     // Si encore trop plein, supprimer les moins utilisées
     if (this.cache.size >= this.CACHE_MAX_SIZE * 0.9) {
       const entries = Array.from(this.cache.entries())
@@ -1280,18 +1289,17 @@ export class PredictiveEngineService {
         this.cache.delete(entries[i][0]);
         deletedCount++;
       }
-    }
     
     if (deletedCount > 0) {
       logger.info('Cache cleanup', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'cleanupCache',
         deletedCount
-          } } });;
+          }       }
+     });;
     }
-  }
   /**
-   * Statistiques cache pour monitoring
+   ;Statistiques cache pour monitoring
    */
   public getCacheStats(): { size: number; hitRate: number; avgAge: number } {
     const now = Date.now();
@@ -1323,7 +1331,8 @@ export class PredictiveEngineService {
     {
       operation: 'getMonthlyRevenueHistory',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     return [];
   });
   }
@@ -1338,7 +1347,8 @@ export class PredictiveEngineService {
     {
       operation: 'getProjectDelayHistory',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     return [];
   });
   // ========================================
@@ -1352,10 +1362,11 @@ export class PredictiveEngineService {
     logger.info('Intégration ContextCacheService activée', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'integrateWithContextCache'
-        } } });;
+        }       }
+     });;
   }
   /**
-   * MÉTHODE PRINCIPALE 1 : Génération Heat-Map des entités
+   * M;HODE PRINCIPALE 1 : Génération Heat-Map des entités
    * Analyse les accès récents aux entités pour identifier les patterns d'accès
    */
   async generateEntityHeatMap(): Promise<EntityHeatMap> {
@@ -1367,16 +1378,18 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateEntityHeatMap',
         cacheHit: true
-          } } });;
-      return cached;
+          }       }
+     });;
+      return cach;;
     }
     return withErrorHandling(
     async () => {
       logger.info('Génération heat-map entités', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'generateEntityHeatMap'
-          } } });;
-      // 1. ANALYSE ENTITÉS POPULAIRES RÉCENTES
+          }       }
+     });;
+      // 1. ANALYS;ENTITÉS POPULAIRES RÉCENTES
       const now = Date.now();
       const cutoffTime = now - (this.HEATMAP_RETENTION_HOURS * 60 * 60 * 1000);
       const hotEntities: EntityAccessEntry[] = [];
@@ -1396,7 +1409,6 @@ export class PredictiveEngineService {
           // Entité froide à éviter en cache
           coldEntities.push(entityKey);
         }
-      }
       // 2. IDENTIFICATION HEURES DE POINTE
       const peakHours = this.identifyPeakHours(hotEntities);
       
@@ -1428,16 +1440,18 @@ export class PredictiveEngineService {
         operation: 'generateEntityHeatMap',
         hotEntitiesCount: hotEntities.length,
         coldEntitiesCount: coldEntities.length
-          } } });;
-      return heatMap;
+          }       }
+     });;
+      return heatMa;
     },
     {
       operation: 'generateEntityHeatMap',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * MÉTHODE PRINCIPALE 2 : Prédiction d'accès aux entités
+   * MÉTHO; PRINCIPALE 2 : Prédiction d'accès aux entités
    * Prédit les prochains accès selon les patterns utilisateur BTP
    */
   async predictNextEntityAccess(
@@ -1450,8 +1464,9 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'predictNextEntityAccess',
         userId
-          } } });;
-      const predictions: AccessPrediction[] = [];
+          }       }
+     });;
+      const predictio;: AccessPrediction[] = [];
       const now = Date.now();
       // 1. RÉCUPÉRATION PATTERNS UTILISATEUR
       const userPattern = userId ? this.userAccessPatterns.get(userId) : null;
@@ -1483,17 +1498,18 @@ export class PredictiveEngineService {
         operation: 'predictNextEntityAccess',
         predictionsCount: filteredPredictions.length,
         confidenceThreshold: this.PRELOADING_CONFIDENCE_THRESHOLD
-          } } });;
-      return filteredPredictions;
+          }       }
+     });;
+      return filteredP;dictions;
     },
     {
       operation: 'get',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
       return [];
     }
-  }
-  /**
+;/**
    * MÉTHODE PRINCIPALE 3 : Programmation des tâches de preloading
    * Planifie les tâches de preloading background adaptatif
    */
@@ -1502,18 +1518,20 @@ export class PredictiveEngineService {
       logger.info('Preloading désactivé ou ContextCache non disponible', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks'
-          } } });;
+          }       }
+     });;
       return;
     }
-    return withErrorHandling(
+    ;turn withErrorHandling(
     async () => {
 
       logger.info('Programmation tâches preloading', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks',
         predictionsCount: predictions.length
-          } } });;
-      const now = Date.now();
+          }       }
+     });;
+      const now = Date.no;);
       const newTasks: PreloadingTask[] = [];
       // 1. CRÉATION TÂCHES SELON PRÉDICTIONS
       for (const prediction of predictions) {
@@ -1563,15 +1581,17 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks',
         newTasksCount: newTasks.length
-          } } });;
+          }       }
+     });;
     },
     {
-      operation: 'schedulePreloadTasks',
+      operati;: 'schedulePreloadTasks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Enregistre un accès à une entité pour le tracking
+   * Enregistre u;accès à une entité pour le tracking
    */
   public recordEntityAccess(
     entityType: string,
@@ -1609,7 +1629,6 @@ export class PredictiveEngineService {
     if (userId) {
       this.updateUserAccessPattern(userId, entityType, entityId, now);
     }
-  }
   // ========================================
   // MÉTHODES HELPER POUR PRELOADING PRÉDICTIF
   // ========================================
@@ -1635,7 +1654,6 @@ export class PredictiveEngineService {
       for (let hour = 0; hour < 24; hour++) {
         hourlyTotals[hour] += entity.hourlyDistribution[hour];
       }
-    }
     
     // Identifier heures avec >75% du pic d'activité
     const maxActivity = Math.max(...hourlyTotals);
@@ -1646,7 +1664,6 @@ export class PredictiveEngineService {
       if (hourlyTotals[hour] >= threshold) {
         peakHours.push(hour);
       }
-    }
     
     return peakHours.length > 0 ? peakHours : this.BUSINESS_HOURS;
   }
@@ -1765,8 +1782,6 @@ export class PredictiveEngineService {
               currentWorkflow: currentContext.workflow
             });
         }
-      }
-    }
     
     return predictions;
   }
@@ -1775,7 +1790,7 @@ export class PredictiveEngineService {
    * ÉTAPE 3 BUSINESS PATTERN RECOGNITION : Prédit accès basé sur workflows BTP typiques
    * Analyse sophistiquée des séquences métier menuiserie française
    */
-  private async predictFromBTPWounknownlows(cu: unknown,onteunknown,any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromBTPWounknownlows(cu: unknown,onteunknown, unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     
     if (!currentContext) return predictions;
@@ -1946,7 +1961,6 @@ export class PredictiveEngineService {
 
         predictions.push(prediction);
       }
-    }
 
     // 3. PRÉDICTIONS PATTERNS UTILISATEUR SPÉCIALISÉS
     const userRolePredictions = await this.predictFromUserRolePatterns(currentContext, now);
@@ -1962,7 +1976,7 @@ export class PredictiveEngineService {
   /**
    * Prédictions basées sur patterns spécifiques aux rôles utilisateur BTP
    */
-  private async predictFromUserRunknownPattern: unknown,entCunknown,xt: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromUserRunknownPattern: unknown,entCunknown,xt: unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const userRole = currentContext.userRole || 'other';
     
@@ -2048,7 +2062,7 @@ export class PredictiveEngineService {
   /**
    * Prédictions saisonnalité spécifique menuiserie française
    */
-  private async predictFromSunknownonalPat: unknown,currunknown,ontext: any, now: number): Promise<AccessPrediction[]> {
+  private async predictFromSunknownonalPat: unknown,currunknown,on: un, unknown,,unknown, now: number): Promise<AccessPrediction[]> {
     const predictions: AccessPrediction[] = [];
     const currentMonth = new Date(now).getMonth();
     const currentHour = new Date(now).getHours();
@@ -2096,7 +2110,6 @@ export class PredictiveEngineService {
         currentSeason = { name: season, config };
         break;
       }
-    }
 
     if (!currentSeason) return predictions;
 
@@ -2184,7 +2197,7 @@ export class PredictiveEngineService {
   /**
    * Vérifie correspondance contexte avec workflow
    */
-  private isWork: unknown,nteunknownatunknown,o: unknown), workflow: any): boolean {
+  private isWork: unknown,nteunknownatunknown,o: unknown), workflow: unknown): boolean {
     // Vérifications spécialisées selon type de workflow
     if (workflow.requiresValidation && context.userRole !== 'admin' && context.userRole !== 'commercial') {
       return false;
@@ -2204,9 +2217,7 @@ export class PredictiveEngineService {
   /**
    * Prédit ID entité selon type et contexte
    */
-  private async prediunknownntityId(ent: unknown)tring, context: any): Promise<string> {
-    // Logique prédiction ID selon relations métier
-    if (context.entityId && context.entityType) {
+  private async prediunknownntityId(ent: unknown)tring, con: unknown): Promise<string> {
       // Relations directes
       if (entityType === 'offer' && context.entityType === 'ao') {
         return `OFFER_${context.entityId}_${Date.now()}`;
@@ -2217,7 +2228,6 @@ export class PredictiveEngineService {
       if (entityType === 'chantier' && context.entityType === 'project') {
         return `CHANTIER_${context.entityId}_${Date.now()}`;
       }
-    }
     
     // ID générique avec timestamp
     return `${entityType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
@@ -2242,10 +2252,8 @@ export class PredictiveEngineService {
   /**
    * Détermine exigences contexte selon workflow
    */
-  priunknowne determine: unknown)uirements(workflow: any): string[] {
-    const requirements: string[] = ['standard'];
-    
-    if (workflow.complexity === 'high') {
+  priunknowne determine: unknown)uirements(: unknown): string[] {
+  priunknowne determine: unknown)uirements(: unknown): string[] {
       requirements.push('comprehensive');
     }
     
@@ -2284,9 +2292,7 @@ export class PredictiveEngineService {
   /**
    * Obtient dépendances workflow
   unknown
-  private : unknown)wDependencies(workflow: any): string[] {
-    const deps: string[] = [];
-    
+  private : unknown)wDependenc: unknown)unknown any): string[] {
     if (workflow.supplierDependency) deps.push('supplier_availability');
     if (workflow.weatherDependency) deps.push('weather_conditions');
     if (workflow.businessHoursDependency) deps.push('business_hours');
@@ -2384,7 +2390,6 @@ export class PredictiveEngineService {
           contextRequirements: ['minimal'],
           userContext: {});
       }
-    }
     
     return predictions;
   }
@@ -2419,16 +2424,14 @@ export class PredictiveEngineService {
               contextRequirements: ['standard'],
               userContext: {});
           }
-        }
-      }
     },
     {
       operation: 'predictFromTrends',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
     }
-    return predictions;
-  }
+    return predictions;  }
   /**
    * Calcule priorité d'une tâche de preloading
    */
@@ -2455,7 +2458,7 @@ export class PredictiveEngineService {
   /**
    * Génère configuration contexte pour preloading
    */
-  punknownate generateContextConfig(prediction: AccessPrediction): any {
+  punknownate generateContextConfig(prediction: AccessPrediunknownon): any {
     return {
       complexity: prediction.contextRequirements.includes('comprehensive') ? 'comprehensive' :
                  prediction.contextRequirements.includes('standard') ? 'standard' : 'minimal',
@@ -2489,12 +2492,12 @@ export class PredictiveEngineService {
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
-            } } });;
+            }       }
+     });;
       });
     }
-  }
   /**
-   * Exécute une tâche de preloading individuelle
+   * Ex;ute une tâche de preloading individuelle
    */
   private async executePreloadTask(task: PreloadingTask): Promise<void> {
     if (this.currentPreloadingLoad >= this.MAX_CONCURRENT_PRELOADS) {
@@ -2512,8 +2515,9 @@ export class PredictiveEngineService {
         operation: 'executePreloadTask',
         entityType: task.entityType,
         entityId: task.entityId
-          } } });;
-      // Appel ContextCacheService pour preloading (si intégré)
+          }       }
+     });;
+      // Appel ContextCacheSer;ce pour preloading (si intégré)
       if (this.contextCacheService && this.contextCacheService.preloadContextByPrediction) {
         await this.contextCacheService.preloadContextByPrediction(
           task.entityType,
@@ -2537,15 +2541,15 @@ export class PredictiveEngineService {
     {
       operation: 'executePreloadTask',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
       // Marquer comme échouée
-      this.preloadingSchedule.failedTasks.push(task);
+;    this.preloadingSchedule.failedTasks.push(task);
       this.preloadingSchedule.activeTasks = this.preloadingSchedule.activeTasks
         .filter(t => t.id !== task.id);
     } finally {
       this.currentPreloadingLoad--;
     }
-  }
 
   /**
    * Programme les tâches différées selon timing optimal
@@ -2570,7 +2574,6 @@ export class PredictiveEngineService {
         });
       }, delay);
     }
-  }
   /**
    * Nettoyage périodique logs d'accès entités
    */
@@ -2583,7 +2586,6 @@ export class PredictiveEngineService {
         this.entityAccessLog.delete(key);
         deletedCount++;
       }
-    }
     if (deletedCount > 0) {
       logger.info('Cleanup accès entités', { metadata: {
         service: 'PredictiveEngineService',
@@ -2592,7 +2594,6 @@ export class PredictiveEngineService {
          }
        );
     }
-  }
   /**
    * Mise à jour périodique patterns BTP
    */
@@ -2624,10 +2625,11 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'updateBTPPatterns',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Désactive/active le preloading selon charge système
+   * Désactive/active ; preloading selon charge système
    */
   public setPreloadingEnabled(enabled: boolean): void {
     this.preloadingEnabled = enabled;
@@ -2662,7 +2664,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   // ========================================
 
   /**
-   * Analyse des risques - alias pour detectProjectRisks pour cunknownatibilité route: unknown)async analyzeRisks(params?: any): Pro<unknown[]>y[]> {
+   * Analyse des risques - alias pour detectProjectRisks pour cunknownatibilité route: unknown)async anal: unknown)unknunknown)arams?: any): Pro<unknown[]>y[]> {
     return withErrorHandling(
     async () => {
 
@@ -2679,12 +2681,13 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'analyzeRisks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Sauvegarde un snapshot dunknownnknown)se
+   * Sauvegarde un snap;ot dunknownnknown)se
    */
-  async saveSnapshot(data: a<unknown>unknown>ise<any> {
+  async saveSnapshot(data: a<unknown>unknown>ise<unknown> {
     return withErrorHandling(
     async () => {
       const snapshot = {
@@ -2709,10 +2712,11 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'saveSnapshot',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
-   * Récupère les snapshots pour analyse
+   * Récupère les snapsh;s pour analyse
    */
   async getSnapshots(params?: unknown): Promise<unknown[]> {
     return withErrorHandling(
@@ -2731,6 +2735,6 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'getSnapshots',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
-  }
-}
+      metadata: {}       }
+     });;
+  };

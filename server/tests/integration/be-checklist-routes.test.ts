@@ -45,15 +45,12 @@ describe('BE Checklist Routes Integration', () => {
 
       vi.mocked(mockStorage.getOffer).mockResolvedValue(mockOffer as unknown);
       vi.mocked(mockStorage.getBeQualityChecklist).mockResolvedValue([]);
-      vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValue(mockItemsas unknown)unknown);
-
-      const response = await request(app)
+      vi.mocked(mockStorage.createBeQualityChecklistItem).mockResolvedValue(mockItemsas unknown);
         .post(`/api/offers/${offerId}/be-checklist/initialize`)
         .expect(201);
 
       expect(Array.isArray(response.body)).toBe(true);
     });
-  });
 
   describe('GET /api/offers/:id/be-checklist/can-validate-fin-etudes', () => {
     it('should return validation status', async () => {
@@ -70,6 +67,4 @@ describe('BE Checklist Routes Integration', () => {
 
       expect(response.body).toHaveProperty('canValidate');
     });
-  });
-});
 

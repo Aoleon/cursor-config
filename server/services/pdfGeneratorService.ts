@@ -67,12 +67,12 @@ export class PdfGeneratorService {
 
         logger.info('Puppeteer browser started successfully', { metadata: {
             service: 'PDFGeneratorService',
-            operation: 'initialize' 
-              
-              }
+                  operation: 'initialize'
+
+                }
  
               
-            });
+                                                            });
       }
       // Compilation du template Handlebars
       if (!this.template) {
@@ -85,26 +85,25 @@ export class PdfGeneratorService {
         this.template = Handlebars.compile(templateContent);
         logger.info('DPGF template compiled successfully', { metadata: {
             service: 'PDFGeneratorService',
-            operation: 'initialize' 
-              
-              }
+                  operation: 'initialize'
+
+                }
  
               
-            });
+                                                            });
       }
     } catch (error) {
       logger.error('[PDFGeneratorService] Erreur lors de l\'initialisation', { metadata: {
           service: 'PDFGeneratorService',
           operation: 'initialize',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw new AppError(`Failed to initialize PDF generator: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
-  }
 
   /**
    * Génère un PDF DPGF depuis les données calculées
@@ -161,11 +160,11 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPdf',
           offerReference: data.metadata.offerReference 
-              
+
               }
  
               
-            });
+                                                            });
       const pdfBuffer = Buffer.from(await page.pdf(pdfOptions));
       // Generation du nom de fichier
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -175,11 +174,11 @@ export class PdfGeneratorService {
           operation: 'generateDpgfPdf',
           filename,
           size: pdfBuffer.length 
-              
+
               }
  
               
-            });
+                                                            });
       
       return {
         buffer: pdfBuffer,
@@ -192,11 +191,11 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPdf',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw new AppError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
       // Nettoyage de la page
@@ -206,17 +205,14 @@ export class PdfGeneratorService {
         } catch (error) {
           logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {
               service: 'PDFGeneratorService',
-              operation: 'generateDpgfPdf',
-              error: error instanceof Error ? error.message : String(error) 
-              
-              }
+                    operation: 'generateDpgfPdf',
+                    error: error instanceof Error ? error.message : String(error)
+
+                  }
  
               
-            });
+                                                            });
         }
-      }
-    }
-  }
 
   /**
    * Génère le HTML de prévisualisation (sans PDF)
@@ -233,25 +229,24 @@ export class PdfGeneratorService {
       logger.info('DPGF preview HTML generated successfully', { metadata: {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPreview' 
-              
+
               }
  
               
-            });
+                                                            });
       return html;
     } catch (error) {
       logger.error('[PDFGeneratorService] Erreur lors de la génération de la prévisualisation', { metadata: {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPreview',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw new AppError(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
-  }
 
   /**
    * Ferme le browser Puppeteer (nettoyage des ressources)
@@ -263,27 +258,25 @@ export class PdfGeneratorService {
         this.browser = null;
         logger.info('Puppeteer browser closed', { metadata: {
             service: 'PDFGeneratorService',
-            operation: 'cleanup' 
-              
-              }
+                  operation: 'cleanup'
+
+                }
  
               
-            });
+                                                            });
       } catch (error) {
         logger.error('[PDFGeneratorService] Erreur lors de la fermeture du browser', { metadata: {
             service: 'PDFGeneratorService',
-            operation: 'cleanup',
-            error: error instanceof Error ? error.message : String(error) 
-              
-              }
+                  operation: 'cleanup',
+                  error: error instanceof Error ? error.message : String(error)
+
+                }
  
               
-            });
+                                                            });
         // Reset browser even on error
         this.browser = null;
       }
-    }
-  }
 
   /**
    * Enregistre les helpers Handlebars personnalisés
@@ -365,11 +358,11 @@ export class PdfGeneratorService {
     logger.info('Handlebars helpers registered', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'registerHandlebarsHelpers' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
   }
   /**
    * Vérifie si le service est initialisé
@@ -385,22 +378,22 @@ export class PdfGeneratorService {
     logger.info('Restarting PDF generator service', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     await this.cleanup();
     this.template = null;
     await this.initialize();
     logger.info('PDF generator service restarted', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
   }
 
   // ========================================
@@ -485,14 +478,13 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateFromTemplate',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Generate LDM PDF with template engine
@@ -524,14 +516,13 @@ export class PdfGeneratorService {
           operation: 'generateLDMPdf',
           templateType,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Validate template before use
@@ -567,17 +558,16 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'validateTemplate',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       return {
         valid: false,
         errors: [error instanceof Error ? error.message : String(error)]
       };
     }
-  }
 
   /**
    * Clear template cache
@@ -648,11 +638,11 @@ export class PdfGeneratorService {
           operation: 'generatePdfFromHtml',
           filename,
           size: pdfBuffer.length 
-              
+
               }
  
               
-            });
+                                                            });
       return {
         buffer: pdfBuffer,
         filename,
@@ -664,11 +654,11 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generatePdfFromHtml',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     } finally {
       if (page) {
@@ -677,18 +667,14 @@ export class PdfGeneratorService {
         } catch (closeError) {
           logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {
               service: 'PDFGeneratorService',
-              operation: 'generatePdfFromHtml',
-              error: closeError instanceof Error ? closeError.message : String(closeError) 
-              
-              }
+                    operation: 'generatePdfFromHtml',
+                    error: closeError instanceof Error ? closeError.message : String(closeError)
+
+                  }
  
               
-            });
+                                                            });
         }
-      }
-    }
-  }
-}
 
 // Gestion de l'arrêt propre du processus
 process.on("SIGTERM", async () => {

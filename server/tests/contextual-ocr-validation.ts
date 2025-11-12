@@ -356,7 +356,6 @@ export class ContextualOCRValidator {
       recommendations
     };
   }
-}
 
 // Export pour utilisation dans les tests
 export { OCRValidationResult };

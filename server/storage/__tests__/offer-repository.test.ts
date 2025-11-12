@@ -550,7 +550,7 @@ describe('OfferRepository Integration Tests', () => {
       createdOfferIds.push(offer.id);
 
       const eventPromise = new Pro<unknown>unknown>((resolve) => {
-        eventBus.once('event', (e: unknown)unknown) => {
+        eventBus.once('event', (e: unknown) => {
           if (event.entity === 'offers' && event.type === 'updated') {
             resolve(event);
           }

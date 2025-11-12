@@ -11,7 +11,7 @@ if (!mondayConfig.apiKey) {
       module: 'Config',
       operation: 'startup',
       service: 'Monday.com'
-              }
+          }
 
             });
 }
@@ -21,7 +21,7 @@ if (!mondayConfig.signingSecret) {
       module: 'Config',
       operation: 'startup',
       service: 'Monday.com Webhook'
-              }
+          }
 
             });
 }

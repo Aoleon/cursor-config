@@ -117,7 +117,6 @@ export class ContactService {
           reason: score.reason
         };
       }
-    }
     
     return bestMatch;
   }
@@ -142,7 +141,6 @@ export class ContactService {
           reason: score.reason
         };
       }
-    }
     
     return bestMatch;
   }
@@ -168,7 +166,6 @@ export class ContactService {
         score += 0.6;
         reasons.push(`Nom similaire (${Math.round(nomSimilarity * 100)}%)`);
       }
-    }
     
     // Correspondance email
     if (extracted.email && existing.email && extracted.email.toLowerCase() === existing.email.toLowerCase()) {
@@ -184,7 +181,6 @@ export class ContactService {
         score += 0.2;
         reasons.push('Téléphone identique');
       }
-    }
     
     // Correspondance adresse/ville
     if (extracted.ville && existing.ville) {
@@ -193,7 +189,6 @@ export class ContactService {
         score += 0.1;
         reasons.push('Ville identique');
       }
-    }
     
     return { 
       confidence: Math.min(score, 1.0), 
@@ -247,8 +242,6 @@ export class ContactService {
             matrix[i - 1][j] + 1
           );
         }
-      }
-    }
     
     return matrix[str2.length][str1.length];
   }
@@ -294,7 +287,7 @@ export class ContactService {
         nom: newMaitreOuvrage.nom,
         id: newMaitreOuvrage.id,
         siret: newMaitreOuvrage.siret
-                                                                                    }
+              }
 
                                                                                   });
     
@@ -312,7 +305,7 @@ export class ContactService {
       adresse: extractedData.adresse || null,
       codePostal: extractedData.codePostal || null,
       ville: extractedData.ville || null,
-      departement: extractedData.departemas unknown unknown || null,
+      departement: extractedData.departement || null,
       telephone: extractedData.telephone || null,
       email: extractedData.email || null,
       siteWeb: extractedData.siteWeb || null,
@@ -326,16 +319,15 @@ export class ContactService {
       .returning();
     
     logger.info('Nouveau maître d\'œuvre créé', {
-      service: 'ContactService',
       metadata: {
+        module: 'ContactService',
         operation: 'createMaitreOeuvre',
         nom: newMaitreOeuvre.nom,
         id: newMaitreOeuvre.id,
         siret: newMaitreOeuvre.siret,
         specialites: newMaitreOeuvre.specialites
-                                                                                    }
-
-                                                                                  });
+      }
+    });
     
     return newMaitreOeuvre;
   }
@@ -355,67 +347,14 @@ export class ContactService {
           logger.info('Maître d\'ouvrage trouvé', {
             service: 'ContactService',
             metadata: {
-              operation: 'findOrCreateContact',
+                      operation: 'findOrCreateContact',
               role: 'maitre_ouvrage',
-              nom: existingMatch.contact.nom,
-              id: existingMatch.contact.id,
+                      nom: existingMatch.contact.nom,
+                      id: existingMatch.contact.id,
               confidence: Math.round(existingMatch.confidence * 100),
               reason: existingMatch.reason
-                                                                                    }
-                                                                                  });
-          
-          return {
-            found: true,
-            created: false,
-            contact: existingMatch.contact,
-            confidence: existingMatch.confidence,
-            reason: `Correspondance trouvée: ${existingMatch.reason}`
-          };
-        }
-        
-        // Créer un nouveau maître d'ouvrage
-        const newContact = await this.createMaitreOuvrage(extractedData, tx);
-        return {
-          found: false,
-          created: true,
-          contact: newContact,
-          confidence: 1.0,
-          reason: 'Nouveau maître d\'ouvrage créé automatiquement'
-        };
-        
-      } else if (extractedData.role === 'maitre_oeuvre') {
-        // Rechercher un maître d'œuvre existant
-        const existingMatch = await this.findSimilarMaitreOeuvre(extractedData, tx);
-        
-        if (existingMatch) {
-          logger.info('Maître d\'œuvre trouvé', {
-            service: 'ContactService',
-            metadata: {
-              operation: 'findOrCreateContact',
-              role: 'maitre_oeuvre',
-              nom: existingMatch.contact.nom,
-              id: existingMatch.contact.id,
-              confidence: Math.round(existingMatch.confidence * 100),
-              reason: existingMatch.reason
-                                                                                    }
-                                                                                  });
-          
-          return {
-            found: true,
-            created: false,
-            contact: existingMatch.contact,
-            confidence: existingMatch.confidence,
-            reason: `Correspondance trouvée: ${existingMatch.reason}`
-          };
-        }
-        
-        // Créer un nouveau maître d'œuvre
-        const newContact = await this.createMaitreOeuvre(extractedData, tx);
-        return {
-          found: false,
-          created: true,
-          contact: newContact,
-          confidence: 1.0,
+                    }
+                        });
           reason: 'Nouveau maître d\'œuvre créé automatiquement'
         };
       }
@@ -427,10 +366,8 @@ export class ContactService {
     {
       operation: 'principal',
       service: 'contactService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
   
   /**
@@ -450,10 +387,8 @@ export class ContactService {
     {
       operation: 'principal',
       service: 'contactService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
     
     return results;
@@ -484,7 +419,6 @@ export class ContactService {
           reason: score.reason
         };
       }
-    }
     
     return bestMatch;
   }
@@ -525,9 +459,6 @@ export class ContactService {
             score += 0.3;
             reasons.push(`Entreprise similaire (${Math.round(companySim * 100)}%)`);
           }
-        }
-      }
-    }
     
     // Téléphone tie-breaker
     if (extracted.phone && existing.phone && score > 0.5) {
@@ -537,7 +468,6 @@ export class ContactService {
         score += 0.2;
         reasons.push('Téléphone identique');
       }
-    }
     
     return {
       confidence: Math.min(score, 1.0),
@@ -560,7 +490,7 @@ export class ContactService {
       email: data.email || null,
       phone: data.phone || null,
       company: data.company || null,
-      poste: datas unknowneunknown |ny || null,
+      poste: data.poste || null,
       address: data.address || null,
       notes: data.notes || `Créé automatiquement - Source: ${data.source}`
     };
@@ -571,14 +501,14 @@ export class ContactService {
       .returning();
     
     logger.info('Nouveau contact individuel créé', {
-      service: 'ContactService',
       metadata: {
+        module: 'ContactService', {
         id: newContact.id,
         firstName: newContact.firstName,
         lastName: newContact.lastName,
         email: newContact.email,
         company: newContact.company
-                                                                                    }
+              }
 
                                                                                   });
     
@@ -600,47 +530,12 @@ export class ContactService {
       
       if (existingMatch) {
         logger.info('Contact individuel trouvé', {
-          service: 'ContactService',
-          metadata: {
-            id: existingMatch.contact.id,
-            firstName: existingMatch.contact.firstName,
-            lastName: existingMatch.contact.lastName,
+      metadata: {
+        module: 'ContactService', {
+                id: existingMatch.contact.id,
+                firstName: existingMatch.contact.firstName,
+                lastName: existingMatch.contact.lastName,
             confidence: existingMatch.confidence,
             reason: existingMatch.reason
-                                                                                  }
-                                                                                });
-        
-        return {
-          found: true,
-          created: false,
-          contact: existingMatch.contact,
-          confidence: existingMatch.confidence,
-          reason: `Correspondance trouvée: ${existingMatch.reason}`
-        };
-      }
-      
-      // Créer nouveau contact
-      const newContact = await this.createContact(data, tx);
-      
-      return {
-        found: false,
-        created: true,
-        contact: newContact,
-        confidence: 1.0,
-        reason: 'Nouveau contact créé automatiquement'
-      };
-      
-    
-    },
-    {
-      operation: 'principal',
-      service: 'contactService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
-  }
-}
-
-// Instance unique du service de contacts
-export const contactService = new ContactService();
+              }
+                  });

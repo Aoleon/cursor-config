@@ -27,7 +27,6 @@ vi.mock('../../utils/logger', () => ({
     error: vi.fn(),
     debug: vi.fn()
   }
-            }
 
                       }
 
@@ -45,7 +44,6 @@ vi.mock('../../services/CacheService', () => ({
     MONDAY_BOARDS_LIST: 600,
     MONDAY_BOARD_DETAIL: 300
   }
-            }
 
                       }
 
@@ -74,7 +72,6 @@ vi.mock('../../eventBus', () => ({
   eventBus: {
     publish: vi.fn()
   }
-            }
 
                       }
 
@@ -125,12 +122,10 @@ describe('MondayIntegrationService', () => {
     it('should execute GraphQL query successfully', async () => {
       const mockResponse = {
         data: {
-          data: {
             boards: [
               { id: '123', name: 'Test Board' }
             ]
           }
-        }
       };
 
       mockPost.mockResolvedValue(mockResponse);
@@ -178,7 +173,6 @@ describe('MondayIntegrationService', () => {
       
       await expect(service.executeGraphQL(query)).rejects.toThrow('Network error');
     });
-  });
 
   // ========================================
   // BOARDS RETRIEVAL TESTS
@@ -231,7 +225,6 @@ describe('MondayIntegrationService', () => {
         expect.unknown(Object)
       );
     });
-  });
 
   // ========================================
   // BOARD COLUMNS TESTS
@@ -255,7 +248,6 @@ describe('MondayIntegrationService', () => {
 
       mockPost.mockResolvedValue({
         data: {
-          data: {
             boards: [{ columns: mockColumns }]
           }
         } );
@@ -277,7 +269,6 @@ describe('MondayIntegrationService', () => {
 
       expect(result).toEqual([]);
     });
-  });
 
   // ========================================
   // BOARD ITEMS TESTS
@@ -300,12 +291,10 @@ describe('MondayIntegrationService', () => {
             id: 'group1',
             title: 'Group 1'
           }
-        }
       ];
 
       mockPost.mockResolvedValue({
         data: {
-          data: {
             boards: [{
               items_page: {
                 items: mockItems
@@ -320,7 +309,6 @@ describe('MondayIntegrationService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Test Item 1');
     });
-  });
 
   // ========================================
   // WEBHOOK HANDLING TESTS
@@ -410,7 +398,6 @@ describe('MondayIntegrationService', () => {
 
       expect(eventBus.publish).not.toHaveBeenCalled();
     });
-  });
 
   // ========================================
   // BOARD STRUCTURE ANALYSIS TESTS
@@ -434,7 +421,6 @@ describe('MondayIntegrationService', () => {
 
       mockPost.mockResolvedValue({
         data: {
-          data: {
             boards: [{ columns: mockColumns }]
           }
         } );
@@ -448,7 +434,6 @@ describe('MondayIntegrationService', () => {
       expect(result.columns[0].description).toBe('Texte libre');
       expect(result.columns[1].description).toBe('Statut avec labels');
     });
-  });
 
   describe('analyzeBoards', () => {
     it('should analyze multiple boards', async () => {
@@ -469,7 +454,6 @@ describe('MondayIntegrationService', () => {
         })
         .mockResolvedValue({
           data: {
-            data: {
               boards: [{ columns: mockColumns }]
             }
           } );
@@ -480,7 +464,6 @@ describe('MondayIntegrationService', () => {
       expect(result.totalColumns).toBe(2);
       expect(result.boards).toHaveLength(2);
     });
-  });
 
   // ========================================
   // FIELD MAPPING SUGGESTIONS TESTS
@@ -511,7 +494,6 @@ describe('MondayIntegrationService', () => {
         confidence: 1.0,
         reason: 'Exact match'
       });
-    });
 
     it('should suggest common mapping patterns', async () => {
       const boardStructure: BoardStructure = {
@@ -536,7 +518,6 @@ describe('MondayIntegrationService', () => {
         confidence: 0.95,
         reason: 'Common mapping pattern'
       });
-    });
 
     it('should filter low confidence mappings', async () => {
       const boardStructure: BoardStructure = {
@@ -558,7 +539,6 @@ describe('MondayIntegrationService', () => {
       // Should not suggest mapping with low confidence
       expect(suggestions.size).toBe(0);
     });
-  });
 
   // ========================================
   // COLUMN VALUE EXTRACTION TESTS
@@ -626,7 +606,6 @@ describe('MondayIntegrationService', () => {
       const result = service.extractColumnValue(columnValue);
       expect(result).toBe('Fallback text');
     });
-  });
 
   // ========================================
   // CACHE INVALIDATION TESTS
@@ -643,7 +622,6 @@ describe('MondayIntegrationService', () => {
         expect.stringContaining('monday:board_structure')
       );
     });
-  });
 
   // ========================================
   // CONNECTION TEST
@@ -653,13 +631,11 @@ describe('MondayIntegrationService', () => {
     it('should return true on successful connection', async () => {
       mockPost.mockResolvedValue({
         data: {
-          data: {
             me: {
               id: 'user1',
               name: 'Test User',
               email: 'test@example.com'
             }
-          }
         } );
 
       const result = await service.testConnection();
@@ -672,5 +648,3 @@ describe('MondayIntegrationService', () => {
       const result = await service.testConnection();
       expect(result).toBe(false);
     });
-  });
-});

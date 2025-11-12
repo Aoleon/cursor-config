@@ -52,7 +52,6 @@ export class ScoringService {
       if (isTriggered) {
         triggeredCriteria.push(criteriaKey);
       }
-    }
 
     // Déterminer si une alerte doit être déclenchée
     const shouldAlert = totalScore >= config.threshold;
@@ -66,7 +65,7 @@ export class ScoringService {
         shouldAlert,
         details 
               
-        }
+            }
       });
     return {
       totalScore,
@@ -106,7 +105,6 @@ export class ScoringService {
       });
       return false;
     }
-  }
 
   /**
    * Calcule le score maximum possible avec une configuration donnée
@@ -179,7 +177,6 @@ export class ScoringService {
           coupeFeu: false
         };
     }
-  }
 
   /**
    * Obtenir une description textuelle du niveau de score
@@ -222,4 +219,3 @@ ${Object.entries(config.weights)
   .join('\n')}
 ================================`;
   }
-}

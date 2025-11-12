@@ -1018,9 +1018,9 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         logger.error('Erreur upsertUser', { metadata: {
             service: 'storage-poc',
-            operation: 'upsertUser',
-            error: error instanceof Error ? error.message : String(error)
-              }
+                  operation: 'upsertUser',
+                  error: error instanceof Error ? error.message : String(error)
+                }
 
             });
         throw error;
@@ -1338,7 +1338,7 @@ export class DatabaseStorage implements IStorage {
       logger.info('Aucune configuration scoring trouvée, utilisation valeurs par défaut', { metadata: {
           service: 'StoragePOC',
           operation: 'getScoringConfig'
-                                      }
+              }
 
                                     });
       DatabaseStorage.scoringConfig = {
@@ -1362,7 +1362,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'updateScoringConfig',
         threshold: config.threshold,
         weightsCount: Object.keys(config.weights).length
-              }
+            }
 
             });
     
@@ -1382,7 +1382,7 @@ export class DatabaseStorage implements IStorage {
     logger.info('Configuration scoring mise à jour avec succès', { metadata: {
         service: 'StoragePOC',
         operation: 'updateScoringConfig'
-              }
+            }
 
             });
   }
@@ -1427,7 +1427,7 @@ export class DatabaseStorage implements IStorage {
         alertId: id,
         aoReference: alert.aoReference,
         score: alert.score
-              }
+            }
 
             });
     return technicalAlert;
@@ -1469,7 +1469,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'acknowledgeTechnicalAlert',
         alertId: id,
         userId: userId
-              }
+            }
 
             });
   }
@@ -1493,7 +1493,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'validateTechnicalAlert',
         alertId: id,
         userId: userId
-              }
+            }
 
             });
   }
@@ -1526,7 +1526,7 @@ export class DatabaseStorage implements IStorage {
         userId: userId,
         bypassUntil: until.toISOString(),
         reason: reason
-              }
+            }
 
             });
   }
@@ -1579,7 +1579,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'addTechnicalAlertHistory',
         alertId: alertId,
         action: action
-              }
+            }
 
             });
     return historyEntry;
@@ -1618,7 +1618,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'getMaterialColorRules',
         rulesCount: DatabaseStorage.materialColorRules.length
-              }
+            }
 
             });
     // Retourner une copie pour éviter les modifications directes
@@ -1630,7 +1630,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'setMaterialColorRules',
         rulesCount: rules.length
-              }
+            }
 
             });
     
@@ -1659,7 +1659,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'setMaterialColorRules',
         rulesCount: rules.length,
         ruleIds: rules.map(r => r.id)
-              }
+            }
 
             });
   }
@@ -1687,7 +1687,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getProjectTimelines',
         projectId: projectId,
         timelinesCount: timelines.length
-              }
+            }
 
             });
     return timelines;
@@ -1701,7 +1701,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'getAllProjectTimelines',
         timelinesCount: timelines.length
-              }
+            }
 
             });
     return timelines;
@@ -1726,7 +1726,7 @@ export class DatabaseStorage implements IStorage {
         timelineId: id,
         projectId: data.projectId,
         phase: data.phase
-              }
+            }
 
             });
     
@@ -1751,7 +1751,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'updateProjectTimeline',
         timelineId: id
-              }
+            }
 
             });
     
@@ -1769,7 +1769,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'deleteProjectTimeline',
         timelineId: id
-              }
+            }
 
             });
   }
@@ -1810,7 +1810,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getActiveRules',
         rulesCount: rules.length,
         filters: filters
-              }
+            }
 
             });
     return rules;
@@ -1824,7 +1824,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'getAllRules',
         rulesCount: rules.length
-              }
+            }
 
             });
     return rules;
@@ -1837,7 +1837,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getRule',
         ruleId: id,
         found: !!rule
-              }
+            }
 
             });
     return rule;
@@ -1862,7 +1862,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'createRule',
         ruleId: id,
         ruleName: rule.name
-              }
+            }
 
             });
     
@@ -1886,7 +1886,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'updateRule',
         ruleId: id
-              }
+            }
 
             });
     
@@ -1904,7 +1904,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'deleteRule',
         ruleId: id
-              }
+            }
 
             });
   }
@@ -1937,7 +1937,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getDateAlerts',
         alertsCount: alerts.length,
         filters: filters
-              }
+            }
 
             });
     return alerts;
@@ -1950,7 +1950,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getDateAlert',
         alertId: id,
         found: !!alert
-              }
+            }
 
             });
     return alert;
@@ -1975,7 +1975,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'createDateAlert',
         alertId: id,
         title: alert.title
-              }
+            }
 
             });
     
@@ -1999,7 +1999,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'updateDateAlert',
         alertId: id
-              }
+            }
 
             });
     
@@ -2017,7 +2017,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'deleteDateAlert',
         alertId: id
-              }
+            }
 
             });
   }
@@ -2042,7 +2042,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'acknowledgeAlert',
         alertId: id,
         userId: userId
-              }
+            }
 
             });
     
@@ -2070,7 +2070,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'resolveAlert',
         alertId: id,
         userId: userId
-              }
+            }
 
             });
     
@@ -2089,7 +2089,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'createKPISnapshot',
         periodFrom: data.periodFrom,
         periodTo: data.periodTo
-              }
+            }
 
             });
     return snapshot;
@@ -2117,7 +2117,7 @@ export class DatabaseStorage implements IStorage {
         snapshotsCount: snapshots.length,
         periodFrom: period.from,
         periodTo: period.to
-              }
+            }
 
             });
     return snapshots;
@@ -2133,7 +2133,7 @@ export class DatabaseStorage implements IStorage {
         service: 'StoragePOC',
         operation: 'getLatestKPISnapshot',
         snapshotId: latest ? latest.id : null
-              }
+            }
 
             });
     return latest || null;
@@ -2148,7 +2148,7 @@ export class DatabaseStorage implements IStorage {
         metricType: data.metricType,
         periodStart: data.periodStart,
         periodEnd: data.periodEnd
-              }
+            }
 
             });
     return metric;
@@ -2193,7 +2193,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getBusinessMetrics',
         metricsCount: metrics.length,
         filters: filters
-              }
+            }
 
             });
     return metrics;
@@ -2216,7 +2216,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getMetricTimeSeries',
         metricType: metricType,
         metricsCount: metrics.length
-              }
+            }
 
             });
     return metrics;
@@ -2231,7 +2231,7 @@ export class DatabaseStorage implements IStorage {
         benchmarkType: data.benchmarkType,
         entityType: data.entityType,
         entityId: data.entityId
-              }
+            }
 
             });
     return benchmark;
@@ -2255,7 +2255,7 @@ export class DatabaseStorage implements IStorage {
         benchmarksCount: benchmarks.length,
         entityType: entityType,
         entityId: entityId
-              }
+            }
 
             });
     return benchmarks;
@@ -2273,7 +2273,7 @@ export class DatabaseStorage implements IStorage {
         operation: 'getTopPerformers',
         performersCount: performers.length,
         limit: limit
-              }
+            }
 
             });
     return performers;
@@ -3156,8 +3156,8 @@ export class DatabaseStorage implements IStorage {
         const [newConfig] = await db.insert(syncConfig).values(config as InsertSyncConfig).returning();
         logger.info('Sync config créée', { metadata: {
             service: 'StoragePOC',
-            operation: 'updateSyncConfig'
-              }
+                  operation: 'updateSyncConfig'
+                }
 
             });
         return newConfig;
@@ -3316,7 +3316,7 @@ export class DatabaseStorage implements IStorage {
     }
   ): Promise<SupplierQuoteAnalysis[]> {
     logger.warn('[Storage] getSupplierQuoteAnalysesBySession not yet fully implemented', { metadata: { sessionId, filters 
-              }
+            }
  
             });
     

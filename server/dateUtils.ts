@@ -24,7 +24,7 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     if (isNaN(dateLimite.getTime())) {
       logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise 
 
-      });
+            });
       return undefined;
     }
 
@@ -35,7 +35,7 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     logger.debug('DateUtils - Date remise calculée', { metadata: { 
         dateLimite: dateLimite.formatDateFR(new Date()), 
         dateRemise: dateRemise.formatDateFR(new Date()) 
-              }
+            }
  
             });
     
@@ -64,7 +64,7 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     if (isNaN(dateSortie.getTime())) {
       logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO 
 
-      });
+            });
       return undefined;
     }
 
@@ -76,7 +76,7 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
         dateSortie: dateSortie.formatDateFR(new Date()), 
         dateLimite: dateLimite.formatDateFR(new Date()),
         delaiJours 
-              }
+            }
  
             });
     
@@ -246,7 +246,6 @@ export function estDatePassee(date?: Date | string | null): boolean {
   } catch (error) {
     return false;
   }
-}
 
 /**
  * Vérifie si une date est urgente (dans les 7 prochains jours)
@@ -267,7 +266,6 @@ export function estDateUrgente(date?: Date | string | null): boolean {
   } catch (error) {
     return false;
   }
-}
 
 // ========================================
 // FONCTIONS ANALYTICS DATE HELPERS - PHASE 3.1.4
@@ -309,7 +307,6 @@ export function parsePeriod(period: string): DateRange {
     default:
       return getDefaultPeriod();
   }
-}
 
 /**
  * Retourne la période par défaut pour les analytics (1 mois)

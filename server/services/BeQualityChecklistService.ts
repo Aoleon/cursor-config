@@ -52,9 +52,9 @@ export class BeQualityChecklistService {
           logger.info('Checklist déjà initialisée', {
             metadata: {
               service: 'BeQualityChecklistService',
-              operation: 'initializeChecklist',
+                      operation: 'initializeChecklist',
               offerId
-        }
+                    }
                   );
           return existing;
         }
@@ -66,7 +66,7 @@ export class BeQualityChecklistService {
             offerId,
             itemType: itemType as unknown,
             isCritical: true,
-            status: 'non_controle' as const
+                      status: 'non_controle' as const
           });
           items.push(item);
         }
@@ -74,7 +74,7 @@ export class BeQualityChecklistService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                      id: crypto.randomUUID(),
             type: 'be:checklist:initializas unknown, unknown,
             entity: 'offer',
             entityId: offerId,
@@ -83,22 +83,22 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', offerId, 'be-checklist']
             ],
-            userId: undefined,
+                      userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               offerId,
               itemsCount: items.length
-        }
+                    }
                   );
         }
 
         logger.info('Checklist qualité BE initialisée', {
           metadata: {
             service: 'BeQualityChecklistService',
-            operation: 'initializeChecklist',
+                    operation: 'initializeChecklist',
             offerId,
             itemsCount: items.length
-        }
+                  }
                 );
 
         return items;
@@ -133,7 +133,7 @@ export class BeQualityChecklistService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                    id: crypto.randomUUID(),
             type: 'be:checklist:item:cas unknown, as unknown,
             entity: 'offer',
             entityId: updated.offerId,
@@ -142,13 +142,13 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', updated.offerId, 'be-checklist']
             ],
-            userId: checkedBy,
+                    userId: checkedBy,
             timestamp: new Date().toISOString(),
             metadata: {
               itemId,
               itemType: updated.itemType,
               status
-        }
+                    }
                   );
         }
 
@@ -171,7 +171,7 @@ export class BeQualityChecklistService {
         
         if (result.isValid && this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                      id: crypto.randomUUID(),
             type: 'be:checklistas unknown,tas unknown unknown,
             entity: 'offer',
             entityId: offerId,
@@ -180,11 +180,11 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', offerId, 'be-checklist']
             ],
-            userId: undefined,
+                      userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               offerId
-        }
+                    }
                   );
         }
 
@@ -227,7 +227,6 @@ export class BeQualityChecklistService {
       }
     );
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

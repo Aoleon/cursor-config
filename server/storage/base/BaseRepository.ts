@@ -160,7 +160,7 @@ export abstract class BaseRepository<
           ...metadata
         
         
-      });
+            });
 
       const result = await safeQuery(queryFn, {
         service: this.repositoryName,
@@ -180,10 +180,8 @@ export abstract class BaseRepository<
     {
       operation: 'create',
       service: 'BaseRepository',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -206,7 +204,6 @@ export abstract class BaseRepository<
         `ID invalide pour l'opération ${operation} dans ${this.repositoryName}`
       );
     }
-  }
 
   /**
    * Normalise un ID pour l'utiliser dans les requêtes avec validation UUID stricte
@@ -270,7 +267,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation,
         entityId: id
-              }
+            }
 
             });
     throw new DatabaseError(message);
@@ -279,16 +276,14 @@ export abstract class BaseRepository<
   /**
    * Émet un événement via l'event bus si disponible
    */
-  protected emitEvent(eventName: string, : unknown)unknown): void {
-    if (this.eventBus) {
-      return withErrorHandling(
+  protected emitEvent(eventName: string, : unknown): void {
     async () => {
 
         this.eventBus.emit(eventName, data);
         this.logger.debug(`Event emitted: ${eventName}`, { metadata: {
-            module: this.repositoryName,
+                  module: this.repositoryName,
             event: eventName
-              }
+                }
 
             });
       
@@ -299,8 +294,6 @@ export abstract class BaseRepository<
       metadata: {}
     } );
       }
-    }
-  }
 
   /**
    * IMPLÉMENTATION CONCRÈTE : Créer une nouvelle entité
@@ -323,7 +316,7 @@ export abstract class BaseRepository<
     this.logger.debug('Creating entity', { metadata: {
         module: this.repositoryName,
         operation: 'create'
-              }
+            }
 
             });
 
@@ -361,7 +354,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'createMany',
         count: data.length
-              }
+            }
 
             });
 
@@ -412,7 +405,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'update',
         entityId: id
-              }
+            }
 
             });
 
@@ -464,7 +457,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'delete',
         entityId: id
-              }
+            }
 
             });
 
@@ -520,7 +513,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'softDelete',
         entityId: id
-              }
+            }
 
             });
 
@@ -583,7 +576,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'restore',
         entityId: id
-              }
+            }
 
             });
 
@@ -646,7 +639,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'updateMany',
         count: ids.length
-              }
+            }
 
             });
 
@@ -672,7 +665,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'updateMany',
         count: result.length
-              }
+            }
 
             });
     
@@ -708,7 +701,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'upsert',
         conflictTarget: conflictTarget as string
-              }
+            }
 
             });
 
@@ -762,7 +755,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'count',
         hasFilters: !!filters
-              }
+            }
 
             });
 
@@ -781,7 +774,6 @@ export abstract class BaseRepository<
       if (whereConditions.length > 0) {
         query = query.where(and(...whereConditions));
       }
-    }
     
     const result = await this.executeQuery(
       () => query,
@@ -822,7 +814,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'archive',
         entityId: id
-              }
+            }
 
             });
 
@@ -875,7 +867,7 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'unarchive',
         entityId: id
-              }
+            }
 
             });
 

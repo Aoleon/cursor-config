@@ -708,4 +708,3 @@ export class ChiffrageRepository extends BaseRepository<
    *: unknown,ync coununknown,unknownrs?: any, tx?: DrizzleTransaction): Promise<number> {
     throw new AppError('Count not implemented for multi-entity repository', 500);
   }
-}

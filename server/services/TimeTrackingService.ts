@@ -54,7 +54,6 @@ export class TimeTrackingService {
           if (!project) {
             throw new NotFoundError(`Project with id ${data.projectId} not found`);
           }
-        }
 
         // Vérifier que l'offre existe si fournie
         if (data.offerId) {
@@ -62,7 +61,6 @@ export class TimeTrackingService {
           if (!offer) {
             throw new NotFoundError(`Offer with id ${data.offerId} not found`);
           }
-        }
 
         // Créer enregistrement
         const tracking = await this.storage.createTimeTracking(data);
@@ -70,7 +68,7 @@ export class TimeTrackingService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
             type: 'time:tracking:recorded' as unknown,
             entity: data.projectId ? 'project' : 'offer',
             entityId: data.projectId || data.offerId || '',
@@ -81,24 +79,24 @@ export class TimeTrackingService {
                 ? ['/api/projects', data.projectId, 'time-tracking']
                 : ['/api/offers', data.offerId!, 'time-tracking']
             ],
-            userId: data.userId,
+                userId: data.userId,
             timestamp: new Date().toISOString(),
             metadata: {
               trackingId: tracking.id,
               hours: Number(data.hours),
               taskType: data.taskType
-        }
+                    }
                   );
         }
 
         logger.info('Temps enregistré', {
           metadata: {
             service: 'TimeTrackingService',
-            operation: 'recordTime',
+                    operation: 'recordTime',
             trackingId: tracking.id,
             hours: Number(data.hours),
             taskType: data.taskType
-        }
+                  }
                 );
 
         return tracking;
@@ -151,7 +149,6 @@ export class TimeTrackingService {
             }
             costByType[entry.taskType] += cost;
           }
-        }
 
         return {
           projectId,
@@ -168,7 +165,6 @@ export class TimeTrackingService {
       }
     );
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

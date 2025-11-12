@@ -27,7 +27,7 @@ import { ConfigurationRepository } from '../configuration/ConfigurationRepositor
 import { ContactsRepository } from '../contacts/ContactsRepository';
 import { SavRepository } from '../sav/SavRepository';
 import { analyticsStorage } from '../analytics';
-import type { Offer, InsertOffer, Ao, InsertAo, Project, InsertProject, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert, EquipmentBattery, EquipmentBatteryInsert, MarginTarget, MarginTargetInsert, AoContacts, InsertAoContacts, ProjectContacts, InsertProjectContacts, SavIntervention, InsertSavIntervention } from '@shared/schema';
+import type { Offer, InsertOffer, Ao, InsertAo, Project, InsertProject, User, UpsertUser, ChiffrageElement, InsertChiffrageElement, DpgfDocument, InsertDpgfDocument, ValidationMilestone, InsertValidationMilestone, DateIntelligenceRule, InsertDateIntelligenceRule, DateAlert, InsertDateAlert, Supplier, SupplierDocument, InsertSupplierDocument, SupplierQuoteSession, InsertSupplierQuoteSession, SupplierQuoteAnalysis, InsertSupplierQuoteAnalysis, PurchaseOrder, InsertPurchaseOrder, ClientQuote, InsertClientQuote, TeamResource, InsertTeamResource, BeWorkload, InsertBeWorkload, EmployeeLabel, EmployeeLabelInsert, EmployeeLabelAssignment, EmployeeLabelAssignmentInsert, EquipmentBattery, EquipmentBatteryInsert, MarginTarget, MarginTargetInsert, AoContacts, InsertAoContacts, ProjectContacts, InsertProjectContacts, SavIntervention, InsertSavIntervention } from '@shared/schema';
 
 /**
  * Facade de storage qui unifie l'accès aux données
@@ -125,9 +125,9 @@ export class StorageFacade {
         status: 'hybrid_mode',
         hasDb: !!this.db,
         hasEventBus: !!this.eventBus,
-        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository', 'UserRepository', 'ConfigurationRepository', 'ContactsRepository', 'SavRepository']
-                                                                              }
-                                                                            });
+        repositories: ['OfferRepository', 'AoRepository', 'ProductionRepository', 'SuppliersRepository', 'ChiffrageRepository', 'DateIntelligenceRepository', 'DocumentsRepository', 'UserRepository', 'ConfigurationRepository', 'ContactsRepository', 'SavRepository'],
+      }
+    });
   }
 
   /**
@@ -175,14 +175,22 @@ export class StorageFacade {
   async getUsers(): Promise<User[]> {
     try {
       const users = await this.userRepository.getUsers();
-      this.facadeLogger.info('Utilisateurs récupérés via UserRepository', { metadata: { count: users.length, module: 'StorageFacade', operation: 'getUsers' 
-        }
-      );
+      this.facadeLogger.info('Utilisateurs récupérés via UserRepository', {
+              metadata: {
+          count: users.length,
+          module: 'StorageFacade',
+          operation: 'getUsers',
+                      }
+      });
       return users;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getUsers failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getUsers' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getUsers failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getUsers',
+                      }
+      });
       return await this.legacyStorage.getUsers();
     }
   }
@@ -195,15 +203,24 @@ export class StorageFacade {
     try {
       const user = await this.userRepository.getUser(id);
       if (user) {
-        this.facadeLogger.info('Utilisateur récupéré via UserRepository', { metadata: { id, module: 'StorageFacade', operation: 'getUser' 
-        }
-      );
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getUser',
+                        }
+      });
       }
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getUser failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getUser' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getUser failed, falling back to legacy', {
+        metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getUser',
+                }
+      });
       return await this.legacyStorage.getUser(id);
     }
   }
@@ -217,14 +234,24 @@ export class StorageFacade {
   async getTeamResources(projectId?: string): Promise<TeamResource[]> {
     try {
       const resources = await this.userRepository.getTeamResources(projectId);
-      this.facadeLogger.info('Ressources d\'équipe récupérées via UserRepository', { metadata: { count: resources.length, projectId, module: 'StorageFacade', operation: 'getTeamResources' 
-        }
-      );
+      this.facadeLogger.info('Ressources d\'équipe récupérées via UserRepository', {
+        metadata: {
+          count: resources.length,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getTeamResources',
+                }
+      });
       return resources;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getTeamResources failed, falling back to legacy', { metadata: { error, projectId, module: 'StorageFacade', operation: 'getTeamResources' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getTeamResources failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getTeamResources',
+                      }
+      });
       return await this.legacyStorage.getTeamResources?.(projectId) || [];
     }
   }
@@ -236,14 +263,23 @@ export class StorageFacade {
   async createTeamResource(resource: InsertTeamResource): Promise<TeamResource> {
     try {
       const created = await this.userRepository.createTeamResource(resource);
-      this.facadeLogger.info('Ressource d\'équipe créée via UserRepository', { metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createTeamResource' 
-        }
-      );
+      this.facadeLogger.info('Ressource d\'équipe créée via UserRepository', {
+              metadata: {
+          id: created.id,
+          projectId: created.projectId,
+          module: 'StorageFacade',
+          operation: 'createTeamResource',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.createTeamResource failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createTeamResource' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.createTeamResource failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createTeamResource',
+                      }
+      });
       return await this.legacyStorage.createTeamResource?.(resource) as TeamResource;
     }
   }
@@ -255,14 +291,23 @@ export class StorageFacade {
   async updateTeamResource(id: string, resource: Partial<InsertTeamResource>): Promise<TeamResource> {
     try {
       const updated = await this.userRepository.updateTeamResource(id, resource);
-      this.facadeLogger.info('Ressource d\'équipe mise à jour via UserRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateTeamResource' 
-        }
-      );
+      this.facadeLogger.info('Ressource d\'équipe mise à jour via UserRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateTeamResource',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.updateTeamResource failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateTeamResource' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.updateTeamResource failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateTeamResource',
+                      }
+      });
       return await this.legacyStorage.updateTeamResource?.(id, resource) as TeamResource;
     }
   }
@@ -276,14 +321,26 @@ export class StorageFacade {
   async getBeWorkload(weekNumber?: number, year?: number): Promise<BeWorkload[]> {
     try {
       const workload = await this.userRepository.getBeWorkload(weekNumber, year);
-      this.facadeLogger.info('Charge BE récupérée via UserRepository', { metadata: { count: workload.length, weekNumber, year, module: 'StorageFacade', operation: 'getBeWorkload' 
-        }
-      );
+      this.facadeLogger.info('Charge BE récupérée via UserRepository', {
+              metadata: {
+          count: workload.length,
+          weekNumber,
+          year,
+          module: 'StorageFacade',
+          operation: 'getBeWorkload',
+                      }
+      });
       return workload;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getBeWorkload failed, falling back to legacy', { metadata: { error, weekNumber, year, module: 'StorageFacade', operation: 'getBeWorkload' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getBeWorkload failed, falling back to legacy', {
+              metadata: {
+          error,
+          weekNumber,
+          year,
+          module: 'StorageFacade',
+          operation: 'getBeWorkload',
+                      }
+      });
       return await this.legacyStorage.getBeWorkload?.(weekNumber, year) || [];
     }
   }
@@ -295,14 +352,25 @@ export class StorageFacade {
   async createOrUpdateBeWorkload(workload: InsertBeWorkload): Promise<BeWorkload> {
     try {
       const result = await this.userRepository.createOrUpdateBeWorkload(workload);
-      this.facadeLogger.info('Charge BE créée/mise à jour via UserRepository', { metadata: { id: result.id, userId: result.userId, weekNumber: result.weekNumber, year: result.year, module: 'StorageFacade', operation: 'createOrUpdateBeWorkload' 
-        }
-      );
+      this.facadeLogger.info('Charge BE créée/mise à jour via UserRepository', {
+              metadata: {
+          id: result.id,
+          userId: result.userId,
+          weekNumber: result.weekNumber,
+          year: result.year,
+          module: 'StorageFacade',
+          operation: 'createOrUpdateBeWorkload',
+                      }
+      });
       return result;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.createOrUpdateBeWorkload failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createOrUpdateBeWorkload' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.createOrUpdateBeWorkload failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createOrUpdateBeWorkload',
+                      }
+      });
       return await this.legacyStorage.createOrUpdateBeWorkload?.(workload) as BeWorkload;
     }
   }
@@ -316,14 +384,24 @@ export class StorageFacade {
   async getEmployeeLabels(category?: string): Promise<EmployeeLabel[]> {
     try {
       const labels = await this.userRepository.getEmployeeLabels(category);
-      this.facadeLogger.info('Labels employés récupérés via UserRepository', { metadata: { count: labels.length, category, module: 'StorageFacade', operation: 'getEmployeeLabels' 
-        }
-      );
+      this.facadeLogger.info('Labels employés récupérés via UserRepository', {
+              metadata: {
+          count: labels.length,
+          category,
+          module: 'StorageFacade',
+          operation: 'getEmployeeLabels',
+                      }
+      });
       return labels;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getEmployeeLabels failed, falling back to legacy', { metadata: { error, category, module: 'StorageFacade', operation: 'getEmployeeLabels' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getEmployeeLabels failed, falling back to legacy', {
+              metadata: {
+          error,
+          category,
+          module: 'StorageFacade',
+          operation: 'getEmployeeLabels',
+                      }
+      });
       return await this.legacyStorage.getEmployeeLabels?.(category) || [];
     }
   }
@@ -335,14 +413,24 @@ export class StorageFacade {
   async createEmployeeLabel(label: EmployeeLabelInsert): Promise<EmployeeLabel> {
     try {
       const created = await this.userRepository.createEmployeeLabel(label);
-      this.facadeLogger.info('Label employé créé via UserRepository', { metadata: { id: created.id, name: created.name, category: created.category, module: 'StorageFacade', operation: 'createEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.info('Label employé créé via UserRepository', {
+              metadata: {
+          id: created.id,
+          name: created.name,
+          category: created.category,
+          module: 'StorageFacade',
+          operation: 'createEmployeeLabel',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.createEmployeeLabel failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.createEmployeeLabel failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createEmployeeLabel',
+                      }
+      });
       return await this.legacyStorage.createEmployeeLabel?.(label) as EmployeeLabel;
     }
   }
@@ -354,14 +442,23 @@ export class StorageFacade {
   async updateEmployeeLabel(id: string, label: Partial<EmployeeLabelInsert>): Promise<EmployeeLabel> {
     try {
       const updated = await this.userRepository.updateEmployeeLabel(id, label);
-      this.facadeLogger.info('Label employé mis à jour via UserRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.info('Label employé mis à jour via UserRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateEmployeeLabel',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.updateEmployeeLabel failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.updateEmployeeLabel failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateEmployeeLabel',
+                      }
+      });
       return await this.legacyStorage.updateEmployeeLabel?.(id, label) as EmployeeLabel;
     }
   }
@@ -373,13 +470,22 @@ export class StorageFacade {
   async deleteEmployeeLabel(id: string): Promise<void> {
     try {
       await this.userRepository.deleteEmployeeLabel(id);
-      this.facadeLogger.info('Label employé supprimé via UserRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.info('Label employé supprimé via UserRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEmployeeLabel',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.deleteEmployeeLabel failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteEmployeeLabel' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.deleteEmployeeLabel failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEmployeeLabel',
+                      }
+      });
       await this.legacyStorage.deleteEmployeeLabel?.(id);
     }
   }
@@ -393,14 +499,24 @@ export class StorageFacade {
   async getEmployeeLabelAssignments(userId?: string): Promise<EmployeeLabelAssignment[]> {
     try {
       const assignments = await this.userRepository.getEmployeeLabelAssignments(userId);
-      this.facadeLogger.info('Assignations de labels employés récupérées via UserRepository', { metadata: { count: assignments.length, userId, module: 'StorageFacade', operation: 'getEmployeeLabelAssignments' 
-        }
-      );
+      this.facadeLogger.info('Assignations de labels employés récupérées via UserRepository', {
+              metadata: {
+          count: assignments.length,
+          userId,
+          module: 'StorageFacade',
+          operation: 'getEmployeeLabelAssignments',
+                      }
+      });
       return assignments;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getEmployeeLabelAssignments failed, falling back to legacy', { metadata: { error, userId, module: 'StorageFacade', operation: 'getEmployeeLabelAssignments' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getEmployeeLabelAssignments failed, falling back to legacy', {
+              metadata: {
+          error,
+          userId,
+          module: 'StorageFacade',
+          operation: 'getEmployeeLabelAssignments',
+                      }
+      });
       return await this.legacyStorage.getEmployeeLabelAssignments?.(userId) || [];
     }
   }
@@ -412,14 +528,24 @@ export class StorageFacade {
   async createEmployeeLabelAssignment(assignment: EmployeeLabelAssignmentInsert): Promise<EmployeeLabelAssignment> {
     try {
       const created = await this.userRepository.createEmployeeLabelAssignment(assignment);
-      this.facadeLogger.info('Assignation de label employé créée via UserRepository', { metadata: { id: created.id, userId: created.userId, labelId: created.labelId, module: 'StorageFacade', operation: 'createEmployeeLabelAssignment' 
-        }
-      );
+      this.facadeLogger.info('Assignation de label employé créée via UserRepository', {
+              metadata: {
+          id: created.id,
+          userId: created.userId,
+          labelId: created.labelId,
+          module: 'StorageFacade',
+          operation: 'createEmployeeLabelAssignment',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.createEmployeeLabelAssignment failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createEmployeeLabelAssignment' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.createEmployeeLabelAssignment failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createEmployeeLabelAssignment',
+                      }
+      });
       return await this.legacyStorage.createEmployeeLabelAssignment?.(assignment) as EmployeeLabelAssignment;
     }
   }
@@ -431,13 +557,22 @@ export class StorageFacade {
   async deleteEmployeeLabelAssignment(id: string): Promise<void> {
     try {
       await this.userRepository.deleteEmployeeLabelAssignment(id);
-      this.facadeLogger.info('Assignation de label employé supprimée via UserRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteEmployeeLabelAssignment' 
-        }
-      );
+      this.facadeLogger.info('Assignation de label employé supprimée via UserRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEmployeeLabelAssignment',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.deleteEmployeeLabelAssignment failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteEmployeeLabelAssignment' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.deleteEmployeeLabelAssignment failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEmployeeLabelAssignment',
+                      }
+      });
       await this.legacyStorage.deleteEmployeeLabelAssignment?.(id);
     }
   }
@@ -451,15 +586,24 @@ export class StorageFacade {
     try {
       const user = await this.userRepository.getUserByEmail(email);
       if (user) {
-        this.facadeLogger.info('Utilisateur récupéré via UserRepository', { metadata: { email, module: 'StorageFacade', operation: 'getUserByEmail' 
-        }
-      );
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+                metadata: {
+          email,
+          module: 'StorageFacade',
+          operation: 'getUserByEmail',
+                        }
+      });
       }
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getUserByEmail failed, falling back to legacy', { metadata: { error, email, module: 'StorageFacade', operation: 'getUserByEmail' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getUserByEmail failed, falling back to legacy', {
+              metadata: {
+          error,
+          email,
+          module: 'StorageFacade',
+          operation: 'getUserByEmail',
+                      }
+      });
       return await this.legacyStorage.getUserByEmail(email);
     }
   }
@@ -472,15 +616,24 @@ export class StorageFacade {
     try {
       const user = await this.userRepository.getUserByUsername(username);
       if (user) {
-        this.facadeLogger.info('Utilisateur récupéré via UserRepository', { metadata: { username, module: 'StorageFacade', operation: 'getUserByUsername' 
-        }
-      );
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+                metadata: {
+          username,
+          module: 'StorageFacade',
+          operation: 'getUserByUsername',
+                        }
+      });
       }
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getUserByUsername failed, falling back to legacy', { metadata: { error, username, module: 'StorageFacade', operation: 'getUserByUsername' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getUserByUsername failed, falling back to legacy', {
+              metadata: {
+          error,
+          username,
+          module: 'StorageFacade',
+          operation: 'getUserByUsername',
+                      }
+      });
       return await this.legacyStorage.getUserByUsername(username);
     }
   }
@@ -493,15 +646,24 @@ export class StorageFacade {
     try {
       const user = await this.userRepository.getUserByMicrosoftId(microsoftId);
       if (user) {
-        this.facadeLogger.info('Utilisateur récupéré via UserRepository', { metadata: { microsoftId, module: 'StorageFacade', operation: 'getUserByMicrosoftId' 
-        }
-      );
+        this.facadeLogger.info('Utilisateur récupéré via UserRepository', {
+                metadata: {
+          microsoftId,
+          module: 'StorageFacade',
+          operation: 'getUserByMicrosoftId',
+                        }
+      });
       }
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.getUserByMicrosoftId failed, falling back to legacy', { metadata: { error, microsoftId, module: 'StorageFacade', operation: 'getUserByMicrosoftId' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.getUserByMicrosoftId failed, falling back to legacy', {
+              metadata: {
+          error,
+          microsoftId,
+          module: 'StorageFacade',
+          operation: 'getUserByMicrosoftId',
+                      }
+      });
       return await this.legacyStorage.getUserByMicrosoftId(microsoftId);
     }
   }
@@ -513,14 +675,22 @@ export class StorageFacade {
   async createUser(userData: Partial<UpsertUser>): Promise<User> {
     try {
       const user = await this.userRepository.createUser(userData);
-      this.facadeLogger.info('Utilisateur créé via UserRepository', { metadata: { id: user.id, module: 'StorageFacade', operation: 'createUser' 
-        }
-      );
+      this.facadeLogger.info('Utilisateur créé via UserRepository', {
+              metadata: {
+          id: user.id,
+          module: 'StorageFacade',
+          operation: 'createUser',
+                      }
+      });
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.createUser failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createUser' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.createUser failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createUser',
+                      }
+      });
       return await this.legacyStorage.createUser(userData);
     }
   }
@@ -532,14 +702,22 @@ export class StorageFacade {
   async upsertUser(userData: UpsertUser): Promise<User> {
     try {
       const user = await this.userRepository.upsertUser(userData);
-      this.facadeLogger.info('Utilisateur upserté via UserRepository', { metadata: { id: user.id, module: 'StorageFacade', operation: 'upsertUser' 
-        }
-      );
+      this.facadeLogger.info('Utilisateur upserté via UserRepository', {
+              metadata: {
+          id: user.id,
+          module: 'StorageFacade',
+          operation: 'upsertUser',
+                      }
+      });
       return user;
     } catch (error) {
-      this.facadeLogger.warn('UserRepository.upsertUser failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'upsertUser' 
-        }
-      );
+      this.facadeLogger.warn('UserRepository.upsertUser failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'upsertUser',
+                      }
+      });
       return await this.legacyStorage.upsertUser(userData);
     }
   }
@@ -557,14 +735,24 @@ export class StorageFacade {
   async getEquipmentBatteries(projectId?: string): Promise<EquipmentBattery[]> {
     try {
       const batteries = await this.configurationRepository.getEquipmentBatteries(projectId);
-      this.facadeLogger.info('Batteries d\'équipement récupérées via ConfigurationRepository', { metadata: { count: batteries.length, projectId, module: 'StorageFacade', operation: 'getEquipmentBatteries' 
-        }
-      );
+      this.facadeLogger.info('Batteries d\'équipement récupérées via ConfigurationRepository', {
+              metadata: {
+          count: batteries.length,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getEquipmentBatteries',
+                      }
+      });
       return batteries;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBatteries failed, falling back to legacy', { metadata: { error, projectId, module: 'StorageFacade', operation: 'getEquipmentBatteries' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBatteries failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getEquipmentBatteries',
+                      }
+      });
       return await this.legacyStorage.getEquipmentBatteries?.(projectId) || [];
     }
   }
@@ -577,15 +765,24 @@ export class StorageFacade {
     try {
       const battery = await this.configurationRepository.getEquipmentBattery(id);
       if (battery) {
-        this.facadeLogger.info('Batterie d\'équipement récupérée via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'getEquipmentBattery' 
-        }
-      );
+        this.facadeLogger.info('Batterie d\'équipement récupérée via ConfigurationRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getEquipmentBattery',
+                        }
+      });
       }
       return battery;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBattery failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.getEquipmentBattery failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getEquipmentBattery',
+                      }
+      });
       return await this.legacyStorage.getEquipmentBattery?.(id);
     }
   }
@@ -597,14 +794,23 @@ export class StorageFacade {
   async createEquipmentBattery(battery: EquipmentBatteryInsert): Promise<EquipmentBattery> {
     try {
       const created = await this.configurationRepository.createEquipmentBattery(battery);
-      this.facadeLogger.info('Batterie d\'équipement créée via ConfigurationRepository', { metadata: { id: created.id, projectId: created.assignedToProjectId, module: 'StorageFacade', operation: 'createEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.info('Batterie d\'équipement créée via ConfigurationRepository', {
+              metadata: {
+          id: created.id,
+          projectId: created.assignedToProjectId,
+          module: 'StorageFacade',
+          operation: 'createEquipmentBattery',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.createEquipmentBattery failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.createEquipmentBattery failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createEquipmentBattery',
+                      }
+      });
       return await this.legacyStorage.createEquipmentBattery?.(battery) as EquipmentBattery;
     }
   }
@@ -616,14 +822,23 @@ export class StorageFacade {
   async updateEquipmentBattery(id: string, battery: Partial<EquipmentBatteryInsert>): Promise<EquipmentBattery> {
     try {
       const updated = await this.configurationRepository.updateEquipmentBattery(id, battery);
-      this.facadeLogger.info('Batterie d\'équipement mise à jour via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.info('Batterie d\'équipement mise à jour via ConfigurationRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateEquipmentBattery',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.updateEquipmentBattery failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.updateEquipmentBattery failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateEquipmentBattery',
+                      }
+      });
       return await this.legacyStorage.updateEquipmentBattery?.(id, battery) as EquipmentBattery;
     }
   }
@@ -635,13 +850,22 @@ export class StorageFacade {
   async deleteEquipmentBattery(id: string): Promise<void> {
     try {
       await this.configurationRepository.deleteEquipmentBattery(id);
-      this.facadeLogger.info('Batterie d\'équipement supprimée via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.info('Batterie d\'équipement supprimée via ConfigurationRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEquipmentBattery',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.deleteEquipmentBattery failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteEquipmentBattery' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.deleteEquipmentBattery failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteEquipmentBattery',
+                      }
+      });
       await this.legacyStorage.deleteEquipmentBattery?.(id);
     }
   }
@@ -655,14 +879,24 @@ export class StorageFacade {
   async getMarginTargets(projectId?: string): Promise<MarginTarget[]> {
     try {
       const targets = await this.configurationRepository.getMarginTargets(projectId);
-      this.facadeLogger.info('Objectifs de marge récupérés via ConfigurationRepository', { metadata: { count: targets.length, projectId, module: 'StorageFacade', operation: 'getMarginTargets' 
-        }
-      );
+      this.facadeLogger.info('Objectifs de marge récupérés via ConfigurationRepository', {
+              metadata: {
+          count: targets.length,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getMarginTargets',
+                      }
+      });
       return targets;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.getMarginTargets failed, falling back to legacy', { metadata: { error, projectId, module: 'StorageFacade', operation: 'getMarginTargets' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.getMarginTargets failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getMarginTargets',
+                      }
+      });
       return await this.legacyStorage.getMarginTargets?.(projectId) || [];
     }
   }
@@ -675,15 +909,24 @@ export class StorageFacade {
     try {
       const target = await this.configurationRepository.getMarginTarget(id);
       if (target) {
-        this.facadeLogger.info('Objectif de marge récupéré via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'getMarginTarget' 
-        }
-      );
+        this.facadeLogger.info('Objectif de marge récupéré via ConfigurationRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getMarginTarget',
+                        }
+      });
       }
       return target;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.getMarginTarget failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getMarginTarget' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.getMarginTarget failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getMarginTarget',
+                      }
+      });
       return await this.legacyStorage.getMarginTarget?.(id);
     }
   }
@@ -695,14 +938,23 @@ export class StorageFacade {
   async createMarginTarget(target: MarginTargetInsert): Promise<MarginTarget> {
     try {
       const created = await this.configurationRepository.createMarginTarget(target);
-      this.facadeLogger.info('Objectif de marge créé via ConfigurationRepository', { metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createMarginTarget' 
-        }
-      );
+      this.facadeLogger.info('Objectif de marge créé via ConfigurationRepository', {
+              metadata: {
+          id: created.id,
+          projectId: created.projectId,
+          module: 'StorageFacade',
+          operation: 'createMarginTarget',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.createMarginTarget failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createMarginTarget' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.createMarginTarget failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createMarginTarget',
+                      }
+      });
       return await this.legacyStorage.createMarginTarget?.(target) as MarginTarget;
     }
   }
@@ -714,14 +966,23 @@ export class StorageFacade {
   async updateMarginTarget(id: string, target: Partial<MarginTargetInsert>): Promise<MarginTarget> {
     try {
       const updated = await this.configurationRepository.updateMarginTarget(id, target);
-      this.facadeLogger.info('Objectif de marge mis à jour via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateMarginTarget' 
-        }
-      );
+      this.facadeLogger.info('Objectif de marge mis à jour via ConfigurationRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateMarginTarget',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.updateMarginTarget failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateMarginTarget' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.updateMarginTarget failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateMarginTarget',
+                      }
+      });
       return await this.legacyStorage.updateMarginTarget?.(id, target) as MarginTarget;
     }
   }
@@ -733,13 +994,22 @@ export class StorageFacade {
   async deleteMarginTarget(id: string): Promise<void> {
     try {
       await this.configurationRepository.deleteMarginTarget(id);
-      this.facadeLogger.info('Objectif de marge supprimé via ConfigurationRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteMarginTarget' 
-        }
-      );
+      this.facadeLogger.info('Objectif de marge supprimé via ConfigurationRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteMarginTarget',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ConfigurationRepository.deleteMarginTarget failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteMarginTarget' 
-        }
-      );
+      this.facadeLogger.warn('ConfigurationRepository.deleteMarginTarget failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteMarginTarget',
+                      }
+      });
       await this.legacyStorage.deleteMarginTarget?.(id);
     }
   }
@@ -757,14 +1027,24 @@ export class StorageFacade {
   async getAoContacts(aoId: string, tx?: DrizzleTransaction): Promise<AoContacts[]> {
     try {
       const contacts = await this.contactsRepository.getAoContacts(aoId, tx);
-      this.facadeLogger.info('Contacts AO récupérés via ContactsRepository', { metadata: { count: contacts.length, aoId, module: 'StorageFacade', operation: 'getAoContacts' 
-        }
-      );
+      this.facadeLogger.info('Contacts AO récupérés via ContactsRepository', {
+              metadata: {
+          count: contacts.length,
+          aoId,
+          module: 'StorageFacade',
+          operation: 'getAoContacts',
+                      }
+      });
       return contacts;
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.getAoContacts failed, falling back to legacy', { metadata: { error, aoId, module: 'StorageFacade', operation: 'getAoContacts' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.getAoContacts failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId,
+          module: 'StorageFacade',
+          operation: 'getAoContacts',
+                      }
+      });
       return await this.legacyStorage.getAoContacts?.(aoId, tx) || [];
     }
   }
@@ -776,14 +1056,23 @@ export class StorageFacade {
   async createAoContact(contact: InsertAoContacts, tx?: DrizzleTransaction): Promise<AoContacts> {
     try {
       const created = await this.contactsRepository.createAoContact(contact, tx);
-      this.facadeLogger.info('Contact AO créé via ContactsRepository', { metadata: { id: created.id, aoId: created.ao_id, module: 'StorageFacade', operation: 'createAoContact' 
-        }
-      );
+      this.facadeLogger.info('Contact AO créé via ContactsRepository', {
+              metadata: {
+          id: created.id,
+          aoId: created.ao_id,
+          module: 'StorageFacade',
+          operation: 'createAoContact',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.createAoContact failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createAoContact' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.createAoContact failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createAoContact',
+                      }
+      });
       return await this.legacyStorage.createAoContact?.(contact, tx) as AoContacts;
     }
   }
@@ -795,13 +1084,22 @@ export class StorageFacade {
   async deleteAoContact(id: string): Promise<void> {
     try {
       await this.contactsRepository.deleteAoContact(id);
-      this.facadeLogger.info('Contact AO supprimé via ContactsRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteAoContact' 
-        }
-      );
+      this.facadeLogger.info('Contact AO supprimé via ContactsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteAoContact',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.deleteAoContact failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteAoContact' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.deleteAoContact failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteAoContact',
+                      }
+      });
       await this.legacyStorage.deleteAoContact?.(id);
     }
   }
@@ -815,14 +1113,24 @@ export class StorageFacade {
   async getProjectContacts(projectId: string): Promise<ProjectContacts[]> {
     try {
       const contacts = await this.contactsRepository.getProjectContacts(projectId);
-      this.facadeLogger.info('Contacts projet récupérés via ContactsRepository', { metadata: { count: contacts.length, projectId, module: 'StorageFacade', operation: 'getProjectContacts' 
-        }
-      );
+      this.facadeLogger.info('Contacts projet récupérés via ContactsRepository', {
+              metadata: {
+          count: contacts.length,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getProjectContacts',
+                      }
+      });
       return contacts;
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.getProjectContacts failed, falling back to legacy', { metadata: { error, projectId, module: 'StorageFacade', operation: 'getProjectContacts' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.getProjectContacts failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getProjectContacts',
+                      }
+      });
       return await this.legacyStorage.getProjectContacts?.(projectId) || [];
     }
   }
@@ -834,14 +1142,23 @@ export class StorageFacade {
   async createProjectContact(contact: InsertProjectContacts): Promise<ProjectContacts> {
     try {
       const created = await this.contactsRepository.createProjectContact(contact);
-      this.facadeLogger.info('Contact projet créé via ContactsRepository', { metadata: { id: created.id, projectId: created.project_id, module: 'StorageFacade', operation: 'createProjectContact' 
-        }
-      );
+      this.facadeLogger.info('Contact projet créé via ContactsRepository', {
+              metadata: {
+          id: created.id,
+          projectId: created.project_id,
+          module: 'StorageFacade',
+          operation: 'createProjectContact',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.createProjectContact failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createProjectContact' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.createProjectContact failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createProjectContact',
+                      }
+      });
       return await this.legacyStorage.createProjectContact?.(contact) as ProjectContacts;
     }
   }
@@ -853,13 +1170,22 @@ export class StorageFacade {
   async deleteProjectContact(id: string): Promise<void> {
     try {
       await this.contactsRepository.deleteProjectContact(id);
-      this.facadeLogger.info('Contact projet supprimé via ContactsRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteProjectContact' 
-        }
-      );
+      this.facadeLogger.info('Contact projet supprimé via ContactsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteProjectContact',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ContactsRepository.deleteProjectContact failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteProjectContact' 
-        }
-      );
+      this.facadeLogger.warn('ContactsRepository.deleteProjectContact failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteProjectContact',
+                      }
+      });
       await this.legacyStorage.deleteProjectContact?.(id);
     }
   }
@@ -877,14 +1203,24 @@ export class StorageFacade {
   async getSavInterventions(projectId: string): Promise<SavIntervention[]> {
     try {
       const interventions = await this.savRepository.getSavInterventions(projectId);
-      this.facadeLogger.info('Interventions SAV récupérées via SavRepository', { metadata: { count: interventions.length, projectId, module: 'StorageFacade', operation: 'getSavInterventions' 
-        }
-      );
+      this.facadeLogger.info('Interventions SAV récupérées via SavRepository', {
+              metadata: {
+          count: interventions.length,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getSavInterventions',
+                      }
+      });
       return interventions;
     } catch (error) {
-      this.facadeLogger.warn('SavRepository.getSavInterventions failed, falling back to legacy', { metadata: { error, projectId, module: 'StorageFacade', operation: 'getSavInterventions' 
-        }
-      );
+      this.facadeLogger.warn('SavRepository.getSavInterventions failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          module: 'StorageFacade',
+          operation: 'getSavInterventions',
+                      }
+      });
       return await this.legacyStorage.getSavInterventions?.(projectId) || [];
     }
   }
@@ -897,15 +1233,24 @@ export class StorageFacade {
     try {
       const intervention = await this.savRepository.getSavIntervention(id);
       if (intervention) {
-        this.facadeLogger.info('Intervention SAV récupérée via SavRepository', { metadata: { id, module: 'StorageFacade', operation: 'getSavIntervention' 
-        }
-      );
+        this.facadeLogger.info('Intervention SAV récupérée via SavRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getSavIntervention',
+                        }
+      });
       }
       return intervention;
     } catch (error) {
-      this.facadeLogger.warn('SavRepository.getSavIntervention failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getSavIntervention' 
-        }
-      );
+      this.facadeLogger.warn('SavRepository.getSavIntervention failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getSavIntervention',
+                      }
+      });
       return await this.legacyStorage.getSavIntervention?.(id);
     }
   }
@@ -917,14 +1262,23 @@ export class StorageFacade {
   async createSavIntervention(intervention: InsertSavIntervention): Promise<SavIntervention> {
     try {
       const created = await this.savRepository.createSavIntervention(intervention);
-      this.facadeLogger.info('Intervention SAV créée via SavRepository', { metadata: { id: created.id, projectId: created.projectId, module: 'StorageFacade', operation: 'createSavIntervention' 
-        }
-      );
+      this.facadeLogger.info('Intervention SAV créée via SavRepository', {
+              metadata: {
+          id: created.id,
+          projectId: created.projectId,
+          module: 'StorageFacade',
+          operation: 'createSavIntervention',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('SavRepository.createSavIntervention failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createSavIntervention' 
-        }
-      );
+      this.facadeLogger.warn('SavRepository.createSavIntervention failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createSavIntervention',
+                      }
+      });
       return await this.legacyStorage.createSavIntervention?.(intervention) as SavIntervention;
     }
   }
@@ -936,14 +1290,23 @@ export class StorageFacade {
   async updateSavIntervention(id: string, intervention: Partial<InsertSavIntervention>): Promise<SavIntervention> {
     try {
       const updated = await this.savRepository.updateSavIntervention(id, intervention);
-      this.facadeLogger.info('Intervention SAV mise à jour via SavRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateSavIntervention' 
-        }
-      );
+      this.facadeLogger.info('Intervention SAV mise à jour via SavRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSavIntervention',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('SavRepository.updateSavIntervention failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateSavIntervention' 
-        }
-      );
+      this.facadeLogger.warn('SavRepository.updateSavIntervention failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSavIntervention',
+                      }
+      });
       return await this.legacyStorage.updateSavIntervention?.(id, intervention) as SavIntervention;
     }
   }
@@ -955,13 +1318,22 @@ export class StorageFacade {
   async deleteSavIntervention(id: string): Promise<void> {
     try {
       await this.savRepository.deleteSavIntervention(id);
-      this.facadeLogger.info('Intervention SAV supprimée via SavRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteSavIntervention' 
-        }
-      );
+      this.facadeLogger.info('Intervention SAV supprimée via SavRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSavIntervention',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('SavRepository.deleteSavIntervention failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteSavIntervention' 
-        }
-      );
+      this.facadeLogger.warn('SavRepository.deleteSavIntervention failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSavIntervention',
+                      }
+      });
       await this.legacyStorage.deleteSavIntervention?.(id);
     }
   }
@@ -977,14 +1349,22 @@ export class StorageFacade {
   async getAos(): Promise<Ao[]> {
     try {
       const aos = await this.aoRepository.findAll();
-      this.facadeLogger.info('AOs récupérés via AoRepository', { metadata: { count: aos.length, module: 'StorageFacade', operation: 'getAos' 
-        }
-      );
+      this.facadeLogger.info('AOs récupérés via AoRepository', {
+              metadata: {
+          count: aos.length,
+          module: 'StorageFacade',
+          operation: 'getAos',
+                      }
+      });
       return aos;
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.findAll failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getAos' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.findAll failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getAos',
+                      }
+      });
       return await this.legacyStorage.getAos();
     }
   }
@@ -1014,9 +1394,17 @@ export class StorageFacade {
         total: result.total
       };
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.findPaginated failed, falling back to legacy', { metadata: { error, search, status, limit, offset, module: 'StorageFacade', operation: 'getAOsPaginated' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.findPaginated failed, falling back to legacy', {
+              metadata: {
+          error,
+          search,
+          status,
+          limit,
+          offset,
+          module: 'StorageFacade',
+          operation: 'getAOsPaginated',
+                      }
+      });
       return await this.legacyStorage.getAOsPaginated(search, status, limit, offset);
     }
   }
@@ -1029,15 +1417,24 @@ export class StorageFacade {
     try {
       const ao = await this.aoRepository.findById(id, tx);
       if (ao) {
-        this.facadeLogger.info('AO récupéré via AoRepository', { metadata: { aoId: id, module: 'StorageFacade', operation: 'getAo' 
-        }
-      );
+        this.facadeLogger.info('AO récupéré via AoRepository', {
+                metadata: {
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'getAo',
+                        }
+      });
       }
       return ao;
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.findById failed, falling back to legacy', { metadata: { error, aoId: id, module: 'StorageFacade', operation: 'getAo' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.findById failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'getAo',
+                      }
+      });
       return await this.legacyStorage.getAo(id, tx);
     }
   }
@@ -1050,15 +1447,25 @@ export class StorageFacade {
     try {
       const ao = await this.aoRepository.findByMondayId(mondayItemId, tx);
       if (ao) {
-        this.facadeLogger.info('AO récupéré par Monday ID via AoRepository', { metadata: { mondayItemId, aoId: ao.id, module: 'StorageFacade', operation: 'getAOByMondayItemId' 
-        }
-      );
+        this.facadeLogger.info('AO récupéré par Monday ID via AoRepository', {
+                metadata: {
+          mondayItemId,
+          aoId: ao.id,
+          module: 'StorageFacade',
+          operation: 'getAOByMondayItemId',
+                        }
+      });
       }
       return ao;
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.findByMondayId failed, falling back to legacy', { metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getAOByMondayItemId' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.findByMondayId failed, falling back to legacy', {
+              metadata: {
+          error,
+          mondayItemId,
+          module: 'StorageFacade',
+          operation: 'getAOByMondayItemId',
+                      }
+      });
       return await this.legacyStorage.getAOByMondayItemId(mondayItemId, tx);
     }
   }
@@ -1070,14 +1477,22 @@ export class StorageFacade {
   async createAo(ao: InsertAo, tx?: DrizzleTransaction): Promise<Ao> {
     try {
       const created = await this.aoRepository.create(ao, tx);
-      this.facadeLogger.info('AO créé via AoRepository', { metadata: { aoId: created.id, module: 'StorageFacade', operation: 'createAo' 
-        }
-      );
+      this.facadeLogger.info('AO créé via AoRepository', {
+              metadata: {
+          aoId: created.id,
+          module: 'StorageFacade',
+          operation: 'createAo',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.create failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createAo' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.create failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createAo',
+                      }
+      });
       return await this.legacyStorage.createAo(ao, tx);
     }
   }
@@ -1089,14 +1504,23 @@ export class StorageFacade {
   async updateAo(id: string, ao: Partial<InsertAo>, tx?: DrizzleTransaction): Promise<Ao> {
     try {
       const updated = await this.aoRepository.update(id, ao, tx);
-      this.facadeLogger.info('AO mis à jour via AoRepository', { metadata: { aoId: id, module: 'StorageFacade', operation: 'updateAo' 
-        }
-      );
+      this.facadeLogger.info('AO mis à jour via AoRepository', {
+              metadata: {
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'updateAo',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.update failed, falling back to legacy', { metadata: { error, aoId: id, module: 'StorageFacade', operation: 'updateAo' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.update failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'updateAo',
+                      }
+      });
       return await this.legacyStorage.updateAo(id, ao, tx);
     }
   }
@@ -1108,13 +1532,22 @@ export class StorageFacade {
   async deleteAo(id: string, tx?: DrizzleTransaction): Promise<void> {
     try {
       await this.aoRepository.delete(id, tx);
-      this.facadeLogger.info('AO supprimé via AoRepository', { metadata: { aoId: id, module: 'StorageFacade', operation: 'deleteAo' 
-        }
-      );
+      this.facadeLogger.info('AO supprimé via AoRepository', {
+              metadata: {
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'deleteAo',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.delete failed, falling back to legacy', { metadata: { error, aoId: id, module: 'StorageFacade', operation: 'deleteAo' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.delete failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId: id,
+          module: 'StorageFacade',
+          operation: 'deleteAo',
+                      }
+      });
       await this.legacyStorage.deleteAo(id, tx);
     }
   }
@@ -1139,8 +1572,9 @@ export class StorageFacade {
           module: 'StorageFacade',
           operation: 'getOffers',
           count: offers.length,
-          filters
-              });
+          filters,
+              }
+      });
       
       return offers;
     } catch (error) {
@@ -1149,8 +1583,9 @@ export class StorageFacade {
           operation: 'getOffers',
           error: error instanceof Error ? error.message : 'Unknown error',
           search,
-          status
-              });
+          status,
+              }
+      });
       return await this.legacyStorage.getOffers(search, status);
     }
   }
@@ -1180,8 +1615,9 @@ export class StorageFacade {
           operation: 'getOffersPaginated',
           count: result.items.length,
           total: result.total,
-          filters
-              });
+          filters,
+              }
+      });
 
       return {
         offers: result.items,
@@ -1197,8 +1633,9 @@ export class StorageFacade {
           search,
           status,
           limit,
-          offset
-              });
+          offset,
+              }
+      });
       const legacyResult = await this.legacyStorage.getOffersPaginated(search, status, limit, offset);
       // Ensure legacy result has limit and offset for type consistency
       return {
@@ -1229,8 +1666,9 @@ export class StorageFacade {
           module: 'StorageFacade',
           operation: 'getOffer',
           id,
-          found: !!offer
-              });
+          found: !!offer,
+              }
+      });
       
       return offer;
     } catch (error) {
@@ -1238,8 +1676,9 @@ export class StorageFacade {
           module: 'StorageFacade',
           operation: 'getOffer',
           id,
-          error: error instanceof Error ? error.message : 'Unknown error'
-              });
+          error: error instanceof Error ? error.message : 'Unknown error',
+              }
+      });
       return await this.legacyStorage.getOffer(id);
     }
   }
@@ -1259,14 +1698,22 @@ export class StorageFacade {
   async createOffer(offer: InsertOffer): Promise<Offer> {
     try {
       const created = await this.offerRepository.create(offer);
-      this.facadeLogger.info('Offre créée via OfferRepository', { metadata: { offerId: created.id, module: 'StorageFacade', operation: 'createOffer' 
-        }
-      );
+      this.facadeLogger.info('Offre créée via OfferRepository', {
+              metadata: {
+          offerId: created.id,
+          module: 'StorageFacade',
+          operation: 'createOffer',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('OfferRepository.create failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createOffer' 
-        }
-      );
+      this.facadeLogger.warn('OfferRepository.create failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createOffer',
+                      }
+      });
       return await this.legacyStorage.createOffer(offer);
     }
   }
@@ -1278,14 +1725,23 @@ export class StorageFacade {
   async updateOffer(id: string, offer: Partial<InsertOffer>): Promise<Offer> {
     try {
       const updated = await this.offerRepository.update(id, offer);
-      this.facadeLogger.info('Offre mise à jour via OfferRepository', { metadata: { offerId: id, module: 'StorageFacade', operation: 'updateOffer' 
-        }
-      );
+      this.facadeLogger.info('Offre mise à jour via OfferRepository', {
+              metadata: {
+          offerId: id,
+          module: 'StorageFacade',
+          operation: 'updateOffer',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('OfferRepository.update failed, falling back to legacy', { metadata: { error, offerId: id, module: 'StorageFacade', operation: 'updateOffer' 
-        }
-      );
+      this.facadeLogger.warn('OfferRepository.update failed, falling back to legacy', {
+              metadata: {
+          error,
+          offerId: id,
+          module: 'StorageFacade',
+          operation: 'updateOffer',
+                      }
+      });
       return await this.legacyStorage.updateOffer(id, offer);
     }
   }
@@ -1297,13 +1753,22 @@ export class StorageFacade {
   async deleteOffer(id: string): Promise<void> {
     try {
       await this.offerRepository.delete(id);
-      this.facadeLogger.info('Offre supprimée via OfferRepository', { metadata: { offerId: id, module: 'StorageFacade', operation: 'deleteOffer' 
-        }
-      );
+      this.facadeLogger.info('Offre supprimée via OfferRepository', {
+              metadata: {
+          offerId: id,
+          module: 'StorageFacade',
+          operation: 'deleteOffer',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('OfferRepository.delete failed, falling back to legacy', { metadata: { error, offerId: id, module: 'StorageFacade', operation: 'deleteOffer' 
-        }
-      );
+      this.facadeLogger.warn('OfferRepository.delete failed, falling back to legacy', {
+              metadata: {
+          error,
+          offerId: id,
+          module: 'StorageFacade',
+          operation: 'deleteOffer',
+                      }
+      });
       await this.legacyStorage.deleteOffer(id);
     }
   }
@@ -1318,21 +1783,29 @@ export class StorageFacade {
    */
   async getProjects(search?: string, status?: string) {
     try {
-      const fil: unknown =ny = {};
+      const filters: Record<string, unknown> = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
       const projects = await this.productionRepository.findAll(filters);
       
-      this.facadeLogger.info('[StorageFacade] getProjects - Using ProductionRepository', { metadata: { module: 'StorageFacade', operation: 'getProjects', count: projects.length 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] getProjects - Using ProductionRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProjects',
+          count: projects.length,
+                      }
+      });
       
       return projects;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] getProjects - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'getProjects', error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] getProjects - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProjects',
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.getProjects(search, status);
     }
   }
@@ -1343,15 +1816,20 @@ export class StorageFacade {
    */
   async getProjectsPaginated(search?: string, status?: string, limit: number = 20, offset: number = 0) {
     try {
-      const: unknown =s: unknown = {};
+      const filters: Record<string, unknown> = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
       const result = await this.productionRepository.findPaginated(filters, { limit, offset });
       
-      this.facadeLogger.info('[StorageFacade] getProjectsPaginated - Using ProductionRepository', { metadata: { module: 'StorageFacade', operation: 'getProjectsPaginated', count: result.items.length, total: result.total 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] getProjectsPaginated - Using ProductionRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProjectsPaginated',
+          count: result.items.length,
+          total: result.total,
+                      }
+      });
       
       return {
         projects: result.items,
@@ -1360,9 +1838,13 @@ export class StorageFacade {
         offset
       };
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] getProjectsPaginated - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'getProjectsPaginated', error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] getProjectsPaginated - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProjectsPaginated',
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.getProjectsPaginated(search, status, limit, offset);
     }
   }
@@ -1375,15 +1857,25 @@ export class StorageFacade {
     try {
       const project = await this.productionRepository.findById(id);
       
-      this.facadeLogger.info('[StorageFacade] getProject - Using ProductionRepository', { metadata: { module: 'StorageFacade', operation: 'getProject', id, found: !!project 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] getProject - Using ProductionRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProject',
+          id,
+          found: !!project,
+                      }
+      });
       
       return project;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] getProject - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'getProject', id, error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] getProject - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getProject',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.getProject(id);
     }
   }
@@ -1396,15 +1888,25 @@ export class StorageFacade {
     try {
       const project = await this.productionRepository.findByMondayId(mondayItemId, tx);
       if (project) {
-        this.facadeLogger.info('Projet récupéré par Monday ID via ProductionRepository', { metadata: { mondayItemId, projectId: project.id, module: 'StorageFacade', operation: 'getProjectByMondayItemId' 
-        }
-      );
+        this.facadeLogger.info('Projet récupéré par Monday ID via ProductionRepository', {
+                metadata: {
+          mondayItemId,
+          projectId: project.id,
+          module: 'StorageFacade',
+          operation: 'getProjectByMondayItemId',
+                        }
+      });
       }
       return project;
     } catch (error) {
-      this.facadeLogger.warn('ProductionRepository.findByMondayId failed, falling back to legacy', { metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getProjectByMondayItemId' 
-        }
-      );
+      this.facadeLogger.warn('ProductionRepository.findByMondayId failed, falling back to legacy', {
+              metadata: {
+          error,
+          mondayItemId,
+          module: 'StorageFacade',
+          operation: 'getProjectByMondayItemId',
+                      }
+      });
       return await this.legacyStorage.getProjectByMondayItemId(mondayItemId, tx);
     }
   }
@@ -1419,15 +1921,23 @@ export class StorageFacade {
     try {
       const created = await this.productionRepository.create(project);
       
-      this.facadeLogger.info('[StorageFacade] createProject - Using ProductionRepository', { metadata: { module: 'StorageFacade', operation: 'createProject', id: created.id 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] createProject - Using ProductionRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'createProject',
+          id: created.id,
+                      }
+      });
       
       return created;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] createProject - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'createProject', error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] createProject - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'createProject',
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.createProject(project);
     }
   }
@@ -1436,19 +1946,28 @@ export class StorageFacade {
    * Met à jour un projet
    * Utilise ProductionRepository avec fallback sur legacy
    */
-  async updateProject(id: string, pro: unknown)unknown) {
+  async updateProject(id: string, project: unknown) {
     try {
       const updated = await this.productionRepository.update(id, project);
       
-      this.facadeLogger.info('[StorageFacade] updateProject - Using ProductionRepository', { metadata: { module: 'StorageFacade', operation: 'updateProject', id 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] updateProject - Using ProductionRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'updateProject',
+          id,
+                      }
+      });
       
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] updateProject - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'updateProject', id, error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] updateProject - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'updateProject',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.updateProject(id, project);
     }
   }
@@ -1460,13 +1979,24 @@ export class StorageFacade {
   async updateProjectMondayId(projectId: string, mondayId: string): Promise<void> {
     try {
       await this.productionRepository.updateMondayId(projectId, mondayId);
-      this.facadeLogger.info('Monday ID projet mis à jour via ProductionRepository', { metadata: { projectId, mondayId, module: 'StorageFacade', operation: 'updateProjectMondayId' 
-        }
-      );
+      this.facadeLogger.info('Monday ID projet mis à jour via ProductionRepository', {
+              metadata: {
+          projectId,
+          mondayId,
+          module: 'StorageFacade',
+          operation: 'updateProjectMondayId',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ProductionRepository.updateMondayId failed, falling back to legacy', { metadata: { error, projectId, mondayId, module: 'StorageFacade', operation: 'updateProjectMondayId' 
-        }
-      );
+      this.facadeLogger.warn('ProductionRepository.updateMondayId failed, falling back to legacy', {
+              metadata: {
+          error,
+          projectId,
+          mondayId,
+          module: 'StorageFacade',
+          operation: 'updateProjectMondayId',
+                      }
+      });
       await this.legacyStorage.updateProjectMondayId(projectId, mondayId);
     }
   }
@@ -1478,13 +2008,24 @@ export class StorageFacade {
   async updateAOMondayId(aoId: string, mondayId: string): Promise<void> {
     try {
       await this.aoRepository.updateMondayId(aoId, mondayId);
-      this.facadeLogger.info('Monday ID AO mis à jour via AoRepository', { metadata: { aoId, mondayId, module: 'StorageFacade', operation: 'updateAOMondayId' 
-        }
-      );
+      this.facadeLogger.info('Monday ID AO mis à jour via AoRepository', {
+              metadata: {
+          aoId,
+          mondayId,
+          module: 'StorageFacade',
+          operation: 'updateAOMondayId',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('AoRepository.updateMondayId failed, falling back to legacy', { metadata: { error, aoId, mondayId, module: 'StorageFacade', operation: 'updateAOMondayId' 
-        }
-      );
+      this.facadeLogger.warn('AoRepository.updateMondayId failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId,
+          mondayId,
+          module: 'StorageFacade',
+          operation: 'updateAOMondayId',
+                      }
+      });
       await this.legacyStorage.updateAOMondayId(aoId, mondayId);
     }
   }
@@ -1508,21 +2049,29 @@ export class StorageFacade {
    */
   async getSuppliers(search?: string, status?: string) {
     try {
-      c: unknown =lteunknown =ny = {};
+      const filters: Record<string, unknown> = {};
       if (search) filters.search = search;
       if (status) filters.status = status;
       
       const suppliers = await this.suppliersRepository.findAll(filters);
       
-      this.facadeLogger.info('[StorageFacade] getSuppliers - Using SuppliersRepository', { metadata: { module: 'StorageFacade', operation: 'getSuppliers', count: suppliers.length 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] getSuppliers - Using SuppliersRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getSuppliers',
+          count: suppliers.length,
+                      }
+      });
       
       return suppliers;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] getSuppliers - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'getSuppliers', error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] getSuppliers - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getSuppliers',
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.getSuppliers(search, status);
     }
   }
@@ -1535,15 +2084,25 @@ export class StorageFacade {
     try {
       const supplier = await this.suppliersRepository.findById(id);
       
-      this.facadeLogger.info('[StorageFacade] getSupplier - Using SuppliersRepository', { metadata: { module: 'StorageFacade', operation: 'getSupplier', id, found: !!supplier 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] getSupplier - Using SuppliersRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getSupplier',
+          id,
+          found: !!supplier,
+                      }
+      });
       
       return supplier;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] getSupplier - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'getSupplier', id, error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] getSupplier - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'getSupplier',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.getSupplier(id);
     }
   }
@@ -1556,15 +2115,25 @@ export class StorageFacade {
     try {
       const supplier = await this.suppliersRepository.findByMondayId(mondayItemId, tx);
       if (supplier) {
-        this.facadeLogger.info('Fournisseur récupéré par Monday ID via SuppliersRepository', { metadata: { mondayItemId, supplierId: supplier.id, module: 'StorageFacade', operation: 'getSupplierByMondayItemId' 
-        }
-      );
+        this.facadeLogger.info('Fournisseur récupéré par Monday ID via SuppliersRepository', {
+                metadata: {
+          mondayItemId,
+          supplierId: supplier.id,
+          module: 'StorageFacade',
+          operation: 'getSupplierByMondayItemId',
+                        }
+              });
       }
       return supplier;
     } catch (error) {
-      this.facadeLogger.warn('SuppliersRepository.findByMondayId failed, falling back to legacy', { metadata: { error, mondayItemId, module: 'StorageFacade', operation: 'getSupplierByMondayItemId' 
-        }
-      );
+      this.facadeLogger.warn('SuppliersRepository.findByMondayId failed, falling back to legacy', {
+              metadata: {
+          error,
+          mondayItemId,
+          module: 'StorageFacade',
+          operation: 'getSupplierByMondayItemId',
+                      }
+      });
       return await this.legacyStorage.getSupplierByMondayItemId(mondayItemId, tx);
     }
   }
@@ -1573,19 +2142,27 @@ export class StorageFacade {
    * Crée un nouveau fournisseur
    * Utilise SuppliersRepository avec fallback sur legacy
    */
-  async createSupplier(: unknown)unknown)unknown) {
+  async createSupplier(supplier: unknown) {
     try {
       const created = await this.suppliersRepository.create(supplier);
       
-      this.facadeLogger.info('[StorageFacade] createSupplier - Using SuppliersRepository', { metadata: { module: 'StorageFacade', operation: 'createSupplier', id: created.id 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] createSupplier - Using SuppliersRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'createSupplier',
+          id: created.id,
+                      }
+      });
       
       return created;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] createSupplier - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'createSupplier', error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] createSupplier - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'createSupplier',
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.createSupplier(supplier);
     }
   }
@@ -1594,19 +2171,28 @@ export class StorageFacade {
    * Met à jour un fournisseur
    * Utilise SuppliersRepository avec fallback sur legacy
    */
-  async updateSupplier(id: stri: unknown)unknown)unknown any) {
+  async updateSupplier(id: string, supplier: unknown) {
     try {
       const updated = await this.suppliersRepository.update(id, supplier);
       
-      this.facadeLogger.info('[StorageFacade] updateSupplier - Using SuppliersRepository', { metadata: { module: 'StorageFacade', operation: 'updateSupplier', id 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] updateSupplier - Using SuppliersRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'updateSupplier',
+          id,
+                      }
+      });
       
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] updateSupplier - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'updateSupplier', id, error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] updateSupplier - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'updateSupplier',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       return await this.legacyStorage.updateSupplier(id, supplier);
     }
   }
@@ -1619,13 +2205,22 @@ export class StorageFacade {
     try {
       await this.suppliersRepository.delete(id);
       
-      this.facadeLogger.info('[StorageFacade] deleteSupplier - Using SuppliersRepository', { metadata: { module: 'StorageFacade', operation: 'deleteSupplier', id 
-        }
-      );
+      this.facadeLogger.info('[StorageFacade] deleteSupplier - Using SuppliersRepository', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'deleteSupplier',
+          id,
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('[StorageFacade] deleteSupplier - Fallback to legacy', { metadata: { module: 'StorageFacade', operation: 'deleteSupplier', id, error: error instanceof Error ? error.message : 'Unknown' 
-        }
-      );
+      this.facadeLogger.warn('[StorageFacade] deleteSupplier - Fallback to legacy', {
+              metadata: {
+          module: 'StorageFacade',
+          operation: 'deleteSupplier',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown',
+                      }
+      });
       await this.legacyStorage.deleteSupplier(id);
     }
   }
@@ -1653,14 +2248,24 @@ export class StorageFacade {
   async getChiffrageElementsByOffer(offerId: string): Promise<ChiffrageElement[]> {
     try {
       const elements = await this.chiffrageRepository.getChiffrageElementsByOffer(offerId);
-      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', { metadata: { offerId, count: elements.length, module: 'StorageFacade', operation: 'getChiffrageElementsByOffer' 
-        }
-      );
+      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {
+              metadata: {
+          offerId,
+          count: elements.length,
+          module: 'StorageFacade',
+          operation: 'getChiffrageElementsByOffer',
+                      }
+      });
       return elements;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByOffer failed, falling back to legacy', { metadata: { error, offerId, module: 'StorageFacade', operation: 'getChiffrageElementsByOffer' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByOffer failed, falling back to legacy', {
+              metadata: {
+          error,
+          offerId,
+          module: 'StorageFacade',
+          operation: 'getChiffrageElementsByOffer',
+                      }
+      });
       return await this.legacyStorage.getChiffrageElementsByOffer(offerId);
     }
   }
@@ -1672,14 +2277,24 @@ export class StorageFacade {
   async getChiffrageElementsByLot(lotId: string): Promise<ChiffrageElement[]> {
     try {
       const elements = await this.chiffrageRepository.getChiffrageElementsByLot(lotId);
-      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', { metadata: { lotId, count: elements.length, module: 'StorageFacade', operation: 'getChiffrageElementsByLot' 
-        }
-      );
+      this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {
+              metadata: {
+          lotId,
+          count: elements.length,
+          module: 'StorageFacade',
+          operation: 'getChiffrageElementsByLot',
+                      }
+      });
       return elements;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByLot failed, falling back to legacy', { metadata: { error, lotId, module: 'StorageFacade', operation: 'getChiffrageElementsByLot' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.getChiffrageElementsByLot failed, falling back to legacy', {
+              metadata: {
+          error,
+          lotId,
+          module: 'StorageFacade',
+          operation: 'getChiffrageElementsByLot',
+                      }
+      });
       return await this.legacyStorage.getChiffrageElementsByLot(lotId);
     }
   }
@@ -1691,14 +2306,23 @@ export class StorageFacade {
   async createChiffrageElement(element: InsertChiffrageElement): Promise<ChiffrageElement> {
     try {
       const created = await this.chiffrageRepository.createChiffrageElement(element);
-      this.facadeLogger.info('Chiffrage element créé via ChiffrageRepository', { metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createChiffrageElement' 
-        }
-      );
+      this.facadeLogger.info('Chiffrage element créé via ChiffrageRepository', {
+              metadata: {
+          id: created.id,
+          offerId: created.offerId,
+          module: 'StorageFacade',
+          operation: 'createChiffrageElement',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.createChiffrageElement failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createChiffrageElement' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.createChiffrageElement failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createChiffrageElement',
+                      }
+      });
       return await this.legacyStorage.createChiffrageElement(element);
     }
   }
@@ -1710,14 +2334,23 @@ export class StorageFacade {
   async updateChiffrageElement(id: string, element: Partial<InsertChiffrageElement>): Promise<ChiffrageElement> {
     try {
       const updated = await this.chiffrageRepository.updateChiffrageElement(id, element);
-      this.facadeLogger.info('Chiffrage element mis à jour via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateChiffrageElement' 
-        }
-      );
+      this.facadeLogger.info('Chiffrage element mis à jour via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateChiffrageElement',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.updateChiffrageElement failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateChiffrageElement' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.updateChiffrageElement failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateChiffrageElement',
+                      }
+      });
       return await this.legacyStorage.updateChiffrageElement(id, element);
     }
   }
@@ -1729,13 +2362,22 @@ export class StorageFacade {
   async deleteChiffrageElement(id: string): Promise<void> {
     try {
       await this.chiffrageRepository.deleteChiffrageElement(id);
-      this.facadeLogger.info('Chiffrage element supprimé via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteChiffrageElement' 
-        }
-      );
+      this.facadeLogger.info('Chiffrage element supprimé via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteChiffrageElement',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.deleteChiffrageElement failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteChiffrageElement' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.deleteChiffrageElement failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteChiffrageElement',
+                      }
+      });
       await this.legacyStorage.deleteChiffrageElement(id);
     }
   }
@@ -1747,14 +2389,24 @@ export class StorageFacade {
   async getDpgfDocumentByOffer(offerId: string): Promise<DpgfDocument | null> {
     try {
       const dpgf = await this.chiffrageRepository.getDpgfDocumentByOffer(offerId);
-      this.facadeLogger.info('DPGF document récupéré via ChiffrageRepository', { metadata: { offerId, found: !!dpgf, module: 'StorageFacade', operation: 'getDpgfDocumentByOffer' 
-        }
-      );
+      this.facadeLogger.info('DPGF document récupéré via ChiffrageRepository', {
+              metadata: {
+          offerId,
+          found: !!dpgf,
+          module: 'StorageFacade',
+          operation: 'getDpgfDocumentByOffer',
+                      }
+      });
       return dpgf;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.getDpgfDocumentByOffer failed, falling back to legacy', { metadata: { error, offerId, module: 'StorageFacade', operation: 'getDpgfDocumentByOffer' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.getDpgfDocumentByOffer failed, falling back to legacy', {
+              metadata: {
+          error,
+          offerId,
+          module: 'StorageFacade',
+          operation: 'getDpgfDocumentByOffer',
+                      }
+      });
       return await this.legacyStorage.getDpgfDocumentByOffer(offerId);
     }
   }
@@ -1766,14 +2418,23 @@ export class StorageFacade {
   async createDpgfDocument(dpgf: InsertDpgfDocument): Promise<DpgfDocument> {
     try {
       const created = await this.chiffrageRepository.createDpgfDocument(dpgf);
-      this.facadeLogger.info('DPGF document créé via ChiffrageRepository', { metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createDpgfDocument' 
-        }
-      );
+      this.facadeLogger.info('DPGF document créé via ChiffrageRepository', {
+              metadata: {
+          id: created.id,
+          offerId: created.offerId,
+          module: 'StorageFacade',
+          operation: 'createDpgfDocument',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.createDpgfDocument failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createDpgfDocument' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.createDpgfDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createDpgfDocument',
+                      }
+      });
       return await this.legacyStorage.createDpgfDocument(dpgf);
     }
   }
@@ -1785,14 +2446,23 @@ export class StorageFacade {
   async updateDpgfDocument(id: string, dpgf: Partial<InsertDpgfDocument>): Promise<DpgfDocument> {
     try {
       const updated = await this.chiffrageRepository.updateDpgfDocument(id, dpgf);
-      this.facadeLogger.info('DPGF document mis à jour via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateDpgfDocument' 
-        }
-      );
+      this.facadeLogger.info('DPGF document mis à jour via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateDpgfDocument',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.updateDpgfDocument failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateDpgfDocument' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.updateDpgfDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateDpgfDocument',
+                      }
+      });
       return await this.legacyStorage.updateDpgfDocument(id, dpgf);
     }
   }
@@ -1804,13 +2474,22 @@ export class StorageFacade {
   async deleteDpgfDocument(id: string): Promise<void> {
     try {
       await this.chiffrageRepository.deleteDpgfDocument(id);
-      this.facadeLogger.info('DPGF document supprimé via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteDpgfDocument' 
-        }
-      );
+      this.facadeLogger.info('DPGF document supprimé via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteDpgfDocument',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.deleteDpgfDocument failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteDpgfDocument' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.deleteDpgfDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteDpgfDocument',
+                      }
+      });
       await this.legacyStorage.deleteDpgfDocument(id);
     }
   }
@@ -1857,14 +2536,24 @@ export class StorageFacade {
   async getValidationMilestones(offerId: string): Promise<ValidationMilestone[]> {
     try {
       const milestones = await this.chiffrageRepository.getValidationMilestones(offerId);
-      this.facadeLogger.info('Validation milestones récupérés via ChiffrageRepository', { metadata: { offerId, count: milestones.length, module: 'StorageFacade', operation: 'getValidationMilestones' 
-        }
-      );
+      this.facadeLogger.info('Validation milestones récupérés via ChiffrageRepository', {
+              metadata: {
+          offerId,
+          count: milestones.length,
+          module: 'StorageFacade',
+          operation: 'getValidationMilestones',
+                      }
+      });
       return milestones;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.getValidationMilestones failed, falling back to legacy', { metadata: { error, offerId, module: 'StorageFacade', operation: 'getValidationMilestones' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.getValidationMilestones failed, falling back to legacy', {
+              metadata: {
+          error,
+          offerId,
+          module: 'StorageFacade',
+          operation: 'getValidationMilestones',
+                      }
+      });
       return await this.legacyStorage.getValidationMilestones(offerId);
     }
   }
@@ -1876,14 +2565,23 @@ export class StorageFacade {
   async createValidationMilestone(milestone: InsertValidationMilestone): Promise<ValidationMilestone> {
     try {
       const created = await this.chiffrageRepository.createValidationMilestone(milestone);
-      this.facadeLogger.info('Validation milestone créé via ChiffrageRepository', { metadata: { id: created.id, offerId: created.offerId, module: 'StorageFacade', operation: 'createValidationMilestone' 
-        }
-      );
+      this.facadeLogger.info('Validation milestone créé via ChiffrageRepository', {
+              metadata: {
+          id: created.id,
+          offerId: created.offerId,
+          module: 'StorageFacade',
+          operation: 'createValidationMilestone',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.createValidationMilestone failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createValidationMilestone' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.createValidationMilestone failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createValidationMilestone',
+                      }
+      });
       return await this.legacyStorage.createValidationMilestone(milestone);
     }
   }
@@ -1895,14 +2593,23 @@ export class StorageFacade {
   async updateValidationMilestone(id: string, milestone: Partial<InsertValidationMilestone>): Promise<ValidationMilestone> {
     try {
       const updated = await this.chiffrageRepository.updateValidationMilestone(id, milestone);
-      this.facadeLogger.info('Validation milestone mis à jour via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateValidationMilestone' 
-        }
-      );
+      this.facadeLogger.info('Validation milestone mis à jour via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateValidationMilestone',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.updateValidationMilestone failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateValidationMilestone' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.updateValidationMilestone failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateValidationMilestone',
+                      }
+      });
       return await this.legacyStorage.updateValidationMilestone(id, milestone);
     }
   }
@@ -1914,13 +2621,22 @@ export class StorageFacade {
   async deleteValidationMilestone(id: string): Promise<void> {
     try {
       await this.chiffrageRepository.deleteValidationMilestone(id);
-      this.facadeLogger.info('Validation milestone supprimé via ChiffrageRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteValidationMilestone' 
-        }
-      );
+      this.facadeLogger.info('Validation milestone supprimé via ChiffrageRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteValidationMilestone',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('ChiffrageRepository.deleteValidationMilestone failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteValidationMilestone' 
-        }
-      );
+      this.facadeLogger.warn('ChiffrageRepository.deleteValidationMilestone failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteValidationMilestone',
+                      }
+      });
       await this.legacyStorage.deleteValidationMilestone(id);
     }
   }
@@ -1969,14 +2685,24 @@ export class StorageFacade {
   async getActiveRules(filters?: { phase?: "passation" | "etude" | "visa_architecte" | "planification" | "approvisionnement" | "chantier" | "sav", projectType?: string }): Promise<DateIntelligenceRule[]> {
     try {
       const rules = await this.dateIntelligenceRepository.getActiveRules(filters);
-      this.facadeLogger.info('Rules actives récupérées via DateIntelligenceRepository', { metadata: { count: rules.length, filters, module: 'StorageFacade', operation: 'getActiveRules' 
-        }
-      );
+      this.facadeLogger.info('Rules actives récupérées via DateIntelligenceRepository', {
+              metadata: {
+          count: rules.length,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getActiveRules',
+                      }
+      });
       return rules;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.getActiveRules failed, falling back to legacy', { metadata: { error, filters, module: 'StorageFacade', operation: 'getActiveRules' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.getActiveRules failed, falling back to legacy', {
+              metadata: {
+          error,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getActiveRules',
+                      }
+      });
       return await this.legacyStorage.getActiveRules(filters);
     }
   }
@@ -1988,14 +2714,22 @@ export class StorageFacade {
   async getAllRules(): Promise<DateIntelligenceRule[]> {
     try {
       const rules = await this.dateIntelligenceRepository.getAllRules();
-      this.facadeLogger.info('Toutes les règles récupérées via DateIntelligenceRepository', { metadata: { count: rules.length, module: 'StorageFacade', operation: 'getAllRules' 
-        }
-      );
+      this.facadeLogger.info('Toutes les règles récupérées via DateIntelligenceRepository', {
+              metadata: {
+          count: rules.length,
+          module: 'StorageFacade',
+          operation: 'getAllRules',
+                      }
+      });
       return rules;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.getAllRules failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getAllRules' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.getAllRules failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getAllRules',
+                      }
+      });
       return await this.legacyStorage.getAllRules();
     }
   }
@@ -2008,15 +2742,24 @@ export class StorageFacade {
     try {
       const rule = await this.dateIntelligenceRepository.getRule(id);
       if (rule) {
-        this.facadeLogger.info('Règle récupérée via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'getRule' 
-        }
-      );
+        this.facadeLogger.info('Règle récupérée via DateIntelligenceRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getRule',
+                        }
+              });
       }
       return rule;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.getRule failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getRule' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.getRule failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getRule',
+                      }
+      });
       return await this.legacyStorage.getRule(id);
     }
   }
@@ -2028,14 +2771,23 @@ export class StorageFacade {
   async createRule(data: InsertDateIntelligenceRule): Promise<DateIntelligenceRule> {
     try {
       const created = await this.dateIntelligenceRepository.createRule(data);
-      this.facadeLogger.info('Règle créée via DateIntelligenceRepository', { metadata: { id: created.id, name: created.name, module: 'StorageFacade', operation: 'createRule' 
-        }
-      );
+      this.facadeLogger.info('Règle créée via DateIntelligenceRepository', {
+              metadata: {
+          id: created.id,
+          name: created.name,
+          module: 'StorageFacade',
+          operation: 'createRule',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.createRule failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createRule' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.createRule failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createRule',
+                      }
+      });
       return await this.legacyStorage.createRule(data);
     }
   }
@@ -2047,14 +2799,23 @@ export class StorageFacade {
   async updateRule(id: string, data: Partial<InsertDateIntelligenceRule>): Promise<DateIntelligenceRule> {
     try {
       const updated = await this.dateIntelligenceRepository.updateRule(id, data);
-      this.facadeLogger.info('Règle mise à jour via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateRule' 
-        }
-      );
+      this.facadeLogger.info('Règle mise à jour via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateRule',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.updateRule failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateRule' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.updateRule failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateRule',
+                      }
+      });
       return await this.legacyStorage.updateRule(id, data);
     }
   }
@@ -2066,13 +2827,22 @@ export class StorageFacade {
   async deleteRule(id: string): Promise<void> {
     try {
       await this.dateIntelligenceRepository.deleteRule(id);
-      this.facadeLogger.info('Règle supprimée via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteRule' 
-        }
-      );
+      this.facadeLogger.info('Règle supprimée via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteRule',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.deleteRule failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteRule' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.deleteRule failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteRule',
+                      }
+      });
       await this.legacyStorage.deleteRule(id);
     }
   }
@@ -2084,14 +2854,24 @@ export class StorageFacade {
   async getDateAlerts(filters?: { entityType?: string, entityId?: string, status?: string }): Promise<DateAlert[]> {
     try {
       const alerts = await this.dateIntelligenceRepository.getDateAlerts(filters);
-      this.facadeLogger.info('Alertes de dates récupérées via DateIntelligenceRepository', { metadata: { count: alerts.length, filters, module: 'StorageFacade', operation: 'getDateAlerts' 
-        }
-      );
+      this.facadeLogger.info('Alertes de dates récupérées via DateIntelligenceRepository', {
+              metadata: {
+          count: alerts.length,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getDateAlerts',
+                      }
+      });
       return alerts;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlerts failed, falling back to legacy', { metadata: { error, filters, module: 'StorageFacade', operation: 'getDateAlerts' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlerts failed, falling back to legacy', {
+              metadata: {
+          error,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getDateAlerts',
+                      }
+      });
       return await this.legacyStorage.getDateAlerts(filters);
     }
   }
@@ -2104,15 +2884,24 @@ export class StorageFacade {
     try {
       const alert = await this.dateIntelligenceRepository.getDateAlert(id);
       if (alert) {
-        this.facadeLogger.info('Alerte de date récupérée via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'getDateAlert' 
-        }
-      );
+        this.facadeLogger.info('Alerte de date récupérée via DateIntelligenceRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getDateAlert',
+                        }
+              });
       }
       return alert;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlert failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getDateAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.getDateAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getDateAlert',
+                      }
+      });
       return await this.legacyStorage.getDateAlert(id);
     }
   }
@@ -2124,14 +2913,23 @@ export class StorageFacade {
   async createDateAlert(data: InsertDateAlert): Promise<DateAlert> {
     try {
       const created = await this.dateIntelligenceRepository.createDateAlert(data);
-      this.facadeLogger.info('Alerte de date créée via DateIntelligenceRepository', { metadata: { id: created.id, title: created.title, module: 'StorageFacade', operation: 'createDateAlert' 
-        }
-      );
+      this.facadeLogger.info('Alerte de date créée via DateIntelligenceRepository', {
+              metadata: {
+          id: created.id,
+          title: created.title,
+          module: 'StorageFacade',
+          operation: 'createDateAlert',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.createDateAlert failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createDateAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.createDateAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createDateAlert',
+                      }
+      });
       return await this.legacyStorage.createDateAlert(data);
     }
   }
@@ -2143,14 +2941,23 @@ export class StorageFacade {
   async updateDateAlert(id: string, data: Partial<InsertDateAlert>): Promise<DateAlert> {
     try {
       const updated = await this.dateIntelligenceRepository.updateDateAlert(id, data);
-      this.facadeLogger.info('Alerte de date mise à jour via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateDateAlert' 
-        }
-      );
+      this.facadeLogger.info('Alerte de date mise à jour via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateDateAlert',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.updateDateAlert failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateDateAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.updateDateAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateDateAlert',
+                      }
+      });
       return await this.legacyStorage.updateDateAlert(id, data);
     }
   }
@@ -2162,13 +2969,22 @@ export class StorageFacade {
   async deleteDateAlert(id: string): Promise<void> {
     try {
       await this.dateIntelligenceRepository.deleteDateAlert(id);
-      this.facadeLogger.info('Alerte de date supprimée via DateIntelligenceRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteDateAlert' 
-        }
-      );
+      this.facadeLogger.info('Alerte de date supprimée via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteDateAlert',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.deleteDateAlert failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteDateAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.deleteDateAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteDateAlert',
+                      }
+      });
       await this.legacyStorage.deleteDateAlert(id);
     }
   }
@@ -2180,14 +2996,25 @@ export class StorageFacade {
   async acknowledgeAlert(id: string, userId: string): Promise<boolean> {
     try {
       const result = await this.dateIntelligenceRepository.acknowledgeAlert(id, userId);
-      this.facadeLogger.info('Alerte acquittée via DateIntelligenceRepository', { metadata: { id, userId, module: 'StorageFacade', operation: 'acknowledgeAlert' 
-        }
-      );
+      this.facadeLogger.info('Alerte acquittée via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          userId,
+          module: 'StorageFacade',
+          operation: 'acknowledgeAlert',
+                      }
+      });
       return result;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.acknowledgeAlert failed, falling back to legacy', { metadata: { error, id, userId, module: 'StorageFacade', operation: 'acknowledgeAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.acknowledgeAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          userId,
+          module: 'StorageFacade',
+          operation: 'acknowledgeAlert',
+                      }
+      });
       return await this.legacyStorage.acknowledgeAlert(id, userId);
     }
   }
@@ -2199,14 +3026,27 @@ export class StorageFacade {
   async resolveAlert(id: string, userId: string, actionTaken?: string): Promise<boolean> {
     try {
       const result = await this.dateIntelligenceRepository.resolveAlert(id, userId, actionTaken);
-      this.facadeLogger.info('Alerte résolue via DateIntelligenceRepository', { metadata: { id, userId, actionTaken, module: 'StorageFacade', operation: 'resolveAlert' 
-        }
-      );
+      this.facadeLogger.info('Alerte résolue via DateIntelligenceRepository', {
+              metadata: {
+          id,
+          userId,
+          actionTaken,
+          module: 'StorageFacade',
+          operation: 'resolveAlert',
+                      }
+      });
       return result;
     } catch (error) {
-      this.facadeLogger.warn('DateIntelligenceRepository.resolveAlert failed, falling back to legacy', { metadata: { error, id, userId, actionTaken, module: 'StorageFacade', operation: 'resolveAlert' 
-        }
-      );
+      this.facadeLogger.warn('DateIntelligenceRepository.resolveAlert failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          userId,
+          actionTaken,
+          module: 'StorageFacade',
+          operation: 'resolveAlert',
+                      }
+      });
       return await this.legacyStorage.resolveAlert(id, userId, actionTaken);
     }
   }
@@ -2224,14 +3064,26 @@ export class StorageFacade {
   async getSupplierDocuments(sessionId?: string, supplierId?: string): Promise<SupplierDocument[]> {
     try {
       const documents = await this.documentsRepository.getSupplierDocuments(sessionId, supplierId);
-      this.facadeLogger.info('Documents fournisseurs récupérés via DocumentsRepository', { metadata: { count: documents.length, sessionId, supplierId, module: 'StorageFacade', operation: 'getSupplierDocuments' 
-        }
-      );
+      this.facadeLogger.info('Documents fournisseurs récupérés via DocumentsRepository', {
+              metadata: {
+          count: documents.length,
+          sessionId,
+          supplierId,
+          module: 'StorageFacade',
+          operation: 'getSupplierDocuments',
+                      }
+      });
       return documents;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', { metadata: { error, sessionId, supplierId, module: 'StorageFacade', operation: 'getSupplierDocuments' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', {
+              metadata: {
+          error,
+          sessionId,
+          supplierId,
+          module: 'StorageFacade',
+          operation: 'getSupplierDocuments',
+                      }
+      });
       return await this.legacyStorage.getSupplierDocuments(sessionId, supplierId);
     }
   }
@@ -2244,15 +3096,24 @@ export class StorageFacade {
     try {
       const document = await this.documentsRepository.getSupplierDocument(id);
       if (document) {
-        this.facadeLogger.info('Document fournisseur récupéré via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'getSupplierDocument' 
-        }
-      );
+        this.facadeLogger.info('Document fournisseur récupéré via DocumentsRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierDocument',
+                        }
+              });
       }
       return document;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierDocument failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierDocument' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierDocument',
+                      }
+      });
       return await this.legacyStorage.getSupplierDocument?.(id);
     }
   }
@@ -2264,14 +3125,23 @@ export class StorageFacade {
   async createSupplierDocument(document: InsertSupplierDocument): Promise<SupplierDocument> {
     try {
       const created = await this.documentsRepository.createSupplierDocument(document);
-      this.facadeLogger.info('Document fournisseur créé via DocumentsRepository', { metadata: { id: created.id, sessionId: created.sessionId, module: 'StorageFacade', operation: 'createSupplierDocument' 
-        }
-      );
+      this.facadeLogger.info('Document fournisseur créé via DocumentsRepository', {
+              metadata: {
+          id: created.id,
+          sessionId: created.sessionId,
+          module: 'StorageFacade',
+          operation: 'createSupplierDocument',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.createSupplierDocument failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createSupplierDocument' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.createSupplierDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createSupplierDocument',
+                      }
+      });
       return await this.legacyStorage.createSupplierDocument(document);
     }
   }
@@ -2283,14 +3153,23 @@ export class StorageFacade {
   async updateSupplierDocument(id: string, document: Partial<InsertSupplierDocument>): Promise<SupplierDocument> {
     try {
       const updated = await this.documentsRepository.updateSupplierDocument(id, document);
-      this.facadeLogger.info('Document fournisseur mis à jour via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateSupplierDocument' 
-        }
-      );
+      this.facadeLogger.info('Document fournisseur mis à jour via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierDocument',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.updateSupplierDocument failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierDocument' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierDocument',
+                      }
+      });
       return await this.legacyStorage.updateSupplierDocument(id, document);
     }
   }
@@ -2302,13 +3181,22 @@ export class StorageFacade {
   async deleteSupplierDocument(id: string): Promise<void> {
     try {
       await this.documentsRepository.deleteSupplierDocument(id);
-      this.facadeLogger.info('Document fournisseur supprimé via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteSupplierDocument' 
-        }
-      );
+      this.facadeLogger.info('Document fournisseur supprimé via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSupplierDocument',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.deleteSupplierDocument failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteSupplierDocument' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.deleteSupplierDocument failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSupplierDocument',
+                      }
+      });
       await this.legacyStorage.deleteSupplierDocument?.(id);
     }
   }
@@ -2320,14 +3208,24 @@ export class StorageFacade {
   async getDocumentsBySession(sessionId: string): Promise<SupplierDocument[]> {
     try {
       const documents = await this.documentsRepository.getSupplierDocuments(sessionId);
-      this.facadeLogger.info('Documents de session récupérés via DocumentsRepository', { metadata: { sessionId, count: documents.length, module: 'StorageFacade', operation: 'getDocumentsBySession' 
-        }
-      );
+      this.facadeLogger.info('Documents de session récupérés via DocumentsRepository', {
+              metadata: {
+          sessionId,
+          count: documents.length,
+          module: 'StorageFacade',
+          operation: 'getDocumentsBySession',
+                      }
+      });
       return documents;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', { metadata: { error, sessionId, module: 'StorageFacade', operation: 'getDocumentsBySession' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierDocuments failed, falling back to legacy', {
+              metadata: {
+          error,
+          sessionId,
+          module: 'StorageFacade',
+          operation: 'getDocumentsBySession',
+                      }
+      });
       return await this.legacyStorage.getDocumentsBySession(sessionId);
     }
   }
@@ -2341,14 +3239,26 @@ export class StorageFacade {
   async getSupplierQuoteSessions(aoId?: string, aoLotId?: string): Promise<SupplierQuoteSession[]> {
     try {
       const sessions = await this.documentsRepository.getSupplierQuoteSessions(aoId, aoLotId);
-      this.facadeLogger.info('Sessions de devis fournisseurs récupérées via DocumentsRepository', { metadata: { count: sessions.length, aoId, aoLotId, module: 'StorageFacade', operation: 'getSupplierQuoteSessions' 
-        }
-      );
+      this.facadeLogger.info('Sessions de devis fournisseurs récupérées via DocumentsRepository', {
+              metadata: {
+          count: sessions.length,
+          aoId,
+          aoLotId,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteSessions',
+                      }
+      });
       return sessions;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSessions failed, falling back to legacy', { metadata: { error, aoId, aoLotId, module: 'StorageFacade', operation: 'getSupplierQuoteSessions' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSessions failed, falling back to legacy', {
+              metadata: {
+          error,
+          aoId,
+          aoLotId,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteSessions',
+                      }
+      });
       return await this.legacyStorage.getSupplierQuoteSessions(aoId, aoLotId);
     }
   }
@@ -2361,15 +3271,24 @@ export class StorageFacade {
     try {
       const session = await this.documentsRepository.getSupplierQuoteSession(id);
       if (session) {
-        this.facadeLogger.info('Session de devis fournisseur récupérée via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'getSupplierQuoteSession' 
-        }
-      );
+        this.facadeLogger.info('Session de devis fournisseur récupérée via DocumentsRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteSession',
+                        }
+              });
       }
       return session;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSession failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteSession failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteSession',
+                      }
+      });
       return await this.legacyStorage.getSupplierQuoteSession(id);
     }
   }
@@ -2381,14 +3300,23 @@ export class StorageFacade {
   async createSupplierQuoteSession(session: InsertSupplierQuoteSession): Promise<SupplierQuoteSession> {
     try {
       const created = await this.documentsRepository.createSupplierQuoteSession(session);
-      this.facadeLogger.info('Session de devis fournisseur créée via DocumentsRepository', { metadata: { id: created.id, aoId: created.aoId, module: 'StorageFacade', operation: 'createSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.info('Session de devis fournisseur créée via DocumentsRepository', {
+              metadata: {
+          id: created.id,
+          aoId: created.aoId,
+          module: 'StorageFacade',
+          operation: 'createSupplierQuoteSession',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteSession failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteSession failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createSupplierQuoteSession',
+                      }
+      });
       return await this.legacyStorage.createSupplierQuoteSession(session);
     }
   }
@@ -2400,14 +3328,23 @@ export class StorageFacade {
   async updateSupplierQuoteSession(id: string, session: Partial<InsertSupplierQuoteSession>): Promise<SupplierQuoteSession> {
     try {
       const updated = await this.documentsRepository.updateSupplierQuoteSession(id, session);
-      this.facadeLogger.info('Session de devis fournisseur mise à jour via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.info('Session de devis fournisseur mise à jour via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierQuoteSession',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteSession failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteSession failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierQuoteSession',
+                      }
+      });
       return await this.legacyStorage.updateSupplierQuoteSession(id, session);
     }
   }
@@ -2419,13 +3356,22 @@ export class StorageFacade {
   async deleteSupplierQuoteSession(id: string): Promise<void> {
     try {
       await this.documentsRepository.deleteSupplierQuoteSession(id);
-      this.facadeLogger.info('Session de devis fournisseur supprimée via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'deleteSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.info('Session de devis fournisseur supprimée via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSupplierQuoteSession',
+                      }
+      });
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.deleteSupplierQuoteSession failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'deleteSupplierQuoteSession' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.deleteSupplierQuoteSession failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'deleteSupplierQuoteSession',
+                      }
+      });
       await this.legacyStorage.deleteSupplierQuoteSession?.(id);
     }
   }
@@ -2440,15 +3386,24 @@ export class StorageFacade {
     try {
       const analysis = await this.documentsRepository.getSupplierQuoteAnalysis(id);
       if (analysis) {
-        this.facadeLogger.info('Analyse OCR de devis fournisseur récupérée via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'getSupplierQuoteAnalysis' 
-        }
-      );
+        this.facadeLogger.info('Analyse OCR de devis fournisseur récupérée via DocumentsRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteAnalysis',
+                        }
+              });
       }
       return analysis;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteAnalysis failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getSupplierQuoteAnalysis' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getSupplierQuoteAnalysis failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getSupplierQuoteAnalysis',
+                      }
+      });
       return await this.legacyStorage.getSupplierQuoteAnalysis?.(id);
     }
   }
@@ -2460,14 +3415,23 @@ export class StorageFacade {
   async createSupplierQuoteAnalysis(analysis: InsertSupplierQuoteAnalysis): Promise<SupplierQuoteAnalysis> {
     try {
       const created = await this.documentsRepository.createSupplierQuoteAnalysis(analysis);
-      this.facadeLogger.info('Analyse OCR de devis fournisseur créée via DocumentsRepository', { metadata: { id: created.id, documentId: created.documentId, module: 'StorageFacade', operation: 'createSupplierQuoteAnalysis' 
-        }
-      );
+      this.facadeLogger.info('Analyse OCR de devis fournisseur créée via DocumentsRepository', {
+              metadata: {
+          id: created.id,
+          documentId: created.documentId,
+          module: 'StorageFacade',
+          operation: 'createSupplierQuoteAnalysis',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteAnalysis failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createSupplierQuoteAnalysis' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.createSupplierQuoteAnalysis failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createSupplierQuoteAnalysis',
+                      }
+      });
       return await this.legacyStorage.createSupplierQuoteAnalysis(analysis);
     }
   }
@@ -2479,14 +3443,23 @@ export class StorageFacade {
   async updateSupplierQuoteAnalysis(id: string, analysis: Partial<InsertSupplierQuoteAnalysis>): Promise<SupplierQuoteAnalysis> {
     try {
       const updated = await this.documentsRepository.updateSupplierQuoteAnalysis(id, analysis);
-      this.facadeLogger.info('Analyse OCR de devis fournisseur mise à jour via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateSupplierQuoteAnalysis' 
-        }
-      );
+      this.facadeLogger.info('Analyse OCR de devis fournisseur mise à jour via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierQuoteAnalysis',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteAnalysis failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateSupplierQuoteAnalysis' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.updateSupplierQuoteAnalysis failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateSupplierQuoteAnalysis',
+                      }
+      });
       return await this.legacyStorage.updateSupplierQuoteAnalysis(id, analysis);
     }
   }
@@ -2500,14 +3473,24 @@ export class StorageFacade {
   async getPurchaseOrders(filters?: { supplierId?: string; status?: string }): Promise<PurchaseOrder[]> {
     try {
       const orders = await this.documentsRepository.getPurchaseOrders(filters);
-      this.facadeLogger.info('Bons de commande récupérés via DocumentsRepository', { metadata: { count: orders.length, filters, module: 'StorageFacade', operation: 'getPurchaseOrders' 
-        }
-      );
+      this.facadeLogger.info('Bons de commande récupérés via DocumentsRepository', {
+              metadata: {
+          count: orders.length,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getPurchaseOrders',
+                      }
+      });
       return orders;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrders failed, falling back to legacy', { metadata: { error, filters, module: 'StorageFacade', operation: 'getPurchaseOrders' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrders failed, falling back to legacy', {
+              metadata: {
+          error,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getPurchaseOrders',
+                      }
+      });
       return await this.legacyStorage.getPurchaseOrders(filters);
     }
   }
@@ -2520,15 +3503,24 @@ export class StorageFacade {
     try {
       const order = await this.documentsRepository.getPurchaseOrder(id);
       if (order) {
-        this.facadeLogger.info('Bon de commande récupéré via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'getPurchaseOrder' 
-        }
-      );
+        this.facadeLogger.info('Bon de commande récupéré via DocumentsRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getPurchaseOrder',
+                        }
+              });
       }
       return order;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrder failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getPurchaseOrder' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getPurchaseOrder failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getPurchaseOrder',
+                      }
+      });
       return await this.legacyStorage.getPurchaseOrder(id);
     }
   }
@@ -2540,14 +3532,23 @@ export class StorageFacade {
   async createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder> {
     try {
       const created = await this.documentsRepository.createPurchaseOrder(order);
-      this.facadeLogger.info('Bon de commande créé via DocumentsRepository', { metadata: { id: created.id, reference: created.reference, module: 'StorageFacade', operation: 'createPurchaseOrder' 
-        }
-      );
+      this.facadeLogger.info('Bon de commande créé via DocumentsRepository', {
+              metadata: {
+          id: created.id,
+          reference: created.reference,
+          module: 'StorageFacade',
+          operation: 'createPurchaseOrder',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.createPurchaseOrder failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createPurchaseOrder' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.createPurchaseOrder failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createPurchaseOrder',
+                      }
+      });
       return await this.legacyStorage.createPurchaseOrder(order);
     }
   }
@@ -2559,14 +3560,23 @@ export class StorageFacade {
   async updatePurchaseOrder(id: string, order: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
     try {
       const updated = await this.documentsRepository.updatePurchaseOrder(id, order);
-      this.facadeLogger.info('Bon de commande mis à jour via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'updatePurchaseOrder' 
-        }
-      );
+      this.facadeLogger.info('Bon de commande mis à jour via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updatePurchaseOrder',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.updatePurchaseOrder failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updatePurchaseOrder' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.updatePurchaseOrder failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updatePurchaseOrder',
+                      }
+      });
       return await this.legacyStorage.updatePurchaseOrder(id, order);
     }
   }
@@ -2580,14 +3590,24 @@ export class StorageFacade {
   async getClientQuotes(filters?: { clientName?: string; status?: string }): Promise<ClientQuote[]> {
     try {
       const quotes = await this.documentsRepository.getClientQuotes(filters);
-      this.facadeLogger.info('Devis clients récupérés via DocumentsRepository', { metadata: { count: quotes.length, filters, module: 'StorageFacade', operation: 'getClientQuotes' 
-        }
-      );
+      this.facadeLogger.info('Devis clients récupérés via DocumentsRepository', {
+              metadata: {
+          count: quotes.length,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getClientQuotes',
+                      }
+      });
       return quotes;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getClientQuotes failed, falling back to legacy', { metadata: { error, filters, module: 'StorageFacade', operation: 'getClientQuotes' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getClientQuotes failed, falling back to legacy', {
+              metadata: {
+          error,
+          filters,
+          module: 'StorageFacade',
+          operation: 'getClientQuotes',
+                      }
+      });
       return await this.legacyStorage.getClientQuotes(filters);
     }
   }
@@ -2600,15 +3620,24 @@ export class StorageFacade {
     try {
       const quote = await this.documentsRepository.getClientQuote(id);
       if (quote) {
-        this.facadeLogger.info('Devis client récupéré via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'getClientQuote' 
-        }
-      );
+        this.facadeLogger.info('Devis client récupéré via DocumentsRepository', {
+                metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'getClientQuote',
+                        }
+              });
       }
       return quote;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.getClientQuote failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'getClientQuote' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.getClientQuote failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'getClientQuote',
+                      }
+      });
       return await this.legacyStorage.getClientQuote(id);
     }
   }
@@ -2620,14 +3649,23 @@ export class StorageFacade {
   async createClientQuote(quote: InsertClientQuote): Promise<ClientQuote> {
     try {
       const created = await this.documentsRepository.createClientQuote(quote);
-      this.facadeLogger.info('Devis client créé via DocumentsRepository', { metadata: { id: created.id, reference: created.reference, module: 'StorageFacade', operation: 'createClientQuote' 
-        }
-      );
+      this.facadeLogger.info('Devis client créé via DocumentsRepository', {
+              metadata: {
+          id: created.id,
+          reference: created.reference,
+          module: 'StorageFacade',
+          operation: 'createClientQuote',
+                      }
+      });
       return created;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.createClientQuote failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'createClientQuote' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.createClientQuote failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'createClientQuote',
+                      }
+      });
       return await this.legacyStorage.createClientQuote(quote);
     }
   }
@@ -2639,14 +3677,23 @@ export class StorageFacade {
   async updateClientQuote(id: string, quote: Partial<InsertClientQuote>): Promise<ClientQuote> {
     try {
       const updated = await this.documentsRepository.updateClientQuote(id, quote);
-      this.facadeLogger.info('Devis client mis à jour via DocumentsRepository', { metadata: { id, module: 'StorageFacade', operation: 'updateClientQuote' 
-        }
-      );
+      this.facadeLogger.info('Devis client mis à jour via DocumentsRepository', {
+              metadata: {
+          id,
+          module: 'StorageFacade',
+          operation: 'updateClientQuote',
+                      }
+      });
       return updated;
     } catch (error) {
-      this.facadeLogger.warn('DocumentsRepository.updateClientQuote failed, falling back to legacy', { metadata: { error, id, module: 'StorageFacade', operation: 'updateClientQuote' 
-        }
-      );
+      this.facadeLogger.warn('DocumentsRepository.updateClientQuote failed, falling back to legacy', {
+              metadata: {
+          error,
+          id,
+          module: 'StorageFacade',
+          operation: 'updateClientQuote',
+                      }
+      });
       return await this.legacyStorage.updateClientQuote(id, quote);
     }
   }
@@ -2662,9 +3709,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getProjectStats(filters);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getProjectStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getProjectStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getProjectStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getProjectStats',
+                      }
+      });
       return await this.legacyStorage.getProjectStats(filters);
     }
   }
@@ -2679,9 +3730,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getOfferStats(filters);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getOfferStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getOfferStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getOfferStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getOfferStats',
+                      }
+      });
       return await this.legacyStorage.getOfferStats(filters);
     }
   }
@@ -2694,9 +3749,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getAOStats(filters);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getAOStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getAOStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getAOStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getAOStats',
+                      }
+      });
       return await this.legacyStorage.getAOStats(filters);
     }
   }
@@ -2711,9 +3770,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getConversionStats(period, filters);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getConversionStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getConversionStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getConversionStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getConversionStats',
+                      }
+      });
       return await this.legacyStorage.getConversionStats(period, filters);
     }
   }
@@ -2725,9 +3788,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getProjectDelayStats(period);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getProjectDelayStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getProjectDelayStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getProjectDelayStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getProjectDelayStats',
+                      }
+      });
       return await this.legacyStorage.getProjectDelayStats(period);
     }
   }
@@ -2739,9 +3806,13 @@ export class StorageFacade {
     try {
       return await analyticsStorage.getTeamPerformanceStats(period);
     } catch (error) {
-      this.facadeLogger.warn('AnalyticsStorage.getTeamPerformanceStats failed, falling back to legacy', { metadata: { error, module: 'StorageFacade', operation: 'getTeamPerformanceStats' 
-        }
-      );
+      this.facadeLogger.warn('AnalyticsStorage.getTeamPerformanceStats failed, falling back to legacy', {
+              metadata: {
+          error,
+          module: 'StorageFacade',
+          operation: 'getTeamPerformanceStats',
+                      }
+      });
       return await this.legacyStorage.getTeamPerformanceStats(period);
     }
   }

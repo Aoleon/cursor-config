@@ -284,7 +284,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           eventBus.publishTechnicalAlertActionPerformed({
             alertId: id,
             action: 'acknowledged',
-            userId: userId,
+                userId: userId,
           });
         }
         
@@ -332,7 +332,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           eventBus.publishTechnicalAlertActionPerformed({
             alertId: id,
             action: 'validated',
-            userId: userId,
+                userId: userId,
           });
         }
         
@@ -382,9 +382,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           eventBus.publishTechnicalAlertActionPerformed({
             alertId: id,
             action: 'bypassed',
-            userId: userId,
+                userId: userId,
             metadata: { until, reason 
-        }
+                    }
                   );
         }
         
@@ -471,12 +471,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             ...alertData.metadata
           });
         
-        logger.info('Test seed alerte créée', { metadata: { alertId: alert.id 
-
-            })
- 
-
-          );
+        logger.info('Test seed alerte créée', { metadata: {
+ alertId: alert.id
+      }
+    });
         
         res.status(201).json({ 
           success: true, 
@@ -515,12 +513,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { entityType, entityId, status, severity, limit, offset } = req.query;
         
-        logger.info('Récupération alertes avec filtres', { metadata: { filters: req.query 
-
-            })
- 
-
-          );
+        logger.info('Récupération alertes avec filtres', { metadata: {
+ filters: req.query
+      }
+    });
         
         // Construire les filtres pour le storage
         const filters: unknown = {};
@@ -546,17 +542,17 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           alerts,
           pagination: {
             total,
-            limit: numLimit,
-            offset: numOffset,
+                  limit: numLimit,
+                  offset: numOffset,
             hasMore: numOffset + numLimit < total
           },
           metadata: {
+
             pendingCount: alerts.filter(a => a.status === 'pending').length,
             criticalCount: alerts.filter(a => a.severity === 'critical').length,
             retrievedAt: new Date()
-              })
-
-            );
+      }
+    });
         
         sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
       
@@ -565,9 +561,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          );
+      }
+    });
           }
                                             }
 
@@ -589,13 +585,13 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         logger.info('Acquittement alerte', { metadata: { alertId: id, userId 
 
-      });
+              });
         
         // Vérifier que l'alerte existe
         const existingAlert = await storage.getDateAlert(id);
         if (!existingAlert) {
           throw createError.notFound("Alerte", id);
-        }
+                }
         
         // Vérifier le statut actuel
         if (existingAlert.status === 'resolved') {
@@ -611,16 +607,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         // Ajouter une note si fournie
         if (note) {
           await storage.updateDateAlert(id, {
-            actionTaken: note
+                  actionTaken: note
           });
         }
         
-        logger.info('Alerte acquittée avec succès', { metadata: { alertId: id 
-
-            })
- 
-
-          );
+        logger.info('Alerte acquittée avec succès', { metadata: {
+ alertId: id
+      }
+    });
         
         sendSuccess(res, acknowledgedAlert);
       
@@ -629,9 +623,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          );
+      }
+    });
         
         throw createError.database("Erreur lors de l'acquittement de l'alerte", {
           alertId: req.params.id,
@@ -662,14 +656,12 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { id } = req.params;
         const { actionTaken, resolution } = req.body;
-        const userId = (as unknown)unknown).user?.id || 'unknown';
+        const userId = (as unknown.user?.id || 'unknown';
         
-        logger.info('Résolution alerte', { metadata: { alertId: id, userId 
-
-            })
- 
-
-          );
+        logger.info('Résolution alerte', { metadata: {
+ alertId: id, userId
+      }
+    });
         
         // Vérifier que l'alerte existe
         const existingAlert = await storage.getDateAlert(id);
@@ -680,12 +672,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         // Résoudre l'alerte
         const resolvedAlert = await storage.resolveAlert(id, userId, actionTaken);
         
-        logger.info('Alerte résolue avec succès', { metadata: { alertId: id 
-
-            })
- 
-
-          );
+        logger.info('Alerte résolue avec succès', { metadata: {
+ alertId: id
+      }
+    });
         
         sendSuccess(res, resolvedAlert);
       
@@ -694,9 +684,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          );
+      }
+    });
         
         throw createError.database("Erreur lors de la résolution de l'alerte", {
           alertId: req.params.id,
@@ -722,7 +712,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         const userIdas unknown) as unknown).user?.id;
         logger.info('Récupération dashboard pour utilisateur', { metadata: { userId 
 
-      });
+              });
         
         const services = await getServices();
         
@@ -814,9 +804,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          ););
+      }
+    }););
             }
 
                       }
@@ -843,12 +833,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         const { detectionType, projectId, daysAhead } = req.body;
         const usas unknunknown)unknown unknown any).user?.id;
         
-        logger.info('Détection manuelle déclenchée', { metadata: { detectionType, userId, projectId 
-
-            })
- 
-
-          );
+        logger.info('Détection manuelle déclenchée', { metadata: {
+ detectionType, userId, projectId
+      }
+    });
         
         const services = await getServices();
         
@@ -917,15 +905,13 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           success: true
         };
         
-        logger.info('Détection terminée', { metadata: { 
+        logger.info('Détection terminée', { metadata: {
+ 
             detectionType, 
             totalAlerts: results.totalAlertsGenerated, 
-            executionTime 
-
-            })
- 
-
-          );
+            executionTime
+      }
+    });
         
         sendSuccess(res, response, 201);
         
@@ -935,9 +921,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          ););
+      }
+    }););
             }
 
                       }
@@ -966,12 +952,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         const { escalationLevel, reason, urgency } = req.body;
         consas unknunknown)unknown unknownq as any).user?.id;
         
-        logger.info('Escalade alerte', { metadata: { alertId: id, escalationLevel, userId 
-
-            })
- 
-
-          );
+        logger.info('Escalade alerte', { metadata: {
+ alertId: id, escalationLevel, userId
+      }
+    });
         
         // Vérifier que l'alerte existe
         const existingAlert = await storage.getDateAlert(id);
@@ -1012,7 +996,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             reason,
             urgency,
             immediateAction: urgency === 'immediate'
-        }
+                  }
                 );
         
         // Notifier selon le niveau d'escalade
@@ -1044,7 +1028,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             targets,
             escalatedAt: new Date().toISOString(),
             action: 'alert_escalated'
-        }
+                  }
                 );
         
         const response = {
@@ -1059,12 +1043,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           }
         };
         
-        logger.info('Alerte escaladée avec succès', { metadata: { alertId: id, escalationLevel 
-
-            })
- 
-
-          );
+        logger.info('Alerte escaladée avec succès', { metadata: {
+ alertId: id, escalationLevel
+      }
+    });
         
         sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`);
         
@@ -1074,9 +1056,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          );
+      }
+    });
         
         throw createError.database("Erreur lors de l'escalade de l'alerte", {
           alertId: req.params.id,
@@ -1106,12 +1088,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
         const { period, groupBy, includeResolved } = req.query;
         
-        logger.info('Récupération résumé alertes', { metadata: { period, groupBy 
-
-            })
- 
-
-          );
+        logger.info('Récupération résumé alertes', { metadata: {
+ period, groupBy
+      }
+    });
         
         // Calculer la période
         let startDate: Date = new Date();
@@ -1167,7 +1147,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           
           if (!acc[key]) {
             acc[key] = {
-              count: 0,
+                  count: 0,
               alerts: [],
               criticalCount: 0,
               warningCount: 0,
@@ -1236,7 +1216,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         
         const summary = {
           period: {
-            name: period,
+                  name: period,
             startDate,
             endDate: new Date(),
             daysIncluded: Math.ceil((Date.now() - startDate.getTime()) / (24 * 60 * 60 * 1000))
@@ -1281,12 +1261,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           summary.insights.push(`Entité la plus affectée: ${topEntities[0].entity} avec ${topEntities[0].count} alertes`);
         }
         
-        logger.info('Résumé généré', { metadata: { totalAlerts, groupCount: Object.keys(grouped).length 
-
-            })
- 
-
-          );
+        logger.info('Résumé généré', { metadata: {
+ totalAlerts, groupCount: Object.keys(grouped).length
+      }
+    });
         
         sendSuccess(res, summary);
         
@@ -1296,9 +1274,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       operation: 'Alerts',
       service: 'routes',
       metadata: {
-            })
 
-          ););
+      }
+    }););
             }
 
                       }
@@ -1328,12 +1306,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       // @ts-ignore - Phase 6+ feature not yet implemented
       const result = await storage.listThresholds(params);
       
-      logger.info('[Alerts] Seuils récupérés', { metadata: { total: result.total, limit: params.limit 
-
-            })
- 
-
-          );
+      logger.info('[Alerts] Seuils récupérés', { metadata: {
+ total: result.total, limit: params.limit
+      }
+    });
       
       // RESPONSE PAGINÉE
       res.json({
@@ -1370,12 +1346,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       // @ts-ignore - Phase 6+ feature not yet implemented
       const thresholdId = await storage.createThreshold(thresholdData);
       
-      logger.info('[Alerts] Seuil créé', { metadata: { thresholdId, createdBy: req.user.id 
-
-            })
- 
-
-          );
+      logger.info('[Alerts] Seuil créé', { metadata: {
+ thresholdId, createdBy: req.user.id
+      }
+    });
       
       // RESPONSE SUCCESS
       res.status(201).json({
@@ -1419,12 +1393,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         throw new DatabaseError('Échec mise à jour seuil');
       }
       
-      logger.info('[Alerts] Seuil mis à jour', { metadata: { thresholdId 
-
-            })
- 
-
-          );
+      logger.info('[Alerts] Seuil mis à jour', { metadata: {
+ thresholdId
+      }
+    });
       
       res.json({
         success: true,
@@ -1457,12 +1429,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         throw new NotFoundError('Seuil non trouvé');
       }
       
-      logger.info('[Alerts] Seuil désactivé', { metadata: { thresholdId: req.params.id 
-
-            })
- 
-
-          );
+      logger.info('[Alerts] Seuil désactivé', { metadata: {
+ thresholdId: req.params.id
+      }
+    });
       
       res.json({
         success: true,
@@ -1497,12 +1467,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       // RÉCUPÉRATION ALERTES  
       const result = await storage.listBusinessAlerts(query);
       
-      logger.info('[BusinessAlerts] Alertes récupérées', { metadata: { total: result.total, userRole: req.user?.role, limit: query.limit 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Alertes récupérées', { metadata: {
+ total: result.total, userRole: req.user?.role, limit: query.limit
+      }
+    });
       
       // RESPONSE ENRICHIE
       res.json({
@@ -1551,12 +1519,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         throw new DatabaseError('Échec accusé réception');
       }
       
-      logger.info('[BusinessAlerts] Alerte accusée réception', { metadata: { alertId, userId 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Alerte accusée réception', { metadata: {
+ alertId, userId
+      }
+    });
       
       res.json({
         success: true,
@@ -1607,12 +1573,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         throw new DatabaseError('Échec résolution alerte');
       }
       
-      logger.info('[BusinessAlerts] Alerte résolue', { metadata: { alertId, userId, previousStatus: alert.status 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Alerte résolue', { metadata: {
+ alertId, userId, previousStatus: alert.status
+      }
+    });
       
       res.json({
         success: true,
@@ -1659,12 +1623,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         throw new NotFoundError('Alerte non trouvée');
       }
       
-      logger.info('[BusinessAlerts] Alerte assignée', { metadata: { alertId, assignedTo, assignedBy 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Alerte assignée', { metadata: {
+ alertId, assignedTo, assignedBy
+      }
+    });
       
       res.json({
         success: true,
@@ -1720,12 +1682,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         offset: 0
       });
       
-      logger.info('[BusinessAlerts] Dashboard consulté', { metadata: { userId, openCount: openAlerts.total, criticalCount: criticalAlerts.total 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Dashboard consulté', { metadata: {
+ userId, openCount: openAlerts.total, criticalCount: criticalAlerts.total
+      }
+    });
       
       res.json({
         success: true,
@@ -1745,8 +1705,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           recent_activity: resolvedThisWeek.alerts
             .slice(0, 5)
             .map(alert  => ({
-              id: alert.id,
-              title: alert.title,
+                id: alert.id,
+                title: alert.title,
               resolved_by: alert.resolvedBy,
               resolved_at: alert.resolvedAt,
               type: alert.alertType
@@ -1794,12 +1754,10 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         trends: calculateAlertsTrends(allAlerts.alerts)
       };
       
-      logger.info('[BusinessAlerts] Stats consultées', { metadata: { userId, userRole, totalAlerts: allAlerts.total 
-
-            })
- 
-
-          );
+      logger.info('[BusinessAlerts] Stats consultées', { metadata: {
+ userId, userRole, totalAlerts: allAlerts.total
+      }
+    });
       
       res.json({
         success: true,

@@ -110,7 +110,6 @@ class DeterministicGenerator {
     const randomValue = parseInt(hash.substring(0, 8), 16) / 0xFFFFFFFF;
     return Math.floor(min + randomValue * (max - min + 1));
   }
-}
 
 // ========================================
 // SEEDER PRINCIPAL - VERSION SIMPLIFIÉE
@@ -179,13 +178,10 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       };
     }
-  }
 
   private async validateOnly() {
     this.logger.info('[Monday Seed] Mode validation uniquement');
@@ -239,10 +235,8 @@ export class MondaySimpleSeed {
     {
       operation: 'AOS',
       service: 'mondaySeed-simple',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
 
     return seededCount;
@@ -422,7 +416,6 @@ export class MondaySimpleSeed {
 
     return seededCount;
   }
-}
 
 // Export de l'instance par défaut
 export const mondaySimpleSeed = new MondaySimpleSeed();

@@ -14,8 +14,8 @@ export function setupMondayExport(
   exportService: MondayExportService
 ): void {
   logger.info('[MondayExportIntegration] Configuration export automatique', {
-    service: 'MondayExportIntegration',
-    metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
       operation: 'setup',
       events: ['project:created', 'ao:created']
 
@@ -27,8 +27,8 @@ export function setupMondayExport(
     
     if (!projectId) {
       logger.warn('[MondayExportIntegration] Event project:created sans ID', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'project:created',
           event
 
@@ -40,8 +40,8 @@ export function setupMondayExport(
     async () => {
 
       logger.info('[MondayExportIntegration] Auto-export projet démarré', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'autoExportProject',
           projectId
 
@@ -59,8 +59,8 @@ export function setupMondayExport(
         payload: { mondayId });
 
       logger.info('[MondayExportIntegration] Auto-export projet réussi', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'autoExportProject',
           projectId,
           mondayId
@@ -76,13 +76,11 @@ export function setupMondayExport(
     });
 
   // Auto-export sur création d'AO
-  eventBus.on('ao:created', async (e: unknown)unknown) => {
-    const aoId = event.entityId || event.id;
-    
+  eventBus.on('ao:created', async (e: unknown) => {
     if (!aoId) {
       logger.warn('[MondayExportIntegration] Event ao:created sans ID', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'ao:created',
           event
 
@@ -94,8 +92,8 @@ export function setupMondayExport(
     async () => {
 
       logger.info('[MondayExportIntegration] Auto-export AO démarré', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'autoExportAO',
           aoId
 
@@ -113,8 +111,8 @@ export function setupMondayExport(
         payload: { mondayId });
 
       logger.info('[MondayExportIntegration] Auto-export AO réussi', {
-        service: 'MondayExportIntegration',
-        metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
           operation: 'autoExportAO',
           aoId,
           mondayId
@@ -130,8 +128,8 @@ export function setupMondayExport(
     });
 
   logger.info('[MondayExportIntegration] Export automatique configuré avec succès', {
-    service: 'MondayExportIntegration',
-    metadata: {
+      metadata: {
+        module: 'MondayExportIntegration', {
       operation: 'setup',
       listenersCount: 2
 

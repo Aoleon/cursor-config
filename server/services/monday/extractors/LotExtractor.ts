@@ -18,14 +18,11 @@ export class LotExtractor extends BaseExtractor<unknown[]> {
           
           for (let i = 0; i < subitemsData.count; i++) {
             lots.push({
-              name: `Lot ${i + 1}`,
+                name: `Lot ${i + 1}`,
               description: `Lot extrait de Monday subitem ${subitemsData.subitemIds[i]}`,
               mondaySubitemId: subitemsData.subitemIds[i],
             });
           }
-        }
-      }
-    }
     
     const baseMappings = context.config.mappings.base || [];
     for (const mapping of baseMappings) {
@@ -42,12 +39,8 @@ export class LotExtractor extends BaseExtractor<unknown[]> {
               source: 'cctp'
             })));
           }
-        }
-      }
-    }
     
     this.addDiagnostic(context, 'info', `Total lots extracted: ${lots.length}`, { count: lots.length });
     
     return lots;
   }
-}

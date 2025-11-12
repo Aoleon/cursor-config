@@ -112,11 +112,11 @@ export class SafetyGuardsService {
     logger.info('Service démarré avec protection système BTP', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'constructor' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   // ========================================
   // CIRCUIT BREAKERS PROTECTION
@@ -143,17 +143,16 @@ export class SafetyGuardsService {
         successThreshold: 3,     // 3 succès pour fermer
         timeoutMinutes: 5        // 5 minutes timeout
       });
-    });
 
     logger.info('Circuit breakers initialisés', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'initializeCircuitBreakers',
         breakers: breakers 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   /**
    * Vérifie l'état d'un circuit breaker avant opération
@@ -176,10 +175,10 @@ export class SafetyGuardsService {
           breaker.state = 'half-open';
           logger.info('Circuit breaker transition vers half-open', { metadata: {
               service: 'SafetyGuardsService',
-              operation: 'checkCircuitBreaker',
+                    operation: 'checkCircuitBreaker',
               componentName 
               
-              }
+                  }
  
               
             });
@@ -196,7 +195,6 @@ export class SafetyGuardsService {
       default:
         return { allowed: true };
     }
-  }
 
   /**
    * Enregistre un succès d'opération
@@ -214,10 +212,10 @@ export class SafetyGuardsService {
         breaker.nextAttemptTime = null;
         logger.info('Circuit breaker fermé après succès', { metadata: {
             service: 'SafetyGuardsService',
-            operation: 'recordOperationSuccess',
+                  operation: 'recordOperationSuccess',
             componentName 
               
-              }
+                }
  
               
             });
@@ -225,7 +223,6 @@ export class SafetyGuardsService {
     } else if (breaker.state === 'closed') {
       breaker.failureCount = Math.max(0, breaker.failureCount - 1);
     }
-  }
 
   /**
    * Enregistre un échec d'opération
@@ -247,13 +244,12 @@ export class SafetyGuardsService {
           operation: 'recordOperationFailure',
           componentName,
           failureCount: breaker.failureCount 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     }
-  }
 
   // ========================================
   // RESOURCE MONITORING & THROTTLING
@@ -278,11 +274,11 @@ export class SafetyGuardsService {
     logger.info('Monitoring système démarré (10s/60s intervals)', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'startSystemMonitoring' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   /**
    * Met à jour les métriques système
@@ -314,7 +310,6 @@ export class SafetyGuardsService {
       metadata: {}
     } );
     }
-  }
 
   /**
    * Évalue le besoin de throttling
@@ -355,7 +350,6 @@ export class SafetyGuardsService {
       metadata: {}
     } );
     }
-  }
 
   /**
    * Active le throttling système
@@ -375,11 +369,11 @@ export class SafetyGuardsService {
         operation: 'activateThrottling',
         reason,
         aggressiveness: this.adaptiveConfig.preloadingAggressiveness 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   /**
    * Désactive le throttling système
@@ -402,11 +396,11 @@ export class SafetyGuardsService {
         operation: 'deactivateThrottling',
         reason,
         duration: Math.round(throttleDuration/1000) 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   /**
    * Gestion surcharge système critique
@@ -421,11 +415,11 @@ export class SafetyGuardsService {
         cpuUsage: this.systemMetrics.cpuUsage,
         memoryUsage: this.systemMetrics.memoryUsage,
         stack: new Error().stack 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     // Actions d'urgence
     await this.emergencyResourceCleanup();
     // Arrêt temporaire preloading
@@ -437,14 +431,13 @@ export class SafetyGuardsService {
         breaker.nextAttemptTime = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         logger.warn('Circuit breaker ouvert préventivement', { metadata: {
             service: 'SafetyGuardsService',
-            operation: 'handleCriticalOverload',
+                  operation: 'handleCriticalOverload',
             circuitBreaker: name 
-              
-              }
+
+                }
  
               
-            });
-      });
+                                                                                                                                                                                                                                                                                    });
   }
 
   // ========================================
@@ -474,7 +467,6 @@ export class SafetyGuardsService {
       metadata: {}
     } );
     }
-  }
 
   /**
    * Calcule le score d'adaptation nécessaire (0-1)
@@ -517,11 +509,11 @@ export class SafetyGuardsService {
         adaptationScore: (adaptationScore*100).toFixed(1),
         aggressiveness: newAggressiveness.toFixed(1),
         confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1) 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   // ========================================
   // MEMORY MANAGEMENT & CLEANUP
@@ -537,7 +529,7 @@ export class SafetyGuardsService {
       logger.info('Nettoyage d\'urgence ressources', { metadata: {
           service: 'SafetyGuardsService',
           operation: 'emergencyResourceCleanup'
-      });
+            });
       // Arrêt background tasks non-critiques
       const tasksStopped = this.backgroundTasksRunning;
       this.backgroundTasksRunning = 0;
@@ -564,7 +556,6 @@ export class SafetyGuardsService {
       metadata: {}
     } );
     }
-  }
 
   /**
    * Évaluation système complète périodique
@@ -584,11 +575,11 @@ export class SafetyGuardsService {
       if (report.systemHealth < 70) {
         logger.warn('Santé système dégradée', { metadata: {
             service: 'SafetyGuardsService',
-            operation: 'comprehensiveSystemEvaluation',
+                  operation: 'comprehensiveSystemEvaluation',
             systemHealth: report.systemHealth,
             recommendations: report.recommendations.slice(0, 3) 
               
-              }
+                }
  
               
             });
@@ -600,7 +591,6 @@ export class SafetyGuardsService {
       metadata: {}
     } );
     }
-  }
 
   // ========================================
   // VALIDATION & AUTHORIZATION
@@ -691,7 +681,6 @@ export class SafetyGuardsService {
     } else if (operationType === 'background_task') {
       this.backgroundTasksRunning++;
     }
-  }
 
   /**
    * Enregistre la fin d'une opération
@@ -711,7 +700,6 @@ export class SafetyGuardsService {
     } else {
       this.recordOperationFailure('background_preloader', 'Operation failed');
     }
-  }
 
   /**
    * Rapport complet safety guards
@@ -814,7 +802,6 @@ export class SafetyGuardsService {
 
     return recommendations;
   }
-}
 
 // ========================================
 // FACTORY ET SINGLETON

@@ -73,16 +73,14 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
       }
 
       logger.info('[OCR] Traitement PDF', { metadata: {
+
           route: '/api/ocr/process-pdf',
           method: 'POST',
           filename: req.file.originalname,
           size: req.file.size,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       // Initialize OCR service
       await ocrService.initialize();
@@ -118,15 +116,13 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
       }
 
       logger.info('[OCR] Création AO depuis PDF', { metadata: {
+
           route: '/api/ocr/create-ao-from-pdf',
           method: 'POST',
           filename: req.file.originalname,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       // Initialize OCR service
       await ocrService.initialize();
@@ -186,15 +182,13 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
       const { field, pattern } = req.body;
       
       logger.info('[OCR] Ajout pattern personnalisé', { metadata: {
+
           route: '/api/ocr/add-pattern',
           method: 'POST',
           field,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
       
       try {
         const regex = new RegExp(pattern, 'i');
@@ -248,21 +242,17 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { fileUrl, filename } = req.body;
 
-      logger.info('[DocumentAnalysis] Démarrage analyse', { metadata: { userId: req.user?.id, filename 
-
-            })
- 
-
-          );
+      logger.info('[DocumentAnalysis] Démarrage analyse', { metadata: {
+ userId: req.user?.id, filename
+      }
+    });
       
       // 1. Extraire le contenu textuel du fichier
       const textContent = await documentProcessor.extractTextFromFile(fileUrl, filename);
-      logger.info('[DocumentAnalysis] Extraction texte', { metadata: { filename, textLength: textContent.length 
-
-            })
- 
-
-          );
+      logger.info('[DocumentAnalysis] Extraction texte', { metadata: {
+ filename, textLength: textContent.length
+      }
+    });
       
       // 2. Analyser le contenu avec l'IA pour extraire les données structurées
       const extractedData = await documentProcessor.extractAOInformation(textContent, filename);
@@ -277,12 +267,10 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
         extractedData.deliveryDate
       );
       
-      logger.info('[DocumentAnalysis] Analyse complétée', { metadata: { filename, hasContacts: !!enrichedData.linkedContacts 
-
-            })
- 
-
-          );
+      logger.info('[DocumentAnalysis] Analyse complétée', { metadata: {
+ filename, hasContacts: !!enrichedData.linkedContacts
+      }
+    });
 
       res.json({
         success: true,
@@ -293,7 +281,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
         },
         contactLinking: {
           maitreOuvrage: enrichedData.linkedContacts?.maitreOuvrage ? {
-            found: enrichedData.linkedContacts.maitreOuvrage.found,
+                found: enrichedData.linkedContacts.maitreOuvrage.found,
             created: enrichedData.linkedContacts.maitreOuvrage.created,
             contactId: enrichedData.linkedContacts.maitreOuvrage.contact.id,
             contactName: enrichedData.linkedContacts.maitreOuvrage.contact.nom,
@@ -301,7 +289,7 @@ export function createDocumentsRouter(storage: IStorage, eventBus: EventBus): Ro
             reason: enrichedData.linkedContacts.maitreOuvrage.reason
           } : null,
           maitreOeuvre: enrichedData.linkedContacts?.maitreOeuvre ? {
-            found: enrichedData.linkedContacts.maitreOeuvre.found,
+                found: enrichedData.linkedContacts.maitreOeuvre.found,
             created: enrichedData.linkedContacts.maitreOeuvre.created,
             contactId: enrichedData.linkedContacts.maitreOeuvre.contact.id,
             contactName: enrichedData.linkedContacts.maitreOeuvre.contact.nom,

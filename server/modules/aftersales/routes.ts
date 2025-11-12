@@ -44,7 +44,7 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         'POST /api/sav-interventions',
         'GET /api/warranty-claims/:interventionId'
       ]
-        }
+          }
             });
 
   // ========================================
@@ -60,15 +60,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { projectId } = req.params;
 
       logger.info('[AfterSales] Récupération réserves projet', { metadata: {
+
           route: '/api/reserves/:projectId',
           method: 'GET',
           projectId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -80,9 +78,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
             method: 'GET',
             projectId,
             reservesCount: reserves?.length || 0,
-            userId: req.user?.id
+                  userId: req.user?.id
 
-      });
+              });
 
         sendSuccess(res, reserves);
       
@@ -112,15 +110,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const reserveData = req.body;
 
       logger.info('[AfterSales] Création réserve projet', { metadata: {
+
           route: '/api/reserves',
           method: 'POST',
           projectId: reserveData.projectId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -130,11 +126,11 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         logger.info('[AfterSales] Réserve projet créée', { metadata: {
             route: '/api/reserves',
             method: 'POST',
-            projectId: reserveData.projectId,
+                  projectId: reserveData.projectId,
             reserveId: newReserve?.id,
-            userId: req.user?.id
+                  userId: req.user?.id
 
-      });
+              });
 
         sendSuccess(res, newReserve, 201);
       
@@ -168,15 +164,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { projectId } = req.params;
 
       logger.info('[AfterSales] Récupération interventions SAV', { metadata: {
+
           route: '/api/sav-interventions/:projectId',
           method: 'GET',
           projectId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -188,9 +182,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
             method: 'GET',
             projectId,
             interventionsCount: interventions?.length || 0,
-            userId: req.user?.id
+                  userId: req.user?.id
 
-      });
+              });
 
         sendSuccess(res, interventions);
       
@@ -220,15 +214,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const interventionData = req.body;
 
       logger.info('[AfterSales] Création intervention SAV', { metadata: {
+
           route: '/api/sav-interventions',
           method: 'POST',
           projectId: interventionData.projectId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -238,11 +230,11 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         logger.info('[AfterSales] Intervention SAV créée', { metadata: {
             route: '/api/sav-interventions',
             method: 'POST',
-            projectId: interventionData.projectId,
+                  projectId: interventionData.projectId,
             interventionId: newIntervention?.id,
-            userId: req.user?.id
+                  userId: req.user?.id
 
-      });
+              });
 
         sendSuccess(res, newIntervention, 201);
       
@@ -276,15 +268,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { interventionId } = req.params;
 
       logger.info('[AfterSales] Récupération réclamations garantie', { metadata: {
+
           route: '/api/warranty-claims/:interventionId',
           method: 'GET',
           interventionId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -296,9 +286,9 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
             method: 'GET',
             interventionId,
             claimsCount: claims?.length || 0,
-            userId: req.user?.id
+                  userId: req.user?.id
 
-      });
+              });
 
         sendSuccess(res, claims);
       
@@ -431,7 +421,7 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       routesCount: 11,
       modules: ['reserves', 'sav-interventions', 'warranty-claims', 'sav-workflow']
     
-              }
+          }
 
     
             });

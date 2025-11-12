@@ -149,7 +149,6 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
             <p>Cet email a été envoyé automatiquement dans le cadre de notre processus de consultation.</p>
             <p>{{companyName}} - Système de gestion des appels d'offres</p>
           </div>
-        </div>
       </body>
       </html>
     `,
@@ -227,7 +226,6 @@ Cordialement,
             <p>Cordialement,<br>
             Équipe {{companyName}}</p>
           </div>
-        </div>
       </body>
       </html>
     `,
@@ -286,7 +284,6 @@ Cordialement,
             <p>Cordialement,<br>
             Équipe {{companyName}}</p>
           </div>
-        </div>
       </body>
       </html>
     `,
@@ -344,7 +341,6 @@ export class HandlebarsTemplateService {
         hour: '2-digit',
         minute: '2-digit'
       });
-    });
 
     Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
     Handlebars.registerHelper('ne': unknown,an: unknown) => a !== b);
@@ -410,7 +406,6 @@ export class HandlebarsTemplateService {
       // Fallback: rendu naïf en cas d'erreur Handlebars
       return this.fallbackRender(templateContent, data);
     }
-  }
 
   /**
    * Méthode de fallback qui fait un remplacement naïf en cas d'erreur Handlebars
@@ -419,11 +414,11 @@ export class HandlebarsTemplateService {
     logger.warn('Utilisation du fallback naïf', { metadata: {
           service: 'EmailService',
           operation: 'renderTemplate' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     let result = template;
     Object.entries(data).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
@@ -481,13 +476,12 @@ export class HandlebarsTemplateService {
         service: 'EmailService',
         operation: 'constructor',
         provider: 'SendGrid' 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     }
-  }
 
   /**
    * Envoie une invitation à un fournisseur pour soumissionner
@@ -619,11 +613,11 @@ export class HandlebarsTemplateService {
           data: emailData.dynamicData,
           htmlLength: htmlContent.length,
           textLength: textContent.length 
-              
-              }
+
+                                                                                                                                                                                                                                                                                                                                                                                      }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
       // Validation du rendu conditionnel pour les instructions
       if (emailData.templateId === 'SUPPLIER_INVITATION') {
         if (emailData.dynamicData.instructions) {
@@ -631,23 +625,22 @@ export class HandlebarsTemplateService {
         service: 'EmailService',
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
         } else {
           logger.info('Pas d\'instructions - bloc conditionnel masqué', { metadata: {
         service: 'EmailService',
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
         }
-      }
       return {
         success: true,
         messageId: `sendgrid_pending_${Date.now()}`,
@@ -665,7 +658,6 @@ export class HandlebarsTemplateService {
         deliveryStatus: 'failed'
       };
     }
-  }
 
   // CORRECTION CRITIQUE : La méthode replaceVariables naïve a été supprimée
   // et remplacée par le service Handlebars centralisé qui gère correctement
@@ -711,7 +703,6 @@ export class HandlebarsTemplateService {
     } else {
       return `${hours} heure${hours > 1 ? 's' : ''}`;
     }
-  }
 
   /**
    * Vérifie si le service email est configuré
@@ -726,7 +717,6 @@ export class HandlebarsTemplateService {
   getAvailableTemplates(): EmailTemplate[] {
     return Object.values(EMAIL_TEMPLATES);
   }
-}
 
 // ========================================
 // FACTORY PATTERN ET CONFIGURATION
@@ -761,7 +751,7 @@ export function createEmailService(config?: Partial<EmailServiceConfig>): IEmail
         operation: 'createEmailService',
         provider 
               
-              }
+          }
  
               
             });
@@ -772,7 +762,6 @@ export function createEmailService(config?: Partial<EmailServiceConfig>): IEmail
     default:
       return new MockEmailService();
   }
-}
 
 /**
  * Instance singleton du service email
@@ -785,11 +774,11 @@ logger.info('Service actif', { metadata: {
         service: 'EmailService',
         operation: 'init',
         serviceName: emailService.constructor.name 
-              
-              }
+
+        }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
 // ========================================
 // HELPER FUNCTIONS POUR WORKFLOW FOURNISSEURS
 // ========================================
@@ -835,11 +824,11 @@ export function scheduleSessionReminders(session: SupplierQuoteSession): void {
         service: 'EmailService',
         operation: 'scheduleSessionReminders',
         sessionId: session.id 
-              
-              }
+
+          }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
 }
 // ========================================
 // EXPORTS POUR COMPATIBILITÉ ET USAGE FACILE

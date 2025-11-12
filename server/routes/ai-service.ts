@@ -297,7 +297,6 @@ router.get("/config", (req, res) => {
     success: true,
     data: config
   });
-});
 
 // ========================================
 // NOUVEAUX ENDPOINTS CONTEXTE ENRICHI IA
@@ -345,7 +344,7 @@ router.get("/context/:entityType/:id", asyncHandler(async (req, res) => {
       generatedAt: new Date().toISOString(),
       tokensEstimate: contextData.tokenEstimate,
       compressionLevel: contextData.compressionLevel
-        }
+            }
           );
             }
 
@@ -562,9 +561,9 @@ router.post("/context-batch", asyncHandler(async (req, res) => {
       operation: 'Router',
       service: 'ai-service',
       metadata: {
-            })
 
-          ););
+      }
+    }););
       return {
         entityType: entity.entityType,
         entityId: entity.entityId,

@@ -163,7 +163,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       const estimate = await service.estimateMigration(config);
       expect(estimate.strategyRecommended).toBe('pattern_based');
     });
-  });
 
   // ========================================
   // PATTERN-BASED STRATEGY TESTS
@@ -245,7 +244,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       expect(estimate.estimatedItems).toBe(1911);
       expect(estimate.estimatedDuration).toBeGreaterThan(0);
     });
-  });
 
   // ========================================
   // EXCEL IMPORT STRATEGY TESTS
@@ -293,7 +291,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       expect(validation.errors.length).toBeGreaterThan(0);
       expect(validation.errors[0]).toContain('not found');
     });
-  });
 
   // ========================================
   // API MIGRATION STRATEGY TESTS
@@ -326,7 +323,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       expect(validation.valid).toBe(true);
       expect(validation.strategyRecommended).toBe('api_migration');
     });
-  });
 
   // ========================================
   // MIGRATION HISTORY TESTS
@@ -372,7 +368,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       history.forEach(h => {
         expect(h.strategyUsed).toBe('pattern_based');
       });
-    });
 
     it('should filter history by entity type', async () => {
       await service.migrate({
@@ -422,7 +417,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
 
       expect(history).toHaveLength(3);
     });
-  });
 
   // ========================================
   // ERROR HANDLING TESTS
@@ -447,7 +441,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
 
       await expect(service.migrate(config)).rejects.toThrow('Migration validation failed');
     });
-  });
 
   // ========================================
   // PERFORMANCE AND BATCH PROCESSING TESTS
@@ -481,8 +474,6 @@ describe('MondayMigrationService - Consolidated Service', () => {
       expect(result.totalMigrated).toBe(100);
       // Progress should be logged (tested via logger mocks in actual implementation)
     });
-  });
-});
 
 // ========================================
 // TEST SUITE: Backward Compatibility Adapters
@@ -511,9 +502,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayMigrationServiceLegacyAdapter;
 
     beforeEach(() => {
-      adapter = new MondayMigrationServiceLegacyAdapter(mockStoras unknown)unknown);
-    });
-
+      adapter = new MondayMigrationServiceLegacyAdapter(mockStoras unknown);
     it('should migrate AOs using legacy API', async () => {
       const result = await adapter.migrateAosFromAnalysis(10);
 
@@ -536,7 +525,6 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
       expect(result.source).toBe('authentic_monday_exports');
       expect(result.success).toBeDefined();
     });
-  });
 
   // ========================================
   // PRODUCTION ADAPTER TESTS
@@ -557,7 +545,6 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
       expect(result.aos).toBeDefined();
       expect(result.projects).toBeDefined();
     });
-  });
 
   // ========================================
   // PRODUCTION FINAL ADAPTER TESTS
@@ -567,8 +554,7 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
     let adapter: MondayProductionFinalServiceAdapter;
 
     beforeEach(() => {
-      adapter = new MondayProductionFinalServiceAdapter(as unknown)ras unknunknown)unknown);
-    });
+      adapter = new MondayProductionFinalServiceAdapter(as unknown)ras unknunknown);
 
     it('should validate authentic data integrity using legacy API', async () => {
       const result = await adapter.validateAuthenticDataIntegrity();
@@ -577,7 +563,6 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
       expect(result.totalFiles).toBeGreaterThan(0);
       expect(result.errors).toBeGreaterThanOrEqual(0);
     });
-  });
 
   // ========================================
   // ENHANCED ADAPTER TESTS
@@ -602,8 +587,6 @@ describe('MondayMigrationService - Backward Compatibility Adapters', () => {
       // In real implementation, this would work with actual Monday integration
       await expect(adapter.migrate(options)).rejects.toThrow();
     });
-  });
-});
 
 // ========================================
 // INTEGRATION TESTS
@@ -676,4 +659,3 @@ describe('MondayMigrationService - Integration Tests', () => {
     expect(result.totalErrors).toBeGreaterThan(0);
     expect(result.success).toBe(false);
   });
-});

@@ -85,7 +85,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
     );
     
-    const enrichedAos = aosEtude.map: unknown)unknown) => ({
+    const enrichedAos = aosEtude.map: unknown) => ({
       ...ao,
       cctpAnalyzed: Math.random() > 0.3,
       technicalDetailsComplete: Math.random() > 0.4,
@@ -97,7 +97,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] AOs en étude récupérés', { metadata: { count: enrichedAos.length 
 
-              }
+            }
  
 
             });
@@ -128,7 +128,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Étude technique validée', { metadata: { aoId, newStatus: 'en_cours_chiffrage' 
 
-              }
+            }
  
 
             });
@@ -156,7 +156,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
 
   app.get("/api/aos/chiffrage", isAuthenticated, asyncHandler(async (req, res) => {
     const aos = await storage.getAos();
-    const aosChiffrage = aos: unknown)unknown)unknown) => ({
+    const aosChiffrage = aos: unknown) => ({
       ...ao,
       totalCalculated: Math.random() > 0.3,
       dpgfGenerated: Math.random() > 0.4,
@@ -175,7 +175,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     const filtered = aosChiffrag: unknown)unknown)unknown any) => ao.status !== 'draft');
     
     logger.info('[Workflow] AOs en chiffrage récupérés', { metadata: { count: filtered.length 
-              }
+            }
  
             });
     
@@ -198,7 +198,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Chiffrage validé', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -241,7 +241,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Devis prêts récupérés', { metadata: { count: devisReady.length 
 
-              }
+            }
  
 
             });
@@ -263,7 +263,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Devis envoyé', { metadata: { aoId, method 
 
-              }
+            }
  
 
             });
@@ -292,7 +292,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Relance client effectuée', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -326,7 +326,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
       // OPTIMISATION: Use pagination instead of loading 375 projects
       const { projects } = await storage.getProjectsPaginated(undefined, status as string, 1000, 0);
       
-      const enrichedProjects = p: unknown)unknown)unknownproject: any) => {
+      const enrichedProjects = p(value: any) => {
         const baseProject = {
           ...project,
           reference: project.aoReference || `PRJ-${project.id.slice(0, 8)}`,
@@ -450,7 +450,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
                               }));
     
     logger.info('[Workflow] Planning projets récupéré', { metadata: { count: planningData.length 
-              }
+            }
  
             });
     
@@ -473,7 +473,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Planification validée', { metadata: { projectId 
 
-              }
+            }
  
 
             });
@@ -503,7 +503,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Chantier démarré', { metadata: { projectId 
 
-              }
+            }
  
 
             });
@@ -534,7 +534,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Chantier terminé', { metadata: { projectId 
 
-              }
+            }
  
 
             });
@@ -563,7 +563,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Problème signalé sur chantier', { metadata: { projectId, issue 
 
-              }
+            }
  
 
             });
@@ -595,7 +595,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Aperçu DPGF demandé', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -625,7 +625,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Téléchargement DPGF', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -648,7 +648,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Aperçu devis demandé', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -677,7 +677,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Téléchargement devis', { metadata: { aoId 
 
-              }
+            }
  
 
             });
@@ -825,7 +825,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     ];
 
     logger.info('[Workflow] Priorités récupérées', { metadata: { count: priorities.length 
-              }
+            }
  
             });
 
@@ -876,13 +876,13 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         metadata: {
           updatedBy: 'admin',
           newWeights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeWeight, risqueWeight, strategiqueWeight 
-        }
+                }
               );
       eventBus.publish(configEvent);
     }
     
     logger.info('[Workflow] Priorités recalculées', { metadata: { recalculatedCount, weights: { montantWeight, delaiWeight, typeClientWeight, complexiteWeight, chargeBeScore: chargeBeWeight, risqueWeight, strategiqueWeight 
-              }
+            }
  
             });
     
@@ -927,7 +927,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     }
     
     logger.info('[Workflow] Priorité forcée manuellement', { metadata: { itemId, newPriorityLevel: priorityLevel, reason 
-              }
+            }
  
             });
     
@@ -982,7 +982,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     ];
     
     logger.info('[Workflow] Historique priorité récupéré', { metadata: { itemId, count: history.length 
-              }
+            }
  
             });
     
@@ -1026,7 +1026,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     ];
     
     logger.info('[Workflow] Alertes priorité récupérées', { metadata: { count: alerts.length 
-              }
+            }
  
             });
     
@@ -1060,7 +1060,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     
     logger.info('[Workflow] Alerte priorité marquée comme vue', { metadata: { alertId 
 
-              }
+            }
  
 
             });
@@ -1113,7 +1113,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     };
     
     logger.info('[Workflow] Stats priorité récupérées', { metadata: { totalItems: stats.totalItems 
-              }
+            }
  
             });
     
@@ -1153,7 +1153,7 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
     };
     
     logger.info('[Workflow] Configuration priorité récupérée', { metadata: { configuredBy: config.configuredBy 
-              }
+            }
  
             });
     
@@ -1188,13 +1188,13 @@ export function registerWorkflowRoutes(app: Express, eventBus?: EventBus) {
         metadata: {
           updatedBy: 'user',
           newConfig: { weights, thresholds, autoRecalculate, alertsEnabled, notificationChannels 
-        }
+                }
               );
       eventBus.publish(configSaveEvent);
     }
     
     logger.info('[Workflow] Configuration priorité sauvegardée', { metadata: { weights, thresholds, autoRecalculate, alertsEnabled 
-              }
+            }
  
             });
     

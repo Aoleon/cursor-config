@@ -84,7 +84,6 @@ export class KpiRepository {
     if (this.performanceMetrics.length > this.MAX_METRICS) {
       this.performanceMetrics.shift();
     }
-  }
 
   /**
    * Get aggregated performance statistics
@@ -162,7 +161,7 @@ export class KpiRepository {
         granularity,
         weeksBetween,
         daysBetween
-              }
+            }
 
             });
 
@@ -456,7 +455,7 @@ export class KpiRepository {
           baseline: {
             legacyMs: PERFORMANCE_BASELINE.LEGACY_AVG_MS,
             targetMs: PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS,
-            status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' : 
+                  status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' :
                     executionTimeMs <= PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'acceptable' : 'degraded'
           });
 
@@ -471,5 +470,3 @@ export class KpiRepository {
             });
       throw error;
     }
-  }
-}

@@ -524,9 +524,9 @@ export class DateAlertDetectionService {
           operation: 'runPeriodicDetection',
           totalAlertsGenerated: summary.totalAlertsGenerated,
           detectionRunTimeMs: summary.detectionRunTime   
-              
-        }
-      });
+
+              }
+                              });
       return summary;
     },
     {
@@ -1559,7 +1559,7 @@ export class MenuiserieDetectionRules {
           
           if (daysUntil <= 14) { // 2 semaines
             alerts.push({
-              projectId: project.id,
+                projectId: project.id,
               type: 'regulatory_approval',
               authority: deadline.authority,
               deadline: deadline.deadline,
@@ -1768,7 +1768,7 @@ export class MenuiserieDetectionRules {
               entityType: violation.entity_type,
               entityId: violation.entity_id,
               entityName: violation.entity_name,
-              title: threshold.alertTitle,
+                title: threshold.alertTitle,
               message: this.buildProfitabilityMessage(threshold, violation),
               severity: threshold.severity,
               thresholdValue: Number(threshold.thresholdValue),
@@ -1939,7 +1939,7 @@ export class MenuiserieDetectionRules {
               entityType: 'team',
               entityId: violation.team_id,
               entityName: violation.team_name,
-              title: threshold.alertTitle,
+                title: threshold.alertTitle,
               message: this.buildTeamUtilizationMessage(threshold, violation),
               severity: threshold.severity,
               thresholdValue: Number(threshold.thresholdValue),
@@ -1999,7 +1999,7 @@ export class MenuiserieDetectionRules {
               entityType: 'project',
               entityId: violation.project_id,
               entityName: `Projet ${violation.project_id}`,
-              title: threshold.alertTitle,
+                title: threshold.alertTitle,
               message: this.buildPredictiveRiskMessage(threshold, violation),
               severity: threshold.severity,
               thresholdValue: Number(threshold.thresholdValue),

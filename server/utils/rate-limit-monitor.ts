@@ -58,7 +58,6 @@ class RateLimitMonitor {
         count: 1
       });
     }
-  }
 
   /**
    * Check if alert thresholds are exceeded
@@ -69,10 +68,10 @@ class RateLimitMonitor {
         metadata: {
           violation: {
             endpoint: violation.endpoint,
-            userId: violation.userId,
+                  userId: violation.userId,
             userEmail: violation.userEmail,
             ip: violation.ip,
-            count: violation.count,
+                  count: violation.count,
             timestamp: violation.timestamp
           },
           alert: 'CRITICAL',
@@ -87,16 +86,15 @@ class RateLimitMonitor {
         metadata: {
           violation: {
             endpoint: violation.endpoint,
-            userId: violation.userId,
+                  userId: violation.userId,
             userEmail: violation.userEmail,
             ip: violation.ip,
-            count: violation.count,
+                  count: violation.count,
             timestamp: violation.timestamp
           },
           alert: 'WARNING'
         });
     }
-  }
 
   /**
    * Get statistics for monitoring dashboard
@@ -174,7 +172,6 @@ class RateLimitMonitor {
   exportViolations(): RateLimitViolation[] {
     return Array.from(this.violations.values());
   }
-}
 
 // Singleton instance
 const monitor = new RateLimitMonitor();
@@ -196,7 +193,7 @@ export function monitorRateLimit(
       ip,
       timestamp: new Date().toISOString(),
       event: 'rate_limit_exceeded'
-              }
+          }
 
             });
   
@@ -221,7 +218,6 @@ export function clearRateLimitViolations() {
   if (process.env.NODE_ENV !== 'production') {
     monitor.clearViolations();
   }
-}
 
 /**
  * Export violations for analysis
@@ -240,7 +236,7 @@ function incrementRateLimitMetric(endpoint: string): void {
       metric: 'rate_limit_exceeded',
       endpoint,
       timestamp: new Date().toISOString()
-              }
+          }
 
             });
 }
@@ -282,7 +278,7 @@ setInterval(() => {
         totalViolations: stats.totalViolations,
         uniqueEndpoints: Object.keys(stats.violationsByEndpoint).length,
         topViolator: stats.topViolators[0]
-              }
+            }
 
             });
   }

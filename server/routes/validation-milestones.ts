@@ -115,7 +115,7 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
             } }
           
           await storage.updateOffer(updatedMilestone.offerId, {
-            status: 'fin_etudes_validee',
+                    status: 'fin_etudes_validee',
             finEtudesValidatedAt: new Date(),
             finEtudesValidatedBy: 'test-user-1'
           })
@@ -137,18 +137,17 @@ router.patch('/:milestoneId', asyncHandler(async (req, res) => {
               completedTypes,
               pendingTypes
             } }
-        }
+                  }
       
     },
     {
       operation: 'Router',
       service: 'validation-milestones',
       metadata: {
-            })
 
-          );
+      }
+    });
     }
-  }
   
   res.json(updatedMilestone)
 }))

@@ -29,7 +29,6 @@ export function parseAddress(addressText: string): {
       departmentCode = code;
       break;
     }
-  }
   
   // Extraire ville (simplistic: dernière ligne avant code postal)
   const lines = addressText.split(/[\n,]/);
@@ -73,7 +72,6 @@ export function extractLotsFromText(cctp: string): Array<{ name: string; descrip
         description: match[2]?.trim()
       });
     }
-  }
   
   return lots;
 }

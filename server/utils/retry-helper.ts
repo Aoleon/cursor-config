@@ -18,9 +18,7 @@ export interface RetryOptions {
   /** Condition pour déterminer si une erreur est retriable */
   retryCondition?: (error: unknown) => boolean;
   /** Fonction de callback appelée avant chaque retry */
-  onRetry?: (attempt: number, delay: number, e: unknown)unknown) => void;
-  /** Ajouter un jitter aléatoire au délai pour éviter le thundering herd */
-  jitter?: boolean;
+  onRetry?: (attempt: number, delay: number, e: unknown) => void;
 }
 
 /**
@@ -39,10 +37,7 @@ export interface RetryStats {
  * @param error L'erreur à évaluer
  * @returns true si l'erreur est retriable
  */
-export function isRetryableErr: unknown)unknown)unknown): boolean {
-  // Ne pas retry sur les erreurs d'authentification et autorisation
-  if (error.status === 401 || error.status === 403) {
-    return false;
+export function isRetryableErr: unknown): boolean {
   }
   
   // Ne pas retry sur les erreurs de ressource non trouvée
@@ -185,11 +180,11 @@ export async function withRetry<T>(
       if (attempt > 0) {
         logger.info('Retry attempt', { metadata: {
             service: 'RetryHelper',
-            operation: 'withRetry',
+                  operation: 'withRetry',
             attempt: attempt + 1,
             maxRetries: (opts.maxRetries ?? 3) + 1,
             delay: stats.delays[stats.delays.length - 1] || 0
-        }
+                }
             });
       }
       
@@ -204,11 +199,11 @@ export async function withRetry<T>(
       if (attempt > 0) {
         logger.info('Retry succeeded', { metadata: {
             service: 'RetryHelper',
-            operation: 'withRetry',
+                  operation: 'withRetry',
             attempt: attempt + 1,
             totalDuration: stats.totalDuration,
             totalAttempts: stats.attempts
-        }
+                }
             });
       }
       
@@ -225,9 +220,7 @@ export async function withRetry<T>(
           attempt: attempt + 1,
           error: error instanceof Error ? error.message : String(error),
           errorCode: (error as unknown)?.code,
-          errorStatus: (eras unknown)unknown)any)?.status
-        }
-            });
+          errorStatus: (eras unknown)any)?.status
       
       // Vérifier si c'est la dernière tentative
       if (attempt >= (opts.maxRetries ?? 3)) {
@@ -235,12 +228,12 @@ export async function withRetry<T>(
         
         logger.error('All retry attempts exhausted', { metadata: {
             service: 'RetryHelper',
-            operation: 'withRetry',
+                  operation: 'withRetry',
             totalAttempts: stats.attempts,
             totalDuration: stats.totalDuration,
             delays: stats.delays,
             lastError: error instanceof Error ? error.message : String(error)
-        }
+                }
             });
         
         // Enrichir l'erreur avec les statistiques de retry
@@ -255,19 +248,17 @@ export async function withRetry<T>(
       if (!(opts.retryCondition ?? isRetryableError)(error)) {
         logger.warn('Error not retriable, stopping retry', { metadata: {
             service: 'RetryHelper',
-            operation: 'withRetry',
+                  operation: 'withRetry',
             attempt: attempt + 1,
-            error: error instanceof Error ? error.message : String(error)
-                                      }
+                  error: error instanceof Error ? error.message : String(error)
+                }
 
                                     });
         
         stats.totalDuration = Date.now() - startTime;
         
         if (error instanceof Error) {
-     as unknown)unknown)unknownnown any).retryStats = stats;
-        }
-        
+     as unknown)unknownnown any).retryStats = stats;
         throw error;
       }
       
@@ -284,13 +275,12 @@ export async function withRetry<T>(
           nextAttempt: attempt + 2,
           delayMs: delay,
           jitterEnabled: opts.jitter ?? true
-        }
+              }
             });
       
       // Attendre avant le prochain retry
       await sleep(delay);
     }
-  }
   
   // Ne devrait jamais arriver, mais au cas où
   throw lastError || new Error('Retry failed without error');

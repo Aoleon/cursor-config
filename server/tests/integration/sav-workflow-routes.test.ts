@@ -48,9 +48,7 @@ describe('SAV Workflow Routes Integration', () => {
       };
 
       vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
-      vi.mocked(mockStorage.createSavDemande).mockResolvedValue(mockDemaas unknown)unknown);
-
-      const response = await request(app)
+      vi.mocked(mockStorage.createSavDemande).mockResolvedValue(mockDemaas unknown);
         .post('/api/sav/demandes')
         .send({
           projectId: 'project-1',
@@ -64,7 +62,6 @@ describe('SAV Workflow Routes Integration', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body.reference).toMatch(/^SAV-/);
     });
-  });
 
   describe('PATCH /api/sav/demandes/:id/commande-materiel', () => {
     it('should update demande with material order', async () => {
@@ -81,8 +78,7 @@ describe('SAV Workflow Routes Integration', () => {
       };
 
       vi.mocked(mockStorage.getSavDemande).mockResolvedValue(mockas unknown) as unknown);
-      vi.mocked(mockStorage.updateSavDemande).mockResolvedValue(updas unknown)aas unknunknown)unknown);
-
+      vi.mocked(mockStorage.updateSavDemande).mockResolvedValue(updas unknown)aas unknunknown);
       const response = await request(app)
         .patch(`/api/sav/demandes/${demandeId}/commande-materiel`)
         .send({
@@ -93,6 +89,4 @@ describe('SAV Workflow Routes Integration', () => {
 
       expect(response.body.status).toBe('materiel_commande');
     });
-  });
-});
 

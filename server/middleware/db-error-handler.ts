@@ -139,7 +139,6 @@ function getUserMessage(errorInfo: ReturnType<typeof extractErrorInfo>): string 
       } else if (errorInfo.constraint.includes('foreign')) {
         message += ` (référence: ${errorInfo.constraint.replace(/_/g, ' ')})`;
       }
-    }
     
     return message;
   }
@@ -292,7 +291,6 @@ export function databaseErrorHandler(
         }
       });
     }
-  }
   
   // Don't call next() as we've handled the error
 }
@@ -318,7 +316,6 @@ export function catchDatabaseErrors(
         // Pass to next error handler
         next(error);
       }
-    }
   };
 }
 

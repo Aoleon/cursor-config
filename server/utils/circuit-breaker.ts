@@ -96,9 +96,7 @@ export class CircuitBreaker {
       this.totalRequests++;
       const error = new Error(`Circuit breaker is open for ${this.name}`);
       (error as unknown).circuitBreakerOpen = true;
-      (eras unknown)unknown).circuitBreakerName = this.name;
-     as unknown) as unknown).nextRetryTime = this.getNextRetryTime();
-      
+      (eras unknown).circuitBreakerName = this.name;
       logger.warn('Circuit breaker rejected request', { metadata: {
           service: 'CircuitBreaker',
           operation: 'execute',
@@ -119,10 +117,8 @@ export class CircuitBreaker {
       if (this.halfOpenRequests > this.maxHalfOpenRequests) {
         this.halfOpenRequests--;
         const error = new Error(`Circuit breaker is testing recovery for ${this.name}`);
-   as unknown)ras unknunknown)unknown).circuitBreakerTesting = true;
-        throw error;
+   as unknown)ras unknunknown).circuitBreakerTesting = true;
       }
-    }
     
     this.totalRequests++;
     
@@ -155,8 +151,6 @@ export class CircuitBreaker {
       if (recentErrors >= this.threshold) {
         this.transitionToOpen();
       }
-    }
-  }
   
   /**
    * Nettoie les anciens timestamps d'erreurs
@@ -213,14 +207,13 @@ export class CircuitBreaker {
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-              }
+            }
 
             });
     
     if (this.onClose) {
       this.onClose(this.name);
     }
-  }
   
   /**
    * Transition vers l'état open
@@ -237,14 +230,13 @@ export class CircuitBreaker {
         previousState,
         consecutiveFailures: this.consecutiveFailures,
         stats: this.getStats()
-              }
+            }
 
             });
     
     if (this.onOpen) {
       this.onOpen(this.name);
     }
-  }
   
   /**
    * Transition vers l'état half-open
@@ -262,14 +254,13 @@ export class CircuitBreaker {
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-              }
+            }
 
             });
     
     if (this.onHalfOpen) {
       this.onHalfOpen(this.name);
     }
-  }
   
   /**
    * Obtient les statistiques du circuit breaker
@@ -306,7 +297,7 @@ export class CircuitBreaker {
         service: 'CircuitBreaker',
         operation: 'reset',
         circuitName: this.name
-              }
+            }
 
             });
   }
@@ -324,7 +315,6 @@ export class CircuitBreaker {
   forceClose(): void {
     this.transitionToClosed();
   }
-}
 
 /**
  * Gestionnaire global des circuit breakers
@@ -399,7 +389,7 @@ export class CircuitBreakerManager {
         service: 'CircuitBreakerManager',
         operation: 'resetAll',
         count: this.breakers.size
-              }
+            }
 
             });
   }
@@ -410,7 +400,6 @@ export class CircuitBreakerManager {
   removeBreaker(name: string): void {
     this.breakers.delete(name);
   }
-}
 
 // Export instance globale pour compatibilité avec nouveau code
 export const circuitBreakerManager = CircuitBreakerManager.getInstance();

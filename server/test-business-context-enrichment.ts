@@ -63,7 +63,6 @@ async function testBusinessContextEnrichment() {
         logger.info(`   ${example.description}`);
         logger.info(`   ${example.sql.replace(/\n/g, '\n   ')}`);
       }
-    }
 
     // Test 3: Contexte SQL intelligent avec détection de domaine
     logger.info("\n🤖 Test 3: Génération de contexte SQL intelligent");
@@ -179,7 +178,7 @@ async function testBusinessContextEnrichment() {
       }
       if (ctx.business_rules) {
         logger.info(`   Règles métier: ${ctx.business_rules.length}`);
-      });
+              });
 
     logger.info("\n" + "=".repeat(60));
     logger.info("✅ Tous les tests ont réussi !");
@@ -195,7 +194,6 @@ async function testBusinessContextEnrichment() {
     } );
     process.exit(1);
   }
-}
 
 // Exécution du test
 testBusinessContextEnrichment()

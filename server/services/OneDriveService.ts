@@ -180,7 +180,7 @@ export class OneDriveService {
         
         if (nextLink) {
           logger.info('OneDrive pagination: fetching next page', { metadata: { path, currentItems: allItems.length 
-        }
+                  }
       }
 
       return allItems;
@@ -258,8 +258,8 @@ export class OneDriveService {
           if (item.deleted) {
             const isFolder = !!item.folder;
             return {
-              id: item.id,
-              name: item.name || 'deleted-item',
+                  id: item.id,
+                  name: item.name || 'deleted-item',
               deleted: true,
               isFolder,
               parentPath: path,
@@ -276,7 +276,7 @@ export class OneDriveService {
         const deletedCount = items.f: unknown) => i.deleted).length;
         if (deletedCount > 0) {
           logger.info('OneDrive delta: deletions detected', { metadata: { path, deletedItems: deletedCount 
-        }
+                  }
 
         // Check for delta link (indicates end of delta sequence)
         if (response['@odata.deltaLink']) {
@@ -288,7 +288,7 @@ export class OneDriveService {
               totalItems: allItems.length,
               hasDeltaLink: true 
               
-              }
+                  }
  
               
             });
@@ -297,7 +297,7 @@ export class OneDriveService {
           nextLink = response['@odata.nextLink'];
           logger.info('OneDrive delta: fetching next page', { metadata: { path, currentItems: allItems.length  
               
-              }
+                  }
   
               
             });
@@ -430,7 +430,7 @@ service: 'OneDriveService',
         .post({
           item: {
             '@microsoft.graph.conflictBehavior': conflictBehavior,
-            name: fileName
+                name: fileName
           });
 
       const uploadUrl = uploadSession.uploadUrl;
@@ -510,7 +510,7 @@ service: 'OneDriveService',
 
       const buffer = Buffer.concat(chunks);
       logger.info('File downloaded from OneDrive', { metadata: { itemId, size: buffer.length 
-      });
+            });
       return buffer;
     },
     {
@@ -559,7 +559,7 @@ service: 'OneDriveService',
 
       await this.client.api(`/me/drive/items/${itemId}`).delete();
       logger.info('Item deleted from OneDrive', { metadata: { itemId 
-      });
+            });
     },
     {
       operation: 'constructor',
@@ -631,7 +631,7 @@ service: 'OneDriveService',
 .api(`/me/drive/items/${itemId}/copy`);
         .post({
           parentReference: {
-            id: destinationFolderId
+                id: destinationFolderId
           },
           name: newName
         });
@@ -663,7 +663,7 @@ service: 'OneDriveService',
         .patch(updateData);
 
       logger.info('Item moved/renamed on OneDrive', { metadata: { itemId, newParentId, newName 
-      });
+            });
       return this.mapToOneDriveItem(item);
     },
     {

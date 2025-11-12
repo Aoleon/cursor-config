@@ -48,11 +48,11 @@ export class MondayWebhookService {
           operation: 'processWebhook',
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     }
     // Extract data
     const { pulseId, itemId, boardId, type, columnValues, userId } = event;
@@ -80,7 +80,7 @@ export class MondayWebhookService {
         type,
         userId 
               
-              }
+            }
  
               
             });
@@ -121,11 +121,11 @@ export class MondayWebhookService {
           eventId,
           boardId,
           itemId: itemIdentifier 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     },
     {
       operation: 'processWebhook',
@@ -134,7 +134,5 @@ export class MondayWebhookService {
     } );
       throw error;
     }
-  }
-}
 
 export const mondayWebhookService = mondayintegrationService();

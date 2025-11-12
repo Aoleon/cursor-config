@@ -86,7 +86,6 @@ export function addWorkingDays(startDate: Date, daysToAdd: number): Date {
     if (dayOfWeek !== 0 && dayOfWeek !== 6) {
       remainingDays--;
     }
-  }
   
   return result;
 }
@@ -125,7 +124,6 @@ export function parseAmountSafely(
   } catch (error) {
     return new Decimal(fallback);
   }
-}
 
 /**
  * Calcule TVA sur montant HT
@@ -265,7 +263,6 @@ export class SimpleCache<T> {
         this.cache.delete(key);
       });
   }
-}
 
 /**
  * Mesure le temps d'exécution d'une fonction
@@ -408,4 +405,3 @@ export class BusinessError extends Error {
     super(message);
     this.name = 'BusinessError';
   }
-}

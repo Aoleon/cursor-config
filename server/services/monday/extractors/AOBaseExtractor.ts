@@ -64,7 +64,6 @@ as unknown) as unknown)unknowna as unknown)[fieldName] = transformedValue;
           { error: error.message }
         );
       }
-    }
     
     // Fallback: intitulé depuis item.name si absent
     if (!aoData.intituleOperation) {
@@ -143,7 +142,6 @@ as unknown) as unknown)unknowna as unknown)[fieldName] = transformedValue;
       } catch {
         return null;
       }
-    }
     
     // TIMELINE - Plage de dates {from, to}
     // Note: timeline est géré différemment car il mappe vers 2 champs
@@ -250,7 +248,6 @@ as unknown) as unknown)unknowna as unknown)[fieldName] = transformedValue;
         if (typeof value === 'object' && value.name) {
           return value.name;
         }
-      }
       // Pour contacts multiples, géré par ContactExtractor
       return null;
     }
@@ -270,8 +267,6 @@ as unknown) as unknown)unknowna as unknown)[fieldName] = transformedValue;
       if (value === null || value === undefined || value === '') {
         missing.push(field);
       }
-    }
     
     return missing;
   }
-}

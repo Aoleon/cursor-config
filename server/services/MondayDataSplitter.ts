@@ -99,8 +99,8 @@ export class MondayDataSplitter {
     diagnostics: unknown[];
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
-      service: 'MondayDataSplitter',
-      metadata: { mondayItemId, boardId 
+      metadata: {
+        module: 'MondayDataSplitter', { mondayItemId, boardId 
 
           });
 
@@ -158,8 +158,8 @@ export class MondayDataSplitter {
     const mondayItemId = isId ? mondayItemOrId : mondayItemOrId.id;
     
     logger.info('Démarrage éclatement Monday item', {
-      service: 'MondayDataSplitter',
-      metadata: { mondayItemId, boardId, preFetched: !isId 
+      metadata: {
+        module: 'MondayDataSplitter', { mondayItemId, boardId, preFetched: !isId 
 
           });
 
@@ -196,8 +196,8 @@ export class MondayDataSplitter {
       await storage.transaction(async (tx) => {
         // ÉTAPE 1 : Extraire et créer/récupérer l'AO de base
         logger.info('Étape 1: Extraction AO de base', {
-          service: 'MondayDataSplitter',
-          metadata: { mondayItemId 
+      metadata: {
+        module: 'MondayDataSplitter', { mondayItemId 
 
               });
 
@@ -262,7 +262,7 @@ export class MondayDataSplitter {
           }
           
           const aoDataWithDefaults = {
-            reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
+                      reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
             menuiserieType: cleanedAoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
             source: cleanedAoData.source || existingAO.source || 'other' as const,
             mondayItemId, // IMPORTANT: Maintenir mondayItemId
@@ -277,11 +277,11 @@ export class MondayDataSplitter {
           result.aoUpdated = true;
           
           logger.info('AO existant mis à jour depuis Monday', {
-            service: 'MondayDataSplitter',
-            metadata: { 
-              aoId: existingAO.id, 
+      metadata: {
+        module: 'MondayDataSplitter', { 
+                aoId: existingAO.id,
               mondayItemId,
-              reference: currentAO.reference,
+                reference: currentAO.reference,
               client: aoDataWithDefaults.client,
               montant: aoDataWithDefaults.montantEstime
 
@@ -312,7 +312,7 @@ export class MondayDataSplitter {
           }
           
           const aoDataWithDefaults = {
-            reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
+                reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
             menuiserieType: cleanedAoData.menuiserieType || 'autre' as const,
             source: cleanedAoData.source || 'other' as const,
             mondayItemId, // IMPORTANT: Ajouter mondayItemId pour traçabilité
@@ -324,14 +324,14 @@ export class MondayDataSplitter {
           result.aoCreated = true;
 
           logger.info('AO créé', {
-            service: 'MondayDataSplitter',
-            metadata: { 
-              aoId: currentAO.id, 
+      metadata: {
+        module: 'MondayDataSplitter', { 
+                aoId: currentAO.id,
               mondayItemId,
-              reference: currentAO.reference
+                reference: currentAO.reference
 
                 });
-        }
+              }
 
         // ÉTAPE 1.5: Extraire et PERSISTER maîtres ouvrage/œuvre avec findOrCreate
         logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
@@ -353,11 +353,11 @@ export class MondayDataSplitter {
             logger.info('Maître d\'ouvrage traité', {
               service: 'MondayDataSplitter',
               metadata: {
-                aoId: currentAO.id,
-                nom: linkResult.contact.nom,
-                id: linkResult.contact.id,
+                        aoId: currentAO.id,
+                        nom: linkResult.contact.nom,
+                        id: linkResult.contact.id,
                 created: linkResult.created,
-                found: linkResult.found,
+                        found: linkResult.found,
                 confidence: linkResult.confidence
 
                   });
@@ -376,7 +376,5 @@ service: 'MondayDataSplitter',
 
       throw error;
     }
-  }
-}
 
 export const mondayDataSplitter = mondaydataService();

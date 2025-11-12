@@ -316,7 +316,7 @@ export class BatigestExportService {
           service: 'BatigestExportService',
           operation: 'exportPurchaseOrder',
           reference: order.reference
-      });
+            });
       const xml = this.convertPurchaseOrderToXML(order);
       const csv = this.convertPurchaseOrderToCSV(order);
       return {

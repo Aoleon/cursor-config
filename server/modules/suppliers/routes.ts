@@ -112,7 +112,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           search,
           status,
           userId: req.user?.id
-        }
+                }
       });
 
       // Get all suppliers (storage.getSuppliers returns Supplier[])
@@ -136,15 +136,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     validateBody(insertSupplierSchema),
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Création fournisseur', { metadata: {
+
           route: '/api/suppliers',
           method: 'POST',
           name: req.body.name,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const supplier = await storage.createSupplier(req.body);
       
@@ -155,10 +153,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, supplier, 201);
-          }
-        })
-      );
-
+              })
+            );
   // Update supplier
   router.patch('/api/suppliers/:id',
     isAuthenticated,
@@ -167,22 +163,18 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Mise à jour fournisseur', { metadata: {
+
           route: '/api/suppliers/:id',
           method: 'PATCH',
           supplierId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const supplier = await storage.updateSupplier(id, req.body);
       sendSuccess(res, supplier);
-          }
-        })
-      );
-
+              })
+            );
   // Delete supplier
   router.delete('/api/suppliers/:id',
     isAuthenticated,
@@ -190,15 +182,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Suppression fournisseur', { metadata: {
+
           route: '/api/suppliers/:id',
           method: 'DELETE',
           supplierId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       await storage.deleteSupplier(id);
       res.status(204).send();
@@ -218,17 +208,15 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { offerId, supplierId, status, sortBy } = req.query;
       
       logger.info('[Suppliers] Récupération demandes fournisseurs', { metadata: {
+
           route: '/api/supplier-requests',
           method: 'GET',
           offerId,
           supplierId,
           status,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const requests = await storage.getSupplierRequests({
         offerId,
@@ -238,26 +226,22 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, requests);
-          }
-        })
-      );
-
+              })
+            );
   // Create supplier request
   router.post('/api/supplier-requests',
     isAuthenticated,
     validateBody(insertSupplierRequestSchema),
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Création demande fournisseur', { metadata: {
+
           route: '/api/supplier-requests',
           method: 'POST',
           offerId: req.body.offerId,
           supplierId: req.body.supplierId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const request = await storage.createSupplierRequest(req.body);
       
@@ -269,10 +253,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, request, 201);
-          }
-        })
-      );
-
+              })
+            );
   // Update supplier request
   router.patch('/api/supplier-requests/:id',
     isAuthenticated,
@@ -281,22 +263,18 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Mise à jour demande fournisseur', { metadata: {
+
           route: '/api/supplier-requests/:id',
           method: 'PATCH',
           requestId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const request = await storage.updateSupplierRequest(id, req.body);
       sendSuccess(res, request);
-          }
-        })
-      );
-
+              })
+            );
   // ========================================
   // SUPPLIER SPECIALIZATIONS ROUTES
   // ========================================
@@ -306,21 +284,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     isAuthenticated,
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Récupération spécialisations', { metadata: {
+
           route: '/api/supplier-specializations',
           method: 'GET',
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const specializations = await storage.getSupplierSpecializations();
       sendSuccess(res, specializations);
-          }
-        })
-      );
-
+              })
+            );
   // Create supplier specialization
   router.post('/api/supplier-specializations',
     isAuthenticated,
@@ -328,23 +302,19 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     validateBody(insertSupplierSpecializationsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Création spécialisation', { metadata: {
+
           route: '/api/supplier-specializations',
           method: 'POST',
           supplierId: req.body.supplierId,
           specialization: req.body.specialization,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const specialization = await storage.createSupplierSpecialization(req.body);
       sendSuccess(res, specialization, 201);
-          }
-        })
-      );
-
+              })
+            );
   // Update supplier specialization
   router.put('/api/supplier-specializations/:id',
     isAuthenticated,
@@ -355,30 +325,26 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Mise à jour spécialisation', { metadata: {
+
           route: '/api/supplier-specializations/:id',
           method: 'PUT',
           id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       try {
         const updatedSpec = await storage.updateSupplierSpecialization(id, req.body);
         sendSuccess(res, updatedSpec);
       } catch (error) {
         logger.error('Erreur updateSupplierSpecialization', { metadata: {
+
             service: 'suppliers',
-            operation: 'updateSupplierSpecialization',
+                  operation: 'updateSupplierSpecialization',
             id,
-            error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                  error: error instanceof Error ? error.message : String(error)
+      }
+    });
         throw createError.database("Erreur lors de la mise à jour de la spécialisation fournisseur");
                         }
 
@@ -393,30 +359,26 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Suppression spécialisation', { metadata: {
+
           route: '/api/supplier-specializations/:id',
           method: 'DELETE',
           id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       try {
         await storage.deleteSupplierSpecialization(id);
         sendSuccess(res, null);
       } catch (error) {
         logger.error('Erreur deleteSupplierSpecialization', { metadata: {
+
             service: 'suppliers',
-            operation: 'deleteSupplierSpecialization',
+                  operation: 'deleteSupplierSpecialization',
             id,
-            error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                  error: error instanceof Error ? error.message : String(error)
+      }
+    });
         throw createError.database("Erreur lors de la suppression de la spécialisation fournisseur");
                         }
 
@@ -433,15 +395,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { aoId } = req.params;
       
       logger.info('[Suppliers] Récupération statut workflow', { metadata: {
+
           route: '/api/supplier-workflow/:aoId/status',
           method: 'GET',
           aoId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const sessions = await storage.getQuoteSessionsByAo(aoId);
       const suppliers = await storage.getSuppliersByAo(aoId);
@@ -459,26 +419,22 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       };
 
       sendSuccess(res, status);
-          }
-        })
-      );
-
+              })
+            );
   // Create quote session
   router.post('/api/supplier-workflow/sessions',
     isAuthenticated,
     validateBody(insertSupplierQuoteSessionSchema),
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Création session devis', { metadata: {
+
           route: '/api/supplier-workflow/sessions',
           method: 'POST',
           aoId: req.body.aoId,
           supplierId: req.body.supplierId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const session = await storage.createQuoteSession({
         ...req.body,
@@ -493,10 +449,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, session, 201);
-          }
-        })
-      );
-
+              })
+            );
   // Get session summary
   router.get('/api/supplier-workflow/sessions/:sessionId/summary',
     isAuthenticated,
@@ -504,15 +458,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { sessionId } = req.params;
       
       logger.info('[Suppliers] Récupération résumé session', { metadata: {
+
           route: '/api/supplier-workflow/sessions/:sessionId/summary',
           method: 'GET',
           sessionId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const session = await storage.getQuoteSession(sessionId);
       if (!session) {
@@ -537,14 +489,12 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { token } = req.params;
       
       logger.info('[Suppliers] Accès public session', { metadata: {
+
           route: '/api/supplier-workflow/sessions/public/:token',
           method: 'GET',
           token: token.substring(0, 8) + '...'
-
-            })
-
-
-          );
+      }
+    });
 
       const session = await storage.getQuoteSessionByToken(token);
       if (!session || new Date() > session.tokenExpiresAt) {
@@ -585,6 +535,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { sessionId, supplierId, documentType } = req.body;
       
       logger.info('[Suppliers] Upload document fournisseur', { metadata: {
+
           route: '/api/supplier-workflow/documents/upload',
           method: 'POST',
           sessionId,
@@ -592,11 +543,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           filename: req.file.originalname,
           size: req.file.size,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       // Store document
       const document = await storage.createSupplierDocument({
@@ -631,15 +579,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Analyse OCR document', { metadata: {
+
           route: '/api/supplier-documents/:id/analyze',
           method: 'POST',
           documentId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const document = await storage.getSupplierDocument(id);
       if (!document) {
@@ -697,15 +643,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Récupération analyse document', { metadata: {
+
           route: '/api/supplier-documents/:id/analysis',
           method: 'GET',
           documentId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const document = await storage.getSupplierDocument(id);
       if (!document) {
@@ -733,15 +677,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     validateBody(insertSupplierQuoteAnalysisSchema),
     asyncHandler(async (req: Request, res: Response) => {
       logger.info('[Suppliers] Création analyse devis', { metadata: {
+
           route: '/api/supplier-quote-analysis',
           method: 'POST',
           sessionId: req.body.sessionId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const analysis = await storage.createQuoteAnalysis({
         ...req.body,
@@ -756,10 +698,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, analysis, 201);
-          }
-        })
-      );
-
+              })
+            );
   // Get session comparison data
   router.get('/api/supplier-quote-sessions/:id/comparison-data',
     isAuthenticated,
@@ -767,15 +707,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { id } = req.params;
       
       logger.info('[Suppliers] Récupération données comparaison', { metadata: {
+
           route: '/api/supplier-quote-sessions/:id/comparison-data',
           method: 'GET',
           sessionId: id,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const session = await storage.getQuoteSession(id);
       if (!session) {
@@ -801,7 +739,6 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           strengths: s.analysis.strengths || [],
           weaknesses: s.analysis.weaknesses || []
         }
-                  }
 
                             }
 
@@ -840,15 +777,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { status, includeRawText, orderBy, order } = req.query;
       
       logger.info('[Suppliers] Récupération analyses pour session', { metadata: {
+
           route: '/api/supplier-quote-sessions/:id/analysis',
           method: 'GET',
           sessionId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       try {
         // Verify session exists
@@ -871,19 +806,19 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         const result = {
           sessionId,
           session: {
-            id: session.id,
-            aoId: session.aoId,
+                id: session.id,
+                aoId: session.aoId,
             aoLotId: session.aoLotId,
-            supplierId: session.supplierId,
-            status: session.status,
+                supplierId: session.supplierId,
+                status: session.status,
             invitedAt: session.invitedAt,
             submittedAt: session.submittedAt
           },
           totalAnalyses: analyses.length,
-          analyses: analyses.map((anal: unknown)unknown) => ({
-            id: analysis.id,
-            documentId: analysis.documentId,
-            status: analysis.status,
+          analyses: analyses.map((anal: unknown) => ({
+                id: analysis.id,
+                documentId: analysis.documentId,
+                status: analysis.status,
             analyzedAt: analysis.analyzedAt,
             confidence: analysis.confidence,
             qualityScore: analysis.qualityScore,
@@ -902,8 +837,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
             // Document info
             document: documentsMap.has(analysis.documentId) ? {
               filename: (documentsMap.get(analysis.documentId) as unknown)?.filename,
-              uploadedAt: (documentsMap.get(analysis.documentas unknunknown)unknown)?.uploadedAt
-            } : null
+              uploadedAt: (documentsMap.get(analysis.documentas unknunknown)?.uploadedAt
           })),
           
           // Global statistics
@@ -922,15 +856,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         sendSuccess(res, result);
       } catch (error) {
         logger.error('Erreur getSupplierQuoteAnalyses', { metadata: {
+
             service: 'suppliers',
-            operation: 'getSupplierQuoteAnalyses',
+                  operation: 'getSupplierQuoteAnalyses',
             sessionId,
-            error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                  error: error instanceof Error ? error.message : String(error)
+      }
+    });
         throw error;
                         }
 
@@ -951,15 +883,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const userId = req.user?.id;
       
       logger.info('[Suppliers] Approbation analyse', { metadata: {
+
           route: '/api/supplier-quote-analysis/:id/approve',
           method: 'POST',
           analysisId,
           userId
-
-            })
-
-
-          );
+      }
+    });
 
       try {
         // Get the analysis
@@ -1000,15 +930,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
               });
       } catch (error) {
         logger.error('Erreur approveQuoteAnalysis', { metadata: {
+
             service: 'suppliers',
-            operation: 'approveQuoteAnalysis',
+                  operation: 'approveQuoteAnalysis',
             analysisId,
-            error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                  error: error instanceof Error ? error.message : String(error)
+      }
+    });
         throw error;
                         }
 
@@ -1026,15 +954,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const userId = req.user?.id;
       
       logger.info('[Suppliers] Mise à jour notes analyse', { metadata: {
+
           route: '/api/supplier-quote-analysis/:id/notes',
           method: 'PUT',
           analysisId,
           userId
-
-            })
-
-
-          );
+      }
+    });
 
       try {
         // Get the analysis
@@ -1071,15 +997,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
               });
       } catch (error) {
         logger.error('Erreur updateQuoteAnalysisNotes', { metadata: {
+
             service: 'suppliers',
-            operation: 'updateQuoteAnalysisNotes',
+                  operation: 'updateQuoteAnalysisNotes',
             analysisId,
-            error: error instanceof Error ? error.message : String(error)
-
-            })
-
-
-          );
+                  error: error instanceof Error ? error.message : String(error)
+      }
+    });
         throw error;
                         }
 
@@ -1096,15 +1020,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const { sessionId } = req.params;
       
       logger.info('[Suppliers] Envoi invitation fournisseur', { metadata: {
+
           route: '/api/supplier-workflow/sessions/:sessionId/invite',
           method: 'POST',
           sessionId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const session = await storage.getQuoteSession(sessionId);
       if (!session) {
@@ -1192,58 +1114,10 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         {
           operation: 'addLotSuppliers',
           service: 'SuppliersRoutes',
-          metadata: { aoLotId: aoLotId, supplierCount: supplierIds.length     })
-   );
-          }
-                                      }
-                                    });
-
-  /**
-   * GET /api/supplier-workflow/lot/:aoLotId/suppliers
-   * Récupérer tous les fournisseurs d'un lot
-   */
-  router.get('/api/supplier-workflow/lot/:aoLotId/suppliers',
-    isAuthenticated,
-    asyncHandler(async (req: Request, res: Response) => {
-      return withErrorHandling(
-        async () => {
-          const { aoLotId } = req.params;
-          const lotSuppliers = await storage.getAoLotSuppliers(aoLotId);
-          
-          sendSuccess(res, { lotSuppliers, count: lotSuppliers.length 
-
-                });
-        },
-        {
-          operation: 'getLotSuppliers',
-          service: 'SuppliersRoutes',
-          metadata: { aoLotId     })
-   );
-          }
-                                  }
-                                });
-
-  /**
-   * POST /api/supplier-workflow/sessions/create-and-invite
-   * Créer une session de devis et envoyer des invitations
-   */
-  router.post('/api/supplier-workflow/sessions/create-and-invite',
-    isAuthenticated,
-    validateBody(z.object({
-      aoLotId: z.string().uuid(),
-      supplierIds: z.array(z.string().uuid()).min(1),
-      dueDate: z.string().refine(date => !isNaN(Date.parse(date)))
-    })),
-    asyncHandler(async (req: Request, res: Response) => {
-      return withErrorHandling(
-        async () => {
-          const { aoLotId, supplierIds, dueDate } = req.body;
-          
-          // Créer la session
-          const session = await storage.createSupplierQuoteSession({
-            aoLotId,
-            dueDate: new Date(dueDate),
-            status: 'active',
+          metadata: {
+ aoLotId: aoLotId, supplierCount: supplierIds.length
+                  }
+                      });
             createdBy: req.user!.id
           });
           
@@ -1281,13 +1155,15 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         {
           operation: 'createSessionAndInvite',
           service: 'SuppliersRoutes',
-          metadata: { aoLotId: aoLotId, supplierCount: supplierIds.length     })
-   );
+          metadata: {
+ aoLotId: aoLotId, supplierCount: supplierIds.length
+      }
+    });
           }
-                                      }
                                     });
 
   logger.info('[SuppliersModule] Routes initialisées', { metadata: {
+
       module: 'SuppliersModule',
       routes: [
         '/api/suppliers',
@@ -1297,11 +1173,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         '/api/supplier-documents',
         '/api/supplier-quote-analysis'
       ]
-    
-            })
-
-    
-          );
+      }
+    });
 
   return router;
 }

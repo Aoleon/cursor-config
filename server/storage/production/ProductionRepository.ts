@@ -1010,4 +1010,3 @@ export class ProductionRepository extends BaseRepository<
       { projectId: normalizedId }
     );
   }
-}

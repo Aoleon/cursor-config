@@ -137,9 +137,9 @@ export class SQLEngineService {
           original: sql.substring(0, 100),
           corrected: correctedSQL.substring(0, 100),
           totalCorrections: (sql.length - correctedSQL.length) 
-              
-        }
-      });
+
+              }
+                              });
     }
     return correctedSQL;
   }
@@ -196,9 +196,9 @@ export class SQLEngineService {
           modifications: {
             actual_margin_removed: originalSQL.includes('actual_margin'),
             name_corrected: originalSQL.includes('.name') 
-              
-        }
-      });
+
+              }
+                              });
     }
     return cleanedSQL;
   }
@@ -221,7 +221,7 @@ export class SQLEngineService {
         operation: 'executeNaturalLanguageQuery',
         queryId,
         userId: request.userId
-      });
+            });
       // 1. Validation et nettoyage de la requête d'entrée
       const validationResult = this.validateInputQuery(request);
       if (!validationResult.isValid) {
@@ -248,9 +248,9 @@ export class SQLEngineService {
           entities: queryAnalysis?.entities,
           temporalContext: queryAnalysis?.temporalContext,
           hasAnalysis: !!queryAnalysis 
-              
-        }
-      });
+
+              }
+                              });
       // 3. Génération SQL via IA avec CONTEXTE D'INTENTION
       // Version du prompt pour invalidation cache automatique si prompt change
       const PROMPT_VERSION = "v3_intention_aware_2025"; // Version avec analyse d'intention
@@ -261,12 +261,12 @@ export class SQLEngineService {
         contextTemplate = `\nTYPE DE REQUÊTE: ${queryType}\n${template.guardrails}\n`;
         logger.info('Template spécialisé utilisé', { metadata: {
             service: 'SQLEngineService',
-            operation: 'executeNaturalLanguageQuery',
+                  operation: 'executeNaturalLanguageQuery',
             queryType,
             templateUsed: true 
-              
-        }
-      });
+
+                }
+                              });
       }
       const versionedContext = `[PROMPT_VERSION:${PROMPT_VERSION}]\n${enrichedContext}\n${contextTemplate}`;
       // Ajustement des limites et timeouts basé sur la complexité
@@ -319,7 +319,7 @@ export class SQLEngineService {
         sqlLength: generatedSQL.length,
         queryId 
               
-        }
+              }
       });
       logger.info('SQL query', { metadata: {
         service: 'SQLEngineService',
@@ -327,7 +327,7 @@ export class SQLEngineService {
         sql: generatedSQL,
         queryId 
               
-        }
+              }
       });
       // 3.5. Validation post-génération du SQL
       const queryTypeDetected = this.analyzeQueryType(request.naturalLanguageQuery);
@@ -335,13 +335,13 @@ export class SQLEngineService {
       if (!postValidation.isValid) {
         logger.warn('SQL généré invalide - violations détectées', { metadata: {
             service: 'SQLEngineService',
-            operation: 'executeNaturalLanguageQuery',
+                  operation: 'executeNaturalLanguageQuery',
             queryId,
             violations: postValidation.violations,
             warnings: postValidation.warnings 
-              
-        }
-      });
+
+                }
+                              });
         const errorDetails = postValidation.violations?.join(', ') || 'Validation échouée';
         // Analyser le type d'erreur pour un message plus utile
         let userMessage = 'Je ne peux pas exécuter cette requête pour des raisons de sécurité.';
@@ -382,12 +382,12 @@ export class SQLEngineService {
       if (postValidation.warnings.length > 0) {
         logger.info('Avertissements SQL post-génération', { metadata: {
             service: 'SQLEngineService',
-            operation: 'executeNaturalLanguageQuery',
+                  operation: 'executeNaturalLanguageQuery',
             queryId,
             warnings: postValidation.warnings 
-              
-        }
-      });
+
+                }
+                              });
       }
       // 4. Parsing et validation sécurité SQL
       const securityCheck = await this.validateSQLSecurity(generatedSQL, request.userId, request.userRole);
@@ -434,7 +434,7 @@ export class SQLEngineService {
         if (!execResult.success) {
           return {
             success: false,
-            error: {
+                  error: {
               type: "execution",
               message: "Erreur d'exécution SQL",
               details: execResult.error
@@ -485,7 +485,7 @@ export class SQLEngineService {
           type: "execution",
           message: "Erreur interne du moteur SQL",
           details: error instanceof Error ? error.message : String(error)
-        }
+              }
       };
     }
   }
@@ -849,9 +849,9 @@ LIMIT 25;`);
           hasAggregation: hasAggregation,
           queryType: queryType,
           violations: violations 
-              
-        }
-      });
+
+              }
+                              });
       // 2. Valider timeframe raisonnable
       const timeframeMatch = sqlLower.match(/interval\s+'(\d+)\s+(year|month|day)s?'/);
       if (timeframeMatch) {
@@ -973,14 +973,14 @@ INSTRUCTIONS DE BASE:
         userId,
         userRole 
               
-        }
+            }
       });
     logger.info('SQL à valider', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         sqlPreview: sql.substring(0, 200) + (sql.length > 200 ? '...' : '') 
               
-        }
+            }
       });
 
     return withErrorHandling(
@@ -1004,16 +1004,12 @@ INSTRUCTIONS DE BASE:
         
         logger.info('SQL nettoyé', { metadata: {
             service: 'SQLEngineService',
-            operation: 'validateSQL',
+                  operation: 'validateSQL',
             cleanedSQLLength: cleanedSQL.length,
             cleanedSQLPreview: cleanedSQL.substring(0, 150) + (cleanedSQL.length > 150 ? '...' : '') 
               
-        }
-      });
-    },
-    {
-      operation: 'secondes',
-service: 'SQLEngineService',
+                }
+                              });
       metadata: {       }
      });
       
@@ -1028,23 +1024,23 @@ service: 'SQLEngineService',
           hasSemicolon,
           sqlForParsingPreview: sqlForParsing.substring(0, 150) 
               
-        }
+              }
       });
       // 2. ANALYSE AST COMPLÈTE avec node-sql-parser
       logger.info('Parsing AST', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 1 
-              
-        }
-      });
+
+              }
+                              });
       const ast = sqlParser.astify(sqlForParsing, { database: 'postgresql' });
       logger.info('Parsing AST réussi', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL' 
-              
-        }
-      });
+
+              }
+                              });
       // 2. ENFORCEMENT READ-ONLY STRICT
       const astArray = Array.isArray(ast) ? ast : [ast];
       logger.info('Vérification READ-ONLY', { metadata: {
@@ -1052,9 +1048,9 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 2,
         statementsCount: astArray.length 
-              
-        }
-      });
+
+              }
+                              });
       
       for (const statement of astArray) {
         // Vérifier que TOUTES les statements sont SELECT
@@ -1065,7 +1061,7 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         violation 
               
-        }
+                  }
       });
           violations.push(violation);
           continue;
@@ -1073,24 +1069,24 @@ service: 'SQLEngineService',
         logger.info('Statement type: SELECT', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL' 
-              
-        }
-      });
+
+                }
+                              });
         // 3. EXTRACTION ET VALIDATION DES TABLES
         logger.info('Validation des tables', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 3 
-              
-        }
-      });
+
+                }
+                              });
         const tablesInQuery = this.extractTablesFromAST(statement);
         logger.info('Tables extraites', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         tables: tablesInQuery.join(', ') 
               
-        }
+                }
       });
         for (const tableName of tablesInQuery) {
           if (ALLOWED_BUSINESS_TABLES.includes(tableName)) {
@@ -1100,7 +1096,7 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         tableName 
               
-        }
+                    }
       });
           } else {
             const violation = `Table non autorisée: ${tableName}`;
@@ -1109,7 +1105,7 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         violation 
               
-        }
+                    }
       });
             violations.push(violation);
           }
@@ -1120,17 +1116,17 @@ service: 'SQLEngineService',
         service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 4 
-              
-        }
-      });
+
+                }
+                              });
         const columnsInQuery = this.extractColumnsFromAST(statement);
         logger.info('Colonnes extraites', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         columnsCount: columnsInQuery.length 
-              
-        }
-      });
+
+                }
+                              });
         
         // SÉCURITÉ CRITIQUE : Vérification stricte des colonnes sensibles
         const accessedSensitiveColumns: string[] = [];
@@ -1145,15 +1141,15 @@ service: 'SQLEngineService',
                 const violation = `SÉCURITÉ CRITIQUE: Accès interdit aux colonnes sensibles pour rôle ${userRole}: ${table}.${column}`;
                 logger.error('Violation sécurité CRITIQUE', { metadata: {
                     service: 'SQLEngineService',
-                    operation: 'validateSQL',
+                          operation: 'validateSQL',
                     violation,
                     table,
                     column,
                     userRole,
                     severity: 'CRITICAL' 
-              
-        }
-      });
+
+                        }
+                              });
                 violations.push(violation);
                 accessedSensitiveColumns.push(`${table}.${column}`);
                 // Ne pas ajouter aux colonnes autorisées
@@ -1162,13 +1158,13 @@ service: 'SQLEngineService',
                 // Admin peut accéder, mais on log
                 logger.warn('Admin accède à colonne sensible', { metadata: {
                     service: 'SQLEngineService',
-                    operation: 'validateSQL',
+                          operation: 'validateSQL',
                     table,
                     column,
                     userRole: 'admin' 
-              
-        }
-      });
+
+                        }
+                              });
               }
             }
           }
@@ -1183,13 +1179,13 @@ service: 'SQLEngineService',
         if (accessedSensitiveColumns.length > 0 && userRole !== 'admin') {
           logger.error('Requête rejetée - colonnes sensibles', { metadata: {
               service: 'SQLEngineService',
-              operation: 'validateSQL',
+                    operation: 'validateSQL',
               accessedSensitiveColumns,
               userRole,
               severity: 'CRITICAL' 
-              
-        }
-      });
+
+                  }
+                              });
           violations.push(`REJET SÉCURITÉ: Accès refusé aux colonnes sensibles: ${accessedSensitiveColumns.join(', ')}`);
         }
         // 5. DÉTECTION INJECTIONS AVANCÉES VIA AST
@@ -1197,9 +1193,9 @@ service: 'SQLEngineService',
         service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 5 
-              
-        }
-      });
+
+                }
+                              });
         const injectionViolationsBefore = violations.length;
         this.detectAdvancedInjectionPatterns(statement, violations);
         if (violations.length > injectionViolationsBefore) {
@@ -1208,24 +1204,24 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         patterns: violations.slice(injectionViolationsBefore).join(', ') 
               
-        }
+                  }
       });
         } else {
           logger.info('Aucun pattern d\'injection détecté', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL' 
-              
-        }
-      });
+
+                  }
+                              });
         }
         // 6. VALIDATION CONTRAINTES MÉTIER
         logger.info('Validation contraintes métier', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         step: 6 
-              
-        }
-      });
+
+                }
+                              });
         const businessViolationsBefore = violations.length;
         this.validateBusinessConstraints(statement, userRole, violations);
         if (violations.length > businessViolationsBefore) {
@@ -1234,15 +1230,15 @@ service: 'SQLEngineService',
         operation: 'validateSQL',
         violations: violations.slice(businessViolationsBefore).join(', ') 
               
-        }
+                  }
       });
         } else {
           logger.info('Contraintes métier respectées', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL' 
-              
-        }
-      });
+
+                  }
+                              });
         }
       }
 
@@ -1275,16 +1271,16 @@ service: 'SQLEngineService',
         violations.push(...basicViolations);
         logger.error('Violations détectées en validation basique', { metadata: {
             service: 'SQLEngineService',
-            operation: 'validateSQL',
+                  operation: 'validateSQL',
             violations: basicViolations 
-              
-        }
-      });
+
+                }
+                              });
       } else {
         // Si aucune violation basique, juste avertir du parsing échoué
         logger.warn('Parser SQL échoué, validation basique appliquée', { metadata: {
             service: 'SQLEngineService',
-            operation: 'validateSQL',
+                  operation: 'validateSQL',
             warning: 'Parser SQL échoué mais aucune violation basique détectée'       }
      });
       }
@@ -1296,29 +1292,29 @@ service: 'SQLEngineService',
         service: 'SQLEngineService',
         operation: 'validateSQL',
         result: isSecure ? 'SÉCURISÉ' : 'REJETÉ' 
-              
-        }
-      });
+
+            }
+                              });
     logger.info('Violations count', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
         violationsCount: violations.length 
-              
-        }
-      });
+
+            }
+                              });
     if (violations.length > 0) {
       logger.info('Détail violations', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL' 
-              
-        }
-      });
+
+              }
+                              });
       violations.forEach((v, i) => logger.info('Violation', { metadata: {
           service: 'SQLEngineService',
           operation: 'validateSQL',
           index: i + 1,
           violation: v
-        }
+              }
        );
     }
 
@@ -1478,17 +1474,13 @@ service: 'SQLEngineService',
         rbacFiltersRequired = true;
         logger.info('Filtres RBAC obligatoires pour non-admin', { metadata: {
             service: 'SQLEngineService',
-            operation: 'applyRBACFilters',
+                  operation: 'applyRBACFilters',
             userRole,
             tables: allowedTables,
             userId 
               
-        }
-      });
-      }
-      // 1. Vérification permissions par table
-      for (const table of allowedTables) {
-        const accessCheck: AccessValidationRequest = {
+                }
+                              });
           userId,
           role: userRole,
           tableName: table,
@@ -1500,13 +1492,13 @@ service: 'SQLEngineService',
           violations.push(`SÉCURITÉ: Accès refusé à la table: ${table} - ${permission.denialReason}`);
           logger.error('Accès table refusé', { metadata: {
               service: 'SQLEngineService',
-              operation: 'applyRBACFilters',
+                    operation: 'applyRBACFilters',
               table,
               reason: permission.denialReason,
               severity: 'HIGH' 
-              
-        }
-      });
+
+                  }
+                              });
           continue;
         }
         // 2. Application FORCÉE des filtres pour non-admin
@@ -1518,12 +1510,12 @@ service: 'SQLEngineService',
               violations.push(`SÉCURITÉ CRITIQUE: Impossible d'appliquer filtre utilisateur sur ${table}`);
               logger.error('Filtre RBAC impossible', { metadata: {
                   service: 'SQLEngineService',
-                  operation: 'applyRBACFilters',
+                        operation: 'applyRBACFilters',
                   table,
                   severity: 'CRITICAL' 
-              
-        }
-      });
+
+                      }
+                              });
               continue;
             }
             filteredSQL = this.injectWhereClause(filteredSQL, table, userIdFilter);
@@ -1532,17 +1524,17 @@ service: 'SQLEngineService',
             
             logger.info('Filtre RBAC appliqué', { metadata: {
                 service: 'SQLEngineService',
-                operation: 'applyRBACFilters',
+                      operation: 'applyRBACFilters',
                 table,
                 filter: userIdFilter 
-              
-        }
-      });
+
+                    }
+                              });
           } else if (this.hasDepartementColumn(table)) {
             // OBLIGATOIRE: Au minimum restreindre l'accès
             logger.warn('Table sans filtre userId, restriction département requise', { metadata: {
                 service: 'SQLEngineService',
-                operation: 'applyRBACFilters',
+                      operation: 'applyRBACFilters',
                 table,
                 warning: 'département_filter_needed'       }
      });
@@ -1559,12 +1551,12 @@ service: 'SQLEngineService',
           filtersApplied.push(`Colonnes sensibles MASQUÉES sur ${table}: ${permission.deniedColumns.join(', ')}`);
           logger.info('Colonnes sensibles masquées', { metadata: {
               service: 'SQLEngineService',
-              operation: 'applyRBACFilters',
+                    operation: 'applyRBACFilters',
               table,
               maskedColumns: permission.deniedColumns 
-              
-        }
-      });
+
+                  }
+                              });
         }
       }
 
@@ -1573,28 +1565,28 @@ service: 'SQLEngineService',
         const criticalViolation = 'SÉCURITÉ CRITIQUE: Filtres RBAC obligatoires non appliqués pour utilisateur non-admin';
         logger.error(criticalViolation, { metadata: {
             service: 'SQLEngineService',
-            operation: 'applyRBACFilters',
+                  operation: 'applyRBACFilters',
             userRole,
             userId,
             tables: allowedTables,
             severity: 'CRITICAL',
             action: 'REJECT_QUERY' 
-              
-        }
-      });
+
+                }
+                              });
         violations.push(criticalViolation);
       }
       // Si violations critiques, REJETER la requête
       if (violations.length > 0) {
         logger.error('Requête REJETÉE - violations RBAC', { metadata: {
             service: 'SQLEngineService',
-            operation: 'applyRBACFilters',
+                  operation: 'applyRBACFilters',
             violations,
             userRole,
             severity: 'CRITICAL' 
-              
-        }
-      });
+
+                }
+                              });
         return {
           success: false,
           rbacViolations: violations
@@ -1606,7 +1598,7 @@ service: 'SQLEngineService',
           filtersApplied,
           userRole 
               
-        }
+              }
       });
       return {
         success: true,
@@ -1763,8 +1755,7 @@ service: 'SQLEngineService',
     return warnings;
   }
 
-  private generateSuggestions(sql: string, s: unknown,yCheck:: unknown)unknowncRe: unknunknown)unknown): string[] {
-    const suggestions: string[] = [];
+  private generateSuggestions(sql: string, s: unknown,yCheck:: unknown)unknowncRe: unknunknown): string[] {
 
     if (!securityCheck.isSecure) {
       suggestions.push("Utilisez uniquement des requêtes SELECT avec des paramètres ($1, $2...)");
@@ -1793,7 +1784,7 @@ service: 'SQLEngineService',
         queryId,
         durationMs: Date.now() - startTime,
         resultsCount: resultCount
-      });
+            });
       // TODO: Persister en base pour audit complet
       // await this.storage.createQueryLog({
       //   queryId,

@@ -997,9 +997,7 @@ export class DocumentsRepository extends BaseRepository<
     }
 
     if (filters?.status) {
-      conditions.push(eq(clientQuotes.status, filters.statas unknown)unknown);
-    }
-
+      conditions.push(eq(clientQuotes.status, filters.statas unknown);
     return this.executeQuery(
       async () => {
         let query = dbToUse.select().from(clientQuotes);
@@ -1164,4 +1162,3 @@ export class DocumentsRepository extends BaseRepository<
       { id: normalizedId }
     );
   }
-}

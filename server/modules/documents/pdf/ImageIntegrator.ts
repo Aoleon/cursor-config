@@ -121,8 +121,6 @@ export class ImageIntegrator {
             options.alt = cleanValue;
             break;
         }
-      }
-    }
 
     return options;
   }
@@ -154,17 +152,13 @@ export class ImageIntegrator {
     {
       operation: 'Logger',
       service: 'ImageIntegrator',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
             failed.push(reference);
           }
         } else {
           failed.push(reference);
         }
-      }
-    }
 
     logger.info('Images processed', {
       successful: successful.length,
@@ -250,8 +244,6 @@ case 'signature':;
         } catch {
           // Continue to next extension
         }
-      }
-    }
 
     return path;
   }
@@ -271,10 +263,8 @@ case 'signature':;
     {
       operation: 'Logger',
 service: 'ImageIntegrator',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
         width: metadata?.width || 0,
         height: metadata?.height || 0,
         format: metadata?.format || 'png',
@@ -282,7 +272,6 @@ service: 'ImageIntegrator',;
         optimized: false
       };
     }
-  }
 
   /**
    * Inject processed images into HTML
@@ -372,4 +361,3 @@ Image Not Available;
       entries: Array.from(this.imageCache.keys())
     };
   }
-}

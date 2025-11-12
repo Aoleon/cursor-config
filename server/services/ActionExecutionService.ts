@@ -218,9 +218,6 @@ export class ActionExecutionService {
                 operation
               };
             }
-          }
-        }
-      }
 
       return {
         hasActionIntention: bestMatch.confidence > 0.6,
@@ -239,7 +236,6 @@ export class ActionExecutionService {
     } );
       return { hasActionIntention: false, confidence: 0 };
     }
-  }
 
   /**
    * Utilise l'IA pour analyser une intention d'action complexe
@@ -291,8 +287,7 @@ service: 'ActionExecutionService',
       metadata: {}
     } );
           return null;
-        }
-      }
+              }
 
       return null;
 
@@ -302,12 +297,11 @@ service: 'ActionExecutionService',
           operation: 'analyzeActionWithAI',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              
-        }
-      });
+
+              }
+                                                                                                                                                                                                                                                                              });
       return null;
     }
-  }
 
   // ========================================
   // PROPOSITION D'ACTIONS
@@ -328,7 +322,7 @@ service: 'ActionExecutionService',
           operation: 'proposeAction',
           actionId,
           userId: request.userId
-      });
+            });
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
@@ -436,7 +430,7 @@ service: 'ActionExecutionService',
         entityId: actionId,
         payload: { actionDefinition: request },
         metadata: { executionTime: Date.now() - startTime 
-        }
+                }
               );
       // 8. Publication d'événement temps réel
       this.eventBus.publish({
@@ -486,7 +480,7 @@ service: 'ActionExecutionService',
         action: 'propose_action',
         errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
         metadata: { executionTime: Date.now() - startTime 
-        }
+                }
               );
       return {
         success: false,
@@ -498,7 +492,6 @@ service: 'ActionExecutionService',
         }
       };
     }
-  }
   // ========================================
   // EXÉCUTION D'ACTIONS
   // ========================================
@@ -515,7 +508,7 @@ service: 'ActionExecutionService',
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-      });
+            });
       // 1. Récupérer l'action
       const actionResults = await db
         .select()
@@ -697,7 +690,7 @@ service: 'ActionExecutionService',
         action: 'execute_action',
         errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
         metadata: { executionTime: Date.now() - startTime 
-        }
+                }
               );
       return {
         success: false,
@@ -709,7 +702,6 @@ service: 'ActionExecutionService',
         }
       };
     }
-  }
   // ========================================
   // MÉTHODES UTILITAIRES PRIVÉES
   // ========================================
@@ -749,7 +741,6 @@ service: 'ActionExecutionService',
       if (operations.includes(operation)) {
         return level as 'low' | 'medium' | 'high';
       }
-    }
     return 'medium'; // Par défaut
   }
   private getTableNameForEntity(entity: string): string {
@@ -787,7 +778,6 @@ service: 'ActionExecutionService',
       if (!request.parameters.offerId && !request.parameters.client) {
         errors.push('ID d\'offre ou client requis pour créer un projet');
       }
-    }
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
   private async createActionConfirmation(actionId: string, userId: string, riskLevel: string, parameters: unknown): Promise<string> {
@@ -872,7 +862,6 @@ service: 'ActionExecutionService',
       metadata: {}
     } );
     }
-  }
   private async performActionExecution(action: Action): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
@@ -881,7 +870,7 @@ service: 'ActionExecutionService',
           operation: 'performActionExecution',
           actionOperation: action.operation,
           entity: action.entity
-      });
+            });
       switch (action.entity) {
         case 'offer':
           return await this.executeOfferAction(action);
@@ -898,7 +887,7 @@ service: 'ActionExecutionService',
         default:
           return {
             success: false,
-            error: {
+                error: {
               type: 'permission',
               message: `Type d'entité non supporté: ${action.entity}`
             }
@@ -915,10 +904,9 @@ service: 'ActionExecutionService',
         error: {
           type: 'execution',
           message: error instanceof Error ? error.message : 'Erreur d\'exécution inconnue'
-        }
+              }
       };
     }
-  }
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
 case 'create_offer':;
@@ -938,14 +926,12 @@ case 'transform_to_project':;
           }
         };
     }
-  }
   private async executeProjectAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
 case 'create_project':;
         return await this.createProject(action.parameters);
 case 'update_status':;
-        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown)unknown).status);
-case 'archive_project':;
+        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown).status);
         return await this.archiveProject(action.targetEntityId!);
       default:
         return {
@@ -956,7 +942,6 @@ case 'archive_project':;
           }
         };
     }
-  }
   private async executeAoAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -981,7 +966,6 @@ case 'update_task_status':;
           }
         };
     }
-  }
   private async executeContactAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -1003,8 +987,7 @@ case 'update_task_status':;
   // ========================================
   // OPÉRATIONS SPÉCIFIQUES CRUD
   // ========================================
-  private async createOffer(paraunknownnunknown)unknown): Promise<ActionExecutionResult> {
-    return withErrorHandling(
+  private async createOffer(paraunknownnunknown): Promise<ActionExecutionResult> {
     async () => {
       const offerId = crypto.randomUUID();
       const reference = `OF-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
@@ -1038,10 +1021,9 @@ case 'update_task_status':;
         error: {
           type: 'execution',
           message: 'Erreur lors de la création de l\'offre'
-        }
+              }
       };
     }
-  }
   private async updateOfferStatus(offerId: string, status: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
@@ -1065,10 +1047,9 @@ case 'update_task_status':;
         error: {
           type: 'execution',
           message: 'Erreur lors de la mise à jour du statut'
-        }
+              }
       };
     }
-  }
   private async archiveOffer(offerId: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
@@ -1096,8 +1077,6 @@ case 'update_task_status':;
         error: {
           type: 'query',
           message: 'Erreur lors de la récupération de l\'historique'
-        }
+              }
       };
     }
-  }
-}

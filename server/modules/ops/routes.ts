@@ -102,12 +102,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       ...validatedData
     }).returning();
 
-    logger.info('[E2E Seeds] AO de test créé', { metadata: { aoId: id, route: '/api/test/seed/ao' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] AO de test créé', { metadata: {
+ aoId: id, route: '/api/test/seed/ao'
+      }
+    });
 
     res.json({ success: true, data: ao[0] 
 
@@ -155,12 +153,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       ...validatedData
     }).returning();
 
-    logger.info('[E2E Seeds] Offer de test créée', { metadata: { offerId: id, route: '/api/test/seed/offer' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] Offer de test créée', { metadata: {
+ offerId: id, route: '/api/test/seed/offer'
+      }
+    });
 
     res.json({ success: true, data: offer[0] 
 
@@ -211,12 +207,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       ...validatedData
     }).returning();
 
-    logger.info('[E2E Seeds] Project de test créé', { metadata: { projectId: id, route: '/api/test/seed/project' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] Project de test créé', { metadata: {
+ projectId: id, route: '/api/test/seed/project'
+      }
+    });
 
     res.json({ success: true, data: project[0] 
 
@@ -243,14 +237,12 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
     // 🔒 Protection production pour opération destructive
     if (process.env.NODE_ENV === 'production') {
       logger.warn('[Ops] Tentative accès route DELETE seed en production', { metadata: {
+
           route: '/api/test/seed/ao/:id',
           method: 'DELETE',
           environment: 'production'
-
-            })
-
-
-          );
+      }
+    });
       return res.status(403).json({ error: 'Route désactivée en production' });
     }
 
@@ -263,12 +255,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
 
     await db.delete(aos).where(eq(aos.id, id));
     
-    logger.info('[E2E Seeds] AO de test supprimé', { metadata: { aoId: id, route: '/api/test/seed/ao/:id' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] AO de test supprimé', { metadata: {
+ aoId: id, route: '/api/test/seed/ao/:id'
+      }
+    });
 
     res.json({ success: true 
 
@@ -295,14 +285,12 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
     // 🔒 Protection production pour opération destructive
     if (process.env.NODE_ENV === 'production') {
       logger.warn('[Ops] Tentative accès route DELETE seed en production', { metadata: {
+
           route: '/api/test/seed/offer/:id',
           method: 'DELETE',
           environment: 'production'
-
-            })
-
-
-          );
+      }
+    });
       return res.status(403).json({ error: 'Route désactivée en production' });
     }
 
@@ -315,12 +303,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
 
     await db.delete(offers).where(eq(offers.id, id));
     
-    logger.info('[E2E Seeds] Offer de test supprimée', { metadata: { offerId: id, route: '/api/test/seed/offer/:id' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] Offer de test supprimée', { metadata: {
+ offerId: id, route: '/api/test/seed/offer/:id'
+      }
+    });
 
     res.json({ success: true 
 
@@ -347,14 +333,12 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
     // 🔒 Protection production pour opération destructive
     if (process.env.NODE_ENV === 'production') {
       logger.warn('[Ops] Tentative accès route DELETE seed en production', { metadata: {
+
           route: '/api/test/seed/project/:id',
           method: 'DELETE',
           environment: 'production'
-
-            })
-
-
-          );
+      }
+    });
       return res.status(403).json({ error: 'Route désactivée en production' });
     }
 
@@ -367,12 +351,10 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
 
     await db.delete(projects).where(eq(projects.id, id));
     
-    logger.info('[E2E Seeds] Project de test supprimé', { metadata: { projectId: id, route: '/api/test/seed/project/:id' 
-
-            })
- 
-
-          );
+    logger.info('[E2E Seeds] Project de test supprimé', { metadata: {
+ projectId: id, route: '/api/test/seed/project/:id'
+      }
+    });
 
     res.json({ success: true 
 
@@ -406,15 +388,13 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       // 🔒 Protection production pour exécution SQL directe
       if (process.env.NODE_ENV === 'production') {
         logger.warn('[Ops] Tentative accès route SQL query en production', { metadata: {
+
             route: '/api/sql/query',
             method: 'POST',
             environment: 'production',
-            userId: req.session?.user?.id || req.user?.id
-
-            })
-
-
-          );
+                  userId: req.session?.user?.id || req.user?.id
+      }
+    });
         return res.status(403).json({ error: 'Route désactivée en production' });
       }
 
@@ -431,15 +411,13 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
         timeoutMs
       };
 
-      logger.info('[Ops] Requête NL reçue', { metadata: { 
+      logger.info('[Ops] Requête NL reçue', { metadata: {
+ 
           userRole: sqlRequest.userRole, 
           query: naturalLanguageQuery,
           route: '/api/sql/query'
-
-            })
-
-
-          );
+      }
+    });
 
       // Exécution via le moteur SQL sécurisé
       const result = await sqlEngineService.executeNaturalLanguageQuery(sqlRequest);
@@ -493,15 +471,13 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       // 🔒 Protection production pour validation SQL
       if (process.env.NODE_ENV === 'production') {
         logger.warn('[Ops] Tentative accès route SQL validate en production', { metadata: {
+
             route: '/api/sql/validate',
             method: 'POST',
             environment: 'production',
-            userId: req.session?.user?.id || req.user?.id
-
-            })
-
-
-          );
+                  userId: req.session?.user?.id || req.user?.id
+      }
+    });
         return res.status(403).json({ error: 'Route désactivée en production' });
       }
 
@@ -515,14 +491,12 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
         userRole: req.session.user?.role || req.user?.role || 'user'
       };
 
-      logger.info('[Ops] Validation SQL demandée', { metadata: { 
+      logger.info('[Ops] Validation SQL demandée', { metadata: {
+ 
           userRole: validationRequest.userRole,
           route: '/api/sql/validate'
-
-            })
-
-
-          );
+      }
+    });
 
       // Validation via le moteur SQL
       const validationResult = await sqlEngineService.validateSQL(validationRequest);
@@ -556,29 +530,25 @@ export function createOpsRouter(storage: IStorage, eventBus: EventBus): Router {
       // 🔒 Protection production pour contexte DB
       if (process.env.NODE_ENV === 'production') {
         logger.warn('[Ops] Tentative accès route SQL context en production', { metadata: {
+
             route: '/api/sql/context',
             method: 'GET',
             environment: 'production',
-            userId: req.session?.user?.id || req.user?.id
-
-            })
-
-
-          );
+                  userId: req.session?.user?.id || req.user?.id
+      }
+    });
         return res.status(403).json({ error: 'Route désactivée en production' });
       }
 
       const userId = req.session.user?.id || req.user?.id;
       const userRole = req.session.user?.role || req.user?.role || 'user';
 
-      logger.info('[Ops] Contexte DB demandé', { metadata: { 
+      logger.info('[Ops] Contexte DB demandé', { metadata: {
+ 
           userRole,
           route: '/api/sql/context'
-
-            })
-
-
-          );
+      }
+    });
 
       // Récupération du contexte filtré par RBAC
       const contextResult = await sqlEngineService.buildDatabaseContext(userId, userRole);

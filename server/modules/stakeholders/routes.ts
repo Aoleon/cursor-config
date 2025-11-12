@@ -34,16 +34,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitresOuvrage = await storage.getMaitresOuvrage();
       
-      logger.info('[Maîtres Ouvrage] Liste récupérée', { metadata: { count: maitresOuvrage.length 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Ouvrage] Liste récupérée', { metadata: {
+ count: maitresOuvrage.length
+      }
+    });
       
       res.json(maitresOuvrage);
           }
-                                        }
 
                                       });
 
@@ -57,16 +54,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         throw new NotFoundError(`Maître d'ouvrage ${req.params.id}`);
       }
       
-      logger.info('[Maîtres Ouvrage] Détail récupéré', { metadata: { id: req.params.id 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Ouvrage] Détail récupéré', { metadata: {
+ id: req.params.id
+      }
+    });
       
       res.json(maitreOuvrage);
           }
-                                        }
 
                                       });
 
@@ -76,16 +70,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitreOuvrage = await storage.createMaitreOuvrage(req.body);
       
-      logger.info('[Maîtres Ouvrage] Créé', { metadata: { id: maitreOuvrage.id, nom: maitreOuvrage.nom 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Ouvrage] Créé', { metadata: {
+ id: maitreOuvrage.id, nom: maitreOuvrage.nom
+      }
+    });
       
       res.status(201).json(maitreOuvrage);
           }
-                                        }
 
                                       });
 
@@ -96,16 +87,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitreOuvrage = await storage.updateMaitreOuvrage(req.params.id, req.body);
       
-      logger.info('[Maîtres Ouvrage] Mis à jour', { metadata: { id: req.params.id 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Ouvrage] Mis à jour', { metadata: {
+ id: req.params.id
+      }
+    });
       
       res.json(maitreOuvrage);
           }
-                                        }
 
                                       });
 
@@ -121,7 +109,6 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                        }
 
                                       });
 
@@ -135,16 +122,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitresOeuvre = await storage.getMaitresOeuvre();
       
-      logger.info('[Maîtres Œuvre] Liste récupérée', { metadata: { count: maitresOeuvre.length 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Œuvre] Liste récupérée', { metadata: {
+ count: maitresOeuvre.length
+      }
+    });
       
       res.json(maitresOeuvre);
           }
-                                        }
 
                                       });
 
@@ -158,16 +142,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         throw new NotFoundError(`Maître d'œuvre ${req.params.id}`);
       }
       
-      logger.info('[Maîtres Œuvre] Détail récupéré', { metadata: { id: req.params.id 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Œuvre] Détail récupéré', { metadata: {
+ id: req.params.id
+      }
+    });
       
       res.json(maitreOeuvre);
           }
-                                        }
 
                                       });
 
@@ -177,16 +158,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitreOeuvre = await storage.createMaitreOeuvre(req.body);
       
-      logger.info('[Maîtres Œuvre] Créé', { metadata: { id: maitreOeuvre.id, nom: maitreOeuvre.nom 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Œuvre] Créé', { metadata: {
+ id: maitreOeuvre.id, nom: maitreOeuvre.nom
+      }
+    });
       
       res.status(201).json(maitreOeuvre);
           }
-                                        }
 
                                       });
 
@@ -197,16 +175,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const maitreOeuvre = await storage.updateMaitreOeuvre(req.params.id, req.body);
       
-      logger.info('[Maîtres Œuvre] Mis à jour', { metadata: { id: req.params.id 
-
-            })
- 
-
-          );
+      logger.info('[Maîtres Œuvre] Mis à jour', { metadata: {
+ id: req.params.id
+      }
+    });
       
       res.json(maitreOeuvre);
           }
-                                        }
 
                                       });
 
@@ -222,7 +197,6 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                        }
 
                                       });
 
@@ -239,16 +213,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const contacts = await storage.getContactsMaitreOeuvre(req.params.maitreOeuvreId);
       
-      logger.info('[Contacts MO] Liste contacts récupérée', { metadata: { maitreOeuvreId: req.params.maitreOeuvreId, count: contacts.length 
-
-            })
- 
-
-          );
+      logger.info('[Contacts MO] Liste contacts récupérée', { metadata: {
+ maitreOeuvreId: req.params.maitreOeuvreId, count: contacts.length
+      }
+    });
       
       res.json(contacts);
           }
-                                        }
 
                                       });
 
@@ -264,16 +235,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         maitreOeuvreId: req.params.maitreOeuvreId,
       });
       
-      logger.info('[Contacts MO] Contact créé', { metadata: { maitreOeuvreId: req.params.maitreOeuvreId, contactId: contact.id 
-
-            })
- 
-
-          );
+      logger.info('[Contacts MO] Contact créé', { metadata: {
+ maitreOeuvreId: req.params.maitreOeuvreId, contactId: contact.id
+      }
+    });
       
       res.status(201).json(contact);
           }
-                                        }
 
                                       });
 
@@ -286,16 +254,13 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
     asyncHandler(async (req, res) => {
       const contact = await storage.updateContactMaitreOeuvre(req.params.contactId, req.body);
       
-      logger.info('[Contacts MO] Contact mis à jour', { metadata: { contactId: req.params.contactId 
-
-            })
- 
-
-          );
+      logger.info('[Contacts MO] Contact mis à jour', { metadata: {
+ contactId: req.params.contactId
+      }
+    });
       
       res.json(contact);
           }
-                                        }
 
                                       });
 
@@ -313,7 +278,6 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                        }
 
                                       });
 
@@ -364,7 +328,7 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         const newContact = await storage.createAoContact(contactData);
         logger.info('Liaison AO-Contact créée avec succès', { metadata: { aoId: req.body.aoId, contactId: req.body.contactId 
 
-      });
+              });
         sendSuccess(res, newContact, 201);
       
     },
@@ -397,7 +361,7 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         await storage.deleteAoContact(id);
         logger.info('Liaison AO-Contact supprimée avec succès', { metadata: { id: req.params.id 
 
-      });
+              });
         sendSuccess(res, null);
       
     },
@@ -464,7 +428,7 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         const newContact = await storage.createProjectContact(contactData);
         logger.info('Liaison Project-Contact créée avec succès', { metadata: { projectId: req.body.projectId, contactId: req.body.contactId 
 
-      });
+              });
         sendSuccess(res, newContact, 201);
       
     },
@@ -497,7 +461,7 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
         await storage.deleteProjectContact(id);
         logger.info('Liaison Project-Contact supprimée avec succès', { metadata: { id: req.params.id 
 
-      });
+              });
         sendSuccess(res, null);
       
     },

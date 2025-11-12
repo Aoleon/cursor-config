@@ -68,7 +68,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           method: 'GET',
           limit,
           agentId
-              }
+                }
 
             });
 
@@ -105,7 +105,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportId: id,
           batigestReference,
           agentId
-              }
+                }
 
             });
 
@@ -152,7 +152,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportId: id,
           errorMessage,
           agentId
-              }
+                }
 
             });
 
@@ -197,7 +197,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           method: 'GET',
           exportId: id,
           format
-              }
+                }
 
             });
 
@@ -252,7 +252,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: (req as unknown as { user?: { id: string } }).user?.id
-              }
+                }
 
             });
 
@@ -270,8 +270,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           const templateContent = await loadTemplate(templatePath);
           
           const template: PDFTemplate = {
-            id: 'purchase-order',
-            name: 'Bon de Commande Fournisseur',
+                    id: 'purchase-order',
+                    name: 'Bon de Commande Fournisseur',
             type: 'handlebars',
             content: templateContent
           };
@@ -288,14 +288,13 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               logger.warn('Erreur lors de la récupération du fournisseur', {
                 metadata: {
                   service: 'batigest',
-                  operation: 'getSupplierById',
-                  supplierId: orderData.supplierId,
-                  error: error instanceof Error ? error.message : String(error)
-                
-        }
-      });
+                          operation: 'getSupplierById',
+                          supplierId: orderData.supplierId,
+                          error: error instanceof Error ? error.message : String(error)
+
+                        }
+                                                                                                                                                                                                                                                                              });
             }
-          }
 
           // Calculer les totaux
           const items = orderData.items || [];
@@ -305,7 +304,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           // Préparer le contexte pour le template
           const context = {
-            reference: orderData.reference,
+                          reference: orderData.reference,
             supplierName,
             supplierContact: orderData.supplierContact || '',
             supplierEmail: orderData.supplierEmail || '',
@@ -320,7 +319,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             totalTVA: new Decimal(totalTVA),
             totalTTC: new Decimal(totalTTC),
             paymentTerms: orderData.paymentTerms || '',
-            notes: orderData.notes || ''
+                          notes: orderData.notes || ''
           };
 
           // Générer le PDF avec PDFTemplateEngine
@@ -340,12 +339,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           // Wrapper avec retry pour gérer l'initialization asynchrone de Puppeteer
           logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', { 
             metadata: { 
-              reference: orderData.reference 
-            
-              }
+                      reference: orderData.reference
+
+                    }
  
             
-            });
+                                                                                                                                                                                                                                                                                    });
 
           const result = await withRetry(
             () => pdfEngine.render(renderOptions),
@@ -357,15 +356,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               onRetry: (attempt, delay, error) => {
                 logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
                   metadata: {
-                    reference: orderData.reference,
+                            reference: orderData.reference,
                     attempt,
                     delay,
-                    error: error instanceof Error ? error.message : String(error)
-                  
-        }
-      });
+                            error: error instanceof Error ? error.message : String(error)
+
+                          }
+                                                                                                                                                                                                                                                                              });
               }
-            }
           );
 
           if (!result.success || !result.pdf) {
@@ -375,14 +373,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           logger.info('[Batigest] PDF preview généré avec succès', {
             metadata: {
-              reference: orderData.reference,
+                      reference: orderData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-            
-              }
+
+                    }
 
             
-            });
+                                                                                                                                                                                                                                                                                    });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -392,22 +390,19 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
         } catch (error) {
           logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
-            reference: orderData.reference
+                      reference: orderData.reference
           });
           throw new ValidationError('Impossible de générer le PDF: ' + 
             (error instanceof Error ? error.message : 'Erreur inconnue'));
         }
-      }
 
       // ========================================
       // MODE PRODUCTION: Créer en DB + Export Batigest
       // ========================================
-      logger.info('[Batigest] Mode PRODUCTION - Création en DB', { metadata: { reference: orderData.reference, exportToBatigest 
-
-            })
- 
-
-          );
+      logger.info('[Batigest] Mode PRODUCTION - Création en DB', { metadata: {
+ reference: orderData.reference, exportToBatigest
+      }
+    });
 
       // Créer le bon de commande en base de données
       const order = await storage.createPurchaseOrder({
@@ -422,24 +417,23 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         if (exportResult.success) {
           const exportQueue = await storage.createBatigestExport({
             documentType: 'bon_commande',
-            documentId: order.id,
+                documentId: order.id,
             documentReference: order.reference,
             exportData: {
               xml: exportResult.xml,
               csv: exportResult.csv,
               metadata: exportResult.metadata
             },
-            status: 'ready'
+                status: 'ready'
           });
 
           eventBus.publishBatigestExportQueued({
             exportId: exportQueue.id,
             documentType: 'purchase_order',
-            documentId: order.id,
-            userId: (req as unknown as { user?: { id: string } }).user?.id
+                documentId: order.id,
+                userId: (req as unknown as { user?: { id: string } }).user?.id
           });
         }
-      }
 
       eventBus.emit('purchase_order:created', {
         orderId: order.id,
@@ -473,7 +467,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: (req as unknown as { user?: { id: string } }).user?.id
-              }
+                }
 
             });
 
@@ -491,8 +485,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           const templateContent = await loadTemplate(templatePath);
           
           const template: PDFTemplate = {
-            id: 'client-quote',
-            name: 'Devis Client',
+                    id: 'client-quote',
+                    name: 'Devis Client',
             type: 'handlebars',
             content: templateContent
           };
@@ -510,7 +504,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           // Préparer le contexte pour le template
           const context = {
-            reference: quoteData.reference,
+                    reference: quoteData.reference,
             clientName: quoteData.clientName || '',
             clientContact: quoteData.clientContact || '',
             clientEmail: quoteData.clientEmail || '',
@@ -528,7 +522,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             totalTTC: new Decimal(totalTTC),
             paymentTerms: quoteData.paymentTerms || '',
             warranty: quoteData.warranty || '',
-            notes: quoteData.notes || ''
+                    notes: quoteData.notes || ''
           };
 
           // Générer le PDF avec PDFTemplateEngine
@@ -546,12 +540,10 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           };
 
           // Wrapper avec retry pour gérer l'initialization asynchrone de Puppeteer
-          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', { metadata: { reference: quoteData.reference 
-
-            })
- 
-
-          );
+          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', { metadata: {
+ reference: quoteData.reference
+      }
+    });
 
           const result = await withRetry(
             () => pdfEngine.render(renderOptions),
@@ -563,13 +555,13 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               onRetry: (attempt, delay, error) => {
                 logger.warn('[Batigest] Retry génération PDF (Puppeteer initialization)', {
                   metadata: {
-                    reference: quoteData.reference,
+                            reference: quoteData.reference,
                     attempt,
                     delay,
-                    error: error instanceof Error ? error.message : String(error)
-                  
-        }
-      });
+                            error: error instanceof Error ? error.message : String(error)
+
+                          }
+                                                                                                                                                                                                                                                                              });
               }
 
           if (!result.success || !result.pdf) {
@@ -579,14 +571,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
 
           logger.info('[Batigest] PDF preview généré avec succès', {
             metadata: {
-              reference: quoteData.reference,
+                      reference: quoteData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-            
-              }
+
+                    }
 
             
-            });
+                                                                                                                                                                                                                                                                                    });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -595,22 +587,19 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           return;
         } catch (error) {
           logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
-            reference: quoteData.reference
+                      reference: quoteData.reference
           });
           throw new ValidationError('Impossible de générer le PDF: ' + 
             (error instanceof Error ? error.message : 'Erreur inconnue'));
         }
-      }
 
       // ========================================
       // MODE PRODUCTION: Créer en DB + Export Batigest
       // ========================================
-      logger.info('[Batigest] Mode PRODUCTION - Création en DB', { metadata: { reference: quoteData.reference, exportToBatigest 
-
-            })
- 
-
-          );
+      logger.info('[Batigest] Mode PRODUCTION - Création en DB', { metadata: {
+ reference: quoteData.reference, exportToBatigest
+      }
+    });
 
       // Créer le devis client
       const quote = await storage.createClientQuote({
@@ -625,14 +614,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         if (exportResult.success) {
           const exportQueue = await storage.createBatigestExport({
             documentType: 'devis_client',
-            documentId: quote.id,
+                documentId: quote.id,
             documentReference: quote.reference,
             exportData: {
               xml: exportResult.xml,
               csv: exportResult.csv,
               metadata: exportResult.metadata
             },
-            status: 'ready'
+                status: 'ready'
           });
 
           // Lier l'export au devis
@@ -643,11 +632,10 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           eventBus.publishBatigestExportQueued({
             exportId: exportQueue.id,
             documentType: 'client_quote',
-            documentId: quote.id,
-            userId: (req as unknown as { user?: { id: string } }).user?.id
+                documentId: quote.id,
+                userId: (req as unknown as { user?: { id: string } }).user?.id
           });
         }
-      }
 
       eventBus.emit('client_quote:created', {
         quoteId: quote.id,
@@ -671,7 +659,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         metadata: {
           route: '/api/batigest/status',
           method: 'GET'
-              }
+                }
 
             });
 
@@ -709,7 +697,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           route: '/api/batigest/exports/all',
           method: 'GET',
           filters: { status, documentType, page, limit }
-              }
+                }
 
             });
 
@@ -735,7 +723,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         metadata: {
           route: '/api/batigest/stats',
           method: 'GET'
-              }
+                }
 
             });
 

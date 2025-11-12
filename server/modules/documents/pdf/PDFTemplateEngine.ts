@@ -118,9 +118,7 @@ export class PDFTemplateEngine {
       });
 
     // Loop helper with separator
-    this.handlebars.registerHelper('each_with_separator', (context: unknown[], separator: string, opt: unknown)unknown) => {
-      return context.map((item, index) => {
-        const result = options.fn(item, {
+    this.handlebars.registerHelper('each_with_separator', (context: unknown[], separator: string, opt: unknown) => {
           data: { index, first: index === 0, last: index === context.length - 1 });
         return index < context.length - 1 ? result + separator : result;
       }).join('');
@@ -143,7 +141,6 @@ export class PDFTemplateEngine {
         logger.debug('Template retrieved from cache', { templateId });
         return cached;
       }
-    }
 
     return withErrorHandling(
     async () => {
@@ -154,7 +151,6 @@ export class PDFTemplateEngine {
         if (!validation.isValid) {
           throw new TemplateError('Template validation failed', 'VALIDATION_FAILED', validation.errors);
         }
-      }
 
       // Process template content
       let processedContent = template.content;
@@ -199,7 +195,7 @@ export class PDFTemplateEngine {
         compileTime,
         placeholders: placeholders.length,
         images: images.length
-      });
+            });
 
       return compiled;
     
@@ -207,10 +203,8 @@ export class PDFTemplateEngine {
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -304,8 +298,7 @@ export class PDFTemplateEngine {
       };
 
       // Render with Handlebars
-      const renderFunction = (compias unknunknown)unknown).renderFunction;
-      if (!renderFunction) {
+      const renderFunction = (compias unknunknown).renderFunction;
         throw new TemplateError('Template not properly compiled', 'RENDER_FUNCTION_MISSING');
       }
 
@@ -351,10 +344,8 @@ export class PDFTemplateEngine {
     {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
 
       return {
@@ -367,7 +358,6 @@ export class PDFTemplateEngine {
         metadata: renderMetadata
       };
     }
-  }
 
   /**
    * Validate template
@@ -427,11 +417,9 @@ export class PDFTemplateEngine {
       if (!['if', 'unless', 'each', 'with'].includes(match[1])) {
         dependencies.add(match[1]);
       }
-    }
 
     return Array.from(dependencies);
   }
-}
 
 /**
  * Template Cache Implementation
@@ -485,7 +473,6 @@ class TemplateCacheImpl implements TemplateCache {
       if (oldestKey) {
         this.cache.delete(oldestKey);
       }
-    }
 
     this.cache.set(id, {
       template,
@@ -521,4 +508,3 @@ class TemplateCacheImpl implements TemplateCache {
     const total = this.stats.hits + this.stats.misses;
     this.stats.hitRate = total > 0 ? (this.stats.hits / total) * 100 : 0;
   }
-}

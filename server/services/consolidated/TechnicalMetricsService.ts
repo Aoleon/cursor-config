@@ -158,8 +158,8 @@ export class TechnicalMetricsService {
     }, 30 * 1000); // Every 30 seconds
 
     logger.info('TechnicalMetricsService initialized', {
-      service: 'TechnicalMetricsService',
-      metadata: { operation: 'constructor' 
+      metadata: {
+        module: 'TechnicalMetricsService', { operation: 'constructor' 
 
           });
   }
@@ -179,7 +179,7 @@ export class TechnicalMetricsService {
         traceId,
         complexity 
               
-              }
+            }
  
               
             });
@@ -252,7 +252,6 @@ export class TechnicalMetricsService {
     if (metadata) {
       step.metadata = { ...step.metadata, ...metadata };
     }
-  }
 
   /**
    * End pipeline trace and persist metrics
@@ -313,11 +312,11 @@ export class TechnicalMetricsService {
           operation: 'endPipelineTrace',
           traceId,
           totalDuration: timings.total 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     },
     {
       operation: 'statistics',
@@ -371,11 +370,11 @@ export class TechnicalMetricsService {
         service: 'TechnicalMetricsService',
         operation: 'recordParallelismFailure',
         consecutiveFailures: this.circuitBreakerFailureCount 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
   }
   /**
    * Record parallelism success
@@ -407,7 +406,6 @@ export class TechnicalMetricsService {
       const savings = ((this.parallelismStats.averageSequentialTime - this.parallelismStats.averageParallelTime) / this.parallelismStats.averageSequentialTime) * 100;
       this.parallelismStats.timeSavingsPercent = Math.max(0, savings);
     }
-  }
 
   /**
    * Get parallelism metrics
@@ -478,7 +476,6 @@ export class TechnicalMetricsService {
     } );
       return this.createEmptyPercentileStats();
     }
-  }
 
   /**
    * Analyze cache performance
@@ -536,7 +533,6 @@ export class TechnicalMetricsService {
         } else {
           analytics.avgRetrievalTime.miss = Math.round(time.avgCacheOps || 0);
         }
-      }
 
       const totalHits = hitRates.reduce((sum, rate) => sum + rate.cacheHits, 0);
       analytics.memoryVsDbHits.totalHits = totalHits;
@@ -554,7 +550,6 @@ export class TechnicalMetricsService {
     } );
       return this.createEmptyCacheAnalytics();
     }
-  }
 
   // ========================================
   // PRIVATE HELPER METHODS
@@ -600,13 +595,11 @@ export class TechnicalMetricsService {
             timings.cacheOperations += step.duration;
             break;
         }
-      }
 
       earliestStart = Math.min(earliestStart, step.startTime);
       if (step.endTime) {
         latestEnd = Math.max(latestEnd, step.endTime);
       }
-    }
 
     timings.total = latestEnd > earliestStart ? latestEnd - earliestStart : 
                     timings.contextGeneration + timings.aiModelSelection + timings.sqlGeneration + 
@@ -628,7 +621,6 @@ export class TechnicalMetricsService {
       metadata: {
       });
     }
-  }
 
   private async checkSLOViolation(
     complexity: QueryComplexity, 
@@ -660,8 +652,6 @@ export class TechnicalMetricsService {
 
         this.lastAlertTime.set(alertKey, new Date());
       }
-    }
-  }
 
   private async createPerformanceAlert(alert: unknown): Promise<void> {
     return withErrorHandling(
@@ -673,7 +663,7 @@ export class TechnicalMetricsService {
           operation: 'createPerformanceAlert',
           alertType: alert.alertType,
           severity: alert.severity
-      });
+            });
     },
     {
       operation: 'statistics',
@@ -681,7 +671,6 @@ export class TechnicalMetricsService {
       metadata: {}
     } );
     }
-  }
 
   private percentile(sortedArray: number[], percentile: number): number {
     const index = Math.ceil((percentile / 100) * sortedArray.length) - 1;
@@ -745,19 +734,15 @@ export class TechnicalMetricsService {
         if (now - oldestTrace > MAX_TRACE_AGE_MS) {
           this.activeTraces.delete(traceId);
         }
-      }
-    }
-  }
 
   private refreshRealtimeMetrics(): void {
     // Placeholder for real-time metrics refresh logic
     logger.debug('Real-time metrics refreshed', {
-      service: 'TechnicalMetricsService',
-      metadata: { operation: 'refreshRealtimeMetrics' 
+      metadata: {
+        module: 'TechnicalMetricsService', { operation: 'refreshRealtimeMetrics' 
 
           });
   }
-}
 
 // ========================================
 // SINGLETON EXPORT

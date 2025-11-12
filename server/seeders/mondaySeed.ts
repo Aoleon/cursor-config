@@ -142,7 +142,6 @@ class DeterministicGenerator {
     
     return futureDate;
   }
-}
 
 // ========================================
 // SEEDER MONDAY.COM INTELLIGENT
@@ -152,9 +151,7 @@ export class MondaySeed {
   private generator: DeterministicGenerator;
   private logger = {
     info: (message: string, data?: unknown) => logger.info(`[MondaySeed] ${message}`, data || ''),
-    warn: (message: string, d: unknown)unknown) => logger.warn($1),
-    error: (message: string: unknown)unknown)unknown) => logger.error('Erreur', `[MondaySeed] ${message}`, error || '')
-  };
+    warn: (message: string, d: unknown) => logger.warn($1),
 
   constructor() {
     this.generator = new DeterministicGenerator();
@@ -199,10 +196,8 @@ export class MondaySeed {
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
 
       // Seeder les relations après les entités principales
@@ -264,7 +259,6 @@ service: 'mondaySeed',;
         executionTimeMs
       };
     }
-  }
 
   // ========================================
   // SEEDER TEMPS POSE (40 entrées - CRITIQUE)
@@ -359,23 +353,20 @@ service: 'mondaySeed',;
     async () => {
 
           await storage.createMaitreOeuvre({
-            name: `${company} ${city}`,
-            siret: `${this.generator.numberInRange(10000000000000, 99999999999999, `siret-${i}`)}`,
-            address: `${this.generator.numberInRange(1, 150, `addr-${i}`)} Rue du Commerce, ${city}`,
-            phone: `03 ${this.generator.numberInRange(20, 29, `phone-${i}`)} ${this.generator.numberInRange(10, 99, `phone2-${i}`)} ${this.generator.numberInRange(10, 99, `phone3-${i}`)}`,
-            email: `contact@${company.toLowerCase().replace(/\s+/g, '-')}.fr`
+                name: `${company} ${city}`,
+                siret: `${this.generator.numberInRange(10000000000000, 99999999999999, `siret-${i}`)}`,
+                address: `${this.generator.numberInRange(1, 150, `addr-${i}`)} Rue du Commerce, ${city}`,
+                phone: `03 ${this.generator.numberInRange(20, 29, `phone-${i}`)} ${this.generator.numberInRange(10, 99, `phone2-${i}`)} ${this.generator.numberInRange(10, 99, `phone3-${i}`)}`,
+                email: `contact@${company.toLowerCase().replace(/\s+/g, '-')}.fr`
           });
         
     },
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
-    }
 
     // Récupérer les maîtres d'œuvre (nouveaux + existants)
     const maitresOeuvre = await storage.getMaitresOeuvre();
@@ -401,10 +392,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
       service: 'mondaySeed',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
 
     return seededCount;
@@ -595,8 +584,7 @@ service: 'mondaySeed',;
       
       const existingRelations: unknown[] = []; // Simplified for now
       
-      const existingPairs = new Set(existingRelati: unknunknown)unknown)el: any) => `${rel.ao_id}-${rel.contact_id}`));
-
+      const existingPairs = new Set(existingRelati: unknunknown)el: any) => `${rel.ao_id}-${rel.contact_id}`));
       // Créer 1-3 contacts par AO (seulement pour les premiers 300 AO pour limiter)
       const limitedAos = aos.slice(0, 300);
       
@@ -622,10 +610,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
 
     return seededCount;
   }
@@ -652,8 +638,7 @@ service: 'mondaySeed',;
       
       const existingRelat: unknown[]ny[] = []; // Simplified for now
       
-      const existingPairs = new Set(existingRe: unknunknown)unknown)p((rel: any) => `${rel.project_id}-${rel.contact_id}`));
-
+      const existingPairs = new Set(existingRe: unknunknown)p((rel: any) => `${rel.project_id}-${rel.contact_id}`));
       // Créer 1-2 contacts par projet (seulement premiers 200 projets)
       const limitedProjects = projects.slice(0, 200);
       
@@ -680,10 +665,8 @@ service: 'mondaySeed',;
     {
       operation: 'constructor',
 service: 'mondaySeed',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
 
     return seededCount;
   }
@@ -745,7 +728,6 @@ service: 'mondaySeed',;
         issues: [`Erreur validation: ${error instanceof Error ? error.message : 'Unknown error'}`]
       };
     }
-  }
 
   // Réconciliation avec analysis JSON (mode lecture seule pour validation)
   static async reconcileWithAnalysisJson(): Promise<{
@@ -791,7 +773,6 @@ service: 'mondaySeed',;
         if (variancePercent > 10) { // Tolérance 10%
           discrepancies.push(`${entity}: attendu ${expected}, trouvé ${actual} (écart ${variancePercent.toFixed(1)}%)`);
         }
-      }
 
     } catch (error) {
       discrepancies.push(`Erreur réconciliation: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -799,7 +780,6 @@ service: 'mondaySeed',;
 
     return { expectedCounts, actualCounts, discrepancies };
   }
-}
 
 // ========================================
 // FONCTION D'EXPORT POUR UTILISATION

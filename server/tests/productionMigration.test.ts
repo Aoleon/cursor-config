@@ -70,7 +70,6 @@ class MockStorage implements Partial<IStorage> {
       totalCreated: this.aos.length + this.projects.length
     };
   }
-}
 
 // ========================================
 // SETUP TESTS
@@ -278,7 +277,6 @@ describe('Production Migration JLM Menuiserie - Migration Complète', () => {
     console.log(`✅ Dry-run validé: ${dryRunResult.validLines}/${dryRunResult.totalLines} lignes, 0 insertions BDD`);
     console.log(`   - Issues dates: ${dryRunResult.dateFormatIssues}, Warnings: ${dryRunResult.warnings}`);
   });
-});
 
 // ========================================
 // TESTS SERVICE MIGRATION INTÉGRÉ
@@ -341,7 +339,6 @@ describe('MondayMigrationService - Intégration Production', () => {
     
     console.log(`✅ Intégrité production validée: ${validationResult.validLines} lignes valides, ${validationResult.dateFormatIssues} issues dates`);
   });
-});
 
 // ========================================
 // TESTS PERFORMANCE ET ROBUSTESSE
@@ -420,7 +417,6 @@ describe('Production Migration - Performance & Robustesse', () => {
     
     console.log(`✅ Intégrité référentielle validée: ${createdAos.length} AOs + ${createdProjects.length} projets`);
   });
-});
 
 // ========================================
 // TESTS SPÉCIFIQUES JLM MENUISERIE
@@ -513,6 +509,5 @@ describe('JLM Menuiserie - Spécificités Métier', () => {
     
     console.log(`✅ Spécificité Nord France: ${nordFranceCount}/${createdAos.length} AOs (${Math.round(nordFranceCount/createdAos.length*100)}%)`);
   });
-});
 
 console.log('🧪 Tests migration production JLM Menuiserie initialisés - 1911 lignes');

@@ -305,35 +305,29 @@ export class TemplateError extends Error {
     super(message);
     this.name = 'TemplateError';
   }
-}
 
 export class PlaceholderError extends TemplateError {
   constructor(message: string, det: unknown) unknown) {
     super(message, 'PLACEHOLDER_ERROR', details);
     this.name = 'PlaceholderError';
   }
-}
 
 export class ImageError extends TemplateError {
-  constructor(message: string,: unknown)lunknown)unknown) {
-    super(message, 'IMAGE_ERROR', details);
+  constructor(message: string,: unknown)lunknown) {
     this.name = 'ImageError';
   }
-}
 
 export class LayoutError extends TemplateError {
   constructor(message: str: unknown)eunknown)unknown any) {
     super(message, 'LAYOUT_ERROR', details);
     this.name = 'LayoutError';
   }
-}
 
 export class ValidationError extends TemplateError {
   constructor(message:: unknown)gunknown)unknownls?: any) {
     super(message, 'VALIDATION_ERROR', details);
     this.name = 'ValidationError';
   }
-}
 
 // LDM specific types
 export interface LDMTemplateData {

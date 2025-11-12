@@ -103,7 +103,6 @@ function createObjectAccessGroup(
     default:
       throw new AppError(`Unknown access group type: ${group.type}`, 500);
   }
-}
 
 // For POC purposes, we'll use a simplified ACL system
 // In production, this would integrate with Replit's object storage metadata
@@ -117,7 +116,7 @@ export async function setObjectAclPolicy(
   // This could be expanded to use Replit's metadata system later
   logger.debug('ObjectAcl - Setting ACL policy', { metadata: { objectPath, aclPolicy 
 
-              }
+          }
  
 
             });

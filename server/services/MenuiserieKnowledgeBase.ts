@@ -227,7 +227,6 @@ const MENUISERIE_MATERIALS: MenuiserieMaterial[] = [
         "Sécurité renforcée"
       ]
     }
-  }
 ];
 
 // ========================================
@@ -457,7 +456,6 @@ const MENUISERIE_PROCESSES: MenuiserieProcess[] = [
       "ete": 0.8, // Moins de problèmes
       "periode_normale": 1.0
     }
-  }
 ];
 
 // ========================================
@@ -933,7 +931,6 @@ export function getTechnicalSynonyms(term: string): string[] {
     if (key.includes(termLower) || synonyms.some(syn => syn.includes(termLower))) {
       return [key, ...synonyms];
     }
-  }
   return [term];
 }
 

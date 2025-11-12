@@ -66,7 +66,7 @@ async function testKpiOptimization() {
       logger.info('\nFirst 3 Time Series Entries:');
       result.timeSeries.slice(0, 3).forEach(entry => {
         logger.info(`  ${entry.date}: ${entry.offersCreated} created, ${entry.offersWon} won, ${entry.forecastRevenue.toFixed(2)}€ forecast`);
-      });
+              });
     }
 
     logger.info('\n✅ Test completed successfully!\n');
@@ -79,6 +79,5 @@ async function testKpiOptimization() {
     await db.$client.end();
     process.exit(0);
   }
-}
 
 testKpiOptimization();

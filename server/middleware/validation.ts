@@ -12,8 +12,6 @@ declare global {
      : unknown;unknown;unknown;
       };
     }
-  }
-}
 
 // Interface pour les options de validation
 interface ValidationOptions {
@@ -45,7 +43,6 @@ function deepMutate(target: unknown, source: unknown): void {
     if (Object.prototype.hasOwnProperty.call(target, key)) {
       delete target[key];
     }
-  }
   
   // 2. Copier toutes les propriétés de source vers target
   // Note: source contient déjà les nested objects/arrays transformés par Zod
@@ -53,7 +50,6 @@ function deepMutate(target: unknown, source: unknown): void {
   for (const [key, value] of Object.entries(source)) {
     target[key] = value;
   }
-}
 
 // Middleware de validation générique
 export function validate(
@@ -87,7 +83,6 @@ export function validate(
         } else {
           validatedData = schema.parse(dataToValidate);
         }
-      }
 
       // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects/arrays
       // deepMutate() remplace Object.assign() qui ne fait qu'une copie shallow
@@ -218,8 +213,6 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
-      }
-    }
 
     // Valider les params si fourni
     if (validations.params) {
@@ -237,8 +230,6 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
-      }
-    }
 
     // Valider la query si fournie
     if (validations.query) {
@@ -256,8 +247,6 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
-      }
-    }
 
     // S'il y a des erreurs, les retourner
     if (errors.length > 0) {
@@ -266,13 +255,10 @@ export function validateRequest(validations: {
         error: 'Erreurs de validation',
         details: errors.map(err  => ({
           source: err.source,
-          issues: err.issues.map((i: unknown)unknown) => ({
-            field: issue.path.join('.'),
-            message: issue.message,
+          issues: err.issues.map((i: unknown) => ({
             code: issue.code,
             received: 'received' in issue ? (isas unknunknown)any).received : 'undefined'
           }))
-        }))
       });
     }
 
@@ -321,8 +307,8 @@ export function validateFileUpload(
 
     for (const f of filesToValidate) {
       // Vérifier la taille
-      if (f.size > opts.maxSize) {
-        return res.status(400).json({
+      if (f.size > opts.maxSize) {}
+returnres.status(400).json({
           success: false,
           error: 'Fichier trop volumineux',
           details: {
@@ -345,7 +331,6 @@ export function validateFileUpload(
             message: `Le type ${f.mimetype} n'est pas autorisé pour ${f.originalname}`
           });
       }
-    }
 
     next();
   };

@@ -49,9 +49,7 @@ describe('Time Tracking Routes Integration', () => {
       };
 
       vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as unknown);
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown)unknown);
-      vi.mocked(mockStorage.createTimeTracking).mockResolvedValue(mockTas unknown) as unknown);
-
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown);
       const response = await request(app)
         .post('/api/time-tracking')
         .send({
@@ -66,7 +64,6 @@ describe('Time Tracking Routes Integration', () => {
 
       expect(response.body).toHaveProperty('id');
     });
-  });
 
   describe('GET /api/projects/:id/time-tracking/summary', () => {
     it('should return time summary', async () => {
@@ -82,8 +79,7 @@ describe('Time Tracking Routes Integration', () => {
         }
       ];
 
-      vi.mocked(mockStorage.getProject).mockResolvedValue(as unknown)jas unknunknown)unknown);
-      vi.mocked(mockStorage.getProjectTimeTracking).mockResolvedVaas unknown)kas unknunknown)unknown any);
+      vi.mocked(mockStorage.getProject).mockResolvedValue(as unknown)jas unknunknown);
 
       const response = await request(app)
         .get(`/api/projects/${projectId}/time-tracking/summary`)
@@ -92,6 +88,4 @@ describe('Time Tracking Routes Integration', () => {
       expect(response.body).toHaveProperty('projectId');
       expect(response.body).toHaveProperty('totalHours');
     });
-  });
-});
 

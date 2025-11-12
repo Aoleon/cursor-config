@@ -59,7 +59,6 @@ declare module 'express-session' {
       isBasicAuth?: boolean;
     };
   }
-}
 
 // Extension du type Express Request pour inclure la propriété user
 // Support pour BOTH basic auth ET OIDC authentication
@@ -86,7 +85,6 @@ declare module 'express-serve-static-core' {
       isOIDC?: boolean;
     };
   }
-}
 
 // Instance unique du service OCR
 const ocrService = new OCRService();
@@ -106,7 +104,7 @@ const predictiveEngineService = new PredictiveEngineService(storage as IStorage,
 // Intégration EventBus → PredictiveEngineService
 logger.info('EventBus PredictiveEngineService Integration', { metadata: { location: 'server/routes-poc.ts', type: 'REAL_PredictiveEngine_instance' 
 
-              }
+        }
  
 
             });
@@ -123,7 +121,7 @@ logger.info('EventBus PredictiveEngineService Integration', { metadata: { locati
         'latency_reduction_35_percent',
         'performance_objective_25s_to_10s'
       ]
-              }
+          }
 
             });
 
@@ -196,14 +194,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialiser les règles métier par défaut au démarrage
   logger.info('Initialisation des règles métier menuiserie', { metadata: { context: 'app_startup' 
 
-              }
+          }
  
 
             });
   await initializeDefaultRules();
   logger.info('Règles métier initialisées avec succès', { metadata: { context: 'app_startup' 
 
-              }
+          }
  
 
             });
@@ -284,7 +282,7 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
         method: 'MOUNT',
         issue: 'AuditService_missing',
         impact: 'admin_routes_unavailable'
-              }
+            }
 
             });
     throw new AppError('AuditService manquant - impossible de monter routes admin', 500);
@@ -296,7 +294,7 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
         method: 'MOUNT',
         issue: 'EventBus_missing',
         impact: 'admin_routes_unavailable'
-              }
+            }
 
             });
     throw new AppError('EventBus manquant - impossible de monter routes admin', 500);
@@ -307,7 +305,7 @@ app.use("/api/onedrive", isAuthenticated, oneDriveRoutes);
   app.use('/api/admin', adminRouter);
   
   logger.info('System - Routes administrateur montées', { metadata: { path: '/api/admin', services: ['AuditService', 'EventBus', 'Storage'] 
-              }
+          }
  
             });
 

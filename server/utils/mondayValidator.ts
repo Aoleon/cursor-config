@@ -197,7 +197,7 @@ function fallbackClientName(name: string): string {
   
   if (!isValidForProduction(normalized)) {
     logger.warn('MondayValidator - Client name normalized', { metadata: { original: name, fallback: 'CLIENT_EXCEL_NORMALISE' 
-              }
+            }
  
             });
     return 'CLIENT_EXCEL_NORMALISE';
@@ -219,7 +219,7 @@ function fallbackGeographicName(name: string): string {
   
   if (!isValidForProduction(normalized)) {
     logger.warn('MondayValidator - Geographic name normalized', { metadata: { original: name, fallback: 'ZONE_EXCEL_NORMALISEE' 
-              }
+            }
  
             });
     return 'ZONE_EXCEL_NORMALISEE';
@@ -241,11 +241,10 @@ function debugValidationValue(fieldName: string, value: string): void {
         chars: JSON.stringify([...value]), 
         charCodes: [...value].map(c => c.charCodeAt(0)).join(', '),
         isValid: isValidForProduction(value)
-              }
+            }
 
             });
   }
-}
 
 // ========================================
 // SCHÉMAS VALIDATION MONDAY.COM
@@ -354,7 +353,6 @@ function normalizeEnums(data: unknown): unknown {
     if (normalized_category) {
       normalized.aoCategory = normalized_category;
     }
-  }
   
   // Normalisation projectSubtype (Projects)
   if (normalized.projectSubtype && typeof normalized.projectSubtype === 'string') {
@@ -370,7 +368,6 @@ function normalizeEnums(data: unknown): unknown {
     if (normalized_subtype) {
       normalized.projectSubtype = normalized_subtype;
     }
-  }
   
   // Normalisation workflowStage (Projects)
   if (normalized.workflowStage && typeof normalized.workflowStage === 'string') {
@@ -388,7 +385,6 @@ function normalizeEnums(data: unknown): unknown {
     if (normalized_stage) {
       normalized.workflowStage = normalized_stage;
     }
-  }
   
   // Normalisation operationalStatus (AO)
   if (normalized.operationalStatus && typeof normalized.operationalStatus === 'string') {
@@ -403,7 +399,6 @@ function normalizeEnums(data: unknown): unknown {
     if (normalized_status) {
       normalized.operationalStatus = normalized_status;
     }
-  }
   
   return normalized;
 }
@@ -442,7 +437,6 @@ export function validateMondayAoData(data: MondayAoData): MondayAoData {
     }
     throw error;
   }
-}
 
 /**
  * Valide et normalise données Project Monday.com
@@ -474,7 +468,6 @@ export function validateMondayProjectData(data: MondayProjectData): MondayProjec
     }
     throw error;
   }
-}
 
 // ========================================
 // NORMALISATION CLIENTS JLM
@@ -629,7 +622,6 @@ function applyProjectBusinessRules(data: MondayProjectData): MondayProjectData {
     if (lgtsCount > 50) {
       processedData.buildingCount = Math.ceil(lgtsCount / 30); // ~30 lgts par bâtiment
     }
-  }
 
   return processedData;
 }

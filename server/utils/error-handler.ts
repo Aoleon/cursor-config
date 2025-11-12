@@ -30,43 +30,36 @@ export class AppError extends Error {
     this.name = this.constructor.name;
     Error.captureStackTrace(this, this.constructor);
   }
-}
 
 export class ValidationError extends AppError {
   constructor(message: string, public validationErrors?: Record<string, string[]>) {
     super(message, 400, 'VALIDATION_ERROR');
   }
-}
 
 export class AuthenticationError extends AppError {
   constructor(message: string = 'Non authentifié') {
     super(message, 401, 'AUTHENTICATION_ERROR');
   }
-}
 
 export class AuthorizationError extends AppError {
   constructor(message: string = 'Non autorisé') {
     super(message, 403, 'AUTHORIZATION_ERROR');
   }
-}
 
 export class NotFoundError extends AppError {
   constructor(resource: string = 'Ressource') {
     super(`${resource} non trouvé(e)`, 404, 'NOT_FOUND');
   }
-}
 
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(message, 409, 'CONFLICT');
   }
-}
 
 export class DatabaseError extends AppError {
   constructor(message: string, public originalError?: Error) {
     super(message, 500, 'DATABASE_ERROR', false); // Non-operational
   }
-}
 
 export class ExternalServiceError extends AppError {
   constructor(
@@ -76,7 +69,6 @@ export class ExternalServiceError extends AppError {
   ) {
     super(`Erreur ${service}: ${message}`, 502, 'EXTERNAL_SERVICE_ERROR', false);
   }
-}
 
 // ========================================
 // WRAPPER ASYNC SAFE
@@ -158,13 +150,12 @@ export async function withErrorHandling<T>(
           ...logContext.metadata, 
           duration,
           errorCode: (normalizedError as AppError).code
-                                                                                      }
+                }
 
                                                                                     });
     
     throw normalizedError;
   }
-}
 
 // ========================================
 // NORMALISATION D'ERREURS
@@ -255,8 +246,8 @@ export async function retryOperation<T>(
   let lastError: Error;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
+    try {}
+returnawait operation();
     } catch (error) {
       lastError = error as Error;
       
@@ -278,7 +269,6 @@ export async function retryOperation<T>(
       // Attendre avant retry
       await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
     }
-  }
   
   throw lastError!;
 }
@@ -340,7 +330,6 @@ export function assert(
   if (!condition) {
     throw new ErrorClass(message);
   }
-}
 
 /**
  * Assert qu'une valeur n'est pas null/undefined
@@ -352,4 +341,3 @@ export function assertExists<T>(
   if (value === null || value === undefined) {
     throw new NotFoundError(resourceName);
   }
-}

@@ -234,7 +234,6 @@ export class DpgfComputeService {
           items: categoryItems.sort((a: DpgfLineItem, b: DpgfLineItem) => a.position - b.position),
           subtotalHT
         });
-      });
 
       // Trier les catégories par nom
       categoryGroups.sort((a: DpgfCategoryGroup, b: DpgfCategoryGroup) => a.categoryLabel.localeCompare(b.categoryLabel));
@@ -251,7 +250,6 @@ export class DpgfComputeService {
         categories: categoryGroups,
         subtotalHT: lotSubtotalHT
       });
-    });
 
     // Trier les lots par numéro
     return lotGroups.sort((a: DpgfLotGroup, b: DpgfLotGroup) => a.lotNumber - b.lotNumber);
@@ -328,9 +326,9 @@ export class DpgfComputeService {
           categoryLabel: cat.categoryLabel,
           subtotalHT: this.formatCurrency(cat.subtotalHT),
           items: cat.items.map(item  => ({
-            id: item.id,
+                id: item.id,
             position: item.position,
-            category: item.category,
+                category: item.category,
             subcategory: item.subcategory,
             designation: item.designation,
             unit: item.unit,
@@ -341,13 +339,12 @@ export class DpgfComputeService {
             supplier: item.supplier,
             supplierRef: item.supplierRef,
             isOptional: item.isOptional,
-            notes: item.notes,
+                notes: item.notes,
             baseCost: this.formatCurrency(item.baseCost),
             marginAmount: this.formatCurrency(item.marginAmount),
             sellUnitPriceHT: this.formatCurrency(item.sellUnitPriceHT),
             lineTotalHT: this.formatCurrency(item.lineTotalHT)
           }))
-        }))
       })),
       totals: {
         totalHT: this.formatCurrency(data.totals.totalHT),
@@ -362,4 +359,3 @@ export class DpgfComputeService {
         generatedAt: data.metadata.generatedAt.toISOString()       }
      });
   }
-}

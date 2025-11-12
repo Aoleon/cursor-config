@@ -64,7 +64,7 @@ export class SavWorkflowService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
             type: 'sav:demande:created' as unknown,
             entity: 'project',
             entityId: data.projectId,
@@ -73,23 +73,23 @@ export class SavWorkflowService {
             affectedQueryKeys: [
               ['/api/sav/demandes']
             ],
-            userId: data.createdBy || undefined,
+                userId: data.createdBy || undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               demandeId: demande.id,
               reference,
               demandeType: demande.demandeType
-        }
+                    }
                   );
         }
 
         logger.info('Demande SAV créée', { metadata: {
             service: 'SavWorkflowService',
-            operation: 'createDemande',
+                  operation: 'createDemande',
             demandeId: demande.id,
             reference 
               
-              }
+                }
  
               
             });
@@ -137,7 +137,7 @@ export class SavWorkflowService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                  id: crypto.randomUUID(),
             type: 'sav:materiel:commanas unknown, unknown,
             entity: 'project',
             entityId: demande.projectId,
@@ -146,13 +146,13 @@ export class SavWorkflowService {
             affectedQueryKeys: [
               ['/api/sav/demandes', demandeId]
             ],
-            userId: undefined,
+                  userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               demandeId,
               materielId,
               dateLivraisonPrevue: dateLivraisonPrevue.toISOString()
-        }
+                    }
                   );
         }
 
@@ -191,7 +191,7 @@ export class SavWorkflowService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                      id: crypto.randomUUID(),
             type: 'sav:rdv:plas unknown, as unknown,
             entity: 'project',
             entityId: demande.projectId,
@@ -200,12 +200,12 @@ export class SavWorkflowService {
             affectedQueryKeys: [
               ['/api/sav/demandes', demandeId]
             ],
-            userId: undefined,
+                      userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               demandeId,
               rdvDate: rdvDate.toISOString()
-        }
+                    }
                   );
         }
 
@@ -249,7 +249,7 @@ export class SavWorkflowService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                      id: crypto.randomUUID(),
             type: 'sav:quias unknown,ias unknown unknown,
             entity: 'project',
             entityId: demande.projectId,
@@ -258,13 +258,13 @@ export class SavWorkflowService {
             affectedQueryKeys: [
               ['/api/sav/demandes', demandeId]
             ],
-            userId: undefined,
+                      userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               demandeId,
               quitusDate: quitusDate.toISOString(),
               reserveLevee
-        }
+                    }
                   );
         }
 
@@ -276,7 +276,6 @@ export class SavWorkflowService {
       }
     );
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

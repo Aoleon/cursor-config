@@ -103,7 +103,6 @@ describe('StorageFacade Contract Tests', () => {
     criticalMethods.forEach(methodName => {
       expect(typeof (facade as unknown)[methodName]).toBe('function');
     });
-  });
 
   /**
    * Test 3: Vérifier la cohérence des types de retour
@@ -121,11 +120,8 @@ describe('StorageFacade Contract Tests', () => {
     ];
     
     asyncMethods.forEach(methodName => {
-      const method = (facas unknown)unknown)[methodName];
-      expect(method).toBeDefined();
-      expect(typeof method).toBe('function');
+      const method = (facas unknown)[methodName];
     });
-  });
 
   /**
    * Test 4: Vérifier que les méthodes utilisateur fonctionnent
@@ -145,7 +141,6 @@ describe('StorageFacade Contract Tests', () => {
       const user = await facade.getUser('non-existent-id');
       expect(user).toBeUndefined();
     });
-  });
 
   /**
    * Test 5: Vérifier que les méthodes AO fonctionnent
@@ -178,7 +173,6 @@ describe('StorageFacade Contract Tests', () => {
       expect(result).toHaveProperty('offset');
       expect(Array.isArray(result.items)).toBe(true);
     });
-  });
 
   /**
    * Test 6: Vérifier que les méthodes Offer fonctionnent
@@ -209,7 +203,6 @@ describe('StorageFacade Contract Tests', () => {
       expect(result).toHaveProperty('total');
       expect(Array.isArray(result.items)).toBe(true);
     });
-  });
 
   /**
    * Test 7: Vérifier que les méthodes Project fonctionnent
@@ -240,7 +233,6 @@ describe('StorageFacade Contract Tests', () => {
       expect(result).toHaveProperty('total');
       expect(Array.isArray(result.items)).toBe(true);
     });
-  });
 
   /**
    * Test 8: Vérifier que les méthodes de recherche fonctionnent
@@ -252,7 +244,6 @@ describe('StorageFacade Contract Tests', () => {
     it.skip('should delegate searchEntities() correctly (not implemented yet)', async () => {
       // Cette méthode sera ajoutée dans une future itération
     });
-  });
 
   /**
    * Test 9: Vérifier que les méthodes de statistiques fonctionnent
@@ -276,7 +267,6 @@ describe('StorageFacade Contract Tests', () => {
       expect(consolidated).toHaveProperty('breakdowns');
       expect(consolidated).toHaveProperty('timeSeries');
     });
-  });
 
   /**
    * Test 10: Vérifier que les méthodes de supplier fonctionnent
@@ -295,7 +285,6 @@ describe('StorageFacade Contract Tests', () => {
       const supplier = await facade.getSupplier('non-existent-id');
       expect(supplier).toBeUndefined();
     });
-  });
 
   /**
    * Test de synthèse: Vérifier la couverture globale
@@ -320,4 +309,3 @@ describe('StorageFacade Contract Tests', () => {
     // On s'attend à au moins 90% de couverture
     expect(coverage).toBeGreaterThanOrEqual(90);
   });
-});

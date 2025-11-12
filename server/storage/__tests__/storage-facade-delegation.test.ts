@@ -124,7 +124,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(result).toBeDefined();
         expect(result.some(o => o.id === created.id)).toBe(true);
       });
-    });
     
     describe('getOffersPaginated', () => {
       it('should delegate to OfferRepository.findPaginated', async () => {
@@ -167,7 +166,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(result).not.toHaveProperty('data');
         expect(typeof result.total).toBe('number');
       });
-    });
     
     describe('getOffer', () => {
       it('should delegate to OfferRepository.findById', async () => {
@@ -197,7 +195,6 @@ describe('StorageFacade Delegation Tests', () => {
         const result = await facade.getOffer('00000000-0000-0000-0000-000000000000');
         expect(result).toBeUndefined();
       });
-    });
     
     describe('createOffer', () => {
       it('should delegate to OfferRepository.create', async () => {
@@ -221,7 +218,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(created.reference).toBe(offerData.reference);
         expect(created.client).toBe(offerData.client);
       });
-    });
     
     describe('updateOffer', () => {
       it('should delegate to OfferRepository.update', async () => {
@@ -250,7 +246,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(updated.client).toBe('Client Modifié');
         expect(updated.status).toBe('etude_technique');
       });
-    });
     
     describe('deleteOffer', () => {
       it('should delegate to OfferRepository.delete', async () => {
@@ -273,8 +268,6 @@ describe('StorageFacade Delegation Tests', () => {
         const found = await facade.getOffer(created.id);
         expect(found).toBeUndefined();
       });
-    });
-  });
   
   // ========================================
   // AO METHODS DELEGATION (7 tests)
@@ -305,7 +298,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(Array.isArray(result)).toBe(true);
         expect(result.some(ao => ao.id === created.id)).toBe(true);
       });
-    });
     
     describe('getAOsPaginated', () => {
       it('should delegate to AoRepository.findPaginated', async () => {
@@ -341,7 +333,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(result).not.toHaveProperty('items');
         expect(typeof result.total).toBe('number');
       });
-    });
     
     describe('getAo', () => {
       it('should delegate to AoRepository.findById', async () => {
@@ -373,8 +364,6 @@ describe('StorageFacade Delegation Tests', () => {
           expect(ao).toBeDefined();
           expect(ao!.id).toBe(testAoId);
         });
-      });
-    });
     
     describe('getAOByMondayItemId', () => {
       it('should delegate to AoRepository.findByMondayId', async () => {
@@ -405,7 +394,6 @@ describe('StorageFacade Delegation Tests', () => {
         const result = await facade.getAOByMondayItemId('nonexistent-monday-id-999999');
         expect(result).toBeUndefined();
       });
-    });
     
     describe('createAo', () => {
       it('should delegate to AoRepository.create', async () => {
@@ -428,7 +416,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(created.reference).toBe(aoData.reference);
         expect(created.client).toBe(aoData.client);
       });
-    });
     
     describe('updateAo', () => {
       it('should delegate to AoRepository.update', async () => {
@@ -456,7 +443,6 @@ describe('StorageFacade Delegation Tests', () => {
         expect(updated.client).toBe('Client Modifié');
         expect(updated.status).toBe('valide');
       });
-    });
     
     describe('deleteAo', () => {
       it('should delegate to AoRepository.delete', async () => {
@@ -478,8 +464,6 @@ describe('StorageFacade Delegation Tests', () => {
         const found = await facade.getAo(created.id);
         expect(found).toBeUndefined();
       });
-    });
-  });
   
   // ========================================
   // FALLBACK MECHANISM (3 tests)
@@ -551,7 +535,6 @@ describe('StorageFacade Delegation Tests', () => {
       repoSpy.mockRestore();
       loggerSpy.mockRestore();
     });
-  });
   
   // ========================================
   // BACKWARD COMPATIBILITY (2 tests)
@@ -605,5 +588,3 @@ describe('StorageFacade Delegation Tests', () => {
       expect(paginated).toHaveProperty('limit');
       expect(paginated).toHaveProperty('offset');
     });
-  });
-});

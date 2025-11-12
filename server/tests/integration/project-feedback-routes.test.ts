@@ -50,9 +50,7 @@ describe('Project Feedback Routes Integration', () => {
       };
 
       vi.mocked(mockStorage.getProject).mockResolvedValue(mockProject as unknown);
-      vi.mocked(mockStorage.createProjectFeedbackTerrain).mockResolvedValue(mockFeedbas unknown)unknown);
-
-      const response = await request(app)
+      vi.mocked(mockStorage.createProjectFeedbackTerrain).mockResolvedValue(mockFeedbas unknown);
         .post(`/api/projects/${projectId}/feedback-terrain`)
         .send({
           reportedBy: 'user-1',
@@ -66,7 +64,6 @@ describe('Project Feedback Routes Integration', () => {
       expect(response.body).toHaveProperty('id');
       expect(mockStorage.createProjectFeedbackTerrain).toHaveBeenCalled();
     });
-  });
 
   describe('GET /api/projects/:id/feedback-terrain', () => {
     it('should return feedback list', async () => {
@@ -85,6 +82,4 @@ describe('Project Feedback Routes Integration', () => {
 
       expect(Array.isArray(response.body)).toBe(true);
     });
-  });
-});
 

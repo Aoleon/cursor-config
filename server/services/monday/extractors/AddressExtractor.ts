@@ -28,9 +28,6 @@ export class AddressExtractor extends BaseExtractor<unknown | null> {
               placeId: locationData.placeId,
             };
           }
-        }
-      }
-    }
     
     const baseMappings = context.config.mappings.base || [];
     for (const mapping of baseMappings) {
@@ -44,11 +41,7 @@ export class AddressExtractor extends BaseExtractor<unknown | null> {
             this.addDiagnostic(context, 'info', 'Address extracted from text column', { parsed: parsedAddress });
             return parsedAddress;
           }
-        }
-      }
-    }
     
     this.addDiagnostic(context, 'warning', 'No address found', {});
     return null;
   }
-}

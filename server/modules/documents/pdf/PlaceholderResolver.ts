@@ -151,12 +151,9 @@ export class PlaceholderResolver {
     {
       operation: 'Logger',
       service: 'PlaceholderResolver',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
-    }
 
     logger.info('Placeholders resolved', {
       resolved: resolved.length,
@@ -331,7 +328,6 @@ export class PlaceholderResolver {
       default:
         return String(value);
     }
-  }
 
   /**
    * Check if content is a control structure
@@ -425,4 +421,3 @@ export class PlaceholderResolver {
 
     return doc;
   }
-}

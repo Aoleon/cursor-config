@@ -188,7 +188,6 @@ describe('MondayDataService', () => {
       expect(event.entity).toBe('project');
       expect(event.severity).toBe('success');
     });
-  });
 
   // ========================================
   // EXPORT TESTS
@@ -264,7 +263,6 @@ describe('MondayDataService', () => {
         'Project non-existent not found'
       );
     });
-  });
 
   // ========================================
   // VALIDATION TESTS
@@ -319,7 +317,6 @@ describe('MondayDataService', () => {
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings[0]).toContain('No column mappings defined');
     });
-  });
 
   // ========================================
   // TRANSFORMATION TESTS
@@ -365,7 +362,6 @@ describe('MondayDataService', () => {
 
       expect(transformed.startDate).toBe('2025-10-01');
     });
-  });
 
   // ========================================
   // DATA SPLITTING TESTS
@@ -422,7 +418,6 @@ describe('MondayDataService', () => {
       expect(result.aoUpdated).toBe(true);
       expect(mockStorage.updateAo).toHaveBeenCalled();
     });
-  });
 
   // ========================================
   // PREVIEW TESTS
@@ -473,7 +468,6 @@ describe('MondayDataService', () => {
       expect(clientSuggestion).toBeDefined();
       expect(clientSuggestion?.mondayColumnId).toBe('col2');
     });
-  });
 
   // ========================================
   // GOLDEN TESTS (Known Transformation Scenarios)
@@ -557,7 +551,6 @@ describe('MondayDataService', () => {
 
       expect(transformed.assignedUsers).toEqual(['user-1', 'user-2']);
     });
-  });
 
   // ========================================
   // SYNC TESTS
@@ -618,5 +611,3 @@ describe('MondayDataService', () => {
       expect(mockStorage.createProject).not.toHaveBeenCalled();
       expect(mockStorage.updateProject).not.toHaveBeenCalled();
     });
-  });
-});

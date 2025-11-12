@@ -252,7 +252,7 @@ export class AlertManager {
         service: 'AlertManager',
         rulesCount: this.rules.size,
         intervalMs: this.checkIntervalMs
-              }
+            }
 
             });
 
@@ -279,7 +279,6 @@ export class AlertManager {
 
             });
     }
-  }
 
   /**
    * Vérifie toutes les règles d'alerte
@@ -308,10 +307,8 @@ export class AlertManager {
     {
       operation: 'async',
       service: 'alert-manager',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
 
     // Résoudre les alertes qui ne sont plus déclenchées
@@ -337,7 +334,6 @@ export class AlertManager {
       // L'alerte n'est plus déclenchée, la marquer comme résolue
       this.resolveAlert(existingAlert, now);
     }
-  }
 
   /**
    * Déclenche une nouvelle alerte
@@ -385,7 +381,7 @@ export class AlertManager {
         alertId: alert.id,
         severity: alert.severity,
         metrics: alert.details?.metrics
-              }
+            }
 
             });
   }
@@ -500,8 +496,6 @@ export class AlertManager {
         alert.notificationsSent++;
         alert.lastNotificationAt = new Date();
       }
-    }
-  }
 
   /**
    * Log une alerte
@@ -519,7 +513,7 @@ export class AlertManager {
         severity: alert.severity,
         status: alert.status,
         metrics: alert.details?.metrics
-                                                                                    }
+              }
 
                                                                                   });
     
@@ -538,7 +532,6 @@ export class AlertManager {
       default:
         logger.info(message, logContext);
     }
-  }
 
   /**
    * Détermine si une notification doit être renvoyée
@@ -564,7 +557,7 @@ export class AlertManager {
         service: 'AlertManager',
         alertId: alert.id,
         notificationsSent: alert.notificationsSent
-              }
+            }
 
             });
   }
@@ -580,7 +573,7 @@ export class AlertManager {
         service: 'AlertManager',
         alertId: alert.id,
         duration: now.getTime() - alert.triggeredAt.getTime()
-              }
+            }
 
             });
     
@@ -600,8 +593,6 @@ export class AlertManager {
       if (rule && !rule.condition(metrics) && alert.status === 'active') {
         this.resolveAlert(alert, now);
       }
-    }
-  }
 
   /**
    * Reconnaît une alerte (acknowledge)
@@ -710,7 +701,7 @@ export class AlertManager {
         service: 'AlertManager',
         ruleId: rule.id,
         severity: rule.severity
-              }
+            }
 
             });
   }
@@ -755,7 +746,6 @@ export class AlertManager {
     this.stop();
     this.reset();
   }
-}
 
 // Instance singleton
 let alertManagerInstance: AlertManager | null = null;

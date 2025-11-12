@@ -46,9 +46,7 @@ describe('WorkloadSimulationService', () => {
       ];
 
       vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWorkload as unknown);
-      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTimeTrackas unknown)unknown);
-
-      const result = await service.simulateCharge(startDate, endDate);
+      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTimeTrackas unknown);
 
       expect(result.period.start).toEqual(startDate);
       expect(result.period.end).toEqual(endDate);
@@ -81,13 +79,10 @@ describe('WorkloadSimulationService', () => {
       ];
 
       vi.mocked(mockStorage.getBeWorkload).mockResolvedValue(mockBeWas unknown) as unknown);
-      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTas unknown)kas unknunknown)unknown);
-
+      vi.mocked(mockStorage.getTimeTracking).mockResolvedValue(mockTas unknown)kas unknunknown);
       const result = await service.simulateCharge(startDate, endDate);
 
       expect(result.bottlenecks.length).toBeGreaterThan(0);
       expect(result.bottlenecks.some(b => b.type === 'be')).toBe(true);
     });
-  });
-});
 

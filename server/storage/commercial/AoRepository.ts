@@ -359,7 +359,6 @@ export class AoRepository extends BaseRepository<
       } else {
         conditions.push(isNull(aos.mondayItemId));
       }
-    }
 
     // Recherche textuelle (reference, client, location)
     if (filters.search) {
@@ -390,4 +389,3 @@ export class AoRepository extends BaseRepository<
 
     return conditions;
   }
-}

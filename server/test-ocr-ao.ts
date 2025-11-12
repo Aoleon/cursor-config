@@ -117,8 +117,6 @@ async function testOCRAndCreateAO() {
           } else {
             logger.info(`  ❌ Erreur création lot: ${lotData.numero}`);
           }
-        }
-      }
       
       logger.info(`\n🎉 AO "${aoData.reference}" créé avec succès!`);
       logger.info(`   URL: http://localhost:5000/offers#ao-${createdAo.id}`);
@@ -126,7 +124,6 @@ async function testOCRAndCreateAO() {
     } catch (error: unknown) {
       logger.error('Erreur', `❌ Erreur lors du traitement: ${error.message}`);
     }
-  }
   
   logger.info('\n=========================================');
   logger.info('✅ Test OCR terminé');

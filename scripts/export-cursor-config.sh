@@ -145,6 +145,9 @@ if [ -d "$PROJECT_ROOT/scripts" ]; then
         "setup-auto-sync.sh"
         "setup-git-hooks.sh"
         "watch-cursor-config.sh"
+        "optimize-cursor-config.sh"
+        "validate-cursor-config.sh"
+        "final-optimization-summary.sh"
     )
     COPIED_COUNT=0
     for script in "${AGENT_SCRIPTS[@]}"; do
@@ -410,6 +413,97 @@ if [ "$PROJECT_NAME" != "Mon Projet" ]; then
     success ".cursorrules personnalisé"
 fi
 
+# Générer contexte projet si manquant ou vide
+info "Vérification contexte projet..."
+CONTEXT_DIR="$PROJECT_ROOT/.cursor/context"
+CONTEXT_FILES=(
+    "projectbrief.md"
+    "techContext.md"
+    "activeContext.md"
+    "systemPatterns.md"
+    "productContext.md"
+    "progress.md"
+)
+
+MISSING_CONTEXT=0
+for ctx_file in "${CONTEXT_FILES[@]}"; do
+    if [ ! -f "$CONTEXT_DIR/$ctx_file" ] || [ ! -s "$CONTEXT_DIR/$ctx_file" ]; then
+        MISSING_CONTEXT=1
+        break
+    fi
+done
+
+if [ $MISSING_CONTEXT -eq 1 ]; then
+    info "Contexte projet incomplet détecté"
+    
+    if [ -f "$CONFIG_DIR/scripts/generate-context.sh" ]; then
+        info "Génération automatique du contexte..."
+        if bash "$CONFIG_DIR/scripts/generate-context.sh" "$PROJECT_NAME" "$PROJECT_DESCRIPTION" >/dev/null 2>&1; then
+            success "Contexte projet généré"
+        else
+            warning "Génération automatique échouée, création manuelle nécessaire"
+        fi
+    else
+        warning "Script generate-context.sh non trouvé"
+        info "Création structure de base..."
+        mkdir -p "$CONTEXT_DIR"
+        
+        # Créer fichiers de base avec templates
+        cat > "$CONTEXT_DIR/projectbrief.md" << EOF
+# Brief Projet
+
+**Nom du projet:** $PROJECT_NAME
+**Description:** $PROJECT_DESCRIPTION
+
+## Objectifs Principaux
+- [À compléter avec l'agent Cursor]
+
+## Périmètre
+- [À compléter]
+
+## Contraintes
+- [À compléter]
+EOF
+
+        cat > "$CONTEXT_DIR/techContext.md" << EOF
+# Contexte Technique
+
+## Stack Technique
+- [À compléter avec l'agent Cursor]
+
+## Dépendances principales
+- [À compléter]
+
+## Architecture
+- [À compléter]
+EOF
+
+        cat > "$CONTEXT_DIR/activeContext.md" << EOF
+# Contexte Actif
+
+**Date:** $(date +%Y-%m-%d)
+
+## Priorités
+- [À compléter avec l'agent Cursor]
+
+## Prochaines étapes
+- [À compléter]
+
+## Blocages
+- [À compléter]
+EOF
+
+        success "Fichiers de contexte créés avec templates"
+    fi
+    
+    echo ""
+    info "💡 Pour compléter automatiquement le contexte avec l'agent Cursor:"
+    echo "   1. Ouvrez Cursor dans ce projet"
+    echo "   2. Demandez à l'agent: 'Complète le contexte du projet dans .cursor/context/'"
+    echo "   3. Ou référencez directement: @.cursor/context/projectbrief.md"
+    echo ""
+fi
+
 # Créer fichier version
 if ! echo "$VERSION" > "$PROJECT_ROOT/.cursor-version"; then
     error "Échec de la création de .cursor-version"
@@ -434,7 +528,10 @@ success "Configuration installée avec succès!"
 echo ""
 info "Prochaines étapes:"
 echo "  1. Vérifier .cursorrules et adapter si nécessaire"
-echo "  2. Adapter .cursor/context/ pour votre projet"
+echo "  2. Compléter .cursor/context/ pour votre projet:"
+echo "     - Ouvrir Cursor dans ce projet"
+echo "     - Demander à l'agent: 'Complète le contexte du projet dans .cursor/context/'"
+echo "     - Ou référencer: @.cursor/context/projectbrief.md"
 echo "  3. Commit: git add .cursor .cursorrules .cursor-version"
 INSTALL_EOF
 

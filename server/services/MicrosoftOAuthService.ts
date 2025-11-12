@@ -87,8 +87,8 @@ export class MicrosoftOAuthService {
           logger.info('[MicrosoftOAuth] User authenticated via Microsoft', { metadata: {
               service: 'MicrosoftOAuthService',
               microsoftId: profile.oid,
-              email: profile._json.email || profile.upn
-      });
+                    email: profile._json.email || profile.upn
+                });
           const microsoftId = profile.oid;
           const email = profile._json.email || profile.upn || `${profile.oid}@unknown.com`;
           const firstName = profile.name?.givenName || profile.displayName?.split(' ')[0] || 'Utilisateur';
@@ -97,7 +97,7 @@ export class MicrosoftOAuthService {
           if (!user) {
             logger.info('[MicrosoftOAuth] Creating new user from Microsoft profile', { metadata: { microsoftId, email  
               
-              }
+                    }
   
               
             });
@@ -113,7 +113,7 @@ export class MicrosoftOAuthService {
           } else {
             logger.info('[MicrosoftOAuth] Existing user found', { metadata: { userId: user.id, email: user.email  
               
-              }
+                    }
   
               
             });
@@ -129,15 +129,15 @@ export class MicrosoftOAuthService {
             isMicrosoftAuth: true,
           };
           logger.info('[MicrosoftOAuth] Tokens stored securely in session', { metadata: {
-              userId: user.id,
+                    userId: user.id,
               expiresAt: new Date(expiresAt * 1000).toISOString(),
               hasAccessToken: !!accessToken,
               hasRefreshToken: !!refreshToken 
-              
-              }
+
+                  }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
           return done(null, authenticatedUser);
     },
     {
@@ -147,7 +147,6 @@ export class MicrosoftOAuthService {
     } );
           return done(error as Error);
               }
-                        }
 
 
                                   }
@@ -157,7 +156,6 @@ export class MicrosoftOAuthService {
 
     logger.info('[MicrosoftOAuth] Microsoft OAuth strategy initialized', { metadata: { service: 'MicrosoftOAuthService', tenantID 
   }
-}
 
 /**
  * Refresh Microsoft OAuth access token using refresh token
@@ -207,11 +205,11 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
     logger.info('[MicrosoftOAuth] Token refreshed successfully', { metadata: {
         hasAccessToken: !!data.access_token,
         hasRefreshToken: !!data.refresh_token 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -224,4 +222,3 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
     } );
     throw error;
   }
-}

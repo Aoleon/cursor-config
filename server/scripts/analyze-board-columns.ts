@@ -32,8 +32,7 @@ async function analyzeBoardColumns() {
         const col = columns.find(c => c.id === cv.id);
         const value = cv.text || cv.value || 'null';
         logger.info(`  ${cv.id.padEnd(20)} | ${(col?.title || 'Unknown').padEnd(30)} | ${value.substring(0, 60)}`);
-      });
-    });
+              });
     
     logger.info('\n✅ Analyse terminée');
   

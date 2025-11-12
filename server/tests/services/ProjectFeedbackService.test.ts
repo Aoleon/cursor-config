@@ -70,7 +70,6 @@ describe('ProjectFeedbackService', () => {
 
       await expect(service.createFeedback(feedbackData)).rejects.toThrow(NotFoundError);
     });
-  });
 
   describe('assignFeedback', () => {
     it('should assign feedback successfully', async () => {
@@ -85,9 +84,7 @@ describe('ProjectFeedbackService', () => {
       const updatedFeedback = { ...mockFeedback, assignedTo, status: 'en_cours' };
 
       vi.mocked(mockStorage.getProjectFeedbackTerrainById).mockResolvedValue(mockFeedback as ProjectFeedbackTerrain);
-      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUas unknown)unknown);
-      vi.mocked(mockStorage.updateProjectFeedbackTerrain).mockResolvedValue(updatedFeedback as ProjectFeedbackTerrain);
-
+      vi.mocked(mockStorage.getUser).mockResolvedValue(mockUas unknown);
       const result = await service.assignFeedback(feedbackId, assignedTo);
 
       expect(mockStorage.getProjectFeedbackTerrainById).toHaveBeenCalledWith(feedbackId);
@@ -96,7 +93,6 @@ describe('ProjectFeedbackService', () => {
       expect(result.assignedTo).toBe(assignedTo);
       expect(result.status).toBe('en_cours');
     });
-  });
 
   describe('resolveFeedback', () => {
     it('should resolve feedback successfully', async () => {
@@ -142,6 +138,4 @@ describe('ProjectFeedbackService', () => {
         service.resolveFeedback(feedbackId, 'user-1', 'Notes')
       ).rejects.toThrow(ValidationError);
     });
-  });
-});
 

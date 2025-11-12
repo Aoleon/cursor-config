@@ -49,7 +49,6 @@ export class SyncAuditService {
             conflictReason: project.mondayConflictReason || undefined
           });
         }
-      }
       
       const aos = await storage.getAos();
       for (const ao of aos) {
@@ -63,11 +62,10 @@ export class SyncAuditService {
             conflictReason: ao.mondayConflictReason || undefined
           });
         }
-      }
       
       logger.info('[SyncAuditService] Cache rebuild completed from DB columns', {
-        service: 'SyncAuditService',
-        metadata: {
+      metadata: {
+        module: 'SyncAuditService', {
           operation: 'rebuildCacheFromDatabase',
           projectsCount: projects.filter(p => p.mondaySyncStatus).length,
           aosCount: aos.filter(a => a.mondaySyncStatus).length,
@@ -82,7 +80,6 @@ export class SyncAuditService {
       metadata: {}
     } );
     }
-  }
   
   private setupEventListeners() {
     // Export success - Project or AO successfully exported to Monday
@@ -125,8 +122,8 @@ export class SyncAuditService {
       }
       
       logger.info('[SyncAudit] Export réussi', {
-        service: 'SyncAuditService',
-        metadata: {
+      metadata: {
+        module: 'SyncAuditService', {
           operation: 'export',
           entityType: event.entityType,
           entityId: event.entityId,
@@ -200,8 +197,8 @@ export class SyncAuditService {
       }
       
       logger.warn('[SyncAudit] Conflict détecté', {
-        service: 'SyncAuditService',
-        metadata: {
+      metadata: {
+        module: 'SyncAuditService', {
           operation: 'conflict',
           entityType: event.entityType,
           entityId: event.entityId,
@@ -277,8 +274,8 @@ export class SyncAuditService {
       }
       
       logger.error('[SyncAudit] Export échoué', {
-        service: 'SyncAuditService',
-        metadata: {
+      metadata: {
+        module: 'SyncAuditService', {
           operation: 'export_failed',
           entityType: event.entityType,
           entityId: event.entityId,
@@ -312,8 +309,8 @@ export class SyncAuditService {
     // Sync success - Generic sync success event
     eventBus.on('monday:sync:success', (e: unknown) => {
       logger.info('[SyncAudit] Sync réussie', {
-        service: 'SyncAuditService',
-        metadata: {
+      metadata: {
+        module: 'SyncAuditService', {
           operation: 'sync',
           entityType: event.entity,
           entityId: event.entityId,
@@ -322,7 +319,6 @@ export class SyncAuditService {
           changeType: event.metadata?.changeType
 
             });
-    });
   }
   
   /**
@@ -338,6 +334,5 @@ export class SyncAuditService {
   getAllSyncStatuses(): SyncState[] {
     return Array.from(this.syncStates.values());
   }
-}
 
 export const syncAuditService = new SyncAuditService();

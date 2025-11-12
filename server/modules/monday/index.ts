@@ -16,8 +16,8 @@ export function setupMondayModule(app: Express): void {
   // Service is already instantiated and listening to events
   
   logger.info('[MondayModule] Routes, export automatique et audit sync initialisés', {
-    service: 'MondayModule',
-    metadata: {
+      metadata: {
+        module: 'MondayModule', {
       routes: [
         '/api/monday/test',
         '/api/monday/boards',
@@ -42,6 +42,4 @@ export function setupMondayModule(app: Express): void {
         strategy: 'Monday-priority',
         events: ['monday:sync:conflict', 'monday:sync:success', 'monday:export:success']
       }
-    }
-  );
-}
+      });

@@ -70,7 +70,7 @@ export class WorkloadSimulationService {
           const utilization = planned > 0 ? (actual / planned) * 100 : 0;
 
           return {
-            userId: w.userId,
+                userId: w.userId,
             userName: '', // TODO: Récupérer nom utilisateur
             plannedHours: planned,
             actualHours: actual,
@@ -92,7 +92,6 @@ export class WorkloadSimulationService {
             const current = fieldByWeek.get(week)!;
             current.actual += hours;
           }
-        }
 
         const fieldWorkload = Array.from(fieldByWeek.entries()).map(([week, data]) => {
           const available = 40 - data.actual; // 40h/semaine standard
@@ -143,7 +142,6 @@ export class WorkloadSimulationService {
           message: `BE ${be.userName}: utilisation à ${be.utilization.toFixed(1)}%`
         });
       }
-    }
 
     // Goulots terrain (utilisation > 90%)
     for (const field of fieldWorkload) {
@@ -155,7 +153,6 @@ export class WorkloadSimulationService {
           message: `Terrain semaine ${field.week}: utilisation à ${field.utilization.toFixed(1)}%`
         });
       }
-    }
 
     return bottlenecks;
   }
@@ -180,7 +177,6 @@ export class WorkloadSimulationService {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

@@ -56,7 +56,7 @@ const initializeModules = async (): Promise<void> => {
     logger.info('Initialisation module pdf-parse', { metadata: {
         service: 'OCRService',
         operation: 'initializeModules'
-              }
+            }
 
             });
     
@@ -72,7 +72,7 @@ const initializeModules = async (): Promise<void> => {
     logger.info('Module pdf-parse initialisé avec succès', { metadata: {
         service: 'OCRService',
         operation: 'initializeModules'
-              }
+            }
 
             });
     isInitializingPdfParse = false;
@@ -81,7 +81,7 @@ const initializeModules = async (): Promise<void> => {
     logger.info('Tentative initialisation fallback pdf-parse', { metadata: {
         service: 'OCRService',
         operation: 'initializeModules'
-              }
+            }
 
             });
     
@@ -400,8 +400,8 @@ export class OCRService {
   private safePatternMatch(text: string, patterns: RegExp[]): RegExpMatchArray | null {
     for (const pattern of patterns) {
       const match = this.safeMatch(text, pattern);
-      if (match) {
-        return match;
+      if (match) {}
+returnmatch;
       }
     }
     return null;
@@ -833,7 +833,7 @@ export class OCRService {
         documentType: documentType,
         improvementPercentage: parseFloat(improvementPercentage.toFixed(1)),
         fieldsImprovedCount: fieldsImproved.length
-              }
+            }
 
             });
     
@@ -892,10 +892,10 @@ export class OCRService {
         // PDF contient du texte natif
         logger.info('PDF avec texte natif détecté', { metadata: {
             service: 'OCRService',
-            operation: 'processSupplierQuote',
-            documentId: documentId,
+                  operation: 'processSupplierQuote',
+                  documentId: documentId,
             textLength: nativeText.length
-              }
+                }
 
             });
         extractedText = nativeText;
@@ -905,9 +905,9 @@ export class OCRService {
         // Fallback vers OCR pour PDFs scannés
         logger.info('Fallback vers OCR pour PDF scanné', { metadata: {
             service: 'OCRService',
-            operation: 'processSupplierQuote',
-            documentId: documentId
-              }
+                  operation: 'processSupplierQuote',
+                  documentId: documentId
+                }
 
             });
         const ocrResult = await this.processSupplierQuoteWithOCR(pdfBuffer);
@@ -955,11 +955,11 @@ export class OCRService {
         
         logger.info('Amélioration contextuelle terminée', { metadata: {
             service: 'OCRService',
-            operation: 'processSupplierQuote',
-            documentId: documentId,
+                  operation: 'processSupplierQuote',
+                  documentId: documentId,
             contextualScore: contextualResult.contextualScore,
             fieldsImprovedCount: contextualResult.mappingResults.length
-              }
+                }
 
             });
         
@@ -976,10 +976,10 @@ export class OCRService {
         // Continuer avec les champs de base si le moteur contextuel échoue
         logger.warn('[OCRService] Le moteur contextuel a échoué, utilisation des champs de base', { metadata: {
             service: 'OCRService',
-            operation: 'processSupplierQuote',
-            documentId: documentId,
-            error: error instanceof Error ? error.message : String(error)
-                                }
+                  operation: 'processSupplierQuote',
+                  documentId: documentId,
+                  error: error instanceof Error ? error.message : String(error)
+                }
                               });
       }
       
@@ -1076,9 +1076,9 @@ export class OCRService {
         // PDF contient du texte natif
         logger.info('PDF avec texte natif détecté', { metadata: {
             service: 'OCRService',
-            operation: 'processPDF',
+                  operation: 'processPDF',
             textLength: nativeText.length
-              }
+                }
 
             });
         let processedFields = await this.parseAOFields(nativeText);
@@ -1086,8 +1086,8 @@ export class OCRService {
         // AMÉLIORATION CONTEXTUELLE - Moteur intelligent pour AO
         logger.info('Application moteur contextuel pour AO', { metadata: {
             service: 'OCRService',
-            operation: 'processPDF'
-              }
+                  operation: 'processPDF'
+                }
 
             });
         let contextualResult: ContextualOCRResult | undefined;
@@ -1114,19 +1114,19 @@ export class OCRService {
           
           logger.info('Amélioration contextuelle AO terminée', { metadata: {
               service: 'OCRService',
-              operation: 'processPDF',
+                    operation: 'processPDF',
               contextualScore: contextualResult.contextualScore,
               fieldsMappedCount: contextualResult.mappingResults.length
-              }
+                  }
 
             });
         } catch (error) {
           // Continuer avec les champs de base si le moteur contextuel échoue
           logger.warn('[OCRService] Le moteur contextuel a échoué, utilisation des champs de base', { metadata: {
               service: 'OCRService',
-              operation: 'processPDF',
-              error: error instanceof Error ? error.message : String(error)
-                                }
+                    operation: 'processPDF',
+                    error: error instanceof Error ? error.message : String(error)
+                  }
                               });
         }
         
@@ -1150,7 +1150,7 @@ export class OCRService {
       logger.info('PDF scanné détecté, fallback OCR', { metadata: {
           service: 'OCRService',
           operation: 'processPDF'
-                                }
+              }
                               });
       return await this.processWithOCR(pdfBuffer);
     } catch (error) {
@@ -1186,8 +1186,8 @@ export class OCRService {
       if (!pdfParseModule) {
         logger.info('pdf-parse non initialisé, appel initializeModules', { metadata: {
             service: 'OCRService',
-            operation: 'extractNativeText'
-                                }
+                  operation: 'extractNativeText'
+                }
                               });
         await initializeModules();
       }
@@ -1195,8 +1195,8 @@ export class OCRService {
       if (!pdfParseModule) {
         logger.info('Module pdf-parse indisponible, skip extraction texte natif', { metadata: {
             service: 'OCRService',
-            operation: 'extractNativeText'
-                                }
+                  operation: 'extractNativeText'
+                }
                               });
         return ''; // Retourner chaîne vide pour déclencher le fallback OCR
       }
@@ -1623,7 +1623,7 @@ Réponses publiées au plus tard le 22/03/2025
         service: 'OCRService',
         operation: 'detectSpecialCriteria',
         detectedCriteria: Object.entries(criteria).filter(([,v]) => v === true).map(([k]) => k)
-              }
+            }
 
             });
     
@@ -1757,7 +1757,7 @@ Réponses publiées au plus tard le 22/03/2025
     logger.info('Extraction matériaux et couleurs', { metadata: {
         service: 'OCRService',
         operation: 'parseAOFields'
-              }
+            }
 
             });
     const { materials, colors } = this.extractMaterialsAndColors(text);
@@ -1769,7 +1769,7 @@ Réponses publiées au plus tard le 22/03/2025
         operation: 'parseAOFields',
         materialsCount: materials.length,
         colorsCount: colors.length
-              }
+            }
 
             });
     
@@ -1783,10 +1783,8 @@ Réponses publiées au plus tard le 22/03/2025
     {
       operation: 'async',
       service: 'ocrService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
     
     // CORRECTION BLOCKER 2: Calculer et inclure technicalScoring
@@ -1824,19 +1822,19 @@ Réponses publiées au plus tard le 22/03/2025
         
         logger.info('Publication alerte technique', { metadata: {
             service: 'OCRService',
-            operation: 'parseAOFields',
+                  operation: 'parseAOFields',
             aoReference: alertData.aoReference,
             score: alertData.score
-              }
+                }
 
             });
         eventBus.publishTechnicalAlert(alertData);
         
         logger.info('Alerte technique publiée via EventBus', { metadata: {
             service: 'OCRService',
-            operation: 'parseAOFields',
+                  operation: 'parseAOFields',
             aoReference: fields.reference
-              }
+                }
 
             });
       
@@ -1871,7 +1869,7 @@ Réponses publiées au plus tard le 22/03/2025
           operation: 'getTriggeredAlertRules',
           rulesCount: rules.length
 
-      });
+            });
       
       for (const rule of rules) {
         const isTriggered = await this.evaluateAlertRule(rule, materials, specialCriteria);
@@ -1879,10 +1877,10 @@ Réponses publiées au plus tard le 22/03/2025
           triggeredRules.push(rule.id);
           logger.info('Règle alerte déclenchée', { metadata: {
               service: 'OCRService',
-              operation: 'getTriggeredAlertRules',
+                    operation: 'getTriggeredAlertRules',
               ruleId: rule.id,
               severity: rule.severity
-              }
+                  }
 
             });
         }
@@ -1969,13 +1967,13 @@ Réponses publiées au plus tard le 22/03/2025
       if (finalMatch) {
         logger.info('Règle alerte déclenchée', { metadata: {
             service: 'OCRService',
-            operation: 'evaluateAlertRule',
+                  operation: 'evaluateAlertRule',
             ruleId: rule.id,
             materialMatch: materialMatch,
             specialCriteriaMatch: specialCriteriaMatch,
             condition: rule.condition,
             severity: rule.severity
-              }
+                }
 
             });
       }
@@ -2004,7 +2002,7 @@ Réponses publiées au plus tard le 22/03/2025
     logger.info('Utilisation règles par défaut (fallback)', { metadata: {
         service: 'OCRService',
         operation: 'getDefaultTriggeredRules'
-              }
+            }
 
             });
     
@@ -2029,7 +2027,7 @@ Réponses publiées au plus tard le 22/03/2025
         operation: 'getDefaultTriggeredRules',
         triggeredRulesCount: triggeredRules.length,
         triggeredRules: triggeredRules
-              }
+            }
 
             });
     return triggeredRules;
@@ -2058,10 +2056,8 @@ Réponses publiées au plus tard le 22/03/2025
     {
       operation: 'async',
       service: 'ocrService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     
     return dateStr;
   }
@@ -2096,7 +2092,7 @@ Réponses publiées au plus tard le 22/03/2025
       logger.info('Aucun critère spécial détecté, pas de scoring technique', { metadata: {
           service: 'OCRService',
           operation: 'computeTechnicalScoring'
-                                }
+              }
                               });
       return undefined;
     }
@@ -2148,10 +2144,10 @@ Réponses publiées au plus tard le 22/03/2025
       if (result.shouldAlert && aoReference) {
         logger.info('Alerte technique déclenchée (sera publiée dans parseAOFields)', { metadata: {
             service: 'OCRService',
-            operation: 'computeTechnicalScoring',
+                  operation: 'computeTechnicalScoring',
             aoReference: aoReference,
             score: result.totalScore
-              }
+                }
 
             });
       }
@@ -2179,7 +2175,7 @@ Réponses publiées au plus tard le 22/03/2025
     logger.info('Début extraction matériaux et couleurs optimisée', { metadata: {
         service: 'OCRService',
         operation: 'extractMaterialsAndColors'
-              }
+            }
 
             });
     
@@ -2235,11 +2231,11 @@ Réponses publiées au plus tard le 22/03/2025
           
           logger.info('Matériau détecté', { metadata: {
               service: 'OCRService',
-              operation: 'extractMaterialsAndColors',
+                    operation: 'extractMaterialsAndColors',
               material: materialKey,
               context: isMenuiserieContext ? 'menuiserie' : 'general',
               confidence: confidence
-              }
+                  }
 
             });
         }
@@ -2257,11 +2253,10 @@ Réponses publiées au plus tard le 22/03/2025
           finish: associatedFinish.standard || associatedFinish.wood || associatedFinish.special,
           evidences: [match[0]],
           confidence: isMenuiserieContext ? 0.9 : 0.7
-      as unknown)unknown);
-        
-        logger.info('Couleur RAL détectée', { metadata: {
+      as unknown);
+      as unknown);
             service: 'OCRService',
-            operation: 'extractMaterialsAndColors',
+                    operation: 'extractMaterialsAndColors',
             ralCode: ralCode,
             colorName: this.getRalColorName(ralCode)
               }
@@ -2284,9 +2279,9 @@ Réponses publiées au plus tard le 22/03/2025
         
         logger.info('Couleur nommée détectée', { metadata: {
             service: 'OCRService',
-            operation: 'extractMaterialsAndColors',
+                  operation: 'extractMaterialsAndColors',
             colorName: colorName
-              }
+                }
 
             });
       }
@@ -2300,7 +2295,7 @@ Réponses publiées au plus tard le 22/03/2025
         operation: 'extractMaterialsAndColors',
         materialsCount: dedupedMaterials.length,
         colorsCount: dedupedColors.length
-              }
+            }
 
             });
     
@@ -2481,7 +2476,7 @@ Réponses publiées au plus tard le 22/03/2025
           service: 'OCRService',
           operation: 'evaluateMaterialColorRules'
 
-      });
+            });
       
       const rules = await storage.getMaterialColorRules();
       logger.info('Règles matériaux-couleurs récupérées', { metadata: {
@@ -2498,10 +2493,10 @@ Réponses publiées au plus tard le 22/03/2025
         if (triggered) {
           logger.info('Règle matériau-couleur déclenchée', { metadata: {
               service: 'OCRService',
-              operation: 'evaluateMaterialColorRules',
+                    operation: 'evaluateMaterialColorRules',
               ruleId: rule.id,
               ruleMessage: rule.message
-              }
+                  }
 
             });
           
@@ -2531,7 +2526,7 @@ Réponses publiées au plus tard le 22/03/2025
         service: 'OCRService',
         operation: 'evaluateRule',
         ruleId: rule.id
-              }
+            }
 
             });
     
@@ -2562,12 +2557,12 @@ Réponses publiées au plus tard le 22/03/2025
         }
         logger.info('Évaluation correspondance matériaux', { metadata: {
             service: 'OCRService',
-            operation: 'evaluateRule',
+                  operation: 'evaluateRule',
             ruleId: rule.id,
             requiredMaterials: rule.materials,
             detectedMaterials: materialNames,
             match: materialMatch
-              }
+                }
 
             });
       } else {
@@ -2596,11 +2591,11 @@ Réponses publiées au plus tard le 22/03/2025
         }
         logger.info('Évaluation correspondance critères spéciaux', { metadata: {
             service: 'OCRService',
-            operation: 'evaluateRule',
+                  operation: 'evaluateRule',
             ruleId: rule.id,
             requiredCriteria: rule.specialCriteria,
             match: specialCriteriaMatch
-              }
+                }
 
             });
       } else {
@@ -2681,7 +2676,7 @@ Réponses publiées au plus tard le 22/03/2025
           service: 'OCRService',
           operation: 'processSupplierQuoteWithOCR'
 
-      });
+            });
       await this.initialize();
       
       if (!this.tesseractWorker) {
@@ -2795,7 +2790,7 @@ l.bernard@menuiseries-moderne.fr
     logger.info('Parsing champs devis fournisseur', { metadata: {
         service: 'OCRService',
         operation: 'parseSupplierQuoteFields'
-              }
+            }
 
             });
     
@@ -3011,7 +3006,7 @@ l.bernard@menuiseries-moderne.fr
         service: 'OCRService',
         operation: 'extractLineItems',
         lineItemsCount: lineItems.length
-              }
+            }
 
             });
     return lineItems;
@@ -3101,7 +3096,7 @@ l.bernard@menuiseries-moderne.fr
           operation: 'saveSupplierQuoteAnalysis',
           documentId: data.documentId
 
-      });
+            });
       
       const analysisData = {
         documentId: data.documentId,

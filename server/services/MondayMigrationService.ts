@@ -21,7 +21,6 @@ import { generateRealisticJLMData, type MondayAoData, type MondayProjectData } f
 import { validateMondayAoData, validateMondayProjectData, validateAndParseMondayDate } from '../utils/mondayValidator';
 import { ZodError } from 'zod';
 import { MondayMigrationService } from './consolidated/MondayMigrationService';
-import { MondayMigrationService } from './consolidated/MondayMigrationService';
 import { logger } from '../utils/logger';
 
 // ========================================
@@ -131,19 +130,19 @@ export class MondayMigrationService {
     logger.info('SOLUTION FINALE: Utilisation données authentiques Monday.com', { metadata: {
         service: 'MondayMigrationService',
         operation: 'migrateFromRealMondayData' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     logger.info('RÉSOUT problème architect: exports Excel réels au lieu de synthétiques', { metadata: {
         service: 'MondayMigrationService',
         operation: 'migrateFromRealMondayData' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     
     return withErrorHandling(
     async () => {
@@ -159,7 +158,7 @@ export class MondayMigrationService {
           sources: result.filesProcessed,
           aosCount: result.aos.migrated,
           projectsCount: result.projects.migrated
-      });
+            });
       return result;
     },
     {
@@ -169,7 +168,6 @@ export class MondayMigrationService {
     } );
       throw new AppError(`Migration authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
-  }
 
   /**
    * DRY-RUN VALIDATION PRODUCTION FINALE - DONNÉES AUTHENTIQUES MONDAY.COM
@@ -187,11 +185,11 @@ export class MondayMigrationService {
     logger.info('Validation authentique dry-run - exports Excel Monday.com réels', { metadata: {
         service: 'MondayMigrationService',
         operation: 'validateAuthenticMondayDataIntegrity' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     return withErrorHandling(
     async () => {
       // Validation avec service final (données authentiques)
@@ -204,7 +202,7 @@ export class MondayMigrationService {
           filesProcessed: validationResult.filesProcessed,
           errors: validationResult.errors,
           warnings: validationResult.warnings
-      });
+            });
       
       return validationResult;
       
@@ -217,7 +215,6 @@ export class MondayMigrationService {
     } );
       throw new AppError(`Validation authentique échouée: ${error instanceof Error ? error.message : String(error, 500)}`);
     }
-  }
 
   // ========================================
   // MÉTHODES DÉPRÉCIÉES (COMPATIBILITÉ TESTS)
@@ -240,7 +237,7 @@ export class MondayMigrationService {
           service: 'MondayMigrationService',
           operation: 'migrateAosFromAnalysis',
           count
-      });
+            });
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayAoData = generateRealisticJLMData(count, 'aos');
       const result: MigrationResult = {
@@ -274,18 +271,17 @@ service: 'MondayMigrationService',
       metadata: {}
     } );
           }
-        }
         // Log progression
         logger.info('AO Progress', { metadata: {
             service: 'MondayMigrationService',
-            operation: 'migrateAosFromAnalysis',
+                  operation: 'migrateAosFromAnalysis',
             progress: Math.min(i + batchSize, mondayAoData.length),
             total: mondayAoData.length 
-              
-              }
+
+                }
  
               
-            });
+                                                            });
       }
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
@@ -295,21 +291,21 @@ service: 'MondayMigrationService',
           migrated: result.migrated,
           errors: result.errors,
           duration: result.duration 
-              
+
               }
  
               
-            });
+                                                            });
       
       // Log warnings de parsing dates
       if (this.warnings.length > 0) {
         logger.info('Warnings dates (non bloquants)', { metadata: {
             service: 'MondayMigrationService',
-            operation: 'migrateAosFromAnalysis',
+                  operation: 'migrateAosFromAnalysis',
             warningsCount: this.warnings.length,
             warnings: this.warnings.slice(0, 5) 
               
-              }
+                }
  
               
             });
@@ -319,7 +315,6 @@ service: 'MondayMigrationService',
     } finally {
       this.isRunning = false;
     }
-  }
 
   /**
    * @deprecated Utiliser migrateFromAnalyzedData() pour migration production
@@ -338,7 +333,7 @@ service: 'MondayMigrationService',
           service: 'MondayMigrationService',
           operation: 'migrateChantiersFromAnalysis',
           count
-      });
+            });
       // Générer données réalistes basées sur patterns Monday.com analysés
       const mondayProjectData = generateRealisticJLMData(count, 'projects');
       const result: MigrationResult = {
@@ -372,18 +367,17 @@ service: 'MondayMigrationService',
       metadata: {}
     } );
           }
-        }
         // Log progression
         logger.info('Projects Progress', { metadata: {
             service: 'MondayMigrationService',
-            operation: 'migrateChantiersFromAnalysis',
+                  operation: 'migrateChantiersFromAnalysis',
             progress: Math.min(i + batchSize, mondayProjectData.length),
             total: mondayProjectData.length 
-              
-              }
+
+                }
  
               
-            });
+                                                            });
       }
       result.duration = Date.now() - startTime;
       this.migrationHistory.push(result);
@@ -393,18 +387,17 @@ service: 'MondayMigrationService',
           migrated: result.migrated,
           errors: result.errors,
           duration: result.duration 
-              
+
               }
  
               
-            });
+                                                            });
       
       return result;
 
     } finally {
       this.isRunning = false;
     }
-  }
 
   /**
    * Validation post-migration avec contrôles d'intégrité
@@ -413,11 +406,11 @@ service: 'MondayMigrationService',
     logger.info('Validation post-migration en cours', { metadata: {
         service: 'MondayMigrationService',
         operation: 'validateMigration' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     // Compter les entités migrées
     const [aos, projects] = await Promise.all([
       this.storage.getAos(),
@@ -475,11 +468,11 @@ service: 'MondayMigrationService',
         operation: 'validateMigration',
         errors: report.errors.length,
         warnings: report.warnings.length 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     return report;
   }
   /**
@@ -570,13 +563,13 @@ service: 'MondayMigrationService',
         this.warnings.push(`Date parsing warning: ${result.warning}`);
         logger.warn('Date parsing warning', { metadata: {
             service: 'MondayMigrationService',
-            operation: 'parseEstimatedDelayWithWarnings',
+                  operation: 'parseEstimatedDelayWithWarnings',
             warning: result.warning 
-              
-              }
+
+                }
  
               
-            });
+                                                            });
       }
       // Continuer avec null au lieu d'échouer (specs JLM)
       return undefined;
@@ -599,4 +592,3 @@ service: 'MondayMigrationService',
   private resetWarnings(): void {
     this.warnings = [];
   }
-}

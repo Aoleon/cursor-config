@@ -20,9 +20,7 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
   beforeAll(() => {
     // Mock dependencies
     const mockAI = new AIService({} as unknown, {} as unknown);
-    const mockRBAC = new RBACServiceas unknown)unknown);
-    const mockBusinessContext = new BusinessContextServiceas unknown,as unknown, as as unknown) as unknown);
-    mockEventBus = new EventBus();
+    const mockRBAC = new RBACServiceas unknown);
     mockStorage = {} as IStorage;
 
     sqlEngine = new SQLEngineService(
@@ -48,7 +46,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         const queryType = sqlEngine['analyzeQueryType'](query);
         expect(queryType).toBe('kpi_metrics');
       });
-    });
 
     it('should detect List/Details queries', () => {
       const testQueries = [
@@ -62,7 +59,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         const queryType = sqlEngine['analyzeQueryType'](query);
         expect(queryType).toBe('list_details');
       });
-    });
 
     it('should detect Comparison queries', () => {
       const testQueries = [
@@ -76,7 +72,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         const queryType = sqlEngine['analyzeQueryType'](query);
         expect(queryType).toBe('comparisons');
       });
-    });
 
     it('should detect Analytics queries', () => {
       const testQueries = [
@@ -90,7 +85,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         const queryType = sqlEngine['analyzeQueryType'](query);
         expect(queryType).toBe('analytics');
       });
-    });
 
     it('should detect Search queries', () => {
       const testQueries = [
@@ -104,8 +98,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         const queryType = sqlEngine['analyzeQueryType'](query);
         expect(queryType).toBe('search');
       });
-    });
-  });
 
   describe('Adaptive Guardrails Generation', () => {
     it('should generate appropriate guardrails for KPI queries', () => {
@@ -131,7 +123,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
       expect(guardrails).toContain('Maximum 24 months timeframe');
       expect(guardrails).toContain('Include percentage changes');
     });
-  });
 
   describe('Performance Hints Generation', () => {
     it('should generate hints for project+offer joins', () => {
@@ -163,7 +154,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
       const hasGINHint = hints.some(h => h.includes('GIN indexes'));
       expect(hasGINHint).toBe(true);
     });
-  });
 
   describe('SQL Validation Post-Generation', () => {
     it('should validate LIMIT clause for non-aggregated queries', async () => {
@@ -256,7 +246,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
       
       expect(validation.warnings.some(w => w.includes('CTEs'))).toBe(true);
     });
-  });
 
   describe('Example Selection', () => {
     it('should select relevant examples for project KPI queries', () => {
@@ -279,7 +268,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
       expect(examples.length).toBeGreaterThan(0);
       expect(examples.some(e => e.includes('supplier'))).toBe(true);
     });
-  });
 
   describe('Prompt Quality Metrics', () => {
     it('should track prompt generation metrics', async () => {
@@ -287,7 +275,6 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
         mockEventBus.subscribe('sql_engine.prompt_metrics', (data) => {
           resolve(data);
         });
-      });
 
       await sqlEngine['trackPromptQuality']('kpi_metrics', 250, true, 0);
       
@@ -297,5 +284,3 @@ describe('SQLEngineService - Adaptive Prompts Tests', () => {
       expect(event.success).toBe(true);
       expect(event.retryCount).toBe(0);
     });
-  });
-});

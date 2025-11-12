@@ -48,7 +48,6 @@ class TestRepository extends BaseRepository<unknown, unknown, unknown, unknown> 
   async exists(id: string, tx?: DrizzleTransaction): Promise<boolean> {
     return false;
   }
-}
 
 describe('BaseRepository - normalizeId()', () => {
   let repository: TestRepository;
@@ -106,15 +105,11 @@ describe('BaseRepository - normalizeId()', () => {
         const result = repository.testNormalizeId(uuid);
         expect(result).toBe(uuid.toLowerCase());
       });
-    });
-  });
 
   describe('❌ Cas invalides - Type incorrect', () => {
     it('devrait rejeter un number', () => {
       expect(() => {
-        repository.testNormalizeId(as unknown)unknown);
-      }).toThrow(DatabaseError);
-      
+        repository.testNormalizeId(as unknown);
       expect(() => {
         repository.testNormalizas unknown) as unknown);
       }).toThrow(/Invalid ID type for TestRepository/);
@@ -159,7 +154,6 @@ describe('BaseRepository - normalizeId()', () => {
         repository.testNormalizeId([as unknown)0as unknownnunknown)41d4-a716-446655440000'] as any);
       }).toThrow(DatabaseError);
     });
-  });
 
   describe('❌ Cas invalides - Format UUID incorrect', () => {
     it('devrait rejeter une chaîne vide', () => {
@@ -222,7 +216,6 @@ describe('BaseRepository - normalizeId()', () => {
           repository.testNormalizeId(invalidUuid);
         }).toThrow(DatabaseError);
       });
-    });
 
     it('devrait rejeter un UUID avec caractères non-hexadécimaux', () => {
       const invalidChars = [
@@ -237,7 +230,6 @@ describe('BaseRepository - normalizeId()', () => {
           repository.testNormalizeId(invalidUuid);
         }).toThrow(DatabaseError);
       });
-    });
 
     it('devrait rejeter une chaîne aléatoire', () => {
       const randomStrings = [
@@ -252,8 +244,6 @@ describe('BaseRepository - normalizeId()', () => {
           repository.testNormalizeId(str);
         }).toThrow(DatabaseError);
       });
-    });
-  });
 
   describe('Messages d\'erreur detailles', () => {
     it('devrait inclure le nom du repository dans le message d\'erreur', () => {
@@ -292,7 +282,6 @@ describe('BaseRepository - normalizeId()', () => {
         repository.testNormalizeId('invalid-format');
       }).toThrow(/lowercase hex/);
     });
-  });
 
   describe('🎯 Edge cases', () => {
     it('devrait gérer correctement les tabulations', () => {
@@ -324,5 +313,3 @@ describe('BaseRepository - normalizeId()', () => {
       expect(firstNormalization).toBe(secondNormalization);
       expect(firstNormalization).toBe('550e8400-e29b-41d4-a716-446655440000');
     });
-  });
-});

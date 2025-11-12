@@ -78,7 +78,7 @@ export class UnitOfWork {
     logger.info('Démarrage d\'une Unit of Work', { metadata: {
         module: 'UnitOfWork',
         operation: 'execute'
-              }
+            }
 
             });
 
@@ -104,12 +104,9 @@ export class UnitOfWork {
     {
       operation: 'begin',
       service: 'UnitOfWork',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
-}
 
 /**
  * Helper pour exécuter une opération avec Unit of Work

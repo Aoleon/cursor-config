@@ -79,12 +79,12 @@ export async function withRetry<T>(
       
       if (attempt > 1) {
         logger.info('Retry successful', { metadata: {
-            module: 'RetryService',
-            operation: 'withRetry',
+                  module: 'RetryService',
+                  operation: 'withRetry',
             attempt,
             totalAttempts: opts.maxAttempts
 
-      });
+              });
       }
       
       return result;
@@ -93,19 +93,17 @@ export async function withRetry<T>(
     {
       operation: 'isRetryableError',
       service: 'retry-service',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       
       // Vérifier si l'erreur est retryable
       if (!isRetryableError(lastError, opts.retryableErrors)) {
         logger.warn('Non-retryable error encountered', { metadata: {
-            module: 'RetryService',
-            operation: 'withRetry',
-            error: lastError.message,
+                  module: 'RetryService',
+                  operation: 'withRetry',
+                  error: lastError.message,
             attempt
-              }
+                }
 
             });
         throw lastError;
@@ -131,7 +129,6 @@ export async function withRetry<T>(
       
       await sleep(delayMs);
     }
-  }
   
   // TypeScript safety - ne devrait jamais arriver ici
   throw lastError!;
@@ -146,7 +143,6 @@ export class RetryService {
   async execute<T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T> {
     return withRetry(fn, { ...this.defaultOptions, ...options });
   }
-}
 
 // Export instance par défaut
 export const retryService = new RetryService();

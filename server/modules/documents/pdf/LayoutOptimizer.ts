@@ -108,12 +108,9 @@ export class LayoutOptimizer {
     {
       operation: 'Logger',
       service: 'LayoutOptimizer',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
-  }
 
   /**
    * Merge options with defaults
@@ -371,7 +368,6 @@ export class LayoutOptimizer {
           page-break-inside: avoid;
           margin-bottom: ${grid.gap};
         }
-      }
     `;
 
     // Inject grid CSS
@@ -471,7 +467,6 @@ export class LayoutOptimizer {
         .pdf-table thead {
           display: table-header-group;
         }
-      }
     `;
 
     if (html.includes('</style>')) {
@@ -543,4 +538,3 @@ export class LayoutOptimizer {
 
     return dimensions[pageSize] || dimensions.A4;
   }
-}

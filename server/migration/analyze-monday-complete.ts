@@ -146,14 +146,12 @@ function analyzeMonday(): CompleteAnalysis {
               // Initialiser les infos de colonne
               if (!boardAnalysis.columns.has(headerName)) {
                 boardAnalysis.columns.set(headerName, {
-                  name: headerName,
+                name: headerName,
                   type: 'unknown',
                   uniqueValues: new Set(),
                   sampleValues: [],
                 });
               }
-            }
-          }
           continue;
         }
 
@@ -217,7 +215,7 @@ function analyzeMonday(): CompleteAnalysis {
               let columnInfo = boardAnalysis.columns.get(headerName);
               if (!columnInfo) {
                 columnInfo = {
-                  name: headerName,
+                name: headerName,
                   type: columnType,
                   uniqueValues: new Set(),
                   sampleValues: [],
@@ -270,7 +268,6 @@ function analyzeMonday(): CompleteAnalysis {
                 const client = extractClientFromItemName(strValue);
                 if (client) analysis.clients.add(client);
               }
-            }
 
             colIndex++;
           }
@@ -282,15 +279,12 @@ function analyzeMonday(): CompleteAnalysis {
             }
             analysis.globalColumns.get(colName)!.add(colInfo.type);
           }
-        }
-      }
 
       // Sauvegarder l'analyse du board
       analysis.boards.set(boardName, boardAnalysis);
       analysis.totalBoards++;
       analysis.totalItems += boardAnalysis.itemCount;
     }
-  }
 
   return analysis;
 }
@@ -335,7 +329,6 @@ function generateAnalysisReport(analysis: CompleteAnalysis): unknown {
       if (report.globalColumns[colName]) {
         report.globalColumns[colName].boardsUsing++;
       }
-    }
 
     report.boards[boardName] = {
       fileName: boardData.fileName,
@@ -466,7 +459,6 @@ function generateMondayToSaxiumMapping(analysis: CompleteAnalysiunknown any {
         columns: Array.from(data.columns.keys()),
       };
     }
-  }
 
   // Mapping des colonnes
   const columnMapping: { [key: string]: string } = {
@@ -495,7 +487,6 @@ function generateMondayToSaxiumMapping(analysis: CompleteAnalysiunknown any {
           .map(b => b.boardName),
       };
     }
-  }
 
   // Mapping des statuts
   const statusMapping: { [key: string]: string } = {
@@ -514,7 +505,6 @@ function generateMondayToSaxiumMapping(analysis: CompleteAnalysiunknown any {
     if (analysis.globalStatuses.has(mondayStatus)) {
       mapping.statusMappings[mondayStatus] = saxiumStatus;
     }
-  }
 
   // Recommandations
   mapping.recommendations = [

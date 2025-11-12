@@ -37,7 +37,7 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
           route: '/auth/microsoft/callback',
           userId: (req.user as unknown as { id?: string })?.id,
           email: (req.user as unknown as { email?: string })?.email
-              }
+                }
 
             });
 
@@ -55,14 +55,13 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
       if (err) {
         logger.error('[MicrosoftAuth] Error during logout', { metadata: { error: err.message 
 
-              }
+                }
  
 
             });
       }
       res.redirect('/login');
     });
-  });
 
   return router;
 }

@@ -56,7 +56,7 @@ export class MemoryCacheAdapter implements ICacheAdapter {
         operation: 'constructor',
         cleanupIntervalMs 
               
-              }
+            }
  
               
             });
@@ -91,11 +91,11 @@ export class MemoryCacheAdapter implements ICacheAdapter {
     logger.info('[MemoryCacheAdapter] Cache vidé', { metadata: {
         service: 'MemoryCacheAdapter',
         operation: 'flush' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
   }
   async keys(): Promise<string[]> {
     return Array.from(this.cache.keys());
@@ -115,7 +115,6 @@ export class MemoryCacheAdapter implements ICacheAdapter {
         this.cache.delete(key);
         cleanedCount++;
       }
-    }
 
     if (cleanedCount > 0) {
       logger.debug('[MemoryCacheAdapter] Nettoyage cache', { metadata: {
@@ -123,19 +122,17 @@ export class MemoryCacheAdapter implements ICacheAdapter {
           operation: 'cleanup',
           cleanedCount,
           remainingSize: this.cache.size 
-              
+
               }
  
               
-            });
+                                                            });
     }
-  }
 
   destroy(): void {
     clearInterval(this.cleanupInterval);
     this.cache.clear();
   }
-}
 
 // ========================================
 // CACHE STATS
@@ -166,11 +163,11 @@ export class CacheService {
         service: 'CacheService',
         operation: 'constructor',
         adapterType: adapter ? 'custom' : 'MemoryCacheAdapter' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
   }
   /**
    * Build normalized cache key
@@ -202,26 +199,26 @@ export class CacheService {
         this.hits++;
         logger.debug('[CacheService] Cache hit', { metadata: {
             service: 'CacheService',
-            operation: 'get',
+                  operation: 'get',
             key,
             hit: true 
-              
-              }
+
+                }
  
               
-            });
+                                                            });
       } else {
         this.misses++;
         logger.debug('[CacheService] Cache miss', { metadata: {
             service: 'CacheService',
-            operation: 'get',
+                  operation: 'get',
             key,
             hit: false 
-              
-              }
+
+                }
  
               
-            });
+                                                            });
       }
 
       return value;
@@ -231,15 +228,14 @@ export class CacheService {
           operation: 'get',
           key,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       this.misses++;
       return null;
     }
-  }
 
   /**
    * Set value in cache with TTL
@@ -264,14 +260,13 @@ export class CacheService {
           operation: 'set',
           key,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Invalidate specific cache key
@@ -295,14 +290,13 @@ export class CacheService {
           operation: 'invalidate',
           key,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Invalidate all keys matching pattern
@@ -323,25 +317,24 @@ export class CacheService {
           operation: 'invalidatePattern',
           pattern,
           invalidatedCount: matchingKeys.length 
-              
+
               }
  
               
-            });
+                                                            });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de l\'invalidation du pattern', { metadata: {
           service: 'CacheService',
           operation: 'invalidatePattern',
           pattern,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Flush all cache
@@ -355,24 +348,23 @@ export class CacheService {
       logger.info('[CacheService] Cache complètement vidé', { metadata: {
           service: 'CacheService',
           operation: 'flush' 
-              
+
               }
  
               
-            });
+                                                            });
     } catch (error) {
       logger.error('[CacheService] Erreur lors du vidage du cache', { metadata: {
           service: 'CacheService',
           operation: 'flush',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw error;
     }
-  }
 
   /**
    * Get cache statistics
@@ -396,11 +388,11 @@ export class CacheService {
           service: 'CacheService',
           operation: 'getStats',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       // Return empty stats on error
       return {
         hits: this.hits,
@@ -410,7 +402,6 @@ export class CacheService {
         keys: []
       };
     }
-  }
 
   /**
    * Setup EventBus integration for automatic cache invalidation
@@ -484,11 +475,11 @@ export class CacheService {
         service: 'CacheService',
         operation: 'warmupCache',
         functionsCount: warmupFunctions.length 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     const results = await Promise.allSettled(
       warmupFunctions.map(fn => fn())
     );
@@ -500,11 +491,11 @@ export class CacheService {
         successCount,
         failureCount,
         totalFunctions: warmupFunctions.length 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
 
     if (failureCount > 0) {
       const errors = results
@@ -521,8 +512,6 @@ export class CacheService {
               
             });
     }
-  }
-}
 
 // ========================================
 // ADAPTER FACTORY
@@ -554,25 +543,24 @@ export function createCacheAdapter(): ICacheAdapter {
           operation: 'createCacheAdapter',
           adapter: 'Redis',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       // Fall back to memory adapter
     }
-  }
 
   logger.info('[CacheService] Creating MemoryCacheAdapter', { metadata: {
       service: 'CacheService',
       operation: 'createCacheAdapter',
       adapter: 'Memory',
       reason: redisUrl ? 'Redis connection failed' : 'No REDIS_URL configured' 
-              
-              }
+
+          }
  
               
-            });
+                                                            });
   return new MemoryCacheAdapter();
 }
 // ========================================

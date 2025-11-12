@@ -24,15 +24,14 @@ export function registerTeamsRoutes(app: Express) {
       with: {
         teamLeader: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
           },
-        },
         members: {
           columns: {
-            id: true,
+                id: true,
             role: true,
             weeklyHours: true,
             contractType: true,
@@ -52,11 +51,8 @@ export function registerTeamsRoutes(app: Express) {
                 email: true,
                 role: true,
               },
-            },
-          },
           where: eq(teamMembers.isActive, true),
         },
-      },
       orderBy: [asc(teams.name)],
     });
 
@@ -64,9 +60,7 @@ export function registerTeamsRoutes(app: Express) {
     const teamsWithStats = allTeams.map((team: unknown) => ({
       ...team,
       memberCount: team.members ? team.members.length : 0,
-      internalMembers: team.members ? team.members.filte: unknown)unknown) => m.userId !== null).length : 0,
-      externalMembers: team.members ? team.members.f: unknown)unknown)unknown) => m.userId === null).length : 0,
-    }));
+      internalMembers: team.members ? team.members.filte: unknown) => m.userId !== null).length : 0,
 
     logger.info('[Teams] Équipes récupérées avec succès', { 
       count: teamsWithStats.length 
@@ -91,21 +85,18 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Récupération équipe spécifique', { 
       teamId,
-      userId: (req.uas unknown)unknown)any)?.id 
-    });
-
+      userId: (req.uas unknown)any)?.id 
     const team = await db.query.teams.findFirst({
       where: eq(teams.id, teamId),
       with: {
         teamLeader: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
             role: true,
           },
-        },
         members: {
           with: {
             user: {
@@ -116,11 +107,8 @@ export function registerTeamsRoutes(app: Express) {
                 email: true,
                 role: true,
               },
-            },
-          },
           orderBy: [asc(teamMembers.role), asc(teamMembers.joinedAt)],
         },
-      },
     });
 
     if (!team) {
@@ -168,7 +156,6 @@ export function registerTeamsRoutes(app: Express) {
       if (!leader) {
         throw new ValidationError(`Chef d'équipe ${teamData.teamLeaderId} non trouvé`);
       }
-    }
 
     const [newTeam] = await db.insert(teams).values(teamData).returning();
 
@@ -178,12 +165,11 @@ export function registerTeamsRoutes(app: Express) {
       with: {
         teamLeader: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
           },
-        },
         members: true,
       },
     });
@@ -212,9 +198,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Modification équipe', { 
       teamId,
-      userIdas unknown)unknown)unknownnown any)?.id 
-    });
-
+      userIdas unknown)unknownnown any)?.id 
     const validationResult = insertTeamSchema.partial().safeParse(req.body);
     
     if (!validationResult.success) {
@@ -241,7 +225,6 @@ export function registerTeamsRoutes(app: Express) {
       if (!leader) {
         throw new ValidationError(`Chef d'équipe ${teamData.teamLeaderId} non trouvé`);
       }
-    }
 
     const [updatedTeam] = await db
       .update(teams)
@@ -258,12 +241,11 @@ export function registerTeamsRoutes(app: Express) {
       with: {
         teamLeader: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
           },
-        },
         members: {
           with: {
             user: {
@@ -273,14 +255,10 @@ export function registerTeamsRoutes(app: Express) {
                 lastName: true,
                 email: true,
               },
-            },
-          },
-        },
-      },
     });
 
     logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId 
-              }
+            }
  
             });
 
@@ -303,9 +281,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Suppression (désactivation) équipe', { 
       teamId,
-      usas unknown)unknown)unknownnownr as any)?.id 
-    });
-
+      usas unknown)unknownnownr as any)?.id 
     const existingTeam = await db.query.teams.findFirst({
       where: eq(teams.id, teamId),
     });
@@ -363,9 +339,7 @@ export function registerTeamsRoutes(app: Express) {
     
     logger.info('[Teams] Ajout membre équipe', { 
       teamId,
-    as unknown)unknown)unknownnown.user as any)?.id 
-    });
-    
+    as unknown)unknownnown.user as any)?.id 
     const validationResult = insertTeamMemberSchema.extend({
       teamId: z.string(),
     }).safeParse({
@@ -386,7 +360,6 @@ export function registerTeamsRoutes(app: Express) {
         members: {
           where: eq(teamMembers.isActive, true),
         },
-      },
     });
 
     if (!team) {
@@ -420,7 +393,6 @@ export function registerTeamsRoutes(app: Express) {
       if (existingMembership) {
         throw new ValidationError("L'utilisateur fait déjà partie de cette équipe");
       }
-    }
 
     const [newMember] = await db.insert(teamMembers).values(memberData).returning();
 
@@ -430,20 +402,17 @@ export function registerTeamsRoutes(app: Express) {
       with: {
         user: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
             role: true,
           },
-        },
         team: {
           columns: {
-            id: true,
-            name: true,
+              id: true,
+              name: true,
           },
-        },
-      },
     });
 
     logger.info('[Teams] Membre ajouté avec succès', { 
@@ -471,9 +440,7 @@ export function registerTeamsRoutes(app: Express) {
     logger.info('[Teams] Modification membre équipe', { 
       teamId,
       memberId,
-as unknown)unknown)unknownnown(req.user as any)?.id 
-    });
-    
+as unknown)unknownnown(req.user as any)?.id 
     const validationResult = insertTeamMemberSchema.partial().safeParse(req.body);
     
     if (!validationResult.success) {
@@ -509,25 +476,22 @@ as unknown)unknown)unknownnown(req.user as any)?.id
       with: {
         user: {
           columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
           },
-        },
         team: {
           columns: {
-            id: true,
-            name: true,
+              id: true,
+              name: true,
           },
-        },
-      },
     });
 
     logger.info('[Teams] Membre modifié avec succès', { metadata: { teamId }, memberId });
 
     res.json(member);
-        }
+            }
 
                   }
 
@@ -545,9 +509,7 @@ as unknown)unknown)unknownnown(req.user as any)?.id
     
     logger.info('[Teams] Retrait membre équipe', { 
       teamId,
-      memberas unknown)unknown)unknownnownId: (req.user as any)?.id 
-    });
-
+      memberas unknown)unknownnownId: (req.user as any)?.id 
     const existingMember = await db.query.teamMembers.findFirst({
       where: and(
         eq(teamMembers.id, memberId),
@@ -574,7 +536,7 @@ as unknown)unknown)unknownnown(req.user as any)?.id
     res.json({ message: "Membre retiré de l'équipe avec succès" 
 
           });
-        }
+            }
 
                   }
 
@@ -591,9 +553,7 @@ as unknown)unknown)unknownnown(req.user as any)?.id
     const teamId = req.params.teamId;
     
     logger.info('[Teams] Récupération utilisateurs disponibles', { 
-      as unknown)unknown)unknownnownuserId: (req.user as any)?.id 
-    });
-
+      as unknown)unknownnownuserId: (req.user as any)?.id 
     // Récupérer tous les utilisateurs actifs
     const allUsers = await db.query.users.findMany({
       columns: {

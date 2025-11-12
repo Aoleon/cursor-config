@@ -114,8 +114,8 @@ export class MondayDataService {
     this.masterEntityExtractor = new MasterEntityExtractor();
 
     logger.info('MondayDataService initialized', {
-      service: 'MondayDataService',
-      metadata: { operation: 'constructor' 
+      metadata: {
+        module: 'MondayDataService', { operation: 'constructor' 
 
           });
   }
@@ -214,12 +214,12 @@ service: 'MondayDataService',
         source: 'monday.com',
         mondayItemId: item.id,
         boardId: mapping.mondayBoardId
-        }
+              }
             );
 
     logger.info('Projet créé depuis Monday', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'importItemAsProject',
         projectId: project.id,
         mondayItemId: item.id
@@ -255,12 +255,12 @@ service: 'MondayDataService',
         source: 'monday.com',
         mondayItemId: item.id,
         boardId
-        }
+              }
             );
 
     logger.info('AO créé depuis Monday', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'importItemAsAO',
         aoId: ao.id,
         mondayItemId: item.id
@@ -283,8 +283,8 @@ service: 'MondayDataService',
     const supplier = await this.storage.createSupplier(supplierData);
 
     logger.info('Fournisseur créé depuis Monday', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'importItemAsSupplier',
         supplierId: supplier.id,
         mondayItemId: item.id
@@ -309,8 +309,8 @@ service: 'MondayDataService',
     const correlationId = getCorrelationId();
     
     logger.info('[MondayDataService] Sync depuis Monday', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'syncFromMonday',
         boardId,
         itemId,
@@ -327,9 +327,9 @@ service: 'MondayDataService',
       
       if (changeType === 'delete') {
         logger.info('[MondayDataService] Suppression détectée', {
-          service: 'MondayDataService',
-          metadata: {
-            operation: 'syncFromMonday',
+      metadata: {
+        module: 'MondayDataService', {
+                operation: 'syncFromMonday',
             itemId,
             entityType,
             changeType: 'delete'
@@ -421,13 +421,13 @@ service: 'MondayDataService',
             mondayId: itemId,
             boardId,
             changeType
-        }
+                  }
                 );
       }
       
       logger.info('[MondayDataService] Sync terminée avec succès', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'syncFromMonday',
           entityType,
           entityId: createdId,
@@ -463,8 +463,8 @@ service: 'MondayDataService',
     const correlationId = getCorrelationId();
     
     logger.info('[MondayDataService] Début export vers Monday', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'exportToMonday',
         entityType,
         entityId,
@@ -493,8 +493,8 @@ service: 'MondayDataService',
     if (!project) {
       const error = new Error(`Project ${projectId} not found`);
       logger.error('[MondayDataService] Projet non trouvé', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportProject',
           projectId,
           correlationId
@@ -505,8 +505,8 @@ service: 'MondayDataService',
 
     if (project.mondayId && !options.updateIfExists) {
       logger.info('[MondayDataService] Projet déjà exporté', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportProject',
           projectId,
           mondayId: project.mondayId,
@@ -549,9 +549,9 @@ service: 'MondayDataService',
     const mondayItem = await withRetry(
       async () => {
         logger.info('[MondayDataService] Création item Monday', {
-          service: 'MondayDataService',
-          metadata: {
-            operation: 'exportProject.createItem',
+      metadata: {
+        module: 'MondayDataService', {
+                operation: 'exportProject.createItem',
             projectId,
             projectName: project.name,
             correlationId
@@ -576,8 +576,8 @@ service: 'MondayDataService',
     if (!mondayItem || !mondayItem.id) {
       const error = new Error('Monday.com item creation failed - no ID returned');
       logger.error('[MondayDataService] Échec création item', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportProject',
           projectId,
           correlationId,
@@ -590,8 +590,8 @@ service: 'MondayDataService',
     await this.storage.updateProjectMondayId(projectId, mondayItem.id);
     
     logger.info('[MondayDataService] Projet exporté avec succès', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'exportProject',
         projectId,
         mondayId: mondayItem.id,
@@ -614,8 +614,8 @@ service: 'MondayDataService',
     if (!ao) {
       const error = new Error(`AO ${aoId} not found`);
       logger.error('[MondayDataService] AO non trouvé', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportAO',
           aoId,
           correlationId
@@ -626,8 +626,8 @@ service: 'MondayDataService',
 
     if (ao.mondayId && !options.updateIfExists) {
       logger.info('[MondayDataService] AO déjà exporté', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportAO',
           aoId,
           mondayId: ao.mondayId,
@@ -679,9 +679,9 @@ service: 'MondayDataService',
     const mondayItem = await withRetry(
       async () => {
         logger.info('[MondayDataService] Création item Monday pour AO', {
-          service: 'MondayDataService',
-          metadata: {
-            operation: 'exportAO.createItem',
+      metadata: {
+        module: 'MondayDataService', {
+                operation: 'exportAO.createItem',
             aoId,
             aoReference: ao.reference,
             correlationId
@@ -706,8 +706,8 @@ service: 'MondayDataService',
     if (!mondayItem || !mondayItem.id) {
       const error = new Error('Monday.com item creation failed - no ID returned');
       logger.error('[MondayDataService] Échec création item AO', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'exportAO',
           aoId,
           correlationId,
@@ -720,8 +720,8 @@ service: 'MondayDataService',
     await this.storage.updateAOMondayId(aoId, mondayItem.id);
     
     logger.info('[MondayDataService] AO exporté avec succès', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'exportAO',
         aoId,
         mondayId: mondayItem.id,
@@ -744,8 +744,8 @@ service: 'MondayDataService',
     const correlationId = getCorrelationId();
     
     logger.info('[MondayDataService] Début mise à jour colonnes item', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'updateItemColumns',
         boardId,
         itemId,
@@ -782,8 +782,8 @@ service: 'MondayDataService',
     if (!result || !result.id) {
       const error = new Error('Monday.com column update failed - no ID returned');
       logger.error('[MondayDataService] Échec mise à jour colonnes', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'updateItemColumns',
           boardId,
           itemId,
@@ -795,8 +795,8 @@ service: 'MondayDataService',
     }
 
     logger.info('[MondayDataService] Colonnes mises à jour avec succès', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'updateItemColumns',
         boardId,
         itemId,
@@ -820,8 +820,8 @@ service: 'MondayDataService',
     const BOARD_ID = '3946257560';
     
     logger.info('[MondayDataService] Début sync nouveaux champs AO', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'syncAONewFields',
         aoId,
         correlationId
@@ -832,8 +832,8 @@ service: 'MondayDataService',
     
     if (!ao) {
       logger.warn('[MondayDataService] AO non trouvé', {
-        service: 'MondayDataService',
-        metadata: { operation: 'syncAONewFields', aoId, correlationId 
+      metadata: {
+        module: 'MondayDataService', { operation: 'syncAONewFields', aoId, correlationId 
 
             });
       return null;
@@ -841,8 +841,8 @@ service: 'MondayDataService',
 
     if (!ao.mondayId) {
       logger.warn('[MondayDataService] AO sans mondayId - impossible de synchroniser', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'syncAONewFields',
           aoId,
           reference: ao.reference,
@@ -868,8 +868,8 @@ service: 'MondayDataService',
 
     if (Object.keys(columnValues).length === 0) {
       logger.info('[MondayDataService] Aucun nouveau champ à synchroniser', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'syncAONewFields',
           aoId,
           mondayId: ao.mondayId,
@@ -882,8 +882,8 @@ service: 'MondayDataService',
     await this.updateItemColumns(BOARD_ID, ao.mondayId, columnValues);
     
     logger.info('[MondayDataService] Nouveaux champs AO synchronisés avec succès', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'syncAONewFields',
         aoId,
         mondayId: ao.mondayId,
@@ -918,8 +918,8 @@ service: 'MondayDataService',
     dia: unknown[]s: unknown[];
   }> {
     logger.info('Analyse Monday item pour opportunités éclatement', {
-      service: 'MondayDataService',
-      metadata: { operation: 'analyzeItem', mondayItemId, boardId 
+      metadata: {
+        module: 'MondayDataService', { operation: 'analyzeItem', mondayItemId, boardId 
 
           });
 
@@ -970,8 +970,8 @@ service: 'MondayDataService',
     const mondayItemId = isId ? mondayItemOrId : mondayItemOrId.id;
     
     logger.info('Démarrage éclatement Monday item', {
-      service: 'MondayDataService',
-      metadata: { 
+      metadata: {
+        module: 'MondayDataService', { 
         operation: 'splitData',
         mondayItemId, 
         boardId, 
@@ -1010,8 +1010,8 @@ service: 'MondayDataService',
 
       await this.storage.transaction(async (tx) => {
         logger.info('Étape 1: Extraction AO de base', {
-          service: 'MondayDataService',
-          metadata: { operation: 'splitData.step1', mondayItemId 
+      metadata: {
+        module: 'MondayDataService', { operation: 'splitData.step1', mondayItemId 
 
               });
 
@@ -1033,7 +1033,7 @@ service: 'MondayDataService',
           logger.error(errorMsg, {
             service: 'MondayDataService',
             metadata: {
-              operation: 'splitData',
+                      operation: 'splitData',
               mondayItemId,
               missingFields: missingRequiredFields,
               extractedData: aoData
@@ -1059,7 +1059,7 @@ service: 'MondayDataService',
           const cleanedAoData = this.cleanEnumFields(aoData);
           
           const aoDataWithDefaults = {
-            reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
+                      reference: cleanedAoData.reference || existingAO.reference || `AO-MONDAY-${mondayItemId}`,
             menuiserieType: cleanedAoData.menuiserieType || existingAO.menuiserieType || 'autre' as const,
             source: cleanedAoData.source || existingAO.source || 'other' as const,
             mondayItemId,
@@ -1074,12 +1074,12 @@ service: 'MondayDataService',
           result.aoUpdated = true;
           
           logger.info('AO existant mis à jour depuis Monday', {
-            service: 'MondayDataService',
-            metadata: { 
-              operation: 'splitData',
-              aoId: existingAO.id, 
+      metadata: {
+        module: 'MondayDataService', { 
+                operation: 'splitData',
+                aoId: existingAO.id,
               mondayItemId,
-              reference: currentAO.reference
+                reference: currentAO.reference
 
                 });
           
@@ -1092,7 +1092,7 @@ service: 'MondayDataService',
           const cleanedAoData = this.cleanEnumFields(aoData);
           
           const aoDataWithDefaults = {
-            reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
+                reference: cleanedAoData.reference || `AO-MONDAY-${mondayItemId}`,
             menuiserieType: cleanedAoData.menuiserieType || 'autre' as const,
             source: cleanedAoData.source || 'other' as const,
             mondayItemId,
@@ -1104,15 +1104,15 @@ service: 'MondayDataService',
           result.aoCreated = true;
 
           logger.info('AO créé', {
-            service: 'MondayDataService',
-            metadata: { 
-              operation: 'splitData',
-              aoId: currentAO.id, 
+      metadata: {
+        module: 'MondayDataService', { 
+                operation: 'splitData',
+                aoId: currentAO.id,
               mondayItemId,
-              reference: currentAO.reference
+                reference: currentAO.reference
 
                 });
-        }
+              }
 
         logger.info('Étape 1.5: Extraction maîtres d\'ouvrage/œuvre', {
           service: 'MondayDataService',
@@ -1210,8 +1210,8 @@ service: 'MondayDataService',
           const dateResult = validateAndParseMondayDate(value as string);
           if (dateResult.warning && !options.skipInvalidFields) {
             logger.warn('[MondayDataService] Date validation warning', {
-              service: 'MondayDataService',
-              metadata: {
+      metadata: {
+        module: 'MondayDataService', {
                 operation: 'transformItem',
                 field: columnMapping.saxiumField,
                 warning: dateResult.warning
@@ -1240,8 +1240,8 @@ service: 'MondayDataService',
     );
 
     logger.info('Preview import généré', {
-      service: 'MondayDataService',
       metadata: {
+        module: 'MondayDataService', {
         operation: 'previewImport',
         boardId,
         boardName: boardData.board.name,
@@ -1438,8 +1438,8 @@ service: 'MondayDataService',
     
     if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
       logger.warn('[Conflict] Saxium plus récent que Monday', {
-        service: 'MondayDataService',
-        metadata: {
+      metadata: {
+        module: 'MondayDataService', {
           operation: 'handleConflict',
           entityType,
           entityId: entity.id,

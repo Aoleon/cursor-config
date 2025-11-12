@@ -49,7 +49,6 @@ describe('Workload Simulation Routes Integration', () => {
       expect(response.body).toHaveProperty('beWorkload');
       expect(response.body).toHaveProperty('fieldWorkload');
     });
-  });
 
   describe('GET /api/workload/current', () => {
     it('should return current workload', async () => {
@@ -62,6 +61,4 @@ describe('Workload Simulation Routes Integration', () => {
 
       expect(response.body).toHaveProperty('period');
     });
-  });
-});
 

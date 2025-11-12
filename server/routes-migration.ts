@@ -63,7 +63,7 @@ migrationRoutes.post('/aos-planning',
 
     logger.info('Démarrage migration AO_Planning', { metadata: { route: '/api/migration/aos-planning', count, dryRun 
 
-              }
+            }
  
 
             });
@@ -92,7 +92,7 @@ migrationRoutes.post('/aos-planning',
     const result = await mondayMigrationService.migrateAosFromAnalysis(count);
     
     logger.info('Migration AO_Planning terminée', { metadata: { route: '/api/migration/aos-planning', migrated: result.migrated, errors: result.errors 
-              }
+            }
  
             });
 
@@ -126,7 +126,7 @@ migrationRoutes.post('/chantiers',
 
     logger.info('Démarrage migration CHANTIERS', { metadata: { route: '/api/migration/chantiers', count, dryRun 
 
-              }
+            }
  
 
             });
@@ -155,7 +155,7 @@ migrationRoutes.post('/chantiers',
     const result = await mondayMigrationService.migrateChantiersFromAnalysis(count);
     
     logger.info('Migration CHANTIERS terminée', { metadata: { route: '/api/migration/chantiers', migrated: result.migrated, errors: result.errors 
-              }
+            }
  
             });
 
@@ -187,7 +187,7 @@ migrationRoutes.post('/production-final/full',
   asyncHandler(async (req, res) => {
     logger.info('Migration données authentiques Monday.com - démarrage', { metadata: { route: '/api/migration/production-final/full', source: 'authentic_monday_exports' 
 
-              }
+            }
  
 
             });
@@ -204,7 +204,7 @@ migrationRoutes.post('/production-final/full',
         aosMigrated: result.aos.migrated,
         projectsMigrated: result.projects.migrated,
         duration: result.duration
-              }
+            }
 
             });
     
@@ -250,7 +250,7 @@ migrationRoutes.post('/production-final/dry-run',
   asyncHandler(async (req, res) => {
     logger.info('Validation authentique Monday.com - démarrage', { metadata: { route: '/api/migration/production-final/dry-run', source: 'authentic_monday_exports' 
 
-              }
+            }
  
 
             });
@@ -268,7 +268,7 @@ migrationRoutes.post('/production-final/dry-run',
         warnings: validationResult.warnings,
         validationRate: validationResult.validLines / validationResult.totalLines,
         readyForProduction: validationResult.errors === 0
-              }
+            }
 
             });
     
@@ -313,10 +313,10 @@ migrationRoutes.get('/status',
         route: '/api/migration/status',
         isRunning: status.isRunning
 
-              }
+            }
 
 
-            });
+                                                                                                                                                                                                                                                });
     
     res.json({
       success: true,
@@ -349,7 +349,7 @@ migrationRoutes.post('/validate',
 
     logger.info('Validation post-migration - démarrage', { metadata: { route: '/api/migration/validate', detailed 
 
-              }
+            }
  
 
             });
@@ -363,10 +363,10 @@ migrationRoutes.post('/validate',
         errorsCount: validation.errors.length,
         warningsCount: validation.warnings.length
 
-              }
+            }
 
 
-            });
+                                                                                                                                                                                                                                                });
     
     const response: unknown = {
       success: true,
@@ -423,7 +423,7 @@ migrationRoutes.post('/full',
 
     logger.info('Démarrage migration complète', { metadata: { route: '/api/migration/full', aosCount, projectsCount, dryRun 
 
-              }
+            }
  
 
             });
@@ -471,13 +471,13 @@ migrationRoutes.post('/full',
 
     // Validation finale
     logger.info('Validation finale migration complète', { metadata: { route: '/api/migration/full', totalMigrated, totalErrors 
-              }
+            }
  
             });
     const validation = await mondayMigrationService.validateMigration();
 
     logger.info('Migration complète terminée', { metadata: { route: '/api/migration/full', totalMigrated, totalErrors, validationPassed: validation.errors.length === 0 
-              }
+            }
  
             });
 
@@ -498,7 +498,6 @@ migrationRoutes.post('/full',
             errors: validation.errors.length,
             warnings: validation.warnings.length
           }
-        }
       },
       message: `Migration complète terminée - ${totalMigrated} migrés, ${totalErrors} erreurs`
     });
@@ -531,10 +530,10 @@ migrationRoutes.get('/sample-data',
         aosCount: sampleData.aos.length,
         projectsCount: sampleData.projects.length
 
-              }
+            }
 
 
-            });
+                                                                                                                                                                                                                                                });
     
     res.json({
       success: true,
@@ -576,7 +575,7 @@ migrationRoutes.delete('/reset',
 
     logger.warn('Reset données migration demandé', { metadata: { route: '/api/migration/reset', environment: process.env.NODE_ENV 
 
-              }
+            }
  
 
             });

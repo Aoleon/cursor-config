@@ -33,4 +33,3 @@ export abstract class BaseExtractor<unknown>unknown> implements IExtractor<T> {
     const mondayService = mondayintegrationService();
     return mondayService.extractColumnValue(column);
   }
-}

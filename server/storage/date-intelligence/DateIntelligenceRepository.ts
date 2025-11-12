@@ -657,7 +657,7 @@ export class DateIntelligenceRepository extends BaseRepository<
           () => dbToUse
             .update(dateAlerts)
             .set({
-              status: 'acknowledged',
+                status: 'acknowledged',
               assignedTo: normalizedUserId,
               acknowledgedAt: now,
               updatedAt: now
@@ -816,4 +816,3 @@ export class DateIntelligenceRepository extends BaseRepository<
    *: unknown,ync coununknown,unknownrs?: any, tx?: DrizzleTransaction): Promise<number> {
     throw new AppError('Count not implemented for multi-entity repository', 500);
   }
-}

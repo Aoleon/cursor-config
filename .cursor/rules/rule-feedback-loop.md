@@ -1,8 +1,9 @@
 # Feedback Loop et Auto-Amélioration des Règles - Saxium
 
 **Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
-**Version:** 1.0.0  
-**Dernière mise à jour:** 2025-01-29
+**Version:** 1.1.0  
+**Dernière mise à jour:** 2025-11-12  
+**Changements:** Intégration collecte feedback automatique et documentation complète
 
 Système de feedback loop pour apprendre des résultats et ajuster dynamiquement les priorités des règles.
 
@@ -278,10 +279,42 @@ async function improveRulesFromFeedback(
 - ❌ Ignorer patterns d'échec
 - ❌ Ne pas améliorer règles inefficaces
 
+## 📊 Intégration Collecte Feedback
+
+### Collecte Automatique
+
+**TOUJOURS:**
+- ✅ Utiliser `rule-feedback-collector.md` pour collecte automatique
+- ✅ Enregistrer feedback après chaque tâche
+- ✅ Détecter feedback implicite (corrections manuelles)
+- ✅ Corréler feedback avec règles utilisées
+
+**Référence:** `@.cursor/rules/rule-feedback-collector.md` - Collecte feedback détaillée
+
+### Utilisation Feedback Collecté
+
+**TOUJOURS:**
+- ✅ Analyser feedback collecté pour améliorer règles
+- ✅ Identifier règles efficaces/inefficaces
+- ✅ Générer suggestions d'amélioration
+- ✅ Appliquer améliorations automatiquement si possible
+
+**Référence:** `@docs/AGENT-FEEDBACK-LOOP.md` - Documentation complète feedback
+
 ## 🔗 Références
 
+### Règles Associées
+
+- `@.cursor/rules/rule-feedback-collector.md` - Collecte feedback automatique
+- `@.cursor/rules/agent-metrics.md` - Métriques générales agent
+- `@.cursor/rules/rule-usage-tracker.md` - Usage règles
 - `@.cursor/rules/rule-metrics.md` - Système de collecte de métriques
 - `@.cursor/rules/rule-prioritization.md` - Priorisation dynamique des règles
 - `@.cursor/rules/rule-self-improvement.md` - Auto-amélioration des règles
 - `@.cursor/rules/learning-memory.md` - Mémoire persistante des apprentissages
+
+### Documentation
+
+- `@docs/AGENT-FEEDBACK-LOOP.md` - Documentation complète système feedback
+- `@docs/AGENT-METRICS.md` - Métriques complètes
 

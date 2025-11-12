@@ -18,17 +18,14 @@ export class ContactExtractor extends BaseExtractor<unknown[]> {
           
           for (const person of peopleData) {
             contacts.push({
-              name: person.name,
-              email: person.email,
+                name: person.name,
+                email: person.email,
               role,
               mondayPersonId: person.id,
             });
             
             this.addDiagnostic(context, 'info', `Extracted contact: ${person.name} (${role})`, { person });
           }
-        }
-      }
-    }
     
     const uniqueContacts = contacts.reduce((acc, contact) => {
       if (!contact.email) return acc;
@@ -45,4 +42,3 @@ export class ContactExtractor extends BaseExtractor<unknown[]> {
     
     return uniqueContacts;
   }
-}

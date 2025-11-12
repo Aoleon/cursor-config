@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express) {
   logger.info('✅ DocumentSyncService initialized', { metadata: {
       module: 'DocumentSyncService',
       operation: 'initialize'
-              }
+          }
 
             });
   
@@ -65,7 +65,7 @@ export async function registerRoutes(app: Express) {
       module: 'SyncScheduler',
       operation: 'initialize',
       status: syncScheduler.getStatus()
-              }
+          }
 
             });
   
@@ -118,21 +118,21 @@ export async function registerRoutes(app: Express) {
   logger.info('✅ Admin routes registered', { metadata: {
       module: 'Admin',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   
   logger.info('✅ Ops routes registered (dev/maintenance)', { metadata: {
       module: 'Ops',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   
   logger.info('✅ Team routes registered', { metadata: {
       module: 'Team',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express) {
       module: 'HR',
       operation: 'registerRoutes',
       routes: ['employee-labels']
-              }
+          }
 
             });
   
@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express) {
       module: 'Testing',
       operation: 'registerRoutes',
       routes: ['test-data', 'bug-reports']
-              }
+          }
 
             });
   
@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express) {
       module: 'AfterSales',
       operation: 'registerRoutes',
       routes: ['reserves', 'sav-interventions', 'warranty-claims']
-              }
+          }
 
             });
   
@@ -170,7 +170,7 @@ export async function registerRoutes(app: Express) {
   logger.info('[CacheService] Intégration EventBus configurée', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express) {
   logger.info('[CacheService] Démarrage warmup cache', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   
@@ -189,13 +189,13 @@ export async function registerRoutes(app: Express) {
           await mondayService.getBoards(50);
           logger.info('[CacheService] Monday boards préchargés', {
             metadata: {
-              module: 'Routes',
-              operation: 'warmupCache'
-            
-              }
+                      module: 'Routes',
+                      operation: 'warmupCache'
+
+                    }
 
             
-            });
+                                                                                                                                                                                                                                                                                    });
         },
         {
           operation: 'registerRoutes',
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express) {
   logger.info('[CacheService] Warmup cache terminé', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-              }
+          }
 
             });
   

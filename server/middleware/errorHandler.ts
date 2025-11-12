@@ -72,7 +72,6 @@ export class AppError extends Error {
     // Maintenir la stack trace pour le debugging
     Error.captureStackTrace(this, this.constructor);
   }
-}
 
 // Helper pour créer des erreurs communes
 export const createError = {
@@ -142,7 +141,6 @@ export class ErrorLogger {
     } else {
       logger.error('ERREUR NON GÉRÉE', errorInfo);
     }
-  }
 
   static logValidationError(error: ZodError, req?: Request) {
     const validationError = fromZodError(error);
@@ -152,11 +150,10 @@ export class ErrorLogger {
         method: req?.method,
         type: 'VALIDATION',
         issues: error.issues
-              }
+            }
 
             });
   }
-}
 
 // Middleware de gestion centralisée des erreurs
 export function errorHandler(

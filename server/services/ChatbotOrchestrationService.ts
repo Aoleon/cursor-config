@@ -212,7 +212,7 @@ export class ChatbotOrchestrationService {
       if (!circuitBreakerCheck.allowed) {
         logger.warn('Circuit breaker ouvert, fallback séquentiel', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleParallelQuery',
+                  operation: 'handleParallelQuery',
             reason: circuitBreakerCheck.reason,
             context: { fallback: 'sequential'   
             }
@@ -239,11 +239,11 @@ export class ChatbotOrchestrationService {
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
         logger.info('Action détectée', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleQuery',
+                  operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
             context: { detectionStep: 'action_intention'    
-        }
+                }
           });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
@@ -257,15 +257,15 @@ export class ChatbotOrchestrationService {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
             entity: actionDefinition.entity as unknown,
-            operation: actionDefinition.operation,
+                  operation: actionDefinition.operation,
             parameters: actionDefinition.parameters,
             targetEntityId: actionDefinition.targetEntityId,
             riskLevel: actionDefinition.risk_level,
             confirmationRequired: actionDefinition.confirmation_required,
             expirationMinutes: 30,
-            userId: request.userId,
+                  userId: request.userId,
             userRole: request.userRole,
-            sessionId: request.sessionId,
+                  sessionId: request.sessionId,
             conversationId,
             metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true  
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
@@ -336,11 +336,11 @@ export class ChatbotOrchestrationService {
       if (!businessValidation.isValid) {
         logger.warn('Requête bloquée par garde-fous métier', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'processQueryParallel',
+                  operation: 'processQueryParallel',
             warnings: businessValidation.warnings,
             suggestions: businessValidation.suggestions   
               
-        }
+                }
       });
         return this.createErrorResponse(
           conversationId,
@@ -428,13 +428,13 @@ export class ChatbotOrchestrationService {
           modelTimeMs: modelTime,
           totalTimeMs: parallelTime   
               
-        }
+              }
       });
       // Validation de réussite minimum
       if (!contextSuccess && !modelSuccess) {
         logger.warn('Échec total parallélisme, fallback séquentiel', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleParallelQuery',
+                  operation: 'handleParallelQuery',
             context: { fallback: 'sequential_mode'   
             }
           });
@@ -471,7 +471,7 @@ export class ChatbotOrchestrationService {
       if (!contextSuccess) {
         logger.warn('Contexte échoué, contexte minimal', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleParallelQuery',
+                  operation: 'handleParallelQuery',
             context: { fallback: 'minimal_context'   
             }
           });
@@ -480,7 +480,7 @@ export class ChatbotOrchestrationService {
       if (!modelSuccess) {
         logger.warn('Sélection modèle échouée, modèle par défaut', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleParallelQuery',
+                  operation: 'handleParallelQuery',
             context: { fallback: 'default_model'   
             }
           });
@@ -664,7 +664,7 @@ export class ChatbotOrchestrationService {
           totalExecutionTimeMs: totalExecutionTime,
           timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0   
               
-        }
+              }
       });
       // Construire réponse finale selon interface ChatbotQueryResponse
       return {
@@ -706,14 +706,14 @@ export class ChatbotOrchestrationService {
           error: error instanceof Error ? error.message : String(error),
           errorType: 'parallel_pipeline_error',
           parallelMode: true
-        }
+              }
       );
       // Fallback vers méthode séquentielle en cas d'erreur critique
       logger.info('Fallback séquentiel après erreur parallèle', { metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
           context: { fallback: 'sequential_after_error'    
-        }
+              }
           });
       return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
     }
@@ -796,11 +796,11 @@ export class ChatbotOrchestrationService {
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
         logger.info('Action détectée', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleQuery',
+                  operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
             context: { detectionStep: 'action_intention'    
-        }
+                }
           });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
@@ -814,15 +814,15 @@ export class ChatbotOrchestrationService {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
             entity: actionDefinition.entas unknown, unknown,
-            operation: actionDefinition.operation,
+                  operation: actionDefinition.operation,
             parameters: actionDefinition.parameters,
             targetEntityId: actionDefinition.targetEntityId,
             riskLevel: actionDefinition.risk_level,
             confirmationRequired: actionDefinition.confirmation_required,
             expirationMinutes: 30, // Valeur par défaut appropriée pour actions détectées via chatbot
-            userId: request.userId,
+                  userId: request.userId,
             userRole: request.userRole,
-            sessionId: request.sessionId,
+                  sessionId: request.sessionId,
             conversationId,
             metadata: { detectedViaQuery: true, confidence: actionIntention.confidence  
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
@@ -911,7 +911,7 @@ export class ChatbotOrchestrationService {
       if (!businessContextResponse.success || !businessContextResponse.context) {
         logger.warn('Échec génération contexte métier, continuation avec contexte minimal', { metadata: {
             service: 'ChatbotOrchestrationService',
-            operation: 'handleQuery',
+                  operation: 'handleQuery',
             context: { fallback: 'minimal_business_context'   
             }
           });
@@ -1084,7 +1084,7 @@ export class ChatbotOrchestrationService {
           executionTime: totalExecutionTime,
           confidence: sqlResult.confidence,
           resultCount: sqlResult.results?.length || 0
-              }
+                }
                         }
                                   }
                                 }));
@@ -1137,7 +1137,7 @@ export class ChatbotOrchestrationService {
           error: error instanceof Error ? error.message : String(error),
           errorType: 'orchestration_error',
           errorStack: error instanceof Error ? error.stack : undefined
-        }
+              }
       );
       // Logging d'erreur
       await this.logConversation({
@@ -1547,7 +1547,7 @@ export class ChatbotOrchestrationService {
             feedbackType: request.feedbackType,
             executionTime: conv.executionTimeMs,
             modelUsed: conv.modelUsed
-                }
+                  }
                           }
                                     }
                                   }));
@@ -2571,10 +2571,10 @@ export class ChatbotOrchestrationService {
       if (!entry) {
         logger.debug('Cache miss', { metadata: {
             service: 'LRUCache',
-            operation: 'get',
+                  operation: 'get',
             key,
             cacheSize: this.cache.size   
-              }
+                }
              } });
         return null;
       }
@@ -2583,11 +2583,11 @@ export class ChatbotOrchestrationService {
         this.cache.delete(key);
         logger.debug('Cache entry expired', { metadata: {
             service: 'LRUCache',
-            operation: 'get',
+                  operation: 'get',
             key,
             ttl: entry.ttl,
             age: Date.now() - entry.timestamp   
-              }
+                }
              } });
         return null;
       }
@@ -2622,11 +2622,11 @@ export class ChatbotOrchestrationService {
           this.cache.delete(firstKey);
           logger.debug('Cache eviction (LRU)', { metadata: {
               service: 'LRUCache',
-              operation: 'set',
+                    operation: 'set',
               evictedKey: firstKey,
               reason: 'max_size_reached',
               maxSize: this.maxSize   
-              }
+                  }
              } });
         });
       }
@@ -2666,12 +2666,12 @@ export class ChatbotOrchestrationService {
       if (keysToDelete.length > 0) {
         logger.info('Cache invalidation par pattern', { metadata: {
             service: 'LRUCache',
-            operation: 'invalidateByPattern',
+                  operation: 'invalidateByPattern',
             entityType,
             event,
             keysInvalidated: keysToDelete.length,
             remainingSize: this.cache.size   
-              }
+                }
              } });
       });
       return keysToDelete.length;
@@ -2716,10 +2716,10 @@ export class ChatbotOrchestrationService {
       if (cleaned > 0) {
         logger.debug('Cache cleanup', { metadata: {
             service: 'LRUCache',
-            operation: 'cleanup',
+                  operation: 'cleanup',
             entriesCleaned: cleaned,
             remainingSize: this.cache.size   
-              }
+                }
              } });
       });
       return cleaned;
@@ -2815,10 +2815,10 @@ export class ChatbotOrchestrationService {
         this.processChatbotQuery(request).catch(error => {
           logger.warn('Erreur warmup cache', { metadata: {
               service: 'ChatbotOrchestrationService',
-              operation: 'warmupCache',
+                    operation: 'warmupCache',
               query,
-              error: error instanceof Error ? error.message : String(error)   
-              }
+                    error: error instanceof Error ? error.message : String(error)
+                  }
              } });
         });
       } catch (error) {
@@ -3451,7 +3451,7 @@ case 'detail':;
               min: Math.min(...values),
               max: Math.max(...values),
               avg: values.reduce((a, b) => a + b, 0) / values.length,
-              count: values.length
+                    count: values.length
             };
           });
       }

@@ -58,7 +58,6 @@ describe('KpiRepository - Time Series Regression Tests', () => {
       // Weekly: count how many full weeks fit in the range
       return Math.floor(daysDiff / 7) + 1;
     }
-  }
 
   /**
    * Helper to validate time series structure
@@ -195,7 +194,6 @@ describe('KpiRepository - Time Series Regression Tests', () => {
       // Validate first period
       expect(result.timeSeries[0].date).toBe('2025-01-01');
     });
-  });
 
   describe('📊 Data structure validation', () => {
     it('should return all required fields in periodSummary', async () => {
@@ -289,7 +287,6 @@ describe('KpiRepository - Time Series Regression Tests', () => {
         expect(dayDiff).toBe(7); // Exactly 7 days (1 week) difference
       }
     });
-  });
 
   describe('🚀 Performance validation (N+1 regression)', () => {
     /**
@@ -362,7 +359,6 @@ describe('KpiRepository - Time Series Regression Tests', () => {
       expect(result.timeSeries).toHaveLength(1);
       expect(result.timeSeries[0].date).toBe('2025-01-01');
     });
-  });
 
   describe('🔍 Empty database scenario (zero offers)', () => {
     /**
@@ -403,6 +399,3 @@ describe('KpiRepository - Time Series Regression Tests', () => {
         expect(period.forecastRevenue).toBeGreaterThanOrEqual(0);
         expect(period.teamLoadHours).toBeGreaterThanOrEqual(0);
       });
-    });
-  });
-});

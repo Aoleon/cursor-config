@@ -85,7 +85,7 @@ export function isConnectionError(error: unknown): boolean {
  */
 export function getDatabaseErrorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code =as unknown) as unknown).code;
+    const code = (error as { code?: string }).code;
     
     // PostgreSQL error codes to human-readable messages
     const errorMessages: Record<string, string> = {
@@ -111,7 +111,6 @@ export function getDatabaseErrorMessage(error: unknown): string {
     if (errorMessages[code]) {
       return errorMessages[code];
     }
-  }
   
   // Generic message
   if (error instanceof Error) {
@@ -199,7 +198,7 @@ export async function withTransaction<T>(
           timeout,
           isolationLevel,
           usingCustomDb: dbInstance !== db
-        }
+              }
             });
       
       // Execute transaction with timeout and isolation level
@@ -228,7 +227,7 @@ export async function withTransaction<T>(
           operation: 'withTransaction',
           duration,
           attempt: attempt + 1
-        }
+              }
             });
       
       return result;
@@ -241,13 +240,13 @@ export async function withTransaction<T>(
       if (retryable && attempt < retries - 1) {
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
         logger.warn('Database transaction failed, retrying', { metadata: {
-            module: 'DatabaseHelpers',
-            operation: 'withTransaction',
+                  module: 'DatabaseHelpers',
+                  operation: 'withTransaction',
             attempt: attempt + 1,
             maxRetries: retries,
             errorCode: error?.code,
             delay
-                                }
+                }
                               });
         
         // Wait before retry
@@ -263,13 +262,12 @@ export async function withTransaction<T>(
           maxRetries: retries,
           duration,
           retryable,
-          errorCode:as unknown)ras unknunknown)unknown).code
-                                }
-                              });
+          errorCode: (error as { code?: string }).code
+              }
+      });
       
       break;
     }
-  }
   
   // Throw a proper DatabaseError with context
   const message = getDatabaseErrorMessage(lastError);
@@ -299,7 +297,7 @@ export async function withSavepoint<T>(
         module: 'DatabaseHelpers',
         operation: 'withSavepoint',
         savepointName: name
-        }
+            }
             });
     
     // Execute callback
@@ -312,7 +310,7 @@ export async function withSavepoint<T>(
         module: 'DatabaseHelpers',
         operation: 'withSavepoint',
         savepointName: name
-        }
+            }
             });
     
     return result;
@@ -325,12 +323,11 @@ export async function withSavepoint<T>(
         operation: 'withSavepoint',
         savepointName: name,
         error: error instanceof Error ? error.message : String(error)
-        }
+            }
             });
     
     throw error;
   }
-}
 
 /**
  * Batch execute multiple database operations in a single transaction
@@ -398,13 +395,5 @@ export async function waitForDatabase(
           module: 'DatabaseHelpers',
           operation: 'waitForDatabase',
           waitTime: Date.now() - startTime
-        }
-            });
-      return;
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, checkInterval));
-  }
-  
-  throw new DatabaseError('Database connection timeout - unable to establish connection');
-}
+              }
+                  });

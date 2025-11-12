@@ -56,7 +56,7 @@ export async function safeQuery<T>(
             attempt: attempt + 1,
             maxRetries: retries,
             timeout
-        }
+                  }
                 );
       }
       
@@ -82,7 +82,7 @@ export async function safeQuery<T>(
             operation,
             duration,
             attempt: attempt + 1
-        }
+                  }
                 );
       }
       
@@ -103,7 +103,7 @@ export async function safeQuery<T>(
             maxRetries: retries,
             errorCode: error?.code,
             delay
-        }
+                  }
                 );
         
         // Wait before retry
@@ -166,7 +166,7 @@ export async function safeBatch<T>(
       metadata: {
         operation,
         queryCount: queries.length
-        }
+              }
             );
     
     // Execute all queries in parallel with individual error handling
@@ -187,7 +187,7 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         duration
-        }
+              }
             );
     
     return results;
@@ -198,7 +198,7 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         error: error instanceof Error ? error.message : String(error)
-        }
+              }
             );
     throw error;
   }
@@ -234,7 +234,7 @@ export async function executeWithMetrics<T>(
         operation: context.operation,
         ...context.metadata,
         error: error instanceof Error ? error.message : String(error)
-        }
+              }
             );
     throw error;
   }
@@ -263,13 +263,8 @@ export async function safeGetOne<T>(
         operation: 'safeGetOne',
         entityName,
         error: error instanceof Error ? error.message : String(error)
-        }
-            });
-    return null;
-  }
-}
-
-/**
+            }
+                                    });
  * Helper to safely count records
  * Returns 0 on error instead of throwing
  * 
@@ -288,13 +283,8 @@ export async function safeCount(
         service: 'SafeQuery',
         operation: 'safeCount',
         error: error instanceof Error ? error.message : String(error)
-        }
-            });
-    return 0;
-  }
-}
-
-/**
+            }
+                                    });
  * Helper to safely check if a record exists
  * Returns false on error instead of throwing
  * 
@@ -317,13 +307,8 @@ export async function safeExists(
         service: 'SafeQuery',
         operation: 'safeExists',
         error: error instanceof Error ? error.message : String(error)
-        }
-            });
-    return false;
-  }
-}
-
-/**
+            }
+                                    });
  * Execute a database health check query
  * Used to verify database connectivity
  */
@@ -344,13 +329,8 @@ export async function healthCheck(): Promise<boolean> {
         service: 'SafeQuery',
         operation: 'healthCheck',
         error: error instanceof Error ? error.message : String(error)
-        }
-            });
-    return false;
-  }
-}
-
-/**
+            }
+                                    });
  * Wrapper for insert operations with conflict handling
  */
 export async function safeInsert<T>(

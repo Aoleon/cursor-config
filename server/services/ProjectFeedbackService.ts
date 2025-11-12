@@ -46,7 +46,7 @@ export class ProjectFeedbackService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
             type: 'project:feedback:created' as unknown,
             entity: 'project',
             entityId: data.projectId,
@@ -55,26 +55,26 @@ export class ProjectFeedbackService {
             affectedQueryKeys: [
               ['/api/projects', data.projectId, 'feedback-terrain']
             ],
-            userId: data.reportedBy,
+                userId: data.reportedBy,
             timestamp: new Date().toISOString(),
             metadata: {
               feedbackId: feedback.id,
               feedbackType: feedback.feedbackType,
               severity: feedback.severity
-        }
+                    }
                   );
         }
 
         logger.info('Feedback terrain créé', { metadata: {
             service: 'ProjectFeedbackService',
-            operation: 'createFeedback',
+                  operation: 'createFeedback',
             feedbackId: feedback.id,
-            projectId: data.projectId 
-              
-              }
+                  projectId: data.projectId
+
+                }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
         return feedback;
       },
       {
@@ -111,7 +111,7 @@ export class ProjectFeedbackService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                  id: crypto.randomUUID(),
             type: 'project:feedback:assignas unknown, unknown,
             entity: 'project',
             entityId: feedback.projectId,
@@ -120,22 +120,22 @@ export class ProjectFeedbackService {
             affectedQueryKeys: [
               ['/api/projects', feedback.projectId, 'feedback-terrain']
             ],
-            userId: assignedTo,
+                  userId: assignedTo,
             timestamp: new Date().toISOString(),
             metadata: {
               feedbackId: feedback.id,
               assignedTo
-        }
+                    }
                   );
         }
 
         logger.info('Feedback assigné', { metadata: {
             service: 'ProjectFeedbackService',
-            operation: 'assignFeedback',
+                  operation: 'assignFeedback',
             feedbackId,
             assignedTo 
               
-              }
+                }
  
               
             });
@@ -180,7 +180,7 @@ export class ProjectFeedbackService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-            id: crypto.randomUUID(),
+                  id: crypto.randomUUID(),
             type: 'project:feedback:reas unknown, as unknown,
             entity: 'project',
             entityId: feedback.projectId,
@@ -189,22 +189,22 @@ export class ProjectFeedbackService {
             affectedQueryKeys: [
               ['/api/projects', feedback.projectId, 'feedback-terrain']
             ],
-            userId: resolvedBy,
+                  userId: resolvedBy,
             timestamp: new Date().toISOString(),
             metadata: {
               feedbackId: feedback.id,
               resolvedBy
-        }
+                    }
                   );
         }
 
         logger.info('Feedback résolu', { metadata: {
             service: 'ProjectFeedbackService',
-            operation: 'resolveFeedback',
+                  operation: 'resolveFeedback',
             feedbackId,
             resolvedBy 
               
-              }
+                }
  
               
             });
@@ -216,7 +216,6 @@ export class ProjectFeedbackService {
       }
     );
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

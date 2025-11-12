@@ -186,11 +186,11 @@ class ExcelImportStrategy implements IMigrationStrategy {
         migrationId,
         entityType: config.entityType,
         dryRun: config.options?.dryRun 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     return withErrorHandling(
     async () => {
       // Load Excel files
@@ -249,11 +249,11 @@ class ExcelImportStrategy implements IMigrationStrategy {
           duration: result.duration,
           totalMigrated: result.totalMigrated,
           totalErrors: result.totalErrors 
-              
+
               }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
       return result;
     },
     {
@@ -263,7 +263,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
     } );
       throw error;
     }
-  }
 
   async validate(config: MigrationConfig): Promise<MigrationValidationResult> {
     const errors: string[] = [];
@@ -278,8 +277,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
         if (!fs.existsSync(file)) {
           errors.push(`Excel file not found: ${file}`);
         }
-      }
-    }
 
     return {
       valid: errors.length === 0,
@@ -301,7 +298,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
         const data = XLSX.utils.sheet_to_json(worksheet);
         totalItems += data.length;
       }
-    }
 
     // Estimate: ~100ms per item with validation
     const estimatedDuration = totalItems * 100;
@@ -351,8 +347,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
           const projectData = this.extractProjectDataFromExcelRow(row, i);
           if (projectData) projects.push(projectData);
         }
-      }
-    }
 
     return { aos, projects };
   }
@@ -382,7 +376,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
     } );
       return null;
     }
-  }
 
   private extractProjectDataFromExcelRow(row: unknown[], rowIndex: number): MondayProjectData | null {
     return withErrorHandling(
@@ -408,7 +401,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
     } );
       return null;
     }
-  }
 
   private extractClient(name: string): string {
     const clients = ['NEXITY', 'COGEDIM', 'PARTENORD HABITAT', 'SAMSE', 'NACARAT'];
@@ -489,8 +481,8 @@ class ExcelImportStrategy implements IMigrationStrategy {
               progress: index + 1,
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100)
-      });
-        }
+                });
+                  }
     },
     {
       operation: 'MondayMigrationService',
@@ -499,7 +491,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
     } );
       throw error;
     }
-  }
 
   async validate(config: MigrationConfig): Promise<MigrationValidationResult> {
     return {
@@ -542,7 +533,7 @@ class ExcelImportStrategy implements IMigrationStrategy {
 
           const validatedAo = validateMondayAoData(ao);
           const saxiumAo: InsertAo = {
-            reference: validatedAo.reference,
+                reference: validatedAo.reference,
             clientName: validatedAo.clientName,
             city: validatedAo.city,
             operationalStatus: this.mapOperationalStatus(validatedAo.operationalStatus),
@@ -551,10 +542,10 @@ class ExcelImportStrategy implements IMigrationStrategy {
             mondayItemId: validatedAo.mondayItemId,
             clientRecurrency: validatedAo.clientRecurrency,
             estimatedDelay: validatedAo.estimatedDelay || new Date().toISOString().split('T')[0],
-            departement: '62',
-            name: `AO ${validatedAo.clientName} - ${validatedAo.city}`,
+                departement: '62',
+                name: `AO ${validatedAo.clientName} - ${validatedAo.city}`,
             description: `Pattern-based migration - ${validatedAo.mondayItemId}`,
-            status: 'draft',
+                status: 'draft',
             priority: 'normal'
           };
 
@@ -576,7 +567,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
     } );
       throw error;
     }
-  }
 
   async validate(config: MigrationConfig): Promise<MigrationValidationResult> {
     const errors: string[] = [];
@@ -613,7 +603,6 @@ class ExcelImportStrategy implements IMigrationStrategy {
       metadata: {}
     } );
       }
-    }
 
     return transformed;
   }
@@ -644,15 +633,12 @@ class ExcelImportStrategy implements IMigrationStrategy {
         } catch (error) {
           result.errors.push({
             mondayId: item.mondayId,
-            error: error instanceof Error ? error.message : String(error)
+                error: error instanceof Error ? error.message : String(error)
           });
         }
-      }
-    }
 
     return result;
   }
-}
 
 // ========================================
 // MAIN SERVICE: STRATEGY ORCHESTRATOR
@@ -683,11 +669,11 @@ export class MondayMigrationService {
         service: 'MondayMigrationService',
         entityType: config.entityType,
         strategyType: config.strategyType || 'auto-detect' 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     // Auto-select strategy if not specified
     const strategyType = config.strategyType || this.autoSelectStrategy(config);
     const strategy = this.strategies.get(strategyType);
@@ -713,11 +699,11 @@ export class MondayMigrationService {
         duration: result.duration,
         totalMigrated: result.totalMigrated,
         totalErrors: result.totalErrors 
-              
-              }
+
+            }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
     return result;
   }
   /**
@@ -763,7 +749,6 @@ export class MondayMigrationService {
       if (filters.limit) {
         filtered = filtered.slice(0, filters.limit);
       }
-    }
 
     return filtered;
   }
@@ -809,7 +794,6 @@ export class MondayMigrationService {
     // Count provided or default → Pattern-Based Strategy
     return 'pattern_based';
   }
-}
 
 // Export singleton instance
 export const mondayMigrationService = new MondayMigrationService({} as IStorage);

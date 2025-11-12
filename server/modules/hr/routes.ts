@@ -54,15 +54,13 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       const { id: userId } = req.params;
       
       logger.info('[HR] Récupération labels employé', { metadata: {
+
           route: '/api/employees/:id/labels',
           method: 'GET',
           employeeId: userId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -101,16 +99,14 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       const { labelId, assignedBy } = req.body;
       
       logger.info('[HR] Assignation label employé', { metadata: {
+
           route: '/api/employees/:id/labels',
           method: 'POST',
           employeeId: userId,
           labelId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -158,16 +154,14 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
       const { userId, labelId } = req.params;
       
       logger.info('[HR] Suppression label employé', { metadata: {
+
           route: '/api/employees/:userId/labels/:labelId',
           method: 'DELETE',
           targetUserId: userId,
           labelId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       return withErrorHandling(
     async () => {
@@ -200,13 +194,11 @@ export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
                               }));
 
   logger.info('[HR] Routes HR montées avec succès', { metadata: {
+
       module: 'HR',
       routes: 3
-    
-            })
-
-    
-          );
+      }
+    });
 
   return router;
 }

@@ -90,7 +90,6 @@ export class ObjectNotFoundError extends Error {
     this.name = "ObjectNotFoundError";
     Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
   }
-}
 
 // The object storage service is used to interact with the object storage service.
 export class ObjectStorageService {
@@ -135,7 +134,7 @@ export class ObjectStorageService {
 
       logger.debug('ObjectStorage - Downloading object', { metadata: { objectPath 
 
-      });
+            });
       // Use Replit's sidecar to get the file
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/get-object`, {
         method: "POST",
@@ -143,7 +142,7 @@ export class ObjectStorageService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ object_path: objectPath }),
-      });
+            });
 
       logger.debug('ObjectStorage - Download response', { metadata: { objectPath, status: response.status 
               }
@@ -151,7 +150,7 @@ export class ObjectStorageService {
             });
       if (!response.ok) {
         logger.warn('ObjectStorage - Download failed', { metadata: { objectPath, status: response.status 
-              }
+                }
  
             });
         return res.status(404).json({ error: "File not found" });
@@ -174,7 +173,6 @@ export class ObjectStorageService {
           if (done) break;
           res.write(value);
         }
-      }
       
       res.end();
     
@@ -182,13 +180,9 @@ export class ObjectStorageService {
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
-    }
-  }
 
   // Gets the upload URL for an object entity.
   async getObjectEntityUploadURL(): Promise<string> {
@@ -221,14 +215,14 @@ export class ObjectStorageService {
 
       logger.debug('ObjectStorage - Checking if object exists', { metadata: { objectPath 
 
-      });
+            });
       const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/object-exists`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ object_path: objectPath }),
-      });
+            });
       
       logger.debug('ObjectStorage - Object exists response', { metadata: { objectPath, status: response.status 
               }
@@ -236,7 +230,7 @@ export class ObjectStorageService {
             });
       if (!response.ok) {
         logger.warn('ObjectStorage - Object exists check failed', { metadata: { objectPath, status: response.status 
-              }
+                }
  
             });
         return false;
@@ -252,10 +246,8 @@ export class ObjectStorageService {
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
@@ -318,10 +310,8 @@ export class ObjectStorageService {
     {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
     }
     
     return { basePath, folders };
@@ -347,7 +337,7 @@ export class ObjectStorageService {
     
     // Log security-related upload attempts for monitoring
     logger.info('ObjectStorage - Secure upload URL generated', { metadata: { offerId, folder: validatedFolder, file: sanitizedFileName 
-              }
+            }
  
             });
     
@@ -384,7 +374,7 @@ export class ObjectStorageService {
     const filePath = `${privateObjectDir}/supplier-quotes/${sessionId}/${timestamp}_${sanitizedFileName}`;
     
     logger.info('ObjectStorage - Uploading supplier document', { metadata: { sessionId, file: sanitizedFileName, size: fileBuffer.length 
-              }
+            }
  
             });
     
@@ -409,7 +399,6 @@ export class ObjectStorageService {
       for (const [key, value] of Object.entries(metadata)) {
         headers[`x-goog-meta-${key}`] = value;
       }
-    }
 
     const uploadResponse = await fetch(uploadUrl, {
       method: "PUT",
@@ -422,7 +411,7 @@ export class ObjectStorageService {
     }
 
     logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath 
-              }
+            }
  
             });
 
@@ -431,7 +420,6 @@ export class ObjectStorageService {
       objectUrl: filePath, // Return full path for internal use
     };
   }
-}
 
 function parseObjectPath(path: string): {
   bucketName: string;

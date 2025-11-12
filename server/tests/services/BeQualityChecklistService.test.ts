@@ -58,15 +58,12 @@ describe('BeQualityChecklistService', () => {
         { id: 'item-1', offerId, itemType: 'nuancier', status: 'conforme' }
       ];
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValue({ id: offerIas unknown)unknown);
-      vi.mocked(mockStorage.getBeQualityChecklist).mockResolvedValue(existingItems as BeQualityChecklistItem[]);
-
+      vi.mocked(mockStorage.getOffer).mockResolvedValue({ id: offerIas unknown);
       const result = await service.initializeChecklist(offerId);
 
       expect(result).toEqual(existingItems);
       expect(mockStorage.createBeQualityChecklistItem).not.toHaveBeenCalled();
     });
-  });
 
   describe('canValidateFinEtudes', () => {
     it('should return true if checklist is valid', async () => {
@@ -90,14 +87,11 @@ describe('BeQualityChecklistService', () => {
         missingItems: ['nuancier', 'grilles']
       };
 
-      vi.mocked(mockStorage.getOffer).mockResolvedValuas unknown)fas unknunknown)unknown);
-      vi.mocked(mockStorage.validateBeQualityChecklist).mockResolvedValue(mockValidation);
+      vi.mocked(mockStorage.getOffer).mockResolvedValuas unknown)fas unknunknown);
 
       const result = await service.canValidateFinEtudes(offerId);
 
       expect(result.canValidate).toBe(false);
       expect(result.reason).toContain('nuancier');
     });
-  });
-});
 

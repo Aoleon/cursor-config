@@ -130,24 +130,24 @@ export class AIService {
       onOpen: (name) => {
         logger.warn('Circuit breaker ouvert pour Claude', { metadata: {
             service: 'AIService',
-            operation: 'circuit_breaker',
+                  operation: 'circuit_breaker',
             provider: name 
-              
-              }
+
+                }
  
               
-            });
+                                                });
       },
       onClose: (name) => {
         logger.info('Circuit breaker fermé pour Claude', { metadata: {
             service: 'AIService',
-            operation: 'circuit_breaker',
+                  operation: 'circuit_breaker',
             provider: name 
-              
-              }
+
+                }
  
               
-            });
+                                                });
       });
     
     // Circuit breaker pour GPT
@@ -158,24 +158,24 @@ export class AIService {
       onOpen: (name) => {
         logger.warn('Circuit breaker ouvert pour GPT', { metadata: {
             service: 'AIService',
-            operation: 'circuit_breaker',
+                  operation: 'circuit_breaker',
             provider: name 
-              
-              }
+
+                }
  
               
-            });
+                                                });
       },
       onClose: (name) => {
         logger.info('Circuit breaker fermé pour GPT', { metadata: {
             service: 'AIService',
-            operation: 'circuit_breaker',
+                  operation: 'circuit_breaker',
             provider: name 
-              
-              }
+
+                }
  
               
-            });
+                                                });
       });
   }
 
@@ -212,11 +212,11 @@ export class AIService {
           operation: 'getDegradedResponse',
           age: Math.round((Date.now() - cached.timestamp) / 1000),
           complexity: cached.complexity 
-              
+
               }
  
               
-            });
+                                                });
       return cached.response;
     }
     return null;
@@ -478,7 +478,7 @@ export class AIService {
         
         if (cachedResult) {
           this.performanceMetrics.endStep(traceId, 'cache_operations', true, { 
-            operation: 'cache_hit', 
+                operation: 'cache_hit',
             cacheRetrievalTime: cacheTime,
             tokensRetrieved: cachedResult.tokensUsed
           });
@@ -627,7 +627,7 @@ export class AIService {
         request.complexity || 'simple', false, false, { 
           error: error instanceof Error ? error.message : String(error),
           errorType: 'unknown'
-        }
+              }
       );
       
       // Logging de l'erreur (préservé)
@@ -861,11 +861,11 @@ export class AIService {
         contextLength: request.context?.length || 0,
         requestId,
         userRole: request.userRole 
-              
-              }
+
+                                                                      }
  
               
-            });
+                                                });
     // Vérifier d'abord le cache de réponses dégradées
     const degradedResponse = this.getDegradedResponse(request.query);
     if (degradedResponse) {
@@ -911,7 +911,7 @@ export class AIService {
           maxRetries: modelConfig.maxRetries,
           timeout: modelConfig.timeout,
           backoffMultiplier: modelConfig.backoffMultiplier
-      });
+            });
       // Exécuter avec circuit breaker et retry
       const result = await circuitBreaker.execute(async () => {
         return await withRetry(
@@ -940,16 +940,16 @@ export class AIService {
             onRetry: (attempt, delay, error) => {
               logger.warn('Retry IA en cours', { metadata: {
                   service: 'AIService',
-                  operation: 'executeModelQuery',
+                        operation: 'executeModelQuery',
                   model: modelSelection.selectedModel,
                   attempt,
                   delay,
-                  error: error instanceof Error ? error.message : String(error) 
-              
-              }
+                        error: error instanceof Error ? error.message : String(error)
+
+                      }
  
               
-            });
+                                                });
             });
       });
       logger.info('Modèle principal réussi avec retry', { metadata: {
@@ -958,11 +958,11 @@ export class AIService {
           model: modelSelection.selectedModel,
           responseTime: result.data?.responseTimeMs,
           totalTime: Date.now() - startTime 
-              
+
               }
  
               
-            });
+                                                });
       return result;
     },
     {
@@ -989,11 +989,11 @@ export class AIService {
           originalModel: modelSelection.selectedModel,
           maxRetries: fallbackConfig.maxRetries,
           timeout: fallbackConfig.timeout 
-              
+
               }
  
               
-            });
+                                                });
       
       fallbackAttempted = true;
       
@@ -1025,30 +1025,30 @@ export class AIService {
               onRetry: (attempt, delay, error) => {
                 logger.warn('Retry fallback IA en cours', { metadata: {
                     service: 'AIService',
-                    operation: 'executeModelQuery',
+                          operation: 'executeModelQuery',
                     model: fallbackModel,
                     attempt,
                     delay,
-                    error: error instanceof Error ? error.message : String(error) 
-              
-              }
+                          error: error instanceof Error ? error.message : String(error)
+
+                        }
  
               
-            });
+                                                });
               });
         });
         
         logger.info('Fallback réussi avec retry', { metadata: {
             service: 'AIService',
-            operation: 'executeModelQuery',
+                  operation: 'executeModelQuery',
             fallbackModel,
             responseTime: result.data?.responseTimeMs,
             totalTime: Date.now() - startTime 
-              
-              }
+
+                }
  
               
-            });
+                                                });
         return result;
     },
     {
@@ -1068,11 +1068,11 @@ export class AIService {
         complexity: request.complexity || 'high',
         totalTime: Date.now() - startTime,
         retryStats: retryStats 
-              
-              }
+
+            }
  
               
-            });
+                                                });
     // Générer une réponse SQL simplifiée basique
     const simplifiedSQL = this.generateSimplifiedSQL(request);
     // Sauvegarder dans le cache dégradé pour futures requêtes similaires
@@ -1286,10 +1286,10 @@ export class AIService {
         
         logger.info('Cache hit DB', { metadata: {
             service: 'AIService',
-            operation: 'getCachedResponse',
+                  operation: 'getCachedResponse',
             queryHash: queryHash.substring(0, 8) 
               
-              }
+                }
  
               
             });
@@ -1308,12 +1308,12 @@ export class AIService {
       if (memoryEntry) {
         logger.info('Utilisation cache in-memory expiré comme fallback final', { metadata: {
             service: 'AIService',
-            operation: 'getCachedResponse' 
-              
-              }
+                  operation: 'getCachedResponse'
+
+                }
  
               
-            });
+                                                });
         return memoryEntry.data;
       }
       return null;
@@ -1402,11 +1402,11 @@ export class AIService {
         service: 'AIService',
         operation: 'cleanMemoryCache',
         entriesRemoved: cleaned 
-              
-              }
+
+            }
  
               
-            });
+                                                });
   }
   /**
    * Génère un hash unique pour la requête + contexte
@@ -2133,11 +2133,11 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       if (cachedContext) {
         logger.info('Contexte enrichi récupéré depuis le cache', { metadata: {
             service: 'AIService',
-            operation: 'buildEnrichedContext',
+                  operation: 'buildEnrichedContext',
             entityType,
             entityId 
               
-              }
+                }
  
               
             });
@@ -2160,28 +2160,28 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
         await this.contextCache.setContext(entityType, entityId, config, result.data);
         logger.info('Contexte enrichi généré avec succès', { metadata: {
             service: 'AIService',
-            operation: 'buildEnrichedContext',
+                  operation: 'buildEnrichedContext',
             entityType,
             entityId,
             tokenEstimate: result.data.tokenEstimate 
-              
-              }
+
+                }
  
               
-            });
+                                                });
         return result.data;
       } else {
         logger.warn('Échec génération contexte', { metadata: {
             service: 'AIService',
-            operation: 'buildEnrichedContext',
+                  operation: 'buildEnrichedContext',
             entityType,
             entityId,
-            error: result.error?.message 
-              
-              }
+                  error: result.error?.message
+
+                }
  
               
-            });
+                                                });
         return null;
       }
     },
@@ -2232,11 +2232,11 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       logger.info('Réponse SQL pure détectée (mode optimisé)', { metadata: {
           service: 'AIService',
           operation: 'parseAIResponse' 
-              
+
               }
  
               
-            });
+                                                });
       // Extraire le SQL (avec ou sans point-virgule)
       const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
       let sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
@@ -2349,8 +2349,8 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     ];
 
     for (const pattern of suspiciousPatterns) {
-      if (pattern.test(request.query)) {
-        return {
+      if (pattern.test(request.query)) {}
+return{
           success: false,
           error: {
             type: "validation_error",
@@ -2449,7 +2449,7 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
           service: 'AIService',
           operation: 'cleanExpiredCache',
           entriesRemoved: result.rowCount || 0
-      });
+            });
       return result.rowCount || 0;
     },
     {

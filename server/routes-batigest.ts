@@ -61,7 +61,7 @@ export function registerBatigestRoutes(app: Express) {
     logger.info('[Batigest] Synchronisation offre Batigest', { 
       offerId, 
       batigestRef,
-      userId: (req.uas unknown)unknown)?.id 
+      userId: (req.uas unknown?.id 
     });
 
     // Vérifier que l'offre existe
@@ -217,7 +217,7 @@ export function registerBatigestRoutes(app: Express) {
 
     // Calculer les moyennes
     Object.values(coefficientsParFamille).forEach((groupe: unknown) => {
-      const coefficients = groupe.ouvrages.ma: unknown)unknown)any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
+      const coefficients = groupe.ouvrages.ma(value: any) => o.COEFFICIENT_MARGE).filter((c: number) => c > 0);
       groupe.coefficientMoyen = coefficients.length > 0 
         ? coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length 
         : 0;

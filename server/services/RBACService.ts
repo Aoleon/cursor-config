@@ -107,14 +107,13 @@ export class RBACService {
           userId,
           role,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }
-  }
 
   /**
    * Valide l'accès d'un utilisateur à une table/action spécifique
@@ -212,7 +211,6 @@ export class RBACService {
         denialReason: "Erreur système lors de la validation"
       };
     }
-  }
 
   /**
    * Crée un contexte de permission dynamique
@@ -253,7 +251,6 @@ export class RBACService {
     } );
       throw new DatabaseError('Erreur lors de la création du contexte', error as Error);
     }
-  }
 
   /**
    * Assigne un contexte de permission à un utilisateur
@@ -293,7 +290,6 @@ export class RBACService {
     } );
       throw new DatabaseError('Erreur lors de l\'assignation du contexte', error as Error);
     }
-  }
 
   /**
    * Récupère l'historique d'audit pour un utilisateur/table
@@ -347,7 +343,6 @@ export class RBACService {
     } );
       throw new DatabaseError('Erreur lors de la récupération de l\'audit', error as Error);
     }
-  }
 
   // ========================================
   // MÉTHODES PRIVÉES
@@ -373,7 +368,6 @@ export class RBACService {
       case 'export': return permission.canExport ?? false;
       default: return false;
     }
-  }
 
   private checkColumnAccess(permission: Permission, requestedColumns: string[]): PermissionCheckResult {
     const allowedColumns = permission.allowedColumns || [];
@@ -393,7 +387,6 @@ export class RBACService {
           denialReason: `Accès refusé aux colonnes: ${blockedColumns.join(', ')}`
         };
       }
-    }
 
     // Si des colonnes sont explicitement autorisées
     if (allowedColumns.length > 0) {
@@ -404,7 +397,6 @@ export class RBACService {
           denialReason: `Accès non autorisé aux colonnes: ${unauthorizedColumns.join(', ')}`
         };
       }
-    }
 
     return { allowed: true, allowedColumns, deniedColumns };
   }
@@ -441,7 +433,6 @@ export class RBACService {
       default:
         return { allowed: true };
     }
-  }
 
   private async checkOwnOnlyContext(
     userId: string, 
@@ -519,5 +510,3 @@ export class RBACService {
     } );
       // Ne pas faire échouer l'opération principale si l'audit échoue
     }
-  }
-}

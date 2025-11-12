@@ -129,9 +129,9 @@ export class MondayIntegrationService {
     this.apiKey = process.env.MONDAY_API_KEY || '';
     
     if (!this.apiKey) {
-      logger.warn('MONDAY_API_KEY not configured', { 
-        service: 'MondayIntegrationService',
-        metadata: { operation: 'constructor' 
+      logger.warn('MONDAY_API_KEY not configured', {
+      metadata: {
+        module: 'MondayIntegrationService', { operation: 'constructor' 
 
             });
     }
@@ -145,8 +145,8 @@ export class MondayIntegrationService {
       });
 
     logger.info('MondayIntegrationService initialized', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'constructor',
         hasApiKey: !!this.apiKey
 
@@ -170,9 +170,9 @@ export class MondayIntegrationService {
     async () => {
 
           logger.info('Executing Monday.com GraphQL query', {
-            service: 'MondayIntegrationService',
-            metadata: {
-              operation: 'executeGraphQL',
+      metadata: {
+        module: 'MondayIntegrationService', {
+                operation: 'executeGraphQL',
               queryLength: query.length,
               hasVariables: !!variables
 
@@ -188,8 +188,8 @@ export class MondayIntegrationService {
 
           if (response.data.errors) {
             logger.error('Monday.com GraphQL errors', {
-              service: 'MondayIntegrationService',
-              metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
                 operation: 'executeGraphQL',
                 errors: response.data.errors
 
@@ -219,8 +219,8 @@ export class MondayIntegrationService {
     const cached = await this.cacheService.get<MondayBoard[]>(cacheKey);
     if (cached) {
       logger.debug('Boards retrieved from cache', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'getBoards',
           cacheHit: true,
           count: cached.length
@@ -248,8 +248,8 @@ export class MondayIntegrationService {
     await this.cacheService.set(cacheKey, boards, TTL_CONFIG.MONDAY_BOARDS_LIST);
     
     logger.info('Boards fetched and cached', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
@@ -282,8 +282,8 @@ export class MondayIntegrationService {
     const columns = result.boards?.[0]?.columns || [];
 
     logger.info('Board columns retrieved', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
@@ -334,8 +334,8 @@ export class MondayIntegrationService {
     const items = result.boards?.[0]?.items_page?.items || [];
 
     logger.info('Board items retrieved', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
@@ -355,8 +355,8 @@ export class MondayIntegrationService {
     let pageCount = 0;
 
     logger.info('Starting Monday.com pagination', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
@@ -412,9 +412,9 @@ export class MondayIntegrationService {
       
       if (!itemsPage) {
         logger.warn('No items_page found', {
-          service: 'MondayIntegrationService',
-          metadata: {
-            operation: 'getBoardItemsPaginated',
+      metadata: {
+        module: 'MondayIntegrationService', {
+                operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
 
@@ -430,8 +430,8 @@ export class MondayIntegrationService {
       hasMore = cursor !== null && cursor !== undefined && cursor !== '';
 
       logger.debug('Page retrieved', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'getBoardItemsPaginated',
           pageCount,
           itemsInPage: items.length,
@@ -443,9 +443,9 @@ export class MondayIntegrationService {
 
       if (pageCount > 100) {
         logger.error('Too many pages, stopping pagination', {
-          service: 'MondayIntegrationService',
-          metadata: {
-            operation: 'getBoardItemsPaginated',
+      metadata: {
+        module: 'MondayIntegrationService', {
+                operation: 'getBoardItemsPaginated',
             boardId,
             pageCount,
             totalItems: allItems.length
@@ -456,8 +456,8 @@ export class MondayIntegrationService {
     }
 
     logger.info('Pagination complete', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardItemsPaginated',
         boardId,
         totalItems: allItems.length,
@@ -477,8 +477,8 @@ export class MondayIntegrationService {
     const cached = await this.cacheService.get<MondayBoardData>(cacheKey);
     if (cached) {
       logger.debug('Board data retrieved from cache', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'getBoardData',
           boardId,
           cacheHit: true
@@ -533,8 +533,8 @@ export class MondayIntegrationService {
     await this.cacheService.set(cacheKey, response, TTL_CONFIG.MONDAY_BOARD_DETAIL);
 
     logger.info('Complete board data retrieved and cached', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardData',
         boardId,
         columnCount: response.columns.length,
@@ -566,8 +566,8 @@ export class MondayIntegrationService {
       const result = await this.executeGraphQL<{ me: unknown}>(query);
       
       logger.info('Monday.com connection test successful', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'testConnection',
           userId: result.me?.id,
           userName: result.me?.name
@@ -625,8 +625,8 @@ export class MondayIntegrationService {
     }
 
     logger.info('Monday.com item retrieved', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getItem',
         itemId,
         itemName: item.name
@@ -672,20 +672,20 @@ export class MondayIntegrationService {
           
           case 'people':
             return parsed.personsAndTeams?.ma: unknown) => ({
-              id: p.id,
-              name: p.name,
-              email: p.email
+                id: p.id,
+                name: p.name,
+                email: p.email
             })) || [];
           
           case 'email':
             return {
-              email: parsed.email || parsed.text,
+                email: parsed.email || parsed.text,
               text: parsed.text
             };
           
           case 'phone':
             return {
-              phone: parsed.phone || parsed.text,
+                phone: parsed.phone || parsed.text,
               text: parsed.text
             };
           
@@ -697,7 +697,7 @@ export class MondayIntegrationService {
           
           case 'location':
             return {
-              address: parsed.address,
+                address: parsed.address,
               city: parsed.city,
               country: parsed.country,
               countryShort: parsed.countryShort,
@@ -708,7 +708,7 @@ export class MondayIntegrationService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.m: unknown)unknown) => ({
+              linkedItems: parsed.linkedPulseIds?.m: unknown) => ({
                 id: item.linkedPulseId || item,
                 boardId: item.boardId
               })) || []
@@ -720,7 +720,7 @@ export class MondayIntegrationService {
               subitemIds: parsed.linkedPulseId: unknown)em: unknown) => 
                 item.linkedPulseId || item
               ) || [],
-              count: parsed.linkedPulseIds?.length || 0
+                count: parsed.linkedPulseIds?.length || 0
             };
           
           case 'long-text':
@@ -766,8 +766,8 @@ export class MondayIntegrationService {
     
     if (!eventId) {
       logger.warn('Webhook event without ID received', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'handleWebhook',
           payload
 
@@ -778,8 +778,8 @@ export class MondayIntegrationService {
     // Idempotence check
     if (this.eventIdCache.has(eventId)) {
       logger.info('Webhook event already processed (duplicate)', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'handleWebhook',
           eventId
         });
@@ -793,8 +793,8 @@ export class MondayIntegrationService {
       const oldest = Array.from(this.eventIdCache)[0];
       this.eventIdCache.delete(oldest);
       logger.debug('Webhook cache cleaned', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'handleWebhook',
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest
@@ -807,8 +807,8 @@ export class MondayIntegrationService {
     
     if (!itemIdentifier || !boardId) {
       logger.error('Incomplete webhook event - missing itemId or boardId', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'handleWebhook',
           eventId,
           event
@@ -818,8 +818,8 @@ export class MondayIntegrationService {
     }
     
     logger.info('Processing Monday.com webhook event', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'handleWebhook',
         eventId,
         boardId,
@@ -853,8 +853,8 @@ export class MondayIntegrationService {
         });
       
       logger.info('Webhook event processed successfully', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'handleWebhook',
           eventId,
           boardId,
@@ -881,8 +881,8 @@ service: 'MondayIntegrationService',
    */
   async analyzeBoards(boardIds?: string[]): Promise<BoardAnalysisResult> {
     logger.info('Analyzing Monday.com board structures', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'analyzeBoards',
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all'
@@ -906,8 +906,8 @@ service: 'MondayIntegrationService',
       };
 
       logger.info('Board analysis complete', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'analyzeBoards',
           totalBoards: result.totalBoards,
           totalColumns: result.totalColumns
@@ -936,8 +936,8 @@ service: 'MondayIntegrationService',
     
     if (cached) {
       logger.debug('Board structure retrieved from cache', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'getBoardStructure',
           boardId,
           cacheHit: true
@@ -947,8 +947,8 @@ service: 'MondayIntegrationService',
     }
 
     logger.info('Analyzing board structure', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'getBoardStructure',
         boardId,
         boardName
@@ -986,8 +986,8 @@ service: 'MondayIntegrationService',
       await this.cacheService.set(cacheKey, structure, TTL_CONFIG.MONDAY_BOARDS_LIST);
 
       logger.info('Board structure analyzed and cached', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'getBoardStructure',
           boardId,
           columnCount: enrichedColumns.length,
@@ -1016,8 +1016,8 @@ service: 'MondayIntegrationService',
     saxiumFields: string[]
   ): Promise<Map<string, { saxiumField: string; confidence: number; reason: string }>> {
     logger.info('Generating mapping suggestions', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'suggestMappings',
         boardId: boardStructure.boardId,
         mondayColumns: boardStructure.columns.length,
@@ -1034,9 +1034,9 @@ service: 'MondayIntegrationService',
         suggestions.set(column.id, match);
         
         logger.debug('Mapping suggested', {
-          service: 'MondayIntegrationService',
-          metadata: {
-            operation: 'suggestMappings',
+      metadata: {
+        module: 'MondayIntegrationService', {
+                operation: 'suggestMappings',
             mondayColumn: column.title,
             saxiumField: match.saxiumField,
             confidence: match.confidence
@@ -1046,8 +1046,8 @@ service: 'MondayIntegrationService',
     }
 
     logger.info('Mapping suggestions generated', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'suggestMappings',
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length
@@ -1065,8 +1065,8 @@ service: 'MondayIntegrationService',
     await this.cacheService.delete(cacheKey);
     
     logger.info('Board cache invalidated', {
-      service: 'MondayIntegrationService',
       metadata: {
+        module: 'MondayIntegrationService', {
         operation: 'invalidateBoardCache',
         boardId
 
@@ -1103,8 +1103,8 @@ service: 'MondayIntegrationService',
       return JSON.parse(settingsStr);
     } catch {
       logger.warn('Failed to parse settings JSON', {
-        service: 'MondayIntegrationService',
-        metadata: {
+      metadata: {
+        module: 'MondayIntegrationService', {
           operation: 'parseSettings'
 
             });
@@ -1143,8 +1143,8 @@ service: 'MondayIntegrationService',
     for (const saxiumField of saxiumFields) {
       const normalizedField = saxiumField.toLowerCase().trim();
       
-      if (normalizedTitle === normalizedField) {
-        return {
+      if (normalizedTitle === normalizedField) {}
+return{
           saxiumField,
           confidence: 1.0,
           reason: 'Exact match'

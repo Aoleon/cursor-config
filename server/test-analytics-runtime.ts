@@ -93,7 +93,6 @@ async function testEndpoint(endpoint: string): Promise<TestResult> {
       error: error.message
     };
   }
-}
 
 async function runAllTests(): Promise<TestResult[]> {
   logger.info('🚀 Démarrage tests runtime analytics endpoints...\n');
@@ -205,7 +204,6 @@ async function main() {
     logger.error('Erreur', '❌ Erreur critique tests:', error);
     process.exit(1);
   }
-}
 
 // Exécution directe
 main();

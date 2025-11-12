@@ -104,7 +104,6 @@ async function runTest(testName: string, testFn: () => Promise<void>): Promise<T
     console.log(`   Erreur: ${errorMessage}`);
     return result;
   }
-}
 
 /**
  * TEST 1: Initialisation et configuration du service
@@ -202,8 +201,6 @@ async function testRoleBasedContextGeneration(): Promise<void> {
       
       console.log(`   📊 Contexte généré: ${context.databaseSchemas.length} schémas, ${context.businessExamples.length} exemples`);
     }
-  }
-}
 
 /**
  * TEST 3: Cache intelligent et performance
@@ -273,7 +270,6 @@ async function testIntelligentCaching(): Promise<void> {
     assert(thirdResult.performance_metrics.cache_hit === false, 'Cache invalidé correctement sur changement', 'Cache');
     console.log('   ✅ Invalidation cache fonctionnelle');
   }
-}
 
 /**
  * TEST 4: Enrichissement de contexte existant
@@ -351,8 +347,6 @@ async function testContextEnrichment(): Promise<void> {
       assert(result.confidence_score >= 0.5, 'Score de confiance acceptable', 'Enrichment');
       console.log(`   🎯 Score de confiance: ${(result.confidence_score * 100).toFixed(1)}%`);
     }
-  }
-}
 
 /**
  * TEST 5: Apprentissage adaptatif
@@ -409,8 +403,6 @@ async function testAdaptiveLearning(): Promise<void> {
       if (result.updated_patterns) {
         console.log(`   🔄 Patterns mis à jour: ${result.updated_patterns.length}`);
       }
-    }
-  }
   
   // Vérifier que l'apprentissage améliore les contextes futurs
   console.log('   🎯 Test amélioration contexte après apprentissage...');
@@ -438,7 +430,6 @@ async function testAdaptiveLearning(): Promise<void> {
     assert(learnedResult.performance_metrics.examples_included > 0, 'Exemples inclus après apprentissage', 'Learning');
     console.log(`   📊 Contexte optimisé: ${learnedResult.performance_metrics.examples_included} exemples pertinents`);
   }
-}
 
 /**
  * TEST 6: Intégration base de connaissances menuiserie
@@ -494,7 +485,6 @@ async function testMenuiserieKnowledgeBase(): Promise<void> {
     assert(hasMenuiserieExamples, 'Exemples métier menuiserie inclus', 'Menuiserie');
     console.log(`   📝 ${context.businessExamples.length} exemples métier spécialisés`);
   }
-}
 
 /**
  * TEST 7: Métriques et monitoring du service
@@ -525,7 +515,6 @@ async function testServiceMetrics(): Promise<void> {
     console.log(`      - Patterns populaires: ${metrics.popular_query_patterns.length}`);
     console.log(`      - Rôles actifs: ${metrics.role_usage_stats.length}`);
   }
-}
 
 /**
  * Fonction principale d'exécution des tests
@@ -620,7 +609,6 @@ export async function runBusinessContextIntegrationTest(): Promise<void> {
   if (!globalSuccess) {
     throw new Error('Certains tests ont échoué - voir le rapport ci-dessus');
   }
-}
 
 // Export pour utilisation directe
 if (import.meta.url === `file://${process.argv[1]}`) {

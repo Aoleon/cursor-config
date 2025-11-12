@@ -88,7 +88,7 @@ export const aosMappingConfig: EntityMappingConfig = {
   transformations: {
     // CRITIQUE: Générer référence unique basée sur Monday item ID
     // TOUJOURS utiliser mondayItemId pour éviter doublons (35 noms dupliqués dans Monday)
-    reference: (value: string | undefined, : unknown)unknown) => {
+    reference: (value: string | undefined, item: unknown) => {
       // TOUJOURS utiliser Monday item ID pour garantir unicité
       const mondayId = item.mondayItemId || item.id;
       if (mondayId) {
@@ -102,7 +102,7 @@ export const aosMappingConfig: EntityMappingConfig = {
 
     // CRITIQUE: Extraire client depuis text7 (MOA - Maître d'Ouvrage)
     // Si vide, fallback vers "Client inconnu"
-    client: (value: string | undefin: unknown)unknown)unknown) => {
+    client: (value: string | undefined) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback vers maitreOeuvre si MOA vide
@@ -127,31 +127,35 @@ export const aosMappingConfig: EntityMappingConfig = {
     },
 
     // DATES: Convertir strings ISO Monday → Date objects Saxium
-    due: unknown)unknown)unknown any) => {
+    due: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
     },
 
-    da: unknown)unknown)unknownlue: any) => {
+    dateDebut: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
     },
 
-  : unknown)unknown)unknown (value: any) => {
+    dateFin: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
-    },: unknown)unknown)unknownord: (value: any) => {
+    },
+
+    dateCommande: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
       return isNaN(parsed.getTime()) ? undefined : parsed;
-    }: unknown)unknown)unknownmarrage: (value: any) => {
+    },
+
+    dateMarrage: (value: any) => {
       if (!value || value === null) return undefined;
       if (value instanceof Date) return value;
       const parsed = new Date(value);
@@ -218,7 +222,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
 
   transformations: {
     // CRITIQUE: Transformation du nom (required)
-    name: : unknown)unknown)unknowng | undefined, item: any) => {
+    name: (value: string | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback: utiliser codeDevis ou codeChantier
@@ -239,7 +243,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
     },
 
     // CRITIQUE: Transformation client (required avec fallback)
-    clie: unknown)unknown)unknowntring | undefined, item: any) => {
+    client: (value: string | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback vers maitreOeuvre si MOA vide
@@ -252,7 +256,7 @@ export const projectsMappingConfig: EntityMappingConfig = {
     },
 
     // CRITIQUE: Transformation location (required avec fallback)
-    lo: unknown)unknown)unknowne: string | undefined, item: any) => {
+    location: (value: string | undefined, item: any) => {
       if (value && value.trim()) return value.trim();
       
       // Fallback: location par défaut
@@ -364,8 +368,8 @@ export function isBoardConfigured(entityType: EntityType): boolean {
  * Valide que tous les champs requis sont présents
  */
 export function validateRequiredFields(
-  entityType: EntityTunknown,
-  data: Record<st, unknunknown>any>
+  entityType: EntityType,
+  data: Record<string, any>
 ): { valid: boolean; missingFields: string[] } {
   const config = getMappingConfig(entityType);
   const missingFields = config.requiredFields.filter(field => !data[field]);

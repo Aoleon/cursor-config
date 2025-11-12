@@ -203,7 +203,6 @@ async function runIntegrationTest() {
       healthScore: 0
     };
   }
-}
 
 // Export pour utilisation dans les routes de test
 export { runIntegrationTest };

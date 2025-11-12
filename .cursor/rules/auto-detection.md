@@ -307,8 +307,11 @@ async function detectBeforeModification(filePath: string): Promise<DetectionResu
   // Détecter tous les anti-patterns
   const antiPatterns = await detectAllAntiPatterns(code);
   
+  // Détecter problèmes formatage (nouveau)
+  const formattingIssues = await detectFormattingIssues(code);
+  
   // Trier par priorité
-  const sorted = sortByPriority(antiPatterns);
+  const sorted = sortByPriority([...antiPatterns, ...formattingIssues]);
   
   return {
     filePath,
@@ -318,6 +321,17 @@ async function detectBeforeModification(filePath: string): Promise<DetectionResu
   };
 }
 ```
+
+### 1.1 Détection Formatage (Nouveau)
+
+**Patterns à Détecter:**
+- ✅ Indentation excessive (14+ espaces)
+- ✅ Metadata logger mal fermé
+- ✅ Duplications dans context
+- ✅ withErrorHandling mal fermé
+- ✅ Lignes vides excessives
+
+**Référence:** `@.cursor/rules/code-formatting-detection.md` - Détection formatage détaillée
 
 ### 2. Correction Automatique
 

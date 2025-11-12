@@ -1240,10 +1240,10 @@ export class SuppliersRepository extends BaseRepository<
               .where(eq(supplierQuoteAnalysis.sessionId, session.id));
 
             return {
-              id: session.id,
+                id: session.id,
               lotId: session.aoLotId,
-              supplierId: session.supplierId,
-              status: session.status as string,
+                supplierId: session.supplierId,
+                status: session.status as string,
               documentCount: sessionDocs[0]?.count || 0,
               analysisCount: sessionAnalyses[0]?.count || 0
             };
@@ -1274,4 +1274,3 @@ export class SuppliersRepository extends BaseRepository<
       { aoId: normalizedAoId }
     );
   }
-}

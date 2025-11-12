@@ -73,7 +73,6 @@ export class Notifier {
 
             });
     }
-  }
 
   /**
    * Envoie une alerte via tous les canaux configurés
@@ -93,12 +92,9 @@ export class Notifier {
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
-    }
     
     return results;
   }
@@ -146,7 +142,6 @@ export class Notifier {
         this.logAlert(alert);
         return { success: true, channel: 'log', timestamp };
     }
-  }
 
   /**
    * Envoie une alerte par email
@@ -176,16 +171,14 @@ export class Notifier {
           alertId: alert.id,
           recipients: this.alertEmailRecipients.length
 
-      });
+            });
     
     },
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -224,10 +217,8 @@ export class Notifier {
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -280,10 +271,8 @@ export class Notifier {
     {
       operation: 'constructor',
       service: 'notifier',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -301,7 +290,7 @@ export class Notifier {
         status: alert.status,
         message: alert.message,
         metrics: alert.details?.metrics
-                                                                                    }
+              }
 
                                                                                   });
     
@@ -319,7 +308,6 @@ case 'medium':;
       default:
         logger.info(message, context);
     }
-  }
 
   /**
    * Formate le template email
@@ -408,8 +396,6 @@ case 'medium':;
               <p>Cette alerte a été générée automatiquement par le système de monitoring SAXIUM.</p>
               <p>Pour modifier les paramètres d'alerte, accédez au dashboard de monitoring.</p>
             </div>
-          </div>
-        </div>
       </body>
       </html>
     `;
@@ -439,7 +425,6 @@ case 'medium':;
           value: String(value),
           short: true
         });
-      });
     }
     
     return {
@@ -603,13 +588,12 @@ case 'medium':;
     logger.info('Tests de notification terminés', { metadata: {
         service: 'Notifier',
         results
-              }
+            }
 
             });
     
     return results;
   }
-}
 
 // Instance singleton
 let notifierInstance: Notifier | null = null;

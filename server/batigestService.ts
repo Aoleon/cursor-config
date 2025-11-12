@@ -272,10 +272,8 @@ export class BatigestService {
     {
       operation: 'parseInt',
       service: 'batigestService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -407,7 +405,7 @@ export class BatigestService {
     `;
     
     const result = await this.pool!.request().query(query);
-    return result.recordset.map((re: unknown)unknown) => BatigestOuvrageSchema.parse(record));
+    return result.recordset.map((record: unknown) => BatigestOuvrageSchema.parse(record));
   }
 
   /**
@@ -441,7 +439,7 @@ export class BatigestService {
     `;
     
     const result = await this.pool!.request().query(query);
-    return result.recordset.map: unknown)unknown)unknown) => BatigestFactureSchema.parse(record));
+    return result.recordset.map((record: unknown) => BatigestFactureSchema.parse(record));
   }
 
   /**
@@ -524,16 +522,15 @@ export class BatigestService {
         batigestData,
         message: 'Synchronisation réussie avec Batigest'
       };
-      
-    
     },
     {
-      operation: 'parseInt',
+      operation: 'syncDevisWithBatigest',
       service: 'batigestService',
       metadata: {
-                                                                                      }
-
-                                                                                    });
+        jlmOfferId,
+        batigestRef
+      }
+    });
   }
 
   /**
@@ -563,7 +560,7 @@ export class BatigestService {
         .reduce((sum, d) => sum + d.MONTANT_HT * 0.8, 0); // 80% réalisé simulé
       
       // Coefficients par famille
-      const familleStats = simulatedOuvrages.reduce((acc: unknown, ouvrage) => {
+      const familleStats = simulatedOuvrages.reduce((acc: Record<string, { coefficients: number[]; famille: string }>, ouvrage) => {
         const famille = ouvrage.FAMILLE || 'Non classé';
         if (!acc[famille]) {
           acc[famille] = { coefficients: [], famille };
@@ -572,10 +569,10 @@ export class BatigestService {
         return acc;
       }, {});
       
-      const coefficientsParFamille = Object.values(familleStat: unknown)unknown)unknown any) => {
-        const coefficients = stat.coefficients;
-        const moyenne = coefficients.reduce((a: number, b: number) => a + b, 0) / coefficients.length;
-        const variance = coefficients.reduce((acc: number, val: number) => acc + Math.pow(val - moyenne, 2), 0) / coefficients.length;
+      const coefficientsParFamille = Object.values(familleStats).map((stat: any) => {
+        const coefficients = stat.coefficients || [];
+        const moyenne = coefficients.reduce((sum: number, val: number) => sum + val, 0) / (coefficients.length || 1);
+        const variance = coefficients.reduce((acc: number, val: number) => acc + Math.pow(val - moyenne, 2), 0) / (coefficients.length || 1);
         
         return {
           famille: stat.famille,
@@ -676,9 +673,7 @@ export class BatigestService {
       margeReelleMoyenne: 0, // À calculer selon la logique métier
       margePrevueMoyenne: 0, // À calculer selon la logique métier
       
-      coefficientsParFamille: coeffResult.re: unknown)unknown)unknownrow: any) => ({
-        famille: row.famille,
-        coefficientMoyen: row.coefficientMoyen || 0,
+      coefficientsParFamille: coeffResult.recordset.map((row: any) => ({
         nombreElements: row.nombreElements,
         ecartType: row.ecartType || 0,
       })),
@@ -719,15 +714,12 @@ export class BatigestService {
         mode: 'production',
         message: `Connexion OK - Test effectué le ${result.recordset[0].TEST_DATE}`
       };
-    
     },
     {
-      operation: 'parseInt',
+      operation: 'testConnection',
       service: 'batigestService',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**

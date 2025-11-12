@@ -187,7 +187,7 @@ class ConversionCalculator extends BaseCalculator {
         {
           departement: filters?.departement,
           userId: filters?.userId
-        }
+              }
       );
 
       const rate = conversionStats.aoToOffer.conversionRate;
@@ -203,7 +203,6 @@ class ConversionCalculator extends BaseCalculator {
             outputCount: stats.offers
           };
         }
-      }
 
       let trend = 0;
       if (!disableTrend) {
@@ -227,11 +226,11 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculateAOToOfferConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       return {
         rate: 0,
         totalInput: 0,
@@ -239,7 +238,6 @@ class ConversionCalculator extends BaseCalculator {
         trend: 0
       };
     }
-  }
 
   async calculateOfferToProjectConversion(
     period: DateRange, 
@@ -257,7 +255,7 @@ class ConversionCalculator extends BaseCalculator {
         {
           userId: filters?.userId,
           departement: filters?.departement
-        }
+              }
       );
 
       const rate = conversionStats.offerToProject.conversionRate;
@@ -273,7 +271,6 @@ class ConversionCalculator extends BaseCalculator {
             outputCount: stats.signed
           };
         }
-      }
 
       let trend = 0;
       if (!disableTrend) {
@@ -297,11 +294,11 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculateOfferToProjectConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       return {
         rate: 0,
         totalInput: 0,
@@ -309,7 +306,6 @@ class ConversionCalculator extends BaseCalculator {
         trend: 0
       };
     }
-  }
 
   async calculatePipelineConversion(period: DateRange): Promise<PipelineMetric> {
     try {
@@ -336,11 +332,11 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculatePipelineConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                            });
       return {
         aoToOffer: 0,
         offerToProject: 0,
@@ -352,8 +348,6 @@ class ConversionCalculator extends BaseCalculator {
         }
       };
     }
-  }
-}
 
 // ========================================
 // BUSINESS ANALYTICS SERVICE
@@ -372,8 +366,8 @@ export class BusinessAnalyticsService {
     this.conversionCalculator = new ConversionCalculator(storage, analyticsStorage);
 
     logger.info('BusinessAnalyticsService initialized', {
-      service: 'BusinessAnalyticsService',
-      metadata: { operation: 'constructor' 
+      metadata: {
+        module: 'BusinessAnalyticsService', { operation: 'constructor' 
 
           });
   }
@@ -426,7 +420,7 @@ export class BusinessAnalyticsService {
           period: period,
           kpis: {
             conversionRate: conversions.globalConversion
-        }
+                }
               );
 
       return savedSnapshot;
@@ -440,7 +434,6 @@ export class BusinessAnalyticsService {
     } );
       throw new AppError(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 500);
     }
-  }
 
   /**
    * Get real-time KPIs with caching
@@ -453,7 +446,6 @@ export class BusinessAnalyticsService {
       if (Date.now() - cached.timestamp < this.CACHE_TTL) {
         return cached.data;
       }
-    }
 
     return withErrorHandling(
     async () => {
@@ -496,7 +488,6 @@ export class BusinessAnalyticsService {
         lastUpdated: new Date()
       };
     }
-  }
 
   /**
    * Get business metrics (conversion, revenue, performance, pipeline)
@@ -578,7 +569,6 @@ export class BusinessAnalyticsService {
         pipeline: { aoCount: 0, offerCount: 0, projectCount: 0, totalValue: 0, expectedRevenue: 0 }
       };
     }
-  }
 
   /**
    * Get dashboard statistics
@@ -645,7 +635,6 @@ export class BusinessAnalyticsService {
         teamUtilization: 0
       };
     }
-  }
 
   /**
    * Get pipeline analytics with optional filters
@@ -727,7 +716,6 @@ export class BusinessAnalyticsService {
         bottlenecks: []
       };
     }
-  }
 
   /**
    * Generate benchmarks for entity and period
@@ -735,9 +723,9 @@ export class BusinessAnalyticsService {
    */
   async generateBenchmarks(entity: BenchmarkEntity, period: DateRange): Promise<PerformanceBenchmark> {
     logger.warn('generateBenchmarks() called - returning placeholder', {
-      service: 'BusinessAnalyticsService',
-      metadata: { operation: 'generateBenchmarks', entity, period 
-        }
+      metadata: {
+        module: 'BusinessAnalyticsService', { operation: 'generateBenchmarks', entity, period 
+              }
             );
 
     // Placeholder implementation - return basic benchmark
@@ -758,9 +746,9 @@ export class BusinessAnalyticsService {
    */
   async getBenchmarks(params: Record<string, unknown>): Promise<Record<string, unknown>> {
     logger.warn('getBenchmarks() called - returning placeholder', {
-      service: 'BusinessAnalyticsService',
-      metadata: { operation: 'getBenchmarks', params 
-        }
+      metadata: {
+        module: 'BusinessAnalyticsService', { operation: 'getBenchmarks', params 
+              }
             );
 
     return {
@@ -778,8 +766,8 @@ export class BusinessAnalyticsService {
   clearCache(): void {
     this.cache.clear();
     logger.info('Analytics cache cleared', {
-      service: 'BusinessAnalyticsService',
-      metadata: { operation: 'clearCache' 
+      metadata: {
+        module: 'BusinessAnalyticsService', { operation: 'clearCache' 
 
           });
   }
@@ -802,7 +790,6 @@ export class BusinessAnalyticsService {
     const timeWindow = Math.floor(Date.now() / (5 * 60 * 1000)); // 5min windows
     return `business_analytics_${operation}_${paramsHash}_${timeWindow}`;
   }
-}
 
 // ========================================
 // SINGLETON EXPORT

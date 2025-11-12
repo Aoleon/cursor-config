@@ -42,7 +42,7 @@ logger.info('Provider de base de données détecté', { metadata: {
     operation: 'detectProvider',
     provider: dbProvider,
     hasDatabaseUrl: !!process.env.DATABASE_URL
-              }
+        }
 
             });
 
@@ -113,20 +113,18 @@ pool.on('error', (err: Error, client: NeonPoolClient | PgPoolClient) => {
       provider: dbProvider,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined
-              }
+          }
 
             });
-});
 
 pool.on('connect', (client: NeonPoolClient | PgPoolClient) => {
   logger.debug('Nouvelle connexion pool établie', { metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolConnect',
       provider: dbProvider
-              }
+          }
 
             });
-});
 
 pool.on('acquire', (client: NeonPoolClient | PgPoolClient) => {
   // Log optionnel pour debug - peut être commenté en production
@@ -138,10 +136,9 @@ pool.on('remove', (client: NeonPoolClient | PgPoolClient) => {
       module: 'DatabaseConfig',
       operation: 'handlePoolRemove',
       provider: dbProvider
-              }
+          }
 
             });
-});
 
 // ========================================
 // INITIALISATION DRIZZLE ORM
@@ -181,7 +178,6 @@ export function getPoolStats() {
       waitingRequests: pgPool.waitingCount,
     };
   }
-}
 
 /**
  * Retourne le provider de base de données actuel
@@ -203,7 +199,7 @@ export async function closePool() {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { action: 'shutdown' }
-                                                                                  }
+            }
 
                                                                                 });
   await pool.end();
@@ -212,7 +208,7 @@ export async function closePool() {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { status: 'closed' }
-                                                                                  }
+            }
 
                                                                                 });
 }

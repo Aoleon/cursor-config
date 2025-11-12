@@ -51,8 +51,8 @@ export class MondayImportService {
     async () => {
 
       logger.info('Démarrage import Monday board vers Projets', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsProjects',
           boardId,
           mappingCount: mapping.columnMappings.length
@@ -68,9 +68,9 @@ export class MondayImportService {
           
           // INSTRUMENTATION: Log mapped data before cleaning
           logger.info('🔍 [DEBUG] Mapped project data', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               itemName: item.name,
               projectData
@@ -82,9 +82,9 @@ export class MondayImportService {
           
           // INSTRUMENTATION: Log cleaned data before validation
           logger.info('🔍 [DEBUG] Cleaned data before validation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               cleanedData
 
@@ -95,8 +95,8 @@ export class MondayImportService {
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] Validation Zod échouée', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsProjects',
                 itemId: item.id,
                 errors,
@@ -110,9 +110,9 @@ export class MondayImportService {
           
           // INSTRUMENTATION: Log successful validation
           logger.info('✅ [DEBUG] Validation passed', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               validatedData: validation.data
 
@@ -120,9 +120,9 @@ export class MondayImportService {
 
           // Check if project already exists with this mondayItemId (upsert strategy)
           logger.info('🔍 [DEBUG] Checking for existing project', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               mondayItemId: item.id
 
@@ -131,9 +131,9 @@ export class MondayImportService {
           const existingProject = await storage.getProjectByMondayItemId(item.id);
           
           logger.info('🔍 [DEBUG] Existing project check result', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               existingProject: existingProject ? { id: existingProject.id, name: existingProject.name } : null
             });
@@ -153,9 +153,9 @@ export class MondayImportService {
           });
           
           logger.info('🔍 [DEBUG] Data for storage', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsProjects',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsProjects',
               itemId: item.id,
               dataForStorage
 
@@ -167,8 +167,8 @@ export class MondayImportService {
           if (existingProject) {
             // Update existing project
             logger.info('🔍 [DEBUG] Updating existing project', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsProjects',
                 projectId: existingProject.id,
                 itemId: item.id
@@ -177,8 +177,8 @@ export class MondayImportService {
             project = await storage.updateProject(existingProas unknown),as unknown)unknownoras unknunknown)unknown);
             wasUpdate = true;
             logger.info('Projet mis à jour depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsProjects',
                 projectId: project.id,
                 mondayItemId: item.id,
@@ -188,8 +188,8 @@ export class MondayImportService {
           } else {
             // Create new project
             logger.info('🔍 [DEBUG] Creating new project', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsProjects',
                 itemId: item.id
 
@@ -198,8 +198,8 @@ export class MondayImportService {
             project = await storage.cas unknown)oas unknown)unknownoras unknown) as unknown);
             
             logger.info('✅ [DEBUG] Projet créé depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsProjects',
                 projectId: project.id,
                 mondayItemId: item.id,
@@ -213,21 +213,21 @@ export class MondayImportService {
 
           // Publish appropriate event based on action
           eventBus.publish({
-            id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
             type: wasUpdate ? EventType.PROJECT_UPDATED : EventType.PROJECT_CREATED,
             entity: 'project',
             entityId: project.id,
             message: `Projet "${project.name}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,
             severity: 'success',
             affectedQueryKeys: [['/api/projects']],
-            userId: 'monday-import',
+                userId: 'monday-import',
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'monday.com',
               mondayItemId: item.id,
               boardId,
               action: wasUpdate ? 'update' : 'create'
-        }
+                    }
                   );
         
     },
@@ -237,12 +237,12 @@ service: 'MondayImportService',
       metadata: {       }
      });
           result.success = false;
-        }
+              }
       }
 
       logger.info('Import Monday terminé', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsProjects',
           importedCount: result.importedCount,
           errorCount: result.errors.length
@@ -252,8 +252,8 @@ service: 'MondayImportService',
       return result;
 unknown)unknownatch (e: unknown)unknown)any) {
       logger.error('Erreur import Monday', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsProjects',
           error: error.message
 
@@ -278,8 +278,8 @@ unknown)unknownatch (e: unknown)unknown)any) {
     async () => {
 
       logger.info('Démarrage import Monday board vers AOs', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsAOs',
           boardId
 
@@ -293,9 +293,9 @@ unknown)unknownatch (e: unknown)unknown)any) {
           const aoData = this.mapItemToAO(item, mapping);
           
           logger.info('🔍 [DEBUG] Mapped AO data', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsAOs',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsAOs',
               itemId: item.id,
               itemName: item.name,
               aoData
@@ -306,9 +306,9 @@ unknown)unknownatch (e: unknown)unknown)any) {
           const cleanedData = this.removeUndefined(aoData);
           
           logger.info('🔍 [DEBUG] Cleaned AO data before validation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsAOs',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsAOs',
               itemId: item.id,
               cleanedData
 
@@ -319,8 +319,8 @@ unknown)unknownatch (e: unknown)unknown)any) {
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] AO Validation Zod échouée', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsAOs',
                 itemId: item.id,
                 errors,
@@ -333,9 +333,9 @@ unknown)unknownatch (e: unknown)unknown)any) {
           }
           
           logger.info('✅ [DEBUG] AO Validation passed', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsAOs',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsAOs',
               itemId: item.id,
               validatedData: validation.data
 
@@ -350,7 +350,7 @@ unknown)unknownatch (e: unknown)unknown)any) {
             montantEstime: typeof validation.data.montantEstime === 'number' 
               ? validation.data.montantEstime.toString() 
               : validation.data.montantEstime,
-            amountEsas unknown) as unknown)unknown (valias unknown)unknown)unknownnown any).amountEstimate === 'numbeas unknown) as unknown)unknown   ? (as unknown)unknown)unknownnowna as any).amountEstimate.toStas unknown) as unknown)unknown      as unknown)unknown)unknownnown.data as any).amountEstimate
+            amountEsas unknown) as unknown)unknown (valias unknownunknownnown any).amountEstimate === 'numbeas unknown) as unknown)unknown   ? (as unknownunknownnowna as any).amountEstimate.toStas unknown) as unknown)unknown      as unknownunknownnown.data as any).amountEstimate
           });
 
           let ao;
@@ -358,11 +358,11 @@ unknown)unknownatch (e: unknown)unknown)any) {
           
           if (existingAo) {
             // Update existing AO
-            ao = await stoas unknown)das unknown)unknownexistias unknown)unknown)unknownnownorStorage as any);
+            ao = await stoas unknown)das unknown)unknownexistias unknownunknownnownorStorage as any);
             wasUpdate = true;
             logger.info('AO mis à jour depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsAOs',
                 aoId: ao.id,
                 mondayItemId: item.id,
@@ -371,10 +371,10 @@ unknown)unknownatch (e: unknown)unknown)any) {
                   });
           } else {
             // Create new AO
-       as unknown) as unknown)unknownt storas unknown)unknown)unknownnownataForStorage as any);
+       as unknown) as unknown)unknownt storas unknownunknownnownataForStorage as any);
             logger.info('AO créé depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsAOs',
                 aoId: ao.id,
                 mondayItemId: item.id,
@@ -388,21 +388,21 @@ unknown)unknownatch (e: unknown)unknown)any) {
 
           // Publish appropriate event based on action
           eventBus.publish({
-            id: crypto.randomUUID(),
+                id: crypto.randomUUID(),
             type: wasUpdate ? EventType.OFFER_UPDATED : EventType.OFFER_CREATED,
             entity: 'offer',
             entityId: ao.id,
 message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis Monday.com`,;
             severity: 'success',
             affectedQueryKeys: [['/api/aos']],
-            userId: 'monday-import',
+                userId: 'monday-import',
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'monday.com',
               mondayItemId: item.id,
               boardId,
               action: wasUpdate ? 'update' : 'create'
-        }
+                    }
                   );
         
     },
@@ -412,12 +412,12 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
       metadata: {       }
      });
           result.success = false;
-        }
+              }
       unknown)unknown  return result;
     } catc: unknown)or: unknown) {
       logger.error('Erreur import Monday AOs', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsAOs',
           error: error.message
 
@@ -442,8 +442,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
     async () => {
 
       logger.info('Démarrage import Monday board vers Fournisseurs', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsSuppliers',
           boardId
 
@@ -457,9 +457,9 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           const supplierData = this.mapItemToSupplier(item, mapping);
           
           logger.info('🔍 [DEBUG] Mapped Supplier data', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsSuppliers',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsSuppliers',
               itemId: item.id,
               itemName: item.name,
               supplierData
@@ -470,9 +470,9 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           const cleanedData = this.removeUndefined(supplierData);
           
           logger.info('🔍 [DEBUG] Cleaned Supplier data before validation', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsSuppliers',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsSuppliers',
               itemId: item.id,
               cleanedData
 
@@ -483,8 +483,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           if (!validation.success) {
             const errors = validation.error.issues.map(i => `$) {i.path.join('.')}: ${i.message}`).join(', ');
             logger.error('❌ [DEBUG] Supplier Validation Zod échouée', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsSuppliers',
                 itemId: item.id,
                 errors,
@@ -497,9 +497,9 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           }
           
           logger.info('✅ [DEBUG] Supplier Validation passed', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'importBoardAsSuppliers',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'importBoardAsSuppliers',
               itemId: item.id,
               validatedData: validation.data
 
@@ -516,11 +516,11 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
           
           if (existingSupplier) {
             // Update existing Supplier
-            supplier = await storageas unknown)unknownnownr(exisas unknown)unknown)unknownnownd, dataForStorage as any);
+            supplier = await storageas unknown)unknownnownr(exisas unknownunknownnownd, dataForStorage as any);
             wasUpdate = true;
             logger.info('Fournisseur mis à jour depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsSuppliers',
                 supplierId: supplier.id,
                 mondayItemId: item.id,
@@ -529,10 +529,10 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
                   });
           } else {
             // Create new Supplier
-           as unknown)unknownnownait stas unknown)unknown)unknownnownpplier(dataForStorage as any);
+           as unknown)unknownnownait stas unknownunknownnownpplier(dataForStorage as any);
             logger.info('Fournisseur créé depuis Monday', {
-              service: 'MondayImportService',
-              metadata: {
+      metadata: {
+        module: 'MondayImportService', {
                 operation: 'importBoardAsSuppliers',
                 supplierId: supplier.id,
                 mondayItemId: item.id,
@@ -556,8 +556,8 @@ service: 'MondayImportService',
       retunknown)unknownult;
     } : unknown)(e: unknown)any) {
       logger.error('Erreur import Monday Fournisseurs', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'importBoardAsSuppliers',
           error: error.message
 
@@ -669,8 +669,8 @@ service: 'MondayImportService',
     );
 
     logger.info('Preview import généré', {
-      service: 'MondayImportService',
       metadata: {
+        module: 'MondayImportService', {
         operation: 'previewImport',
         boardId,
         boardName: boardData.board.name,
@@ -757,8 +757,8 @@ service: 'MondayImportService',
     const { boardId, itemId, changeType, data, mondayUpdatedAt } = params;
     
     logger.info('[MondayImportService] Sync depuis Monday', {
-      service: 'MondayImportService',
       metadata: {
+        module: 'MondayImportService', {
         operation: 'syncFromMonday',
         boardId,
         itemId,
@@ -781,23 +781,23 @@ service: 'MondayImportService',
         if (entityType === 'project') {
           // Note: We would need a deleteProject method in storage
           logger.info('[MondayImportService] Projet suppression détectée', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'syncFromMonday',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'syncFromMonday',
               itemId,
               changeType: 'delete'
 
                 });
         } else if (entityType === 'ao') {
           logger.info('[MondayImportService] AO suppression détectée', {
-            service: 'MondayImportService',
-            metadata: {
-              operation: 'syncFromMonday',
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'syncFromMonday',
               itemId,
               changeType: 'delete'
 
                 });
-        }
+              }
         return;
       }
       
@@ -833,10 +833,10 @@ service: 'MondayImportService',
             if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
               // Conflict detected: Saxium is more recent than Monday
               logger.warn('[Conflict] Saxium plus récent que Monday', {
-                service: 'MondayImportService',
-                metadata: {
-                  operation: 'syncFromMonday',
-                  projectId: existingProject.id,
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'syncFromMonday',
+                projectId: existingProject.id,
                   mondayId: itemId,
                   saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
                   mondayUpdatedAt: mondayTime.toISOString(),
@@ -893,10 +893,10 @@ service: 'MondayImportService',
             if (saxiumUpdatedAt && saxiumUpdatedAt > mondayTime) {
               // Conflict detected: Saxium is more recent than Monday
               logger.warn('[Conflict] Saxium plus récent que Monday', {
-                service: 'MondayImportService',
-                metadata: {
-                  operation: 'syncFromMonday',
-                  aoId: existingAo.id,
+      metadata: {
+        module: 'MondayImportService', {
+                operation: 'syncFromMonday',
+                aoId: existingAo.id,
                   mondayId: itemId,
                   saxiumUpdatedAt: saxiumUpdatedAt.toISOString(),
                   mondayUpdatedAt: mondayTime.toISOString(),
@@ -949,13 +949,13 @@ message: `${entityType} synchronisé depuis Monday.com`,;
             mondayId: itemId,
             boardId,
             changeType
-        }
+                  }
                 );
       }
       
       logger.info('[MondayImportService] Sync terminée avec succès', {
-        service: 'MondayImportService',
-        metadata: {
+      metadata: {
+        module: 'MondayImportService', {
           operation: 'syncFromMonday',
           entityType,
           entityId: createdId,

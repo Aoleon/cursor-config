@@ -221,28 +221,43 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 
 ## 🎯 Optimisations
 
+### Chargement Adaptatif Basé sur Usage Réel
+
+**Principe:** Utiliser les données d'usage réelles (`rule-usage.json`) pour optimiser le chargement
+
+**Implémentation:**
+- Consulter `rule-usage.json` avant chargement
+- Filtrer règles avec `usageRate < 0.3` (peu utilisées)
+- Prioriser règles avec `usageRate > 0.9` (très utilisées)
+- Ne pas charger règles jamais utilisées (`usageRate = 0`)
+
+**Référence:** `@.cursor/rules/intelligent-rule-loading.md` - Chargement intelligent détaillé
+
 ### Lazy Loading
 
 **Principe:** Charger les règles P2 uniquement sur demande
 
 **Implémentation:**
 - P0: Toujours chargé (3 fichiers)
-- P1: Chargé automatiquement selon contexte (1-2 fichiers)
-- P2: Chargé explicitement avec `@` ou pour tâches complexes (0-2 fichiers)
+- P1: Chargé automatiquement selon contexte + usage réel (1-2 fichiers)
+- P2: Chargé explicitement avec `@` ou si `usageRate > 0.5` (0-2 fichiers)
 
 ### Réduction du Contexte
 
 **Stratégies:**
 1. **Priorisation:** Charger uniquement règles prioritaires
 2. **Contextualisation:** Charger uniquement règles pertinentes au contexte
-3. **Lazy loading:** Charger règles P2 sur demande uniquement
-4. **Consolidation:** Éviter duplication entre fichiers
+3. **Usage-based:** Filtrer selon usage réel (éviter règles inutilisées)
+4. **Lazy loading:** Charger règles P2 sur demande uniquement
+5. **Consolidation:** Éviter duplication entre fichiers
 
-### Maximum Recommandé
+### Maximum Recommandé (Optimisé)
 
-**Pour tâches simples:** 4-5 fichiers maximum
-**Pour tâches complexes:** 5-7 fichiers maximum
-**Pour runs autonomes:** 6-8 fichiers maximum
+**Pour tâches simples:** 4-5 fichiers maximum (vs 5-7 avant optimisation)
+**Pour tâches complexes:** 5-7 fichiers maximum (vs 10-12 avant optimisation)
+**Pour runs autonomes:** 7-9 fichiers maximum (vs 15-17 avant optimisation)
+
+**Gain estimé:** Réduction 30-40% du nombre de règles chargées
 
 ## 🔗 Références
 
@@ -258,10 +273,32 @@ Documentation de la stratégie de chargement optimisée des règles Cursor pour 
 - `@.cursor/rules/examples.md` - Exemples concrets
 - `@AGENTS.md` - Index simplifié des règles
 
+## 📊 Intégration Données d'Usage
+
+### Utilisation de `rule-usage.json`
+
+**TOUJOURS:**
+- ✅ Consulter `.cursor/rule-usage.json` avant chargement règles
+- ✅ Filtrer règles avec `usageRate < 0.3` (peu utilisées)
+- ✅ Prioriser règles avec `usageRate > 0.9` (très utilisées)
+- ✅ Ne pas charger règles jamais utilisées
+
+**Référence:** `@.cursor/rules/rule-usage-tracker.md` - Tracking usage détaillé
+
+### Ajustement Dynamique Priorité
+
+**TOUJOURS:**
+- ✅ Promouvoir règles P2 → P1 si `usageRate > 0.9`
+- ✅ Rétrograder règles P1 → P2 si `usageRate < 0.3`
+- ✅ Considérer suppression règles jamais utilisées
+
+**Référence:** `@.cursor/rules/intelligent-rule-loading.md` - Ajustement priorité détaillé
+
 ---
 
 **Note:** Cette stratégie de chargement optimisée permet d'améliorer la prise en compte des paramétrages par Cursor AI en évitant la saturation du contexte.
 
-**Version:** 1.0.0  
-**Dernière mise à jour:** 2025-01-29
+**Version:** 1.1.0  
+**Dernière mise à jour:** 2025-11-12  
+**Changements:** Intégration données d'usage réel pour optimisation chargement
 

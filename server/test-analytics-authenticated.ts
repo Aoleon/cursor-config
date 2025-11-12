@@ -44,7 +44,6 @@ async function loginBasicAuth(): Promise<string | null> {
     logger.info(`❌ Erreur auth: ${error.message}`);
     return null;
   }
-}
 
 async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string): Promise<unknown> {
   try {
@@ -76,15 +75,12 @@ async function testAuthenticatedEndpoint(endpoint: string, sessionCookie: string
       hasValidStructure: responseData?.success !== undefined || responseData?.data !== undefined
     };
     
-  } catch (e: unknown)unknown) {
-    return {
-      endpoint,
+  } catch (e: unknown) {
       status: 0,
       success: false,
       error: error.message
     };
   }
-}
 
 async function validateAnalyticsEndpoints(): Promise<void> {
   logger.info('🚀 VALIDATION ENDPOINTS ANALYTICS AUTHENTIFIÉS\n');
@@ -149,7 +145,6 @@ async function validateAnalyticsEndpoints(): Promise<void> {
       if (alertsData.data_warnings && alertsData.data_warnings.length > 0) {
         logger.info(`   ⚠️  Warnings: ${alertsData.data_warnings.join(', ')}`);
       }
-    }
   } else {
     logger.info('❌ Route /api/analytics/alerts: INSTABLE');
   }

@@ -377,9 +377,9 @@ export class UserRepository extends BaseRepository<
       async () => {
         let query = dbToUse
           .select({
-            id: teamResources.id,
-            projectId: teamResources.projectId,
-            userId: teamResources.userId,
+                id: teamResources.id,
+                projectId: teamResources.projectId,
+                userId: teamResources.userId,
             externalName: teamResources.externalName,
             role: teamResources.role,
             startDate: teamResources.startDate,
@@ -402,9 +402,7 @@ export class UserRepository extends BaseRepository<
 
         const results = await query;
 
-        return results.map(: unknown)unknown) => ({
-          id: row.id,
-          projectId: row.projectId,
+        return results.map(: unknown) => ({
           userId: row.userId,
           externalName: row.externalName,
           role: row.role,
@@ -578,15 +576,15 @@ export class UserRepository extends BaseRepository<
 
         let query = dbToUse
           .select({
-            id: beWorkload.id,
-            userId: beWorkload.userId,
-            weekNumber: beWorkload.weekNumber,
-            year: beWorkload.year,
+                id: beWorkload.id,
+                userId: beWorkload.userId,
+                weekNumber: beWorkload.weekNumber,
+                year: beWorkload.year,
             plannedHours: beWorkload.plannedHours,
             actualHours: beWorkload.actualHours,
             dossierCount: beWorkload.dossierCount,
             chargeLevel: beWorkload.chargeLevel,
-            notes: beWorkload.notes,
+                notes: beWorkload.notes,
             createdAt: beWorkload.createdAt,
             updatedAt: beWorkload.updatedAt,
             user: users
@@ -602,10 +600,7 @@ export class UserRepository extends BaseRepository<
 
         const results = await query;
 
-        return results.: unknown)unknown)unknown) => ({
-          id: row.id,
-          userId: row.userId,
-          weekNumber: row.weekNumber,
+        return results.: unknown) => ({
           year: row.year,
           plannedHours: row.plannedHours,
           actualHours: row.actualHours,
@@ -696,10 +691,10 @@ export class UserRepository extends BaseRepository<
           }
 
           this.emitEvent('be_workload:updated', { 
-            id: updated.id, 
-            userId: updated.userId,
-            weekNumber: updated.weekNumber,
-            year: updated.year
+                id: updated.id,
+                userId: updated.userId,
+                weekNumber: updated.weekNumber,
+                year: updated.year
           });
 
           return updated;
@@ -716,10 +711,10 @@ export class UserRepository extends BaseRepository<
           }
 
           this.emitEvent('be_workload:created', { 
-            id: newWorkload.id, 
-            userId: newWorkload.userId,
-            weekNumber: newWorkload.weekNumber,
-            year: newWorkload.year
+                id: newWorkload.id,
+                userId: newWorkload.userId,
+                weekNumber: newWorkload.weekNumber,
+                year: newWorkload.year
           });
 
           return newWorkload;
@@ -1041,4 +1036,3 @@ export class UserRepository extends BaseRepository<
       { id: normalizedId }
     );
   }
-}

@@ -49,9 +49,7 @@ const isAdminOrResponsible = (req: unknown,: unknown, unknown, next: unknown) =>
 /**
  * Middleware: Check if user is responsable_be or admin
  */
-const requireTechnicalValidationRol: unknown,: unknown,y, res: unknown, : unknown)unknown) => {
-  const userRole = req.session?.user?.role;
-  if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
+const requireTechnicalValidationRol: unknown,: unknown,y, res: unknown, : unknown) => {
     return res.status(403).json({
       success: false,
       message: "Accès refusé. Rôle 'responsable_be' ou 'admin' requis."
@@ -78,10 +76,7 @@ const scorePreviewSchema = z.object({
 /**
  * Factory function to create Configuration routes with dependency injection
  */
-export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)unknown) {
-  const router = Router();
-
-  // ========================================
+export function createConfigurationRoutes(storage: IStorage, : unknown) {
   // TECHNICAL SCORING ROUTES
   // ========================================
 
@@ -90,21 +85,17 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     isAuthenticated,
     isAdminOrResponsible,
     asyncHandler(async (req, res) => {
-      logger.info('Récupération configuration scoring', { metadata: { endpoint: 'GET /api/scoring-config' 
-
-            })
- 
-
-          );
+      logger.info('Récupération configuration scoring', { metadata: {
+ endpoint: 'GET /api/scoring-config'
+      }
+    });
       
       const config = await storage.getScoringConfig();
       
-      logger.info('Configuration scoring récupérée', { metadata: { config 
-
-            })
- 
-
-          );
+      logger.info('Configuration scoring récupérée', { metadata: {
+ config
+      }
+    });
       
       res.json({
         success: true,
@@ -120,12 +111,10 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     isAdminOrResponsible,
     validateBody(technicalScoringConfigSchema),
     asyncHandler(async (req, res) => {
-      logger.info('Mise à jour configuration scoring', { metadata: { endpoint: 'PATCH /api/scoring-config', data: req.body 
-
-            })
- 
-
-          );
+      logger.info('Mise à jour configuration scoring', { metadata: {
+ endpoint: 'PATCH /api/scoring-config', data: req.body
+      }
+    });
       
       const config: TechnicalScoringConfig = req.body;
       
@@ -140,12 +129,10 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       
       await storage.updateScoringConfig(config);
       
-      logger.info('Configuration scoring mise à jour avec succès', { metadata: { config 
-
-            })
- 
-
-          );
+      logger.info('Configuration scoring mise à jour avec succès', { metadata: {
+ config
+      }
+    });
       
       res.json({
         success: true,
@@ -162,24 +149,20 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     isAdminOrResponsible,
     validateBody(scorePreviewSchema),
     asyncHandler(async (req, res) => {
-      logger.info('Calcul aperçu scoring', { metadata: { endpoint: 'POST /api/score-preview', criteria: req.body 
-
-            })
- 
-
-          );
+      logger.info('Calcul aperçu scoring', { metadata: {
+ endpoint: 'POST /api/score-preview', criteria: req.body
+      }
+    });
       
       const { specialCriteria, config } = req.body;
       
       const scoringConfig = config || await storage.getScoringConfig();
       const result = ScoringService.compute(specialCriteria, scoringConfig);
       
-      logger.info('Résultat aperçu scoring calculé', { metadata: { result 
-
-            })
- 
-
-          );
+      logger.info('Résultat aperçu scoring calculé', { metadata: {
+ result
+      }
+    });
       
       res.json({
         success: true,
@@ -202,20 +185,16 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     isAuthenticated, 
     requireTechnicalValidationRole,
     asyncHandler(async (req, res) => {
-      logger.info('Récupération règles matériaux-couleurs', { metadata: { endpoint: 'GET /api/settings/material-color-rules' 
-
-            })
- 
-
-          );
+      logger.info('Récupération règles matériaux-couleurs', { metadata: {
+ endpoint: 'GET /api/settings/material-color-rules'
+      }
+    });
       
       const rules = await storage.getMaterialColorRules();
-      logger.info('Règles matériaux-couleurs récupérées', { metadata: { count: rules.length 
-
-            })
- 
-
-          );
+      logger.info('Règles matériaux-couleurs récupérées', { metadata: {
+ count: rules.length
+      }
+    });
       
       res.json({
         success: true,
@@ -232,12 +211,10 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     requireTechnicalValidationRole,
     validateBody(z.array(materialColorAlertRuleSchema)),
     asyncHandler(async (req, res) => {
-      logger.info('Mise à jour règles matériaux-couleurs', { metadata: { endpoint: 'PUT /api/settings/material-color-rules', newRules: req.body 
-
-            })
- 
-
-          );
+      logger.info('Mise à jour règles matériaux-couleurs', { metadata: {
+ endpoint: 'PUT /api/settings/material-color-rules', newRules: req.body
+      }
+    });
       
       const newRules: MaterialColorAlertRule[] = req.body;
       
@@ -253,12 +230,10 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       
       await storage.setMaterialColorRules(newRules);
       
-      logger.info('Règles matériaux-couleurs mises à jour avec succès', { metadata: { count: newRules.length 
-
-            })
- 
-
-          );
+      logger.info('Règles matériaux-couleurs mises à jour avec succès', { metadata: {
+ count: newRules.length
+      }
+    });
       
       res.json({
         success: true,
@@ -285,10 +260,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { projectId } = req.query;
       const batteries = await storage.getEquipmentBatteries(projectId as string | undefined);
       sendSuccess(res, batteries);
-          }
-        })
-      );
-
+              })
+            );
   router.get('/api/equipment-batteries/:id',
     isAuthenticated,
     rateLimits.general,
@@ -300,10 +273,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
         throw createError.notFound('Batterie', id);
       }
       sendSuccess(res, battery);
-          }
-        })
-      );
-
+              })
+            );
   router.post('/api/equipment-batteries',
     isAuthenticated,
     rateLimits.creation,
@@ -322,10 +293,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     asyncHandler(async (req, res) => {
       const battery = await storage.createEquipmentBattery(req.body);
       sendSuccess(res, battery);
-          }
-        })
-      );
-
+              })
+            );
   router.put('/api/equipment-batteries/:id',
     isAuthenticated,
     rateLimits.general,
@@ -345,10 +314,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       const battery = await storage.updateEquipmentBattery(id, req.body);
       sendSuccess(res, battery);
-          }
-        })
-      );
-
+              })
+            );
   router.delete('/api/equipment-batteries/:id',
     isAuthenticated,
     rateLimits.general,
@@ -357,10 +324,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       await storage.deleteEquipmentBattery(id);
       sendSuccess(res, null);
-          }
-        })
-      );
-
+              })
+            );
   // ========================================
   // MARGIN TARGETS ROUTES
   // ========================================
@@ -379,10 +344,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { projectId } = req.query;
       const targets = await storage.getMarginTargets(projectId as string | undefined);
       sendSuccess(res, targets);
-          }
-        })
-      );
-
+              })
+            );
   router.get('/api/margin-targets/:id',
     isAuthenticated,
     rateLimits.general,
@@ -394,10 +357,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
         throw createError.notFound('Objectif de marge', id);
       }
       sendSuccess(res, target);
-          }
-        })
-      );
-
+              })
+            );
   router.post('/api/margin-targets',
     isAuthenticated,
     rateLimits.creation,
@@ -420,10 +381,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
         targetPeriodEnd: new Date(req.body.targetPeriodEnd)
       });
       sendSuccess(res, target);
-          }
-        })
-      );
-
+              })
+            );
   router.put('/api/margin-targets/:id',
     isAuthenticated,
     rateLimits.general,
@@ -445,10 +404,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       
       const target = await storage.updateMarginTarget(id, updateData);
       sendSuccess(res, target);
-          }
-        })
-      );
-
+              })
+            );
   router.delete('/api/margin-targets/:id',
     isAuthenticated,
     rateLimits.general,
@@ -457,10 +414,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       await storage.deleteMarginTarget(id);
       sendSuccess(res, null);
-          }
-        })
-      );
-
+              })
+            );
   // ========================================
   // CLASSIFICATION TAGS ROUTES
   // ========================================
@@ -477,10 +432,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { category } = req.query;
       const tags = await storage.getClassificationTags(category as string | undefined);
       sendSuccess(res, tags);
-          }
-        })
-      );
-
+              })
+            );
   router.get('/api/tags/classification/:id',
     isAuthenticated,
     rateLimits.general,
@@ -492,10 +445,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
         throw createError.notFound('Tag de classification', id);
       }
       sendSuccess(res, tag);
-          }
-        })
-      );
-
+              })
+            );
   router.post('/api/tags/classification',
     isAuthenticated,
     rateLimits.creation,
@@ -509,10 +460,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     asyncHandler(async (req, res) => {
       const tag = await storage.createClassificationTag(req.body);
       sendSuccess(res, tag);
-          }
-        })
-      );
-
+              })
+            );
   router.put('/api/tags/classification/:id',
     isAuthenticated,
     rateLimits.general,
@@ -528,10 +477,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       const tag = await storage.updateClassificationTag(id, req.body);
       sendSuccess(res, tag);
-          }
-        })
-      );
-
+              })
+            );
   router.delete('/api/tags/classification/:id',
     isAuthenticated,
     rateLimits.general,
@@ -540,10 +487,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       await storage.deleteClassificationTag(id);
       sendSuccess(res, null);
-          }
-        })
-      );
-
+              })
+            );
   // ========================================
   // ENTITY TAGS ROUTES
   // ========================================
@@ -561,10 +506,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { entityType, entityId } = req.query;
       const entityTags = await storage.getEntityTags(entityType as string | undefined, entityId as string | undefined);
       sendSuccess(res, entityTags);
-          }
-        })
-      );
-
+              })
+            );
   router.post('/api/tags/entity',
     isAuthenticated,
     rateLimits.creation,
@@ -577,10 +520,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
     asyncHandler(async (req, res) => {
       const entityTag = await storage.createEntityTag(req.body);
       sendSuccess(res, entityTag);
-          }
-        })
-      );
-
+              })
+            );
   router.delete('/api/tags/entity/:id',
     isAuthenticated,
     rateLimits.general,
@@ -589,19 +530,15 @@ export function createConfigurationRoutes(storage: IStorage, : unknown)unknown)u
       const { id } = req.params;
       await storage.deleteEntityTag(id);
       sendSuccess(res, null);
-          }
-        })
-      );
-
+              })
+            );
   logger.info('✅ Configuration routes created', { metadata: {
+
       module: 'Configuration',
       operation: 'createRoutes',
       routeCount: 23
-    
-            })
-
-    
-          );
+      }
+    });
 
   return router;
 }

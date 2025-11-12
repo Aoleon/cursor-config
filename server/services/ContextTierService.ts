@@ -91,11 +91,11 @@ export class ContextTierService implements ContextTierServiceInterface {
     logger.info('Service initialisé avec configuration BTP/Menuiserie', { metadata: {
         service: 'ContextTierService',
         operation: 'constructor' 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
   }
   // ========================================
   // DÉTECTION INTELLIGENTE DU TIER
@@ -119,7 +119,7 @@ export class ContextTierService implements ContextTierServiceInterface {
           operation: 'detectContextTier',
           query: query.substring(0, 100),
           entityType
-      });
+            });
       // 1. Analyse linguistique de la requête
       const queryAnalysis = this.analyzeQuery(query);
       // 2. Évaluation du contexte utilisateur
@@ -190,7 +190,6 @@ export class ContextTierService implements ContextTierServiceInterface {
         potentialTokenSaving: 0
       };
     }
-  }
 
   // ========================================
   // ANALYSE REQUÊTE LINGUISTIQUE
@@ -729,11 +728,11 @@ export class ContextTierService implements ContextTierServiceInterface {
         operation: 'compressContextByPriority',
         tier: profile.tier,
         entityType: fullContext.entityType 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     const compressedContext = { ...fullContext };
     // 1. Préservation données critiques
     await this.preserveCriticalData(compressedContext, profile);
@@ -758,11 +757,11 @@ case 'relevance_based':;
         operation: 'compressContextByPriority',
         tier: profile.tier,
         compressionTimeMs: compressionTime 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     // Mise à jour métriques compression
     compressedContext.generationMetrics.executionTimeMs += compressionTime;
     return compressedContext;
@@ -830,7 +829,7 @@ case 'relevance_based':;
       context.relationalContext = {
         mainActors: {
           client: context.relationalContext.mainActors?.client || {
-            name: 'Non spécifié',
+              name: 'Non spécifié',
             type: 'private',
             recurrency: 'nouveau',
             criticalRequirements: []
@@ -876,7 +875,6 @@ case 'relevance_based':;
         alerts: context.temporalContext.alerts?.slice(0, 3) || []
       };
     }
-  }
 
   /**
    * Compression basée sur temporalité
@@ -902,7 +900,6 @@ case 'relevance_based':;
     if (context.businessContext && !profile.includeHistorical) {
       context.businessContext.completedPhases = context.businessContext.completedPhases?.slice(-3) || [];
     }
-  }
 
   /**
    * Compression basée sur pertinence
@@ -923,7 +920,6 @@ case 'relevance_based':;
       context.businessContext.menuiserieSpecifics.installationMethods = 
         context.businessContext.menuiserieSpecifics.installationMethods?.slice(0, 2) || [];
     }
-  }
 
   /**
    * Application limites tokens strictes
@@ -976,7 +972,6 @@ case 'relevance_based':;
       
       context.frenchTerminology = filteredTerminology;
     }
-  }
 
   /**
    * Estimation approximative tokens contexte
@@ -1004,11 +999,11 @@ case 'relevance_based':;
         operation: 'validateMinimalContext',
         tier: profile.tier,
         entityType: context.entityType 
-              
-              }
+
+            }
  
               
-            });
+                                                            });
     // Vérifications critiques
     const validations = [
       // Entité identifiée
@@ -1027,11 +1022,11 @@ case 'relevance_based':;
           operation: 'validateMinimalContext',
           tier: profile.tier,
           entityType: context.entityType 
-              
+
               }
  
               
-            });
+                                                            });
     }
     
     return isValid;
@@ -1066,7 +1061,6 @@ case 'relevance_based':;
       this.performanceMetrics.tokenSavings.push(tokenSaving);
       this.performanceMetrics.buildTimeSavings.push(detectionTime);
     }
-  }
 
   /**
    * Récupération métriques globales
@@ -1197,4 +1191,3 @@ case 'relevance_based':;
       }
     };
   }
-}

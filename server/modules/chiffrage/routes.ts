@@ -70,7 +70,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           method: 'GET',
           offerId,
           userId: req.user?.id
-        }
+                }
       });
       
       const elements = await storage.getChiffrageElementsByOffer(offerId);
@@ -95,7 +95,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           method: 'GET',
           lotId,
           userId: req.user?.id
-        }
+                }
       });
       
       const items = await storage.getChiffrageElementsByLot(lotId);
@@ -122,7 +122,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           method: 'POST',
           offerId,
           userId: req.user?.id
-        }
+                }
       });
       
       const element = await storage.createChiffrageElement({
@@ -157,7 +157,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           offerId,
           elementId,
           userId: req.user?.id
-        }
+                }
       });
       
       const element = await storage.updateChiffrageElement(elementId, req.body);
@@ -172,9 +172,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: element
       });
-          }
-        })
-      );
+    })
+  );
 
   // Delete chiffrage element
   router.delete('/api/offers/:offerId/chiffrage-elements/:elementId', 
@@ -182,17 +181,15 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { offerId, elementId } = req.params;
       
-      logger.info('[Chiffrage] Suppression élément chiffrage', { metadata: { 
+      logger.info('[Chiffrage] Suppression élément chiffrage', { 
+        metadata: { 
           route: '/api/offers/:offerId/chiffrage-elements/:elementId',
           method: 'DELETE',
           offerId,
           elementId,
           userId: req.user?.id
-
-            })
-
-
-          );
+                }
+      });
       
       await storage.deleteChiffrageElement(elementId);
       
@@ -203,9 +200,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       });
       
       res.status(204).send();
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // DPGF ROUTES
@@ -219,17 +215,15 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { offerId } = req.params;
       const { includeOptional, tvaPercentage, format } = req.query;
       
-      logger.info('[DPGF] Récupération DPGF', { metadata: { 
+      logger.info('[DPGF] Récupération DPGF', { 
+        metadata: { 
           route: '/api/offers/:offerId/dpgf',
           method: 'GET',
           offerId,
           format,
           userId: req.user?.id
-
-            })
-
-
-          );
+                }
+      });
 
       const dpgfService = new DpgfComputeService(storage);
       const dpgf = await dpgfService.computeDpgf(offerId, {
@@ -267,16 +261,14 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { offerId } = req.params;
       
-      logger.info('[DPGF] Génération DPGF', { metadata: { 
+      logger.info('[DPGF] Génération DPGF', { metadata: {
+ 
           route: '/api/offers/:offerId/dpgf',
           method: 'POST',
           offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const dpgfService = new DpgfComputeService(storage);
       const dpgfData = await dpgfService.computeDpgf(offerId, req.body);
@@ -313,15 +305,13 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { offerId } = req.params;
       
       logger.info('[Milestones] Récupération jalons validation', { metadata: {
+
           route: '/api/validation-milestones/:offerId',
           method: 'GET',
           offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
       
       const milestones = await storage.getValidationMilestones(offerId);
       
@@ -342,15 +332,13 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { offerId } = req.body;
       
       logger.info('[Milestones] Initialisation jalons validation', { metadata: {
+
           route: '/api/validation-milestones/init',
           method: 'POST',
           offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       // Check if milestones already exist
       const existing = await storage.getValidationMilestones(offerId);
@@ -394,16 +382,14 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const updateData: MilestoneUpdate = req.body;
 
       logger.info('[Milestones] Mise à jour jalon', { metadata: {
+
           route: '/api/validation-milestones/:milestoneId',
           method: 'PATCH',
           milestoneId,
           isCompleted: updateData.isCompleted,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       // Add completion metadata if completing
       if (updateData.isCompleted) {
@@ -429,28 +415,24 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           
           if (bouclageComplete) {
             logger.info('[Milestones] Bouclage complet - mise à jour statut offre', { metadata: {
+
                 route: '/api/validation-milestones/:milestoneId',
                 offerId: updatedMilestone.offerId,
-                userId: req.user?.id
-
-            })
-
-
-          );
+                      userId: req.user?.id
+      }
+    });
             
             await storage.updateOffer(updatedMilestone.offerId, {
-              status: 'fin_etudes_validee',
+                      status: 'fin_etudes_validee',
               lastValidatedAt: new Date(),
               lastValidatedBy: req.user?.id
             });
 
             eventBus.emit('offer:bouclage:complete', {
               offerId: updatedMilestone.offerId,
-              userId: req.user?.id
+                      userId: req.user?.id
             });
           }
-        }
-      }
 
       res.json({
         success: true,
@@ -471,15 +453,13 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { offerId } = req.params;
       
       logger.info('[Quotations] Récupération devis offre', { metadata: {
+
           route: '/api/quotations/:offerId',
           method: 'GET',
           offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const quotations = await storage.getQuotationsByOffer(offerId);
 
@@ -499,17 +479,15 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { status, includeElements, limit, offset } = req.query;
       
       logger.info('[Quotations] Récupération devis avec filtres', { metadata: {
+
           route: '/api/quotations',
           method: 'GET',
           status,
           limit,
           offset,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const quotations = await storage.getQuotations({
         status,
@@ -537,15 +515,13 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const quotationData = req.body;
       
       logger.info('[Quotations] Création devis', { metadata: {
+
           route: '/api/quotations',
           method: 'POST',
           offerId: quotationData.offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
 
       const quotation = await storage.createQuotation({
         ...quotationData,
@@ -567,6 +543,7 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       );
 
   logger.info('[ChiffrageModule] Routes initialisées', { metadata: {
+
       module: 'ChiffrageModule',
       routes: [
         '/api/offers/:offerId/chiffrage-elements',
@@ -574,11 +551,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         '/api/validation-milestones',
         '/api/quotations'
       ]
-    
-            })
-
-    
-          );
+      }
+    });
 
   return router;
 }

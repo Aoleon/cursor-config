@@ -127,14 +127,14 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'migrateProductionMondayData',
         context: { source: 'authentic_monday_exports'  
-              }
+            }
   
             });
     logger.info('RÉSOLUTION problème architect: données réelles au lieu de synthétiques', { metadata: {
         service: 'MondayProductionFinalService',
         operation: 'migrateProductionMondayData',
         context: { approach: 'real_data_instead_of_synthetic'  
-              }
+            }
   
             });
     this.resetWarnings();
@@ -151,7 +151,7 @@ export class MondayProductionFinalService {
           projectSourceFile: authenticData.metadata.projectSourceFile,
           totalExcelRows: authenticData.metadata.totalExcelRows,
           context: { migrationStep: 'data_loaded' 
-      });
+            });
       // Migration avec données authentiques
       const aosResult = await this.migrateAuthenticAOs(authenticData.aos, authenticData.metadata.aoSourceFile);
       const projectsResult = await this.migrateAuthenticProjects(authenticData.projects, authenticData.metadata.projectSourceFile);
@@ -184,11 +184,11 @@ export class MondayProductionFinalService {
       if (this.warnings.length > 0) {
         logger.warn('Warnings non bloquants détectés', { metadata: {
             service: 'MondayProductionFinalService',
-            operation: 'migrateProductionMondayData',
+                  operation: 'migrateProductionMondayData',
             warningsCount: this.warnings.length,
             topWarnings: this.warnings.slice(0, 5),
             context: { migrationStep: 'warnings_detected'  
-              }
+                }
   
             });
       }
@@ -211,7 +211,7 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'loadAuthenticMondayData',
         context: { migrationStep: 'loading_excel_exports'  
-              }
+            }
   
             });
     const aoFilePath = path.join(MONDAY_EXPORTS_BASE_PATH, AO_PLANNING_FILE);
@@ -236,7 +236,7 @@ export class MondayProductionFinalService {
           chantiersEntriesCount: projectData.length,
           totalExcelRows,
           context: { migrationStep: 'excel_read_complete' 
-      });
+            });
       return {
         aos: aoData,
         projects: projectData,
@@ -265,7 +265,7 @@ export class MondayProductionFinalService {
         operation: 'readAuthenticAOPlanningFile',
         fileName: AO_PLANNING_FILE,
         context: { fileType: 'ao_planning'  
-              }
+            }
   
             });
     const workbook = XLSX.readFile(filePath);
@@ -278,7 +278,7 @@ export class MondayProductionFinalService {
         sheetName,
         rawDataLines: rawData.length,
         context: { loadStep: 'sheet_loaded'  
-              }
+            }
   
             });
     const aos: MondayAoData[] = [];
@@ -319,7 +319,7 @@ export class MondayProductionFinalService {
         processedCount,
         skippedCount,
         context: { fileType: 'ao_planning', step: 'extraction_complete'  
-              }
+            }
   
             });
     return aos;
@@ -333,7 +333,7 @@ export class MondayProductionFinalService {
         operation: 'readAuthenticChantiersFile',
         fileName: CHANTIERS_FILE,
         context: { fileType: 'chantiers'  
-              }
+            }
   
             });
     const workbook = XLSX.readFile(filePath);
@@ -346,7 +346,7 @@ export class MondayProductionFinalService {
         sheetName,
         rawDataLines: rawData.length,
         context: { loadStep: 'sheet_loaded'  
-              }
+            }
   
             });
     const projects: MondayProjectData[] = [];
@@ -387,7 +387,7 @@ export class MondayProductionFinalService {
         processedCount,
         skippedCount,
         context: { fileType: 'chantiers', step: 'extraction_complete'  
-              }
+            }
   
             });
     return projects;
@@ -469,7 +469,7 @@ export class MondayProductionFinalService {
         aoCount: aoData.length,
         sourceFile,
         context: { migrationStep: 'aos_migration_start'  
-              }
+            }
   
             });
     const results: BatchResult[] = [];
@@ -491,12 +491,12 @@ export class MondayProductionFinalService {
         if ((index + 1) % 100 === 0) {
           logger.info('Migration AO progression', { metadata: {
               service: 'MondayProductionFinalService',
-              operation: 'migrateAuthenticAOs',
+                    operation: 'migrateAuthenticAOs',
               progress: index + 1,
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100),
               context: { migrationStep: 'aos_batch_progress'  
-              }
+                  }
   
             });
         }
@@ -520,7 +520,7 @@ export class MondayProductionFinalService {
         projectCount: projectData.length,
         sourceFile,
         context: { migrationStep: 'projects_migration_start'  
-              }
+            }
   
             });
     const results: BatchResult[] = [];
@@ -542,12 +542,12 @@ export class MondayProductionFinalService {
         if ((index + 1) % 100 === 0) {
           logger.info('Migration projets progression', { metadata: {
               service: 'MondayProductionFinalService',
-              operation: 'migrateAuthenticProjects',
+                    operation: 'migrateAuthenticProjects',
               progress: index + 1,
               total: projectData.length,
               percentage: Math.round(((index + 1) / projectData.length) * 100),
               context: { migrationStep: 'projects_batch_progress'  
-              }
+                  }
   
             });
         }
@@ -707,7 +707,7 @@ export class MondayProductionFinalService {
         validationRate: Math.round(migrationResult.validationRate * 100),
         sourceFile,
         context: { migrationStep: 'batch_results'  
-              }
+            }
   
             });
     if (failed.length > 0) {
@@ -740,7 +740,7 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'validateAuthenticData',
         context: { validationMode: 'dry_run'  
-              }
+            }
   
             });
     try {

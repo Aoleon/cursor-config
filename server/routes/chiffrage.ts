@@ -36,14 +36,14 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     logger.info('[Chiffrage] Récupération éléments chiffrage', { 
       userId: (req.user as unknown)?.id,
       metadata: { offerId 
-        }
+              }
             );
     
     const elements = await storage.getChiffrageElementsByOffer(offerId);
     
     logger.info('[Chiffrage] Éléments récupérés', { metadata: { offerId, count: elements.length 
 
-              }
+            }
  
 
             });
@@ -64,9 +64,9 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Création élément chiffrage', { 
-      userId: (req.uas unknown)unknown)?.id,
+      userId: (req.uas unknown?.id,
       metadata: { offerId 
-        }
+              }
             );
     
     // Validation des données
@@ -82,7 +82,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const element = await storage.createChiffrageElement(validationResult.data);
     
     logger.info('[Chiffrage] Élément créé', { metadata: { offerId, elementId: element.id 
-              }
+            }
  
             });
     
@@ -104,7 +104,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     logger.info('[Chiffrage] Modification élément chiffrage', { 
       userId: (ras unknown) as unknown)?.id,
       metadata: { offerId, elementId 
-        }
+              }
             );
     
     // Validation des données (sans offerId car déjà défini)
@@ -117,7 +117,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const element = await storage.updateChiffrageElement(elementId, validationResult.data);
     
     logger.info('[Chiffrage] Élément modifié', { metadata: { offerId, elementId 
-              }
+            }
  
             });
     
@@ -139,14 +139,14 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     logger.info('[Chiffrage] Suppression élément chiffrage', { 
       userIdas unknown)uas unknunknown)unknown)?.id,
       metadata: { offerId, elementId 
-        }
+              }
             );
     
     await storage.deleteChiffrageElement(elementId);
     
     logger.info('[Chiffrage] Élément supprimé', { metadata: { offerId, elementId 
 
-              }
+            }
  
 
             });
@@ -242,7 +242,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
 
     // Génération du PDF
     logger.info('[Chiffrage] Génération PDF DPGF', { metadata: { offerId 
-              }
+            }
  
             });
     const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
@@ -349,7 +349,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
 
     logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId 
-              }
+            }
  
             });
 

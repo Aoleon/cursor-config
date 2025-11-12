@@ -90,7 +90,7 @@ export class DocumentSyncService {
     async () => {
 
       logger.info('[DocumentSyncService] Début synchronisation', { metadata: { aoId, aoReference, force 
-      });
+            });
       // PERF-5 FIX: Invalider le cache OneDrive avant sync pour garantir données fraîches
       const basePath = buildAoPath(aoReference);
       const categories = getAoCategories();
@@ -132,27 +132,26 @@ service: 'DocumentSyncService',
      });
         for (const file of files) {
           oneDriveFilesMap.set(file.id, { ...file, category });
-        }
-      }
+              }
       logger.info('[DocumentSyncService] Scan OneDrive terminé', { metadata: {
           aoId,
           categories: categories.length,
           filesFound: oneDriveFilesMap.size 
-              
+
               }
  
               
-            });
+                                                            });
       // Ajouter les nouveaux documents
       for (const [oneDriveId, fileData] of Array.from(oneDriveFilesMap.entries())) {
         if (!existingDocsMap.has(oneDriveId)) {
       await withErrorHandling(
     async () => {
             await this.storage.createDocument({
-              name: fileData.name,
+                name: fileData.name,
               originalName: fileData.name,
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
-              category: fileData.category as unknown,
+                category: fileData.category as unknown,
               uploadedBy: 'system', // TODO: récupérer l'utilisateur qui a uploadé
               metadata: {
                 aoId, // ✅ Association AO stockée dans metadata pour getDocumentsByEntity
@@ -168,7 +167,7 @@ service: 'DocumentSyncService',
             result.documentsAdded++;
             logger.debug('[DocumentSyncService] Document ajouté', { metadata: { aoId, documentName: fileData.name, category: fileData.category  
               
-              }
+                    }
   
               
             });
@@ -192,10 +191,10 @@ service: 'DocumentSyncService',
           return withErrorHandling(
     async () => {
             await this.storage.updateDocument(existingDoc.id, {
-              name: fileData.name,
+                name: fileData.name,
               originalName: fileData.name,
               filePath: `onedrive/${aoReference}/${fileData.category}/${fileData.name}`,
-              category: fileData.categas unknown, unknown,
+                category: fileData.categas unknown, unknown,
               oneDrivePath: `${basePath}/${fileData.category}/${fileData.name}`,
               oneDriveUrl: fileData.webUrl,
               metadata: {
@@ -208,23 +207,23 @@ service: 'DocumentSyncService',
             if (needsBackfill) {
               logger.info('[DocumentSyncService] Backfill aoId effectué', { metadata: { documentId: existingDoc.id, aoId  
               
-              }
+                      }
   
               
             });
             }
             if (needsUpdate) {
               logger.info('[DocumentSyncService] Métadonnées mises à jour', { metadata: { 
-                  documentId: existingDoc.id, 
+                        documentId: existingDoc.id,
                   oldName: existingDoc.name, 
                   newName: fileData.name,
                   oldCategory: existingDoc.category,
                   newCategory: fileData.category 
-              
-              }
+
+                      }
  
               
-            });
+                                                            });
             }
             result.documentsUpdated++;
     },
@@ -233,8 +232,7 @@ service: 'DocumentSyncService',
       service: 'DocumentSyncService',
       metadata: {       }
      });
-        }
-      }
+              }
       // Marquer comme supprimés les documents qui ne sont plus dans OneDrive
       for (const [oneDriveId, doc] of Array.from(existingDocsMap.entries())) {
         if (!oneDriveFilesMap.has(oneDriveId)) {
@@ -243,15 +241,14 @@ service: 'DocumentSyncService',
             await this.storage.deleteDocument(doc.id);
             result.documentsDeleted++;
             logger.debug('[DocumentSyncService] Document supprimé', { metadata: { aoId, documentId: doc.id, documentName: doc.name 
-      });
+                  });
     },
     {
       operation: 'Set',
       service: 'DocumentSyncService',
       metadata: {       }
      });
-        }
-      }
+              }
       logger.info('[DocumentSyncService] Synchronisation terminée', { metadata: {
           aoId,
           aoReference,
@@ -270,7 +267,7 @@ service: 'DocumentSyncService',
         originalError: error
       });
       logger.error('[DocumentSyncService] Erreur synchronisation', error, { metadata: { aoId, aoReference        }
-      });
+            });
     } finally {
       this.syncInProgress.delete(aoId);
     }
@@ -299,7 +296,6 @@ service: 'DocumentSyncService',
       } else {
         results.errors++;
       }
-    }
 
     logger.info('[DocumentSyncService] Sync globale terminée', {
       metadata: results
@@ -314,7 +310,6 @@ service: 'DocumentSyncService',
   isSyncInProgress(aoId: string): boolean {
     return this.syncInProgress.has(aoId);
   }
-}
 
 // Instance singleton (sera initialisée dans index.ts)
 let documentSyncServiceInstance: DocumentSyncService | null = null;

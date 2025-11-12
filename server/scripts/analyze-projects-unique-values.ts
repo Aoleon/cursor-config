@@ -39,9 +39,6 @@ async function analyzeUniqueValues() {
         if (value !== null && value !== undefined && value !== '') {
           uniqueValues.get(cv.id)!.add(JSON.stringify(value));
         }
-      }
-    }
-  }
   
   // Afficher résultats
   logger.info('📊 VALEURS UNIQUES PAR COLONNE:\n');
@@ -53,7 +50,7 @@ async function analyzeUniqueValues() {
       sorted.slice(0, 20).forEach(v => {
         const parsed = JSON.parse(v);
         logger.info(`  - ${parsed}`);
-      });
+              });
       if (sorted.length > 20) {
         logger.info(`  ... et ${sorted.length - 20} autres`);
       }
@@ -61,7 +58,5 @@ async function analyzeUniqueValues() {
     } else {
       logger.info(`[${columnId}]: (vide)\n`);
     }
-  }
-}
 
 analyzeUniqueValues().catch(console.error);

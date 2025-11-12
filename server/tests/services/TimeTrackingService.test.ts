@@ -46,9 +46,7 @@ describe('TimeTrackingService', () => {
       const mockTracking = { id: 'tracking-1', ...timeData };
 
       vi.mocked(mockStorage.getUser).mockResolvedValue(mockUser as unknown);
-      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown)unknown);
-      vi.mocked(mockStorage.createTimeTracking).mockResolvedValue(mockTracking as TimeTracking);
-
+      vi.mocked(mockStorage.getProject).mockResolvedValue(mockProjas unknown);
       const result = await service.recordTime(timeData);
 
       expect(mockStorage.getUser).toHaveBeenCalledWith('user-1');
@@ -67,7 +65,6 @@ describe('TimeTrackingService', () => {
 
       await expect(service.recordTime(timeData)).rejects.toThrow(ValidationError);
     });
-  });
 
   describe('getProjectTimeSummary', () => {
     it('should calculate time summary correctly', async () => {
@@ -105,6 +102,4 @@ describe('TimeTrackingService', () => {
       expect(result.hoursByType.admin).toBe(4);
       expect(result.totalCost).toBe(8 * 50 + 4 * 40);
     });
-  });
-});
 

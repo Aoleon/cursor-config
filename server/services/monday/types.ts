@@ -35,7 +35,6 @@ export interface MondaySplitterConfig {
         menuiserieType?: string;
         status?: string;
       };
-    };
     lots?: {
       enabled?: boolean;
       priority?: number;
@@ -52,7 +51,6 @@ export interface MondaySplitterConfig {
       extractMaitreOuvrage?: boolean;
       extractMaitreOeuvre?: boolean;
     };
-  };
   transformations?: {
     location?: {
       extractCity?: boolean;
@@ -67,7 +65,6 @@ export interface MondaySplitterConfig {
       decimalSeparator?: string;
       removeSpaces?: boolean;
     };
-  };
   validation?: {
     requiredFields?: string[];
     markAsDraftIfMissing?: string[];

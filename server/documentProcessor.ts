@@ -173,7 +173,6 @@ Extrais et structure les informations suivantes au format JSON strict :
     "siret": "numéro SIRET si mentionné",
     "specialites": "spécialités (Logement, Tertiaire, Industriel, etc.)"
   }
-}
 
 Règles importantes:
 - Si une information n'est pas trouvée, utilise null
@@ -205,7 +204,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length }
 
 
-                }
+              }
 
               });
 
@@ -253,13 +252,10 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       };
     }
-  }
 
   /**
    * Traite les contacts extraits et les lie automatiquement avec la base de données
@@ -298,7 +294,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       // Traiter tous les contacts extraits
       if (contactsToProcess.length > 0) {
         logger.info('DocumentProcessor - Processing contacts', { metadata: { count: contactsToProcess.length 
-              }
+                }
  
             });
         
@@ -312,18 +308,16 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
           if (contactData.role === 'maitre_ouvrage') {
             linkedContacts.maitreOuvrage = result;
             logger.info('DocumentProcessor - Maître d\'ouvrage processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
-              }
+                    }
  
             });
           } else if (contactData.role === 'maitre_oeuvre') {
             linkedContacts.maitreOeuvre = result;
             logger.info('DocumentProcessor - Maître d\'œuvre processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
-              }
+                    }
  
             });
           }
-        }
-      }
       
       // Retourner les données enrichies avec les informations de liaison
       return {
@@ -336,10 +330,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
 
   /**
@@ -367,7 +359,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         const response = await fetch(fileUrl);
         if (!response.ok) {
           logger.warn('DocumentProcessor - Cannot fetch file', { metadata: { filename, statusText: response.statusText 
-              }
+                  }
  
             });
           // Utiliser un contenu de démonstration basé sur le nom du fichier
@@ -391,16 +383,13 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
             } catch {
               return this.generateDemoContent(filename);
             }
-        }
       
     },
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
         return this.generateDemoContent(filename);
       }
 
@@ -408,12 +397,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.error('DocumentProcessor - Error extracting text', error as Error, { metadata: { filename }
 
 
-                }
+              }
 
               });
       return this.generateDemoContent(filename);
     }
-  }
 
   /**
    * Extrait des informations détaillées sur les lots de menuiserie depuis le contenu d'un document.
@@ -495,7 +483,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length }
 
 
-                }
+              }
 
               });
 
@@ -513,7 +501,7 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename }
 
 
-                  }
+                }
 
                 });
         return [];
@@ -539,14 +527,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         montantEstime: lot.montantEstime ? parseFloat(lot.montantEstime.toString()) : null,
         status: this.validateLotStatus(lot.status),
         technicalDetails: lot.technicalDetails || null,
-      }
-    }));
-
-      logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length }
-
-
-                }
-
+                                          }
+                                        }));
               });
       return cleanedLots;
     },
@@ -755,20 +737,16 @@ Description: Travaux de menuiserie selon ${filename}
     } catch {
       return undefined;
     }
-  }
 
   /**
    * Valide et convertit un montant.
    */
-  private validateAmount(am: unknown)unknown): number | undefined {
-    if (amount === null || amount === undefined) return undefined;
-    
+  private validateAmount(am: unknown): number | undefined {
     const numAmount = typeof amount === 'string' ? 
       parseFloat(amount.replace(/[^\d.,]/g, '').replace(',', '.')) :
       Number(amount);
     
     return isNaN(numAmount) ? undefined : numAmount;
   }
-}
 
 export const documentProcessor = new DocumentProcessor();

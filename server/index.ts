@@ -116,7 +116,7 @@ app.use((req, res, next) => {
       operation: 'startup',
       nodeVersion: process.version,
       environment: process.env.NODE_ENV || 'development'
-              }
+          }
 
             });
   
@@ -143,7 +143,7 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateAlertDetectionService'
-              }
+          }
 
             });
   
@@ -158,7 +158,7 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'AuditService'
-              }
+          }
 
             });
   
@@ -171,7 +171,7 @@ app.use((req, res, next) => {
         service: 'AuditService',
         error: 'SINGLETON VIOLATION: AuditService already initialized',
         stack: undefined
-              }
+            }
 
             });
     throw new AppError('SINGLETON VIOLATION: AuditService already initialized', 500);
@@ -200,7 +200,7 @@ app.use((req, res, next) => {
       operation: 'initializeServices',
       service: 'AuditService',
       context: { singleton: true, frozen: true }
-                                                                                  }
+            }
 
                                                                                 });
   
@@ -208,7 +208,7 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateIntelligenceService'
-              }
+          }
 
             });
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
@@ -230,7 +230,6 @@ app.use((req, res, next) => {
         hasEventBus: !!eventBus,
         hasIntegrationMethod: typeof eventBus.integratePredictiveEngine === 'function'
       }
-                            }
                           });
   
   await withErrorHandling(
@@ -239,7 +238,7 @@ app.use((req, res, next) => {
         metadata: {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngine'
-              }
+                }
 
             });
       await eventBus.integratePredictiveEngine(predictiveEngineService);
@@ -251,46 +250,8 @@ app.use((req, res, next) => {
             preloadingActive: true,
             backgroundCycles: ['business_hours', 'peak', 'weekend', 'nightly']
           }
-                                      }
-                                    });
-    },
-    {
-      operation: 'integratePredictiveEngine',
-      service: 'index',
-      metadata: {}
-    });
-  
-  const dateAlertDetectionService = new DateAlertDetectionService(
-    storageInterface,
-    eventBus,
-    dateIntelligenceService,
-    menuiserieRules,
-    analyticsService,
-    predictiveEngineService
-  );
-  
-  const periodicDetectionScheduler = new PeriodicDetectionScheduler(
-    storageInterface,
-    eventBus,
-    dateAlertDetectionService,
-    dateIntelligenceService
-  );
-  
-  // Démarrer la surveillance périodique
-  await periodicDetectionScheduler.start();
-  logger.info('Système détection alertes opérationnel', {
-    metadata: {
-      module: 'ExpressApp',
-      operation: 'initializeServices',
-      context: { periodicSchedulerActive: true }
-                                                                                  }
-
-                                                                                });
-  
-  // Rendre les services disponibles pour les routes
-  app.set('dateAlertDetectionService', dateAlertDetectionService);
-  app.set('periodicDetectionScheduler', periodicDetectionScheduler);
-  
+                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                          });
   // ========================================
   // ABONNEMENT AUX ALERTES TECHNIQUES POUR JULIEN LAMBOROT
   // ========================================
@@ -387,7 +348,7 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'integratePredictiveEngineFinal',
       context: { timing: 'after_registerRoutes' }
-                                                                                  }
+            }
 
                                                                                 });
   
@@ -403,7 +364,7 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngineFinal',
           context: { instanceAvailable: !!predictiveEngineService }
-                                                                                      }
+                }
 
                                                                                     });
       
@@ -419,7 +380,6 @@ app.use((req, res, next) => {
             cacheOptimizationEnabled: true,
             targetLatencyReduction: '25s→10s'
           }
-                                                                                      }
 
                                                                                     });
     },
@@ -441,7 +401,7 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'setupViteOrStatic',
       environment: env
-              }
+          }
 
             });
   
@@ -449,28 +409,28 @@ app.use((req, res, next) => {
     logger.info('Appel setupVite...', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-              }
+            }
 
             });
     await setupVite(app, server);
     logger.info('setupVite terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-              }
+            }
 
             });
   } else {
     logger.info('Appel serveStatic...', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-              }
+            }
 
             });
     serveStatic(app);
     logger.info('serveStatic terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-              }
+            }
 
             });
   }
@@ -521,7 +481,7 @@ app.use((req, res, next) => {
         module: 'ExpressApp',
         operation: 'gracefulShutdown',
         signal
-              }
+            }
 
             });
     
@@ -537,15 +497,14 @@ app.use((req, res, next) => {
       await new Promise<void>((resolve) => {
         server.close(() => {
           logger.info('Serveur HTTP fermé', { metadata: {
-              module: 'ExpressApp',
-              operation: 'gracefulShutdown',
+                    module: 'ExpressApp',
+                    operation: 'gracefulShutdown',
               step: 'httpServerClosed'
-              }
+                  }
 
             });
           resolve();
         });
-      });
       
       // 2. Fermer le pool de connexions DB
       logger.info('Fermeture pool connexions DB', { metadata: {
@@ -593,7 +552,6 @@ app.use((req, res, next) => {
             });
       process.exit(1);
     }
-  }
   
   // Écoute des signaux de terminaison
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -607,7 +565,7 @@ app.use((req, res, next) => {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         fatal: true
-              }
+            }
 
             });
     gracefulShutdown('UNCAUGHT_EXCEPTION');
@@ -620,7 +578,7 @@ app.use((req, res, next) => {
         error: reason instanceof Error ? reason.message : String(reason),
         stack: reason instanceof Error ? reason.stack : undefined,
         fatal: true
-              }
+            }
 
             });
     gracefulShutdown('UNHANDLED_REJECTION');

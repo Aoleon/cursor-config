@@ -115,11 +115,11 @@ export class ContextualOCREngine {
     logger.info('Initializing Contextual OCR Engine', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'constructor' 
-              
-              }
+
+            }
  
               
-            });
+                                    });
   }
   /**
    * Initialise le contexte en chargeant les données existantes
@@ -131,7 +131,7 @@ export class ContextualOCREngine {
       logger.info('Loading contextual data', { metadata: {
           service: 'ContextualOCREngine',
           operation: 'initializeContext'
-      });
+            });
       // Charger les données existantes
       const [aos, projects] = await Promise.all([
         storage.getAos(),
@@ -164,11 +164,11 @@ export class ContextualOCREngine {
           projectsCount: projects.length,
           clientsCount: knownClients.length,
           locationsCount: knownLocations.length 
-              
+
               }
  
               
-            });
+                                    });
     },
     {
       operation: 'constructor',
@@ -195,7 +195,7 @@ export class ContextualOCREngine {
         operation: 'enhanceOCRFields',
         documentType 
               
-              }
+            }
  
               
             });
@@ -359,8 +359,8 @@ export class ContextualOCREngine {
       const normalizedCandidate = this.normalizeString(candidate);
       
       // Correspondance exacte
-      if (normalizedValue === normalizedCandidate) {
-        return { match: candidate, confidence: 1.0 };
+      if (normalizedValue === normalizedCandidate) {}
+return{ match: candidate, confidence: 1.0 };
       }
 
       // Correspondance floue utilisant distance de Levenshtein
@@ -455,12 +455,12 @@ export class ContextualOCREngine {
       if (locationLower === keyword || locationLower.includes(' ' + keyword + ' ') || locationLower.startsWith(keyword + ' ') || locationLower.endsWith(' ' + keyword)) {
         logger.info('Département inféré', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'inferDepartmentFromLocation',
+                  operation: 'inferDepartmentFromLocation',
             department: dept,
             keyword,
             location 
               
-              }
+                }
  
               
             });
@@ -473,12 +473,12 @@ export class ContextualOCREngine {
       if (locationLower.includes(keyword)) {
         logger.info('Département inféré (partiel)', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'inferDepartmentFromLocation',
+                  operation: 'inferDepartmentFromLocation',
             department: dept,
             keyword,
             location 
               
-              }
+                }
  
               
             });
@@ -500,11 +500,11 @@ export class ContextualOCREngine {
     logger.info('Auto-complétion intelligente des contacts pour JLM', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'autoCompleteContactsFromMaster' 
-              
-              }
+
+            }
  
               
-            });
+                                    });
     // Stratégie multi-niveau pour trouver des AOs similaires
     const similarityStrategies = [
       // Niveau 1: Client + localisation exacte (priorité max)
@@ -527,13 +527,13 @@ export class ContextualOCREngine {
         matchStrategy = i;
         logger.info('Correspondance trouvée', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'autoCompleteContactsFromMaster',
+                  operation: 'autoCompleteContactsFromMaster',
             strategyLevel: i + 1 
-              
-              }
+
+                }
  
               
-            });
+                                    });
       }
     }
 
@@ -558,11 +558,11 @@ export class ContextualOCREngine {
         });
         logger.info('Bureau d\'Études auto-complété', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'autoCompleteContactsFromMaster',
+                  operation: 'autoCompleteContactsFromMaster',
             bureauEtudes: bestMatch.bureauEtudes,
             confidence 
               
-              }
+                }
  
               
             });
@@ -584,11 +584,11 @@ export class ContextualOCREngine {
         });
         logger.info('Bureau de Contrôle auto-complété', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'autoCompleteContactsFromMaster',
+                  operation: 'autoCompleteContactsFromMaster',
             bureauControle: bestMatch.bureauControle,
             confidence 
               
-              }
+                }
  
               
             });
@@ -606,23 +606,23 @@ export class ContextualOCREngine {
         });
         logger.info('Département auto-complété', { metadata: {
             service: 'ContextualOCREngine',
-            operation: 'autoCompleteContactsFromMaster',
-            departement: bestMatch.departement 
-              
-              }
+                  operation: 'autoCompleteContactsFromMaster',
+                  departement: bestMatch.departement
+
+                }
  
               
-            });
+                                    });
       }
     } else {
       logger.info('Aucune correspondance trouvée pour auto-complétion', { metadata: {
           service: 'ContextualOCREngine',
           operation: 'autoCompleteContactsFromMaster' 
-              
+
               }
  
               
-            });
+                                    });
     }
   }
 
@@ -847,8 +847,8 @@ case 'volet':;
       const match = text.match(pattern);
       if (match) {
         const value = parseInt(match[1]);
-        if (text.toLowerCase().includes('semaine')) {
-          return value * 7;
+        if (text.toLowerCase().includes('semaine')) {}
+returnvalue * 7;
         } else if (text.toLowerCase().includes('mois')) {
           return value * 30;
         }
@@ -960,7 +960,7 @@ case 'volet':;
         operation: 'generatePerformanceMetrics',
         documentType 
               
-              }
+            }
  
               
             });
@@ -1021,18 +1021,17 @@ case 'volet':;
         operation: 'generatePerformanceMetrics',
         globalScore: globalScore.toFixed(2),
         jlmScore: jlmSpecificScore.toFixed(2) 
-              
-              }
+
+            }
  
               
-            });
+                                    });
     return metrics;
   }
   /**
    * Génère des patterns adaptatifs basés sur le contexte
    */
-  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknown)nt: unknunknown)unknown): Record<string, RegExp[]> {
-    if (!this.context) return {};
+  generateAdaptivePatterns(documentType: 'ao' | 'supplier_quot: unknunknown)nt: unknunknown): Record<string, RegExp[]> {
 
     const adaptivePatterns: Record<string, RegExp[]> = {};
 

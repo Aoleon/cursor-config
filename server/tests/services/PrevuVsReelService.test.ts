@@ -68,6 +68,4 @@ describe('PrevuVsReelService', () => {
 
       await expect(service.compareProject('non-existent')).rejects.toThrow(NotFoundError);
     });
-  });
-});
 

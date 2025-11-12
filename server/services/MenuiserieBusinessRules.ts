@@ -626,7 +626,6 @@ export function getApplicableRules(
       for (const [key, value] of Object.entries(ruleConditions)) {
         if (conditions[key] !== value) return false;
       }
-    }
     
     // Vérifier la validité temporelle
     const now = new Date();
@@ -664,14 +663,13 @@ export function isInVacationPeriod(date: Date): { inVacation: boolean; period?: 
   const dateStr = date.toISOString().split('T')[0];
   
   for (const vacation of BTP_VACATION_PERIODS) {
-    if (dateStr >= vacation.start && dateStr <= vacation.end) {
-      return {
+    if (dateStr >= vacation.start && dateStr <= vacation.end) {}
+return{
         inVacation: true,
         period: vacation.period,
         impact: vacation.impact
       };
     }
-  }
   
   return { inVacation: false };
 }
@@ -690,7 +688,6 @@ export function countHolidaysInPeriod(startDate: Date, endDate: Date): number {
     if (holidayDate >= startDate && holidayDate <= endDate) {
       holidays++;
     }
-  }
   
   // TODO: Ajouter calcul des jours fériés variables (Pâques, etc.)
   

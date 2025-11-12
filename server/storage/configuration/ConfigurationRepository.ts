@@ -568,4 +568,3 @@ export class ConfigurationRepository extends BaseRepository<
       { id: normalizedId }
     );
   }
-}

@@ -41,7 +41,6 @@ export class MasterEntityExtractor extends BaseExtractor<{
         maitresOeuvre.push(masterEntity);
         this.addDiagnostic(context, 'info', `Extracted maître d'œuvre: ${value}`, { masterEntity });
       }
-    }
     
     this.addDiagnostic(context, 'info', `Total master entities extracted`, { 
       maitresOuvrage: maitresOuvrage.length,
@@ -50,4 +49,3 @@ export class MasterEntityExtractor extends BaseExtractor<{
     
     return { maitresOuvrage, maitresOeuvre };
   }
-}

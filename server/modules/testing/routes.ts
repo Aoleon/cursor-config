@@ -59,7 +59,6 @@ service: 'routes',;
       timestamp: new Date().toISOString()
     };
   }
-}
 
 /**
  * Intégration GitHub Issues API
@@ -155,7 +154,7 @@ ${serverInfo.serverLogs}
 
     const issueData = await response.json();
     logger.info('[Testing] Issue GitHub créée', { metadata: { issueUrl: issueData.html_url 
-              }
+            }
  
             });
     return issueData.html_url;
@@ -169,7 +168,6 @@ ${serverInfo.serverLogs}
     } );
     return null;
   }
-}
 
 // ========================================
 // TESTING ROUTER FACTORY
@@ -198,7 +196,7 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
               }
 
 
-            });
+                                                                                                                                                                                                                                                                                    });
 
       const testProjects = [
         {
@@ -383,7 +381,7 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
               }
 
 
-            });
+                                                                                                                                                                                                                                                                                    });
       
       const serverInfo = await collectServerInfo();
       
@@ -404,12 +402,12 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
             type: bugReportData.type,
             priority: bugReportData.priority
 
-      });
+              });
         
         const [savedBugReport] = await db.insert(bugReports).values(bugReportData).returning();
         
         logger.info('[Testing] Rapport sauvegardé en base', { metadata: { bugReportId: savedBugReport.id 
-              }
+                }
  
             });
 
@@ -423,16 +421,16 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
 service: 'routes',;
       metadata: {}
     } );
-        }
+              }
 
         logger.info('[Testing] Rapport créé', { metadata: {
             bugReportId: savedBugReport.id,
             type: savedBugReport.type,
             priority: savedBugReport.priority,
-            userId: savedBugReport.userId,
+                  userId: savedBugReport.userId,
             githubCreated: !!githubIssueUrl,
             serverInfoCollected: !!serverInfo.timestamp
-              }
+                }
 
             });
 
@@ -452,10 +450,10 @@ service: 'routes',;
             method: 'POST',
             bugReportType: req.body.type,
             bugReportPriority: req.body.priority,
-            error: error instanceof Error ? error.message : String(error),
+                  error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
-            userId: req.user?.id
-              }
+                  userId: req.user?.id
+                }
 
             });
         throw createError.database('Erreur lors de la création du rapport de bug');
@@ -470,13 +468,11 @@ service: 'routes',;
                               }));
 
   logger.info('[Testing] Routes Testing montées avec succès', { metadata: {
+
       module: 'Testing',
       routes: 2
-    
-            })
-
-    
-          );
+      }
+    });
 
   return router;
 }

@@ -118,7 +118,7 @@ function initializeCircuitBreakers() {
       operation: 'initializeCircuitBreakers',
       providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid', 'onedrive'] 
               
-              }
+          }
  
               
             });
@@ -182,7 +182,6 @@ export async function executeMonday<T>(
     } );
     throw error;
   }
-}
 
 /**
  * Execute OpenAI API call with retry + circuit breaker
@@ -212,7 +211,6 @@ export async function executeOpenAI<T>(
     } );
     throw error;
   }
-}
 
 /**
  * Execute SendGrid email dispatch with retry + circuit breaker
@@ -238,7 +236,6 @@ export async function executeSendGrid<T>(
     } );
     throw error;
   }
-}
 
 /**
  * PERF-4: Execute Microsoft OneDrive/Graph API call with retry + circuit breaker
@@ -264,7 +261,6 @@ export async function executeOneDrive<T>(
     } );
     throw error;
   }
-}
 
 // ========================================
 // MONITORING HELPERS
@@ -292,9 +288,9 @@ export function resetAllBreakers() {
   logger.info('All circuit breakers reset', { metadata: {
       service: 'Resilience',
       operation: 'resetAllBreakers' 
-              
-              }
+
+          }
  
               
-            });
+                                                                                                                                                                                                                                                                                    });
 }

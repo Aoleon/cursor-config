@@ -102,8 +102,6 @@ describe('MondayDataGenerator', () => {
       expect(project.name).toBeDefined();
       expect(project.clientName).toBeDefined();
     });
-  });
-});
 
 // ========================================
 // TESTS VALIDATEUR MONDAY.COM
@@ -182,7 +180,6 @@ describe('MondayValidator', () => {
     expect(result.invalid).toHaveLength(1);
     expect(result.invalid[0].errors).toContain(expect.stringContaining('clientName'));
   });
-});
 
 // ========================================
 // TESTS SERVICE MIGRATION
@@ -286,7 +283,6 @@ describe('MondayMigrationService', () => {
     expect(status.totalMigrated.aos).toBeGreaterThanOrEqual(0);
     expect(status.totalMigrated.projects).toBeGreaterThanOrEqual(0);
   });
-});
 
 // ========================================
 // TESTS PERFORMANCE & ROBUSTESSE
@@ -328,7 +324,6 @@ describe('Migration Performance & Robustness', () => {
       console.log(`⚠️ Erreurs gérées - ${result.errors} échecs sur ${result.migrated + result.errors} tentatives`);
     }
   });
-});
 
 // ========================================
 // TESTS RÈGLES MÉTIER JLM
@@ -387,6 +382,5 @@ describe('JLM Business Rules', () => {
       console.log('✅ Traçabilité Monday.com - IDs uniques préservés');
     }
   });
-});
 
 console.log('📋 Tests migration Monday.com configurés - Couvrance complète Database Safety + Règles métier JLM');

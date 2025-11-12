@@ -232,11 +232,11 @@ class CalculationEngine {
           service: 'DateIntelligenceService',
           phase,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);
     }
@@ -503,11 +503,11 @@ export class DateIntelligenceService {
           phase,
           projectId,
           error: error instanceof Error ? error.message : String(error) 
-              
+
               }
  
               
-            });
+                                                });
       throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }
   }
@@ -729,10 +729,10 @@ export class DateIntelligenceService {
             ruleId: rule.id,
             ruleName: rule.name || 'Règle sans nom',
             phase: rule.phase || 'all',
-            projectId: context.projectId,
+                projectId: context.projectId,
             confidence: Math.min(1.0, Math.abs(durationImpact) / 10), // Confiance basée sur l'impact
             impact: durationImpact,
-            userId: 'system'
+                userId: 'system'
           });
         }
       }
@@ -769,10 +769,10 @@ export class DateIntelligenceService {
         
         if (current.endDate >= next.startDate) {
           issues.push({
-            id: `overlap_${current.phase}_${next.phase}`,
+                id: `overlap_${current.phase}_${next.phase}`,
             type: 'dependency_violation',
             severity: 'critical',
-            title: 'Chevauchement de phases détecté',
+                title: 'Chevauchement de phases détecté',
             description: `Les phases ${current.phase} et ${next.phase} se chevauchent`,
             affectedPhases: [current.phase, next.phase],
             affectedDates: [current.endDate, next.startDate],
@@ -791,10 +791,10 @@ export class DateIntelligenceService {
       timeline.forEach(phase => {
         if (phase.duration > 60) { // Plus de 2 mois
           issues.push({
-            id: `long_phase_${phase.phase}`,
+                id: `long_phase_${phase.phase}`,
             type: 'optimization_opportunity',
             severity: 'warning',
-            title: 'Phase exceptionnellement longue',
+                title: 'Phase exceptionnellement longue',
             description: `La phase ${phase.phase} dure ${phase.duration} jours`,
             affectedPhases: [phase.phase],
             affectedDates: [phase.startDate, phase.endDate],
@@ -812,10 +812,10 @@ export class DateIntelligenceService {
       timeline.forEach(phase => {
         if (phase.confidence && phase.confidence < 0.6) {
           issues.push({
-            id: `low_confidence_${phase.phase}`,
+                id: `low_confidence_${phase.phase}`,
             type: 'deadline_risk',
             severity: 'warning',
-            title: 'Risque de retard détecté',
+                title: 'Risque de retard détecté',
             description: `Faible confiance (${Math.round(phase.confidence * 100)}%) pour la phase ${phase.phase}`,
             affectedPhases: [phase.phase],
             affectedDates: [phase.endDate],
@@ -833,10 +833,10 @@ export class DateIntelligenceService {
       timeline.forEach(phase => {
         if (phase.duration < 2 && ['etude', 'planification'].includes(phase.phase)) {
           issues.push({
-            id: `short_phase_${phase.phase}`,
+                id: `short_phase_${phase.phase}`,
             type: 'optimization_opportunity',
             severity: 'info',
-            title: 'Opportunité de parallélisation',
+                title: 'Opportunité de parallélisation',
             description: `La phase ${phase.phase} est très courte (${phase.duration} jours)`,
             affectedPhases: [phase.phase],
             affectedDates: [phase.startDate, phase.endDate],

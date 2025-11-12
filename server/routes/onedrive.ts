@@ -23,7 +23,7 @@ const upload = multer({
 // ========================================
 
 const requireAuth = (req: Request, res: Response, next: unknown) => {
-  const user = (req as unknown).user || (as unknown)unknown).session?.user;
+  const user = (req as unknown).user || (as unknown.session?.user;
   
   if (!user) {
     return res.status(401).json({
@@ -157,15 +157,13 @@ router.post('/upload', requireAuth, upload.single('file'), asyncHandler(async (r
   const conflictBehavior = (req.body.conflictBehavior as 'rename' | 'replace' | 'fail') || 'rename';
   
   logger.info('Uploading file to OneDrive', { metadata: {
+
       fileName: file.originalname,
       size: file.size,
       path,
       conflictBehavior
-    
-            })
-
-    
-          );
+      }
+    });
   
   // Choisir la méthode d'upload selon la taille
   const uploadedFile = file.size < 4 * 1024 * 1024

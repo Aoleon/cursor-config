@@ -438,4 +438,3 @@ export class ContactsRepository extends BaseRepository<
       { id: normalizedId }
     );
   }
-}

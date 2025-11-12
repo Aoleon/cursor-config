@@ -86,7 +86,7 @@ export class TemplateValidator {
         warnings: warnings.length,
         suggestions: suggestions.length,
         validationTime
-      });
+            });
 
       return {
         isValid: errors.filter(e => e.severity === 'error' || e.severity === 'critical').length === 0,
@@ -100,10 +100,8 @@ export class TemplateValidator {
     {
       operation: 'Logger',
       service: 'TemplateValidator',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
         severity: 'critical'
       });
 
@@ -114,7 +112,6 @@ export class TemplateValidator {
         suggestions
       };
     }
-  }
 
   /**
    * Validate basic template structure
@@ -163,7 +160,6 @@ message: `Template size exceeds maximum (${this.maxTemplateSize} bytes)`,;
         severity: 'error'
       });
     }
-  }
 
   /**
    * Validate template syntax
@@ -252,7 +248,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
       } else if (!match[0].endsWith('/>')) {
         stack.push(tagName);
       }
-    }
 
     if (stack.length > 0) {
       errors.push({
@@ -261,7 +256,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
         severity: 'error'
       });
     }
-  }
 
   /**
    * Check nesting depth
@@ -277,7 +271,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
       } else if (content[i] === ']' || content[i] === '>') {
         currentDepth--;
       }
-    }
 
     if (maxDepth > this.maxNestingDepth) {
       errors.push({
@@ -287,7 +280,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
         suggestion: 'Consider simplifying the template structure'
       });
     }
-  }
 
   /**
    * Validate placeholders
@@ -336,7 +328,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
           suggestion: 'Use only letters, numbers, underscores, and dots'
         });
       }
-    }
 
     return {
       count: placeholders.length,
@@ -386,7 +377,6 @@ context: `if: ${ifCount}, /if: ${endIfCount}`;
           suggestion: 'Add a fallback image for better reliability'
         });
       }
-    }
 
     return { count: images.length };
   }
@@ -434,7 +424,6 @@ if (estimatedTime > 10000) { // 10 seconds;
             '.keep-together { page-break-inside: avoid; }</style>');
         });
     }
-  }
 
   /**
    * Validate security aspects
@@ -479,7 +468,6 @@ if (estimatedTime > 10000) { // 10 seconds;
         suggestion: 'Remove CSS expressions and javascript: protocols'
       });
     }
-  }
 
   /**
    * Check best practices
@@ -528,7 +516,6 @@ if (estimatedTime > 10000) { // 10 seconds;
         message: 'Use table headers (th) for better accessibility'
       });
     }
-  }
 
   /**
    * Estimate render time
@@ -594,7 +581,6 @@ if (estimatedTime > 10000) { // 10 seconds;
       } else if (char === ']' || char === '>') {
         currentNesting--;
       }
-    }
     score += maxNesting;
 
     return Math.round(Math.min(100, score));
@@ -614,4 +600,3 @@ if (estimatedTime > 10000) { // 10 seconds;
     const lastNewline = text.lastIndexOf('\n', index - 1);
     return index - lastNewline;
   }
-}

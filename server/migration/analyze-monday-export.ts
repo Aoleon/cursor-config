@@ -133,8 +133,6 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
             if (value.match(/^\d{4}-\d{2}-\d{2}T/)) {
               boardAnalysis.dates.push(value);
             }
-          }
-        }
         
         // Extract project patterns from name
         if (firstValue) {
@@ -162,7 +160,6 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
           if (clientMatch) {
             allClients.add(clientMatch[1].trim());
           }
-        }
         
         // Check for subitems
         if (firstValue === 'Subitems' || item[firstKey] === 'Subitems') {
@@ -173,8 +170,6 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
         if (boardAnalysis.sample_items.length < 10) {
           boardAnalysis.sample_items.push(item);
         }
-      }
-    }
     
     boardAnalysis.count = itemCount;
     boardAnalysis.columns = Array.from(columnSet);
@@ -256,7 +251,6 @@ for (const [boardKey, board] of Object.entries(analysis.boards)) {
         mdReport += `${idx + 1}. ${name}\n`;
       });
   }
-}
 
 mdReport += `\n---
 

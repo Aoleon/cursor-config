@@ -29,7 +29,6 @@ export interface PrevuVsReelComparison {
       startDays?: number;
       endDays?: number;
     };
-  };
   budget: {
     planned: number;
     actual: number;
@@ -155,7 +154,6 @@ export class PrevuVsReelService {
 
     return { planned, actual, variance, variancePercent, byType };
   }
-}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

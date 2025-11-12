@@ -99,9 +99,9 @@ export class MondayMigrationServiceEnhanced {
         boardId: options.boardId,
         dryRun: options.dryRun,
         verbose: options.verbose 
-              
-        }
-      });
+
+            }
+                                                                                                                                                                                                                                                                              });
     const report: MigrationReport = {
       entityType: options.entityType,
       boardId: options.boardId || getMappingConfig(options.entityType).boardId || '',
@@ -134,9 +134,9 @@ export class MondayMigrationServiceEnhanced {
           service: 'MondayMigrationServiceEnhanced',
           operation: 'migrate',
           totalFetched: report.totalFetched 
-              
-        }
-      });
+
+              }
+                                                                                                                                                                                                                                                                              });
 
       // Étape 2: Transform & Validate
       const transformedI: unknown[]ny[] = [];
@@ -161,8 +161,6 @@ service: 'MondayMigrationServiceEnhanced',
       metadata: {}
     } );
           }
-        }
-      }
 
       // Étape 3: Dry-run preview OU Bulk insert
       if (options.dryRun) {
@@ -170,12 +168,12 @@ service: 'MondayMigrationServiceEnhanced',
         
         logger.info('Mode dry-run: migration simulée', { metadata: {
             service: 'MondayMigrationServiceEnhanced',
-            operation: 'migrate',
+                  operation: 'migrate',
             totalValidated: report.totalValidated,
             previewCount: report.preview.length 
-              
-        }
-      });
+
+                }
+                                                                                                                                                                                                                                                                              });
       } else {
         // Bulk insert avec skip doublons
         const insertResult = await this.bulkInsert(
@@ -206,9 +204,9 @@ service: 'MondayMigrationServiceEnhanced',
           totalInserted: report.totalInserted,
           totalErrors: report.totalErrors,
           totalSkipped: report.totalSkipped 
-              
-        }
-      });
+
+              }
+                                                                                                                                                                                                                                                                              });
       return report;
     } catch (error) {
       report.completedAt = new Date();
@@ -218,13 +216,12 @@ service: 'MondayMigrationServiceEnhanced',
           operation: 'migrate',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              
-        }
-      });
+
+              }
+                                                                                                                                                                                                                                                                              });
 
       throw error;
     }
-  }
 
   /**
    * FETCH ALL ITEMS depuis Monday board avec pagination
@@ -241,7 +238,7 @@ service: 'MondayMigrationServiceEnhanced',
         boardId,
         entityType 
               
-        }
+            }
       });
     return withErrorHandling(
     async () => {
@@ -260,9 +257,9 @@ service: 'MondayMigrationServiceEnhanced',
           service: 'MondayMigrationServiceEnhanced',
           operation: 'fetchAllItems',
           totalItems: items.length 
-              
-        }
-      });
+
+              }
+                                                                                                                                                                                                                                                                              });
       return items;
     },
     {
@@ -272,7 +269,6 @@ service: 'MondayMigrationServiceEnhanced',
     } );
       throw error;
     }
-  }
 
   /**
    * TRANSFORM ITEM Monday → Saxium
@@ -320,15 +316,12 @@ service: 'MondayMigrationServiceEnhanced',
         if (defaultValue !== undefined) {
           transformed[requiredField] = defaultValue;
         }
-      }
-    }
 
     // Ajouter champs Monday pour traçabilité
     for (const mondayField of config.mondayFields) {
       if (mondayField === 'mondayId') {
         transformed.mondayId = item.id; // Monday item ID
       }
-    }
 
     // Ajouter nom item Monday comme fallback description
     if (!transformed.description && item.name) {
@@ -366,7 +359,6 @@ service: 'MondayMigrationServiceEnhanced',
       });
       throw error;
     }
-  }
 
   /**
    * BULK INSERT avec gestion doublons - OPTIMISÉ AVEC BATCHES PARALLÈLES
@@ -403,9 +395,9 @@ service: 'MondayMigrationServiceEnhanced',
         totalItems: items.length,
         parallelBatchSize: PARALLEL_BATCH_SIZE,
         skipExisting: options.skipExisting 
-              
-        }
-      });
+
+            }
+                                                                                                                                                                                                                                                                              });
     const totalBatches = Math.ceil(items.length / PARALLEL_BATCH_SIZE);
     let batchNumber = 0;
     // Traiter par batches parallèles
@@ -418,20 +410,19 @@ service: 'MondayMigrationServiceEnhanced',
           // Check for duplicates if skip enabled
           if (options.skipExisting && item.mondayId) {
             const exists = await this.checkIfExists(item.mondayId, entityType);
-            if (exists) {
-              return {
-                status: 'skipped' as const,
+            if (exists) {}
+return{
+              status: 'skipped' as const,
                 mondayId: item.mondayId,
                 reason: 'Already exists in database'
               };
             }
-          }
 
           // Insert via storage interface
           const created = await this.insertEntity(item, entityType);
           return {
-            status: 'inserted' as const,
-            id: created.id,
+              status: 'inserted' as const,
+              id: created.id,
             mondayId: item.mondayId
           };
               }
@@ -465,7 +456,7 @@ service: 'MondayMigrationServiceEnhanced',
           // Rejected promise = error
           result.errors.push({
             mondayId: item.mondayId || 'unknown',
-            error: settledResult.reason instanceof Error 
+              error: settledResult.reason instanceof Error
               ? settledResult.reason.message 
               : String(settledResult.reason)
           });
@@ -473,17 +464,15 @@ service: 'MondayMigrationServiceEnhanced',
           if (options.verbose) {
             logger.warn('Erreur insertion item', { metadata: {
                 service: 'MondayMigrationServiceEnhanced',
-                operation: 'bulkInsert',
+                      operation: 'bulkInsert',
                 mondayId: item.mondayId,
-                error: settledResult.reason instanceof Error 
+                      error: settledResult.reason instanceof Error
                   ? settledResult.reason.message 
                   : String(settledResult.reason) 
               
-        }
+                    }
       });
           }
-        }
-      }
 
       // Progress logging with percentage
       const processedSoFar = Math.min(i + PARALLEL_BATCH_SIZE, items.length);
@@ -500,9 +489,9 @@ service: 'MondayMigrationServiceEnhanced',
           inserted: result.inserted,
           skipped: result.skipped,
           errors: result.errors.length 
-              
-        }
-      });
+
+                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                              });
     }
     logger.info('Bulk insert terminé', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
@@ -510,9 +499,9 @@ service: 'MondayMigrationServiceEnhanced',
         inserted: result.inserted,
         skipped: result.skipped,
         errors: result.errors.length 
-              
-        }
-      });
+
+            }
+                                                                                                                                                                                                                                                                              });
     return result;
   }
   /**
@@ -563,7 +552,6 @@ service: 'MondayMigrationServiceEnhanced',
       });
       return false;
     }
-  }
 
   /**
    * Insère entity via storage interface
@@ -579,8 +567,6 @@ service: 'MondayMigrationServiceEnhanced',
       default:
         throw new AppError(`Unknown entity type: ${entityType}`, 500);
     }
-  }
-}
 
 // Export singleton
 let enhancedService: MondayMigrationServiceEnhanced | null = null;

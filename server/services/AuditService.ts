@@ -201,7 +201,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec du logging d\'audit', error as Error);
     }
-  }
 
   /**
    * Créer une alerte de sécurité
@@ -219,7 +218,7 @@ export class AuditService {
       if (lastAlert && (Date.now() - lastAlert) < this.config.alertCooldownMs) {
         logger.info('Alerte en cooldown, ignorée', { metadata: {
             service: 'AuditService',
-            operation: 'createSecurityAlert',
+                  operation: 'createSecurityAlert',
             alertType: alertData.type       }
      });
         return '';
@@ -285,11 +284,11 @@ export class AuditService {
           operation: 'createSecurityAlert',
           alertType: alertData.type,
           severity: alertData.severity 
-              
+
               }
  
               
-            });
+                                                });
       return alertId;
     },
     {
@@ -299,7 +298,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de création d\'alerte de sécurité', error as Error);
     }
-  }
 
   // ========================================
   // MÉTHODES D'ANALYSE ET DÉTECTION
@@ -343,7 +341,6 @@ export class AuditService {
       metadata: {
       });
     }
-  }
 
   /**
    * Détecter violations RBAC répétées
@@ -381,7 +378,6 @@ export class AuditService {
           lastViolationResource: event.resource
         });
     }
-  }
 
   /**
    * Détecter requêtes SQL suspectes
@@ -421,7 +417,6 @@ export class AuditService {
           eventId: event.entityId
         });
     }
-  }
 
   /**
    * Détecter problèmes de performance
@@ -449,7 +444,6 @@ export class AuditService {
           resource: event.resource
         });
     }
-  }
 
   /**
    * Détecter patterns d'activité inhabituels
@@ -486,7 +480,6 @@ export class AuditService {
           lastAction: event.action
         });
     }
-  }
 
   /**
    * Détecter tentatives d'accès non autorisées
@@ -507,7 +500,7 @@ export class AuditService {
         blockedResource: event.resource,
         userRole: event.userRole,
         ipAddress: event.metadata?.ip
-        }
+              }
             );
   }
 
@@ -591,7 +584,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de récupération des logs d\'audit', error as Error);
     }
-  }
 
   /**
    * Récupérer alertes de sécurité avec filtres
@@ -674,7 +666,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de récupération des alertes de sécurité', error as Error);
     }
-  }
 
   /**
    * Générer métriques de sécurité globales
@@ -747,7 +738,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de calcul des métriques de sécurité', error as Error);
     }
-  }
 
   /**
    * Générer analytics chatbot détaillées
@@ -841,7 +831,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de calcul des analytics chatbot', error as Error);
     }
-  }
 
   /**
    * Générer rapport d'activité utilisateur
@@ -916,7 +905,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec de génération du rapport d\'activité utilisateur', error as Error);
     }
-  }
 
   // ========================================
   // MÉTHODES DE GESTION ET MAINTENANCE
@@ -978,7 +966,6 @@ export class AuditService {
     } );
       return false;
     }
-  }
 
   /**
    * Archiver anciens logs selon la configuration de rétention
@@ -1019,11 +1006,11 @@ export class AuditService {
           operation: 'archiveOldLogs',
           archived: archivedResult.rowCount || 0,
           deleted: deletedResult.rowCount || 0 
-              
+
               }
  
               
-            });
+                                                });
       return {
         archived: archivedResult.rowCount || 0,
         deleted: deletedResult.rowCount || 0
@@ -1036,7 +1023,6 @@ export class AuditService {
     } );
       return { archived: 0, deleted: 0 };
     }
-  }
 
   /**
    * Exporter logs d'audit au format CSV
@@ -1090,7 +1076,6 @@ export class AuditService {
     } );
       throw new DatabaseError('Échec d\'export CSV des logs d\'audit', error as Error);
     }
-  }
 
   // ========================================
   // MÉTHODES PRIVÉES ET UTILITAIRES
@@ -1122,7 +1107,6 @@ export class AuditService {
         } else {
           sanitized[key] = value;
         }
-      }
       
       return sanitized;
     }
@@ -1187,7 +1171,7 @@ export class AuditService {
       service: 'AuditService',
       metadata: {
       });
-        }
+              }
 }, 60 * 60 * 1000); // 1 heure;
     }
 
@@ -1198,7 +1182,5 @@ export class AuditService {
         if (now - timestamp > this.config.alertCooldownMs * 2) {
           this.alertCooldowns.delete(key);
         }
-      }
     }, 10 * 60 * 1000); // 10 minutes
   }
-}

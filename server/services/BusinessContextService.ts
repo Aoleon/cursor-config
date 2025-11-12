@@ -118,7 +118,7 @@ export class BusinessContextService {
           contextId,
           userId: request.userId,
           userRole: request.user_role
-      });
+            });
       // 1. Validation de la requête
       const validationResult = businessContextRequestSchema.safeParse(request);
       if (!validationResult.success) {
@@ -608,9 +608,9 @@ export class BusinessContextService {
         memoryEntry.hitCount++;
         logger.info('Cache mémoire hit', { metadata: {
             service: 'BusinessContextService',
-            operation: 'getCachedContext',
+                  operation: 'getCachedContext',
             cacheKey
-      });
+              });
         return memoryEntry.data;
       }
       // 2. Vérification cache DB
@@ -642,10 +642,10 @@ export class BusinessContextService {
 
         logger.info('Cache DB hit', { metadata: {
             service: 'BusinessContextService',
-            operation: 'getCachedContext',
+                  operation: 'getCachedContext',
             cacheKey 
               
-              }
+                }
  
               
             });
@@ -747,7 +747,7 @@ export class BusinessContextService {
           operation: 'cleanupExpiredCache',
           error: err instanceof Error ? err.message : String(err),
           stack: err instanceof Error ? err.stack : undefined
-        }
+              }
        );
   }
   // ========================================
@@ -763,7 +763,7 @@ export class BusinessContextService {
       logger.info('Base de connaissances menuiserie initialisée', { metadata: {
           service: 'BusinessContextService',
           operation: 'initializeDomainKnowledge'
-      });
+            });
     },
     {
       operation: 'async',
@@ -1606,11 +1606,11 @@ export class BusinessContextService {
         service: 'BusinessContextService',
         operation: 'getEnrichedSchemaMetadata',
         tablesCount: Object.keys(metadata.tables).length 
-              
-              }
+
+            }
  
               
-            });
+                                                });
   }
   /**
    * Dictionnaire métier JLM complet
@@ -1857,7 +1857,7 @@ export class BusinessContextService {
           materialsCount: MENUISERIE_KNOWLEDGE_BASE.materials.length,
           processesCount: MENUISERIE_KNOWLEDGE_BASE.processes.length,
           normsCount: MENUISERIE_KNOWLEDGE_BASE.norms.length
-      });
+            });
       return MENUISERIE_KNOWLEDGE_BASE;
     },
     {
@@ -2377,12 +2377,8 @@ export class BusinessContextService {
         typical_results: "Résultats basés sur l'historique d'utilisation"
             }
                       }
-                                }
-                              }));
-    },
-    {
-      operation: 'async',
-      service: 'BusinessContextService',
+                                                        }
+                                                      }));
       metadata: {}
     } );
       return [];
@@ -2694,10 +2690,10 @@ export class BusinessContextService {
       if (cachedContext) {
         logger.info('Cache SQL hit', { metadata: {
             service: 'BusinessContextService',
-            operation: 'buildIntelligentContextForSQL',
+                  operation: 'buildIntelligentContextForSQL',
             domain: queryAnalysis.primaryDomain,
             cacheKey
-      });
+              });
         return cachedContext;
       }
       // 3. Récupération des métadonnées enrichies
@@ -2829,11 +2825,11 @@ export class BusinessContextService {
           examplesIncluded: relevantExamples.length,
           generationTime: Date.now() - startTime,
           contextSize: finalContext.length 
-              
+
               }
  
               
-            });
+                                                });
       return finalContext;
     },
     {
@@ -3000,9 +2996,8 @@ export class BusinessContextService {
       const table = allTables[tableName];
       if (table?.sqlExamples) {
         // Filtrer les exemples selon les mots-clés de la requête
-        const relevantExamples = table.sqlExamples.: ununknownwn)((unknown)unknown) => {
-          const exampleText = `${ex.description} ${ex.sql}`.toLowerCase();
-          return queryAnalysis.keywords.some((keyword: string) => exampleText.includes(keyword));
+        const relevantExamples = table.sqlExamples.: ununknownwn)((unknown) => {}
+returnqueryAnalysis.keywords.some((keyword: string) => exampleText.includes(keyword));
         });
         
         if (relevantExamples.length > 0) {

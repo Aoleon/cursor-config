@@ -61,10 +61,8 @@ export class DateIntelligenceRulesSeeder {
     {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
       }
       
       logger.info(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
@@ -89,7 +87,6 @@ service: 'dateIntelligenceRulesSeeder',;
       logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors du seeding des règles:', error);
       throw new AppError('Impossible d\'initialiser les règles métier menuiserie', 500);
     }
-  }
   
   /**
    * Réinitialise toutes les règles (suppression + recréation)
@@ -127,7 +124,6 @@ service: 'dateIntelligenceRulesSeeder',;
       logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors du reset des règles:', error);
       throw new AppError('Impossible de réinitialiser les règles métier', 500);
     }
-  }
   
   /**
    * Mise à jour incrémentale des règles (ajoute seulement les manquantes)
@@ -161,12 +157,9 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
-      metadata: {
-                                                                                      }
-
-                                                                                    });
-        }
-      }
+      metadata: {}
+    });
+              }
       
       logger.info(`[DateIntelligenceSeeder] Mise à jour terminée: ${addedCount} nouvelles règles ajoutées`);
       
@@ -174,7 +167,6 @@ service: 'dateIntelligenceRulesSeeder',;
       logger.error('Erreur', '[DateIntelligenceSeeder] Erreur lors de la mise à jour des règles:', error);
       throw new AppError('Impossible de mettre à jour les règles métier', 500);
     }
-  }
   
   /**
    * Obtenir les statistiques des règles métier
@@ -219,10 +211,8 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
   
   /**
@@ -301,12 +291,9 @@ service: 'dateIntelligenceRulesSeeder',;
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
   }
-}
 
 /**
  * Fonction d'initialisation automatique appelée au démarrage
@@ -358,8 +345,6 @@ export async function initializeDefaultRules(): Promise<void> {
     {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
-      metadata: {
-                                                                                      }
-
-                                                                                    });
+      metadata: {}
+    });
 }

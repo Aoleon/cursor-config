@@ -307,4 +307,3 @@ export class OfferRepository extends BaseRepository<
 
     return conditions;
   }
-}

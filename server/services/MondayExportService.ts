@@ -19,8 +19,8 @@ export class MondayExportService {
     const correlationId = getCorrelationId();
     
     logger.info('[MondayExportService] Début export projet', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'exportProject',
         projectId,
         correlationId
@@ -33,8 +33,8 @@ export class MondayExportService {
     if (!project) {
       const error = new Error(`Project ${projectId} not found`);
       logger.error('[MondayExportService] Projet non trouvé', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportProject',
           projectId,
           correlationId
@@ -46,8 +46,8 @@ export class MondayExportService {
     // Vérifier si déjà exporté (idempotence)
     if (project.mondayId) {
       logger.info('[MondayExportService] Projet déjà exporté', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportProject',
           projectId,
           mondayId: project.mondayId,
@@ -93,9 +93,9 @@ export class MondayExportService {
     const mondayItem = await withRetry(
       async () => {
         logger.info('[MondayExportService] Création item Monday', {
-          service: 'MondayExportService',
-          metadata: {
-            operation: 'exportProject.createItem',
+      metadata: {
+        module: 'MondayExportService', {
+                operation: 'exportProject.createItem',
             projectId,
             projectName: project.name,
             correlationId
@@ -120,8 +120,8 @@ export class MondayExportService {
     if (!mondayItem || !mondayItem.id) {
       const error = new Error('Monday.com item creation failed - no ID returned');
       logger.error('[MondayExportService] Échec création item', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportProject',
           projectId,
           correlationId,
@@ -135,8 +135,8 @@ export class MondayExportService {
     await this.storage.updateProjectMondayId(projectId, mondayItem.id);
     
     logger.info('[MondayExportService] Projet exporté avec succès', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'exportProject',
         projectId,
         mondayId: mondayItem.id,
@@ -155,8 +155,8 @@ export class MondayExportService {
     const correlationId = getCorrelationId();
     
     logger.info('[MondayExportService] Début export AO', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'exportAO',
         aoId,
         correlationId
@@ -169,8 +169,8 @@ export class MondayExportService {
     if (!ao) {
       const error = new Error(`AO ${aoId} not found`);
       logger.error('[MondayExportService] AO non trouvé', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportAO',
           aoId,
           correlationId
@@ -182,8 +182,8 @@ export class MondayExportService {
     // Vérifier si déjà exporté (idempotence)
     if (ao.mondayId) {
       logger.info('[MondayExportService] AO déjà exporté', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportAO',
           aoId,
           mondayId: ao.mondayId,
@@ -233,9 +233,9 @@ export class MondayExportService {
     const mondayItem = await withRetry(
       async () => {
         logger.info('[MondayExportService] Création item Monday pour AO', {
-          service: 'MondayExportService',
-          metadata: {
-            operation: 'exportAO.createItem',
+      metadata: {
+        module: 'MondayExportService', {
+                operation: 'exportAO.createItem',
             aoId,
             aoReference: ao.reference,
             correlationId
@@ -260,8 +260,8 @@ export class MondayExportService {
     if (!mondayItem || !mondayItem.id) {
       const error = new Error('Monday.com item creation failed - no ID returned');
       logger.error('[MondayExportService] Échec création item AO', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'exportAO',
           aoId,
           correlationId,
@@ -275,8 +275,8 @@ export class MondayExportService {
     await this.storage.updateAOMondayId(aoId, mondayItem.id);
     
     logger.info('[MondayExportService] AO exporté avec succès', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'exportAO',
         aoId,
         mondayId: mondayItem.id,
@@ -304,8 +304,8 @@ export class MondayExportService {
     const correlationId = getCorrelationId();
     
     logger.info('[MondayExportService] Début mise à jour colonnes item', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'updateItemColumns',
         boardId,
         itemId,
@@ -327,9 +327,9 @@ export class MondayExportService {
     const result = await withRetry(
       async () => {
         logger.debug('[MondayExportService] Exécution mutation change_multiple_column_values', {
-          service: 'MondayExportService',
-          metadata: {
-            operation: 'updateItemColumns.mutation',
+      metadata: {
+        module: 'MondayExportService', {
+                operation: 'updateItemColumns.mutation',
             boardId,
             itemId,
             columnValues,
@@ -355,8 +355,8 @@ export class MondayExportService {
     if (!result || !result.id) {
       const error = new Error('Monday.com column update failed - no ID returned');
       logger.error('[MondayExportService] Échec mise à jour colonnes', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'updateItemColumns',
           boardId,
           itemId,
@@ -368,8 +368,8 @@ export class MondayExportService {
     }
 
     logger.info('[MondayExportService] Colonnes mises à jour avec succès', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'updateItemColumns',
         boardId,
         itemId,
@@ -396,8 +396,8 @@ export class MondayExportService {
     const BOARD_ID = '3946257560'; // AO Planning 🖥️
     
     logger.info('[MondayExportService] Début sync nouveaux champs AO', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'syncAONewFields',
         aoId,
         correlationId
@@ -409,8 +409,8 @@ export class MondayExportService {
     
     if (!ao) {
       logger.warn('[MondayExportService] AO non trouvé', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           correlationId
@@ -422,8 +422,8 @@ export class MondayExportService {
     // Vérifier qu'on a bien un mondayId
     if (!ao.mondayId) {
       logger.warn('[MondayExportService] AO sans mondayId - impossible de synchroniser', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           reference: ao.reference,
@@ -440,8 +440,8 @@ export class MondayExportService {
     if (ao.dateLivraisonPrevue) {
       columnValues.date_mkpcfgja = ao.dateLivraisonPrevue.toISOString().split('T')[0];
       logger.debug('[MondayExportService] Ajout dateLivraisonPrevue', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           value: columnValues.date_mkpcfgja
@@ -453,8 +453,8 @@ export class MondayExportService {
     if (ao.dateOS) {
       columnValues.date__1 = ao.dateOS.toISOString().split('T')[0];
       logger.debug('[MondayExportService] Ajout dateOS', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           value: columnValues.date__1
@@ -466,8 +466,8 @@ export class MondayExportService {
     if (ao.cctp) {
       columnValues.long_text_mkx4zgjd = ao.cctp;
       logger.debug('[MondayExportService] Ajout cctp', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           length: ao.cctp.length
@@ -478,8 +478,8 @@ export class MondayExportService {
     // Si aucun champ à synchroniser, skip
     if (Object.keys(columnValues).length === 0) {
       logger.info('[MondayExportService] Aucun nouveau champ à synchroniser', {
-        service: 'MondayExportService',
-        metadata: {
+      metadata: {
+        module: 'MondayExportService', {
           operation: 'syncAONewFields',
           aoId,
           mondayId: ao.mondayId,
@@ -493,8 +493,8 @@ export class MondayExportService {
     await this.updateItemColumns(BOARD_ID, ao.mondayId, columnValues);
     
     logger.info('[MondayExportService] Nouveaux champs AO synchronisés avec succès', {
-      service: 'MondayExportService',
       metadata: {
+        module: 'MondayExportService', {
         operation: 'syncAONewFields',
         aoId,
         mondayId: ao.mondayId,

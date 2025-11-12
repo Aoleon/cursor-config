@@ -50,7 +50,7 @@ export class MicrosoftAuthService {
       
       const result = await this.msalClient.acquireTokenByClientCredential({
         scopes: this.scopes
-      });
+            });
 
       if (!result || !result.accessToken) {
         throw new AppError('Failed to acquire access token', 500);
@@ -87,7 +87,6 @@ export class MicrosoftAuthService {
     this.tokenCache = null;
     logger.info('Microsoft auth token cache cleared');
   }
-}
 
 // Singleton instance
 export const microsoftAuthService = new MicrosoftAuthService();

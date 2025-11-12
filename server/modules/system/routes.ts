@@ -51,7 +51,6 @@ async function checkDatabaseHealth() {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
 
 function checkCacheHealth() {
   return {
@@ -86,7 +85,6 @@ async function checkMondayHealth() {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
 
 async function checkOpenAIHealth() {
   if (!process.env.OPENAI_API_KEY) {
@@ -114,7 +112,6 @@ async function checkOpenAIHealth() {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
 
 async function checkSendGridHealth() {
   if (!process.env.SENDGRID_API_KEY) {
@@ -142,7 +139,6 @@ async function checkSendGridHealth() {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
 
 // ========================================
 // FACTORY FUNCTION - Dependency Injection Pattern
@@ -192,6 +188,7 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
     const isHealthy = databaseHealth.status === 'healthy';
     
     logger.info('[Health] Health check effectué', { metadata: {
+
         route: '/api/health',
         method: 'GET',
         status: health.status,
@@ -200,11 +197,8 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
           monday: mondayHealth.status,
           openai: openaiHealth.status,
           sendgrid: sendgridHealth.status
-
-            })
-
-
-          );
+      }
+    });
     
     res.status(isHealthy ? 200 : 503).json(health);
         }
@@ -223,16 +217,14 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
 
   router.get("/api/users", isAuthenticated, asyncHandler(async (req, res) => {
     const users = await storage.getUsers();
-    logger.info('[Users] Liste utilisateurs récupérée', { metadata: { 
+    logger.info('[Users] Liste utilisateurs récupérée', { metadata: {
+ 
         route: '/api/users',
         method: 'GET',
         count: users.length,
         userId: req.user?.id
-
-            })
-
-
-          );
+      }
+    });
     res.json(users);
         }
 
@@ -253,10 +245,8 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
         throw createError.notFound('Utilisateur', req.params.id);
       }
       sendSuccess(res, user);
-          }
-        })
-      );
-
+              })
+            );
   // ========================================
   // GLOBAL SEARCH ROUTE
   // ========================================
@@ -296,7 +286,6 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
             ilike(sql`COALESCE(${aos.location}, '')`, searchPattern),
             ilike(sql`COALESCE(${aos.city}, '')`, searchPattern)
           )
-        )
         .limit(limitNum);
 
       // Search in Offers
@@ -318,7 +307,6 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
             ilike(sql`COALESCE(${offers.client}, '')`, searchPattern),
             ilike(sql`COALESCE(${offers.location}, '')`, searchPattern)
           )
-        )
         .limit(limitNum);
 
       // Search in Projects
@@ -340,10 +328,10 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
             ilike(sql`COALESCE(${projects.client}, '')`, searchPattern),
             ilike(sql`COALESCE(${projects.location}, '')`, searchPattern)
           )
-        )
         .limit(limitNum);
 
       logger.info('[Search] Global search effectuée', { metadata: {
+
           route: '/api/search/global',
           method: 'GET',
           query: searchTerm,
@@ -351,11 +339,8 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
             aos: matchingAos.length,
             offers: matchingOffers.length,
             projects: matchingProjects.length
-
-            })
-
-
-          );
+      }
+    });
 
       res.json({
         success: true,
@@ -380,12 +365,10 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
-      logger.info('[ObjectStorage] URL upload générée', { metadata: { userId: req.user?.id 
-
-            })
- 
-
-          );
+      logger.info('[ObjectStorage] URL upload générée', { metadata: {
+ userId: req.user?.id
+      }
+    });
       
       res.json({ success: true, data: { uploadURL 
 
@@ -406,17 +389,14 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
         throw new NotFoundError("File not found");
       }
       
-      logger.info('[ObjectStorage] Objet servi', { metadata: { objectPath, userId: req.user?.id 
-
-            })
- 
-
-          );
+      logger.info('[ObjectStorage] Objet servi', { metadata: {
+ objectPath, userId: req.user?.id
+      }
+    });
       
       // Download and serve object
       await objectStorageService.downloadObject(objectPath, res);
           }
-                                        }
 
                                       });
 
@@ -425,6 +405,7 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
 
 // Log module initialization
 logger.info('[SystemModule] Module System initialized', { metadata: {
+
     routes: [
       '/api/health',
       '/api/users',
@@ -433,8 +414,5 @@ logger.info('[SystemModule] Module System initialized', { metadata: {
       '/api/objects/upload',
       '/api/objects/:objectPath/*splat'
     ]
-
-            })
-
-
-          );
+      }
+    });

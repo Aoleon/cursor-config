@@ -70,9 +70,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           method: 'GET',
           offerId,
           userId: req.user?.id
-        
-            })
-          );
+        }
+      });
       
       const elements = await storage.getChiffrageElementsByOffer(offerId);
       
@@ -90,16 +89,14 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { lotId } = req.params;
       
-      logger.info('[Chiffrage] Récupération items du lot', { metadata: { 
+      logger.info('[Chiffrage] Récupération items du lot', { 
+        metadata: { 
           route: '/api/ao-lots/:lotId/items',
           method: 'GET',
           lotId,
           userId: req.user?.id
-
-            })
-
-
-          );
+        }
+      });
       
       const items = await storage.getChiffrageElementsByLot(lotId);
       
@@ -108,9 +105,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         data: items,
         count: items.length
       });
-          }
-        })
-      );
+    })
+  );
 
   // Create new chiffrage element
   router.post('/api/offers/:offerId/chiffrage-elements', 
@@ -120,16 +116,14 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { offerId } = req.params;
       
-      logger.info('[Chiffrage] Création élément chiffrage', { metadata: { 
+      logger.info('[Chiffrage] Création élément chiffrage', { 
+        metadata: { 
           route: '/api/offers/:offerId/chiffrage-elements',
           method: 'POST',
           offerId,
           userId: req.user?.id
-
-            })
-
-
-          );
+        }
+      });
       
       const element = await storage.createChiffrageElement({
         ...req.body,
@@ -146,9 +140,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: element
       });
-          }
-        })
-      );
+    })
+  );
 
   // Update chiffrage element
   router.put('/api/offers/:offerId/chiffrage-elements/:elementId', 
@@ -157,17 +150,15 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { offerId, elementId } = req.params;
       
-      logger.info('[Chiffrage] Modification élément chiffrage', { metadata: { 
+      logger.info('[Chiffrage] Modification élément chiffrage', { 
+        metadata: { 
           route: '/api/offers/:offerId/chiffrage-elements/:elementId',
           method: 'PUT',
           offerId,
           elementId,
           userId: req.user?.id
-
-            })
-
-
-          );
+        }
+      });
       
       const element = await storage.updateChiffrageElement(elementId, req.body);
       

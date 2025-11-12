@@ -132,7 +132,10 @@ export class AIService {
             service: 'AIService',
             operation: 'circuit_breaker',
             provider: name 
+              
               }
+ 
+              
             });
       },
       onClose: (name) => {
@@ -140,7 +143,10 @@ export class AIService {
             service: 'AIService',
             operation: 'circuit_breaker',
             provider: name 
+              
               }
+ 
+              
             });
       });
     
@@ -154,7 +160,10 @@ export class AIService {
             service: 'AIService',
             operation: 'circuit_breaker',
             provider: name 
+              
               }
+ 
+              
             });
       },
       onClose: (name) => {
@@ -162,7 +171,10 @@ export class AIService {
             service: 'AIService',
             operation: 'circuit_breaker',
             provider: name 
+              
               }
+ 
+              
             });
       });
   }
@@ -200,7 +212,10 @@ export class AIService {
           operation: 'getDegradedResponse',
           age: Math.round((Date.now() - cached.timestamp) / 1000),
           complexity: cached.complexity 
+              
               }
+ 
+              
             });
       return cached.response;
     }
@@ -846,7 +861,10 @@ export class AIService {
         contextLength: request.context?.length || 0,
         requestId,
         userRole: request.userRole 
+              
               }
+ 
+              
             });
     // Vérifier d'abord le cache de réponses dégradées
     const degradedResponse = this.getDegradedResponse(request.query);
@@ -927,7 +945,10 @@ export class AIService {
                   attempt,
                   delay,
                   error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
             });
       });
@@ -937,7 +958,10 @@ export class AIService {
           model: modelSelection.selectedModel,
           responseTime: result.data?.responseTimeMs,
           totalTime: Date.now() - startTime 
+              
               }
+ 
+              
             });
       return result;
     },
@@ -965,7 +989,10 @@ export class AIService {
           originalModel: modelSelection.selectedModel,
           maxRetries: fallbackConfig.maxRetries,
           timeout: fallbackConfig.timeout 
+              
               }
+ 
+              
             });
       
       fallbackAttempted = true;
@@ -1003,7 +1030,10 @@ export class AIService {
                     attempt,
                     delay,
                     error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
               });
         });
@@ -1014,7 +1044,10 @@ export class AIService {
             fallbackModel,
             responseTime: result.data?.responseTimeMs,
             totalTime: Date.now() - startTime 
+              
               }
+ 
+              
             });
         return result;
     },
@@ -1035,7 +1068,10 @@ export class AIService {
         complexity: request.complexity || 'high',
         totalTime: Date.now() - startTime,
         retryStats: retryStats 
+              
               }
+ 
+              
             });
     // Générer une réponse SQL simplifiée basique
     const simplifiedSQL = this.generateSimplifiedSQL(request);
@@ -1209,7 +1245,10 @@ export class AIService {
           service: 'AIService',
           operation: 'getCachedResponse',
           queryHash: queryHash.substring(0, 8) 
+              
               }
+ 
+              
             });
       return memoryEntry.data;
     }
@@ -1249,7 +1288,10 @@ export class AIService {
             service: 'AIService',
             operation: 'getCachedResponse',
             queryHash: queryHash.substring(0, 8) 
+              
               }
+ 
+              
             });
         return data;
       }
@@ -1267,7 +1309,10 @@ export class AIService {
         logger.info('Utilisation cache in-memory expiré comme fallback final', { metadata: {
             service: 'AIService',
             operation: 'getCachedResponse' 
+              
               }
+ 
+              
             });
         return memoryEntry.data;
       }
@@ -1324,7 +1369,10 @@ export class AIService {
           service: 'AIService',
           operation: 'cacheResponse',
           queryHash: queryHash.substring(0, 8) 
+              
               }
+ 
+              
             });
     },
     {
@@ -1354,7 +1402,10 @@ export class AIService {
         service: 'AIService',
         operation: 'cleanMemoryCache',
         entriesRemoved: cleaned 
+              
               }
+ 
+              
             });
   }
   /**
@@ -2085,7 +2136,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
             operation: 'buildEnrichedContext',
             entityType,
             entityId 
+              
               }
+ 
+              
             });
         return cachedContext;
       }
@@ -2095,7 +2149,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
           operation: 'buildEnrichedContext',
           entityType,
           entityId 
+              
               }
+ 
+              
             });
       const result = await this.contextBuilder.buildContextualData(config);
       if (result.success && result.data) {
@@ -2107,7 +2164,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
             entityType,
             entityId,
             tokenEstimate: result.data.tokenEstimate 
+              
               }
+ 
+              
             });
         return result.data;
       } else {
@@ -2117,7 +2177,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
             entityType,
             entityId,
             error: result.error?.message 
+              
               }
+ 
+              
             });
         return null;
       }
@@ -2169,7 +2232,10 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       logger.info('Réponse SQL pure détectée (mode optimisé)', { metadata: {
           service: 'AIService',
           operation: 'parseAIResponse' 
+              
               }
+ 
+              
             });
       // Extraire le SQL (avec ou sans point-virgule)
       const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);

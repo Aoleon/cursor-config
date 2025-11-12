@@ -43,8 +43,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitresOuvrage);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // GET /api/maitres-ouvrage/:id - Récupérer un maître d'ouvrage
   router.get("/api/maitres-ouvrage/:id", 
@@ -65,8 +66,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitreOuvrage);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // POST /api/maitres-ouvrage - Créer un maître d'ouvrage
   router.post("/api/maitres-ouvrage", 
@@ -83,8 +85,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(201).json(maitreOuvrage);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // PUT /api/maitres-ouvrage/:id - Mettre à jour un maître d'ouvrage
   router.put("/api/maitres-ouvrage/:id", 
@@ -102,8 +105,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitreOuvrage);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // DELETE /api/maitres-ouvrage/:id - Supprimer un maître d'ouvrage (soft delete)
   router.delete("/api/maitres-ouvrage/:id", 
@@ -117,8 +121,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // ========================================
   // MAITRES D'OEUVRE ROUTES - Gestion contacts avec multi-contacts
@@ -139,8 +144,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitresOeuvre);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // GET /api/maitres-oeuvre/:id - Récupérer un maître d'œuvre avec ses contacts
   router.get("/api/maitres-oeuvre/:id", 
@@ -161,8 +167,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitreOeuvre);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // POST /api/maitres-oeuvre - Créer un maître d'œuvre
   router.post("/api/maitres-oeuvre", 
@@ -179,8 +186,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(201).json(maitreOeuvre);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // PUT /api/maitres-oeuvre/:id - Mettre à jour un maître d'œuvre
   router.put("/api/maitres-oeuvre/:id", 
@@ -198,8 +206,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(maitreOeuvre);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // DELETE /api/maitres-oeuvre/:id - Supprimer un maître d'œuvre (soft delete)
   router.delete("/api/maitres-oeuvre/:id", 
@@ -213,8 +222,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // ========================================
   // CONTACTS MAITRE OEUVRE ROUTES - Gestion multi-contacts
@@ -238,8 +248,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(contacts);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // POST /api/maitres-oeuvre/:maitreOeuvreId/contacts - Créer un contact pour un maître d'œuvre
   router.post("/api/maitres-oeuvre/:maitreOeuvreId/contacts", 
@@ -262,8 +273,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(201).json(contact);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // PUT /api/contacts-maitre-oeuvre/:contactId - Mettre à jour un contact
   router.put("/api/contacts-maitre-oeuvre/:contactId", 
@@ -283,8 +295,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.json(contact);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // DELETE /api/contacts-maitre-oeuvre/:contactId - Supprimer un contact (soft delete)
   router.delete("/api/contacts-maitre-oeuvre/:contactId", 
@@ -300,8 +313,9 @@ export function createStakeholdersRouter(storage: IStorage, eventBus: EventBus):
       
       res.status(204).send();
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // ========================================
   // AO CONTACTS ROUTES - Table de liaison AO ↔ Contacts

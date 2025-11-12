@@ -77,8 +77,8 @@ class MondayService {
     if (!this.apiKey) {
       logger.warn('MONDAY_API_KEY not configured', { 
         service: 'MondayService',
-        metadata: { operation: 'constructor' }
-      });
+        metadata: { operation: 'constructor'       }
+     });
     }
 
     this.client = axios.create({
@@ -134,7 +134,8 @@ class MondayService {
     {
       operation: 'dropdown',
       service: 'MondayService',
-      metadata: { } });
+      metadata: {       }
+     });
       },
       'GraphQL Query'
     );
@@ -502,7 +503,8 @@ class MondayService {
     {
       operation: 'dropdown',
       service: 'MondayService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   async getItem(itemId: string): Promise<MondayItem> {

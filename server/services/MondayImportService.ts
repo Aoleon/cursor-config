@@ -234,7 +234,8 @@ export class MondayImportService {
     {
       operation: 'coerceDecimalToString',
 service: 'MondayImportService',
-      metadata: { } });
+      metadata: {       }
+     });
           result.success = false;
         }
       }
@@ -408,7 +409,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
     {
       operation: 'coerceDecimalToString',
       service: 'MondayImportService',
-      metadata: { } });
+      metadata: {       }
+     });
           result.success = false;
         }
       unknown)unknown  return result;
@@ -546,7 +548,8 @@ message: `AO "${ao.reference}" ${wasUpdate ? 'mis à jour' : 'importé'} depuis 
     {
       operation: 'coerceDecimalToString',
 service: 'MondayImportService',
-      metadata: { } });
+      metadata: {       }
+     });
           result.success = false;
     unknown)unknown     }
 

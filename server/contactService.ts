@@ -294,8 +294,9 @@ export class ContactService {
         nom: newMaitreOuvrage.nom,
         id: newMaitreOuvrage.id,
         siret: newMaitreOuvrage.siret
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     return newMaitreOuvrage;
   }
@@ -332,8 +333,9 @@ export class ContactService {
         id: newMaitreOeuvre.id,
         siret: newMaitreOeuvre.siret,
         specialites: newMaitreOeuvre.specialites
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     return newMaitreOeuvre;
   }
@@ -426,8 +428,9 @@ export class ContactService {
       operation: 'principal',
       service: 'contactService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
   
   /**
@@ -448,8 +451,9 @@ export class ContactService {
       operation: 'principal',
       service: 'contactService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     }
     
     return results;
@@ -574,8 +578,9 @@ export class ContactService {
         lastName: newContact.lastName,
         email: newContact.email,
         company: newContact.company
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     return newContact;
   }
@@ -631,8 +636,9 @@ export class ContactService {
       operation: 'principal',
       service: 'contactService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 }
 

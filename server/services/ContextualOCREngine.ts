@@ -115,7 +115,10 @@ export class ContextualOCREngine {
     logger.info('Initializing Contextual OCR Engine', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'constructor' 
+              
               }
+ 
+              
             });
   }
   /**
@@ -161,7 +164,10 @@ export class ContextualOCREngine {
           projectsCount: projects.length,
           clientsCount: knownClients.length,
           locationsCount: knownLocations.length 
+              
               }
+ 
+              
             });
     },
     {
@@ -188,7 +194,10 @@ export class ContextualOCREngine {
         service: 'ContextualOCREngine',
         operation: 'enhanceOCRFields',
         documentType 
+              
               }
+ 
+              
             });
     const mappingResults: FieldMappingResult[] = [];
     const validationErrors: ValidationError[] = [];
@@ -450,7 +459,10 @@ export class ContextualOCREngine {
             department: dept,
             keyword,
             location 
+              
               }
+ 
+              
             });
         return dept;
       }
@@ -465,7 +477,10 @@ export class ContextualOCREngine {
             department: dept,
             keyword,
             location 
+              
               }
+ 
+              
             });
         return dept;
       }
@@ -485,7 +500,10 @@ export class ContextualOCREngine {
     logger.info('Auto-complétion intelligente des contacts pour JLM', { metadata: {
         service: 'ContextualOCREngine',
         operation: 'autoCompleteContactsFromMaster' 
+              
               }
+ 
+              
             });
     // Stratégie multi-niveau pour trouver des AOs similaires
     const similarityStrategies = [
@@ -511,7 +529,10 @@ export class ContextualOCREngine {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
             strategyLevel: i + 1 
+              
               }
+ 
+              
             });
       }
     }
@@ -540,7 +561,10 @@ export class ContextualOCREngine {
             operation: 'autoCompleteContactsFromMaster',
             bureauEtudes: bestMatch.bureauEtudes,
             confidence 
+              
               }
+ 
+              
             });
       }
       // Auto-compléter Bureau de Contrôle avec validation
@@ -563,7 +587,10 @@ export class ContextualOCREngine {
             operation: 'autoCompleteContactsFromMaster',
             bureauControle: bestMatch.bureauControle,
             confidence 
+              
               }
+ 
+              
             });
       }
       // Auto-compléter département si manquant
@@ -581,14 +608,20 @@ export class ContextualOCREngine {
             service: 'ContextualOCREngine',
             operation: 'autoCompleteContactsFromMaster',
             departement: bestMatch.departement 
+              
               }
+ 
+              
             });
       }
     } else {
       logger.info('Aucune correspondance trouvée pour auto-complétion', { metadata: {
           service: 'ContextualOCREngine',
           operation: 'autoCompleteContactsFromMaster' 
+              
               }
+ 
+              
             });
     }
   }
@@ -926,7 +959,10 @@ case 'volet':;
         service: 'ContextualOCREngine',
         operation: 'generatePerformanceMetrics',
         documentType 
+              
               }
+ 
+              
             });
     const startTime = Date.now();
     // Métriques de base
@@ -985,7 +1021,10 @@ case 'volet':;
         operation: 'generatePerformanceMetrics',
         globalScore: globalScore.toFixed(2),
         jlmScore: jlmSpecificScore.toFixed(2) 
+              
               }
+ 
+              
             });
     return metrics;
   }

@@ -19,9 +19,8 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
     passport.authenticate('azure-ad', {
       failureRedirect: '/login',
       session: true
-          }
-        })
-      );
+    })
+  );
 
   /**
    * POST /auth/microsoft/callback
@@ -33,13 +32,14 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
       session: true
     }),
     (req: Request, res: Response) => {
-      logger.info('[MicrosoftAuth] User successfully authenticated', { metadata: {
+      logger.info('[MicrosoftAuth] User successfully authenticated', { 
+        metadata: {
           route: '/auth/microsoft/callback',
-          userId: (req.user as unknown)?.id,
-          email: (req.uas unknown)unknown)?.email
+          userId: (req.user as unknown as { id?: string })?.id,
+          email: (req.user as unknown as { email?: string })?.email
+              }
 
-        }
-                });
+            });
 
       // Redirect to dashboard after successful login
       res.redirect('/');
@@ -55,8 +55,10 @@ export function createMicrosoftAuthRoutes(storage: IStorage): Router {
       if (err) {
         logger.error('[MicrosoftAuth] Error during logout', { metadata: { error: err.message 
 
-        }
-                });
+              }
+ 
+
+            });
       }
       res.redirect('/login');
     });

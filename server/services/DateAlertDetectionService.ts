@@ -240,14 +240,16 @@ export class DateAlertDetectionService {
           service: 'DateAlertDetectionService',
           operation: 'detectDelayRisks',
           alertsCount: alerts.length
-        }
-      });
+              }
+
+            });
       return alerts;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return [];
     }
   );
@@ -299,14 +301,16 @@ export class DateAlertDetectionService {
           service: 'DateAlertDetectionService',
           operation: 'detectPlanningConflicts',
           alertsCount: alerts.length
-        }
-      });
+              }
+
+            });
       return alerts;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return [];
     }
   );
@@ -379,13 +383,16 @@ export class DateAlertDetectionService {
           operation: 'detectCriticalDeadlines',
           alertsCount: alerts.length   
               }
-             } });
+                   }
+
+                 });
       return alerts;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return [];
     }
   );
@@ -435,13 +442,16 @@ export class DateAlertDetectionService {
           operation: 'detectOptimizationOpportunities',
           alertsCount: alerts.length   
               }
-             } });
+                   }
+
+                 });
       return alerts;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return [];
     }
   );
@@ -471,7 +481,9 @@ export class DateAlertDetectionService {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
           context: { detectionType: 'periodic' 
-        } });
+              }
+ 
+            });
       // 1. Détection retards
       const delayAlerts = await this.detectDelayRisks();
       // 2. Détection conflits (sur 30 jours)
@@ -512,14 +524,16 @@ export class DateAlertDetectionService {
           operation: 'runPeriodicDetection',
           totalAlertsGenerated: summary.totalAlertsGenerated,
           detectionRunTimeMs: summary.detectionRunTime   
-              }
-            });
+              
+        }
+      });
       return summary;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       summary.detectionRunTime = Date.now() - startTime;
       return summary;
     });
@@ -557,13 +571,16 @@ export class DateAlertDetectionService {
           alertId,
           userId   
               }
-             } });
+                   }
+
+                 });
       return updatedAlert;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       throw error;
     });
   }
@@ -599,13 +616,16 @@ export class DateAlertDetectionService {
           alertId,
           userId   
               }
-             } });
+                   }
+
+                 });
       return updatedAlert;
     },
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       throw error;
     });
   }
@@ -1142,7 +1162,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -1215,7 +1236,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1247,7 +1269,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1277,7 +1300,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1310,7 +1334,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1343,7 +1368,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1381,7 +1407,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1416,7 +1443,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1445,7 +1473,8 @@ export class DateAlertDetectionService {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
       return null;
     }
   }
@@ -1763,7 +1792,8 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
     
     return alertsCreated;
   }
@@ -1932,7 +1962,8 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
     
     return alertsCreated;
   }
@@ -1991,7 +2022,8 @@ export class MenuiserieDetectionRules {
     {
       operation: 'constructor',
       service: 'DateAlertDetectionService',
-      metadata: { } });
+      metadata: {       }
+     });
     
     return alertsCreated;
   }

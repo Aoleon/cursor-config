@@ -328,7 +328,8 @@ export class PredictiveEngineService {
     logger.info('Service initialisé avec preloading prédictif', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'constructor'
-        } } });;
+        }       }
+     });;
   }
   // ========================================
   // MÉTHODES PRINCIPALES
@@ -344,7 +345,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'forecastRevenue',
         cacheHit: true
-          } } });;
+          }       }
+     });;
       return cached;
     }
     return withErrorHandling(
@@ -353,7 +355,8 @@ export class PredictiveEngineService {
           service: 'PredictiveEngineService',
           operation: 'forecastRevenue',
           params
-            } } });;
+            }       }
+     });;
         // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
         const historicalData = await this.getMonthlyRevenueHistory({
           start_date: params.start_date,
@@ -363,7 +366,8 @@ export class PredictiveEngineService {
           logger.info('Aucune donnée historique trouvée', { metadata: {
           service: 'PredictiveEngineService',
           operation: 'forecastRevenue'
-              } } });;
+              }       }
+     });;
           return [];
         }
         // 2. ALGORITHMES FORECASTING
@@ -404,13 +408,15 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'forecastRevenue',
         forecastCount: results.length
-          } } });;
+          }       }
+     });;
       return results;
     },
     {
       operation: 'forecastRevenue',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Détection de risques projets avec scoring algorithmique
@@ -423,7 +429,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         cacheHit: true
-          } } });;
+          }       }
+     });;
       return cached;
     }
     return withErrorHandling(
@@ -432,7 +439,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         params
-          } } });;
+          }       }
+     });;
       // 1. DONNÉES HISTORIQUES DÉLAIS
       const delayHistory = await this.getProjectDelayHistory({
         start_date: subMonths(new Date(), 12).toISOString().split('T')[0],
@@ -486,13 +494,15 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'detectProjectRisks',
         risksCount: results.length
-          } } });;
+          }       }
+     });;
       return results;
     },
     {
       operation: 'detectProjectRisks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Génération de recommandations business actionables
@@ -505,7 +515,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         cacheHit: true
-          } } });;
+          }       }
+     });;
       return cached;
     }
     return withErrorHandling(
@@ -514,7 +525,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         context
-          } } });;
+          }       }
+     });;
       const recommendations: BusinessRecommendation[] = [];
       // 1. ANALYSE KPIs ACTUELS via AnalyticsService
       const currentKPIs = await this.getCurrentKPIs(context.analysis_period);
@@ -557,13 +569,15 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateBusinessRecommendations',
         recommendationsCount: filteredRecs.length
-          } } });;
+          }       }
+     });;
       return filteredRecs;
     },
     {
       operation: 'generateBusinessRecommendations',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   // ========================================
   // ALGORITHMES FORECASTING
@@ -926,7 +940,8 @@ export class PredictiveEngineService {
     {
       operation: 'getBenchmarks',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     // Fallback avec valeurs par défaut
     return {
       conversion_rate: 25,
@@ -947,7 +962,8 @@ export class PredictiveEngineService {
     {
       operation: 'getSectorBenchmarks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Génère recommandations revenue/conversion
@@ -1048,7 +1064,8 @@ export class PredictiveEngineService {
     {
       operation: 'generateCostOptimizationRecommendations',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Génère recommandations qualité
@@ -1231,7 +1248,8 @@ export class PredictiveEngineService {
         operation: 'getCachedEntry',
         cacheKey: key,
         hitCount: entry.hit_count
-        } } });;
+        }       }
+     });;
     return entry.data;
   }
   /**
@@ -1255,7 +1273,8 @@ export class PredictiveEngineService {
         operation: 'setCacheEntry',
         cacheKey: key,
         ttlMinutes
-        } } });;
+        }       }
+     });;
   }
   /**
    * Nettoyage intelligent du cache
@@ -1287,7 +1306,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'cleanupCache',
         deletedCount
-          } } });;
+          }       }
+     });;
     }
   }
   /**
@@ -1323,7 +1343,8 @@ export class PredictiveEngineService {
     {
       operation: 'getMonthlyRevenueHistory',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     return [];
   });
   }
@@ -1338,7 +1359,8 @@ export class PredictiveEngineService {
     {
       operation: 'getProjectDelayHistory',
       service: 'PredictiveEngineService',
-      metadata: {} } });.catch(() => {
+      metadata: {}       }
+     });.catch(() => {
     return [];
   });
   // ========================================
@@ -1352,7 +1374,8 @@ export class PredictiveEngineService {
     logger.info('Intégration ContextCacheService activée', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'integrateWithContextCache'
-        } } });;
+        }       }
+     });;
   }
   /**
    * MÉTHODE PRINCIPALE 1 : Génération Heat-Map des entités
@@ -1367,7 +1390,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'generateEntityHeatMap',
         cacheHit: true
-          } } });;
+          }       }
+     });;
       return cached;
     }
     return withErrorHandling(
@@ -1375,7 +1399,8 @@ export class PredictiveEngineService {
       logger.info('Génération heat-map entités', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'generateEntityHeatMap'
-          } } });;
+          }       }
+     });;
       // 1. ANALYSE ENTITÉS POPULAIRES RÉCENTES
       const now = Date.now();
       const cutoffTime = now - (this.HEATMAP_RETENTION_HOURS * 60 * 60 * 1000);
@@ -1428,13 +1453,15 @@ export class PredictiveEngineService {
         operation: 'generateEntityHeatMap',
         hotEntitiesCount: hotEntities.length,
         coldEntitiesCount: coldEntities.length
-          } } });;
+          }       }
+     });;
       return heatMap;
     },
     {
       operation: 'generateEntityHeatMap',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * MÉTHODE PRINCIPALE 2 : Prédiction d'accès aux entités
@@ -1450,7 +1477,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'predictNextEntityAccess',
         userId
-          } } });;
+          }       }
+     });;
       const predictions: AccessPrediction[] = [];
       const now = Date.now();
       // 1. RÉCUPÉRATION PATTERNS UTILISATEUR
@@ -1483,13 +1511,15 @@ export class PredictiveEngineService {
         operation: 'predictNextEntityAccess',
         predictionsCount: filteredPredictions.length,
         confidenceThreshold: this.PRELOADING_CONFIDENCE_THRESHOLD
-          } } });;
+          }       }
+     });;
       return filteredPredictions;
     },
     {
       operation: 'get',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
       return [];
     }
   }
@@ -1502,7 +1532,8 @@ export class PredictiveEngineService {
       logger.info('Preloading désactivé ou ContextCache non disponible', { metadata: {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks'
-          } } });;
+          }       }
+     });;
       return;
     }
     return withErrorHandling(
@@ -1512,7 +1543,8 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks',
         predictionsCount: predictions.length
-          } } });;
+          }       }
+     });;
       const now = Date.now();
       const newTasks: PreloadingTask[] = [];
       // 1. CRÉATION TÂCHES SELON PRÉDICTIONS
@@ -1563,12 +1595,14 @@ export class PredictiveEngineService {
         service: 'PredictiveEngineService',
         operation: 'schedulePreloadTasks',
         newTasksCount: newTasks.length
-          } } });;
+          }       }
+     });;
     },
     {
       operation: 'schedulePreloadTasks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Enregistre un accès à une entité pour le tracking
@@ -2425,7 +2459,8 @@ export class PredictiveEngineService {
     {
       operation: 'predictFromTrends',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
     }
     return predictions;
   }
@@ -2489,7 +2524,8 @@ export class PredictiveEngineService {
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
-            } } });;
+            }       }
+     });;
       });
     }
   }
@@ -2512,7 +2548,8 @@ export class PredictiveEngineService {
         operation: 'executePreloadTask',
         entityType: task.entityType,
         entityId: task.entityId
-          } } });;
+          }       }
+     });;
       // Appel ContextCacheService pour preloading (si intégré)
       if (this.contextCacheService && this.contextCacheService.preloadContextByPrediction) {
         await this.contextCacheService.preloadContextByPrediction(
@@ -2537,7 +2574,8 @@ export class PredictiveEngineService {
     {
       operation: 'executePreloadTask',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
       // Marquer comme échouée
       this.preloadingSchedule.failedTasks.push(task);
       this.preloadingSchedule.activeTasks = this.preloadingSchedule.activeTasks
@@ -2624,7 +2662,8 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'updateBTPPatterns',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Désactive/active le preloading selon charge système
@@ -2679,7 +2718,8 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'analyzeRisks',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Sauvegarde un snapshot dunknownnknown)se
@@ -2709,7 +2749,8 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'saveSnapshot',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
   /**
    * Récupère les snapshots pour analyse
@@ -2731,6 +2772,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     {
       operation: 'getSnapshots',
       service: 'PredictiveEngineService',
-      metadata: {} } });;
+      metadata: {}       }
+     });;
   }
 }

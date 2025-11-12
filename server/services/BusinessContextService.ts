@@ -644,7 +644,10 @@ export class BusinessContextService {
             service: 'BusinessContextService',
             operation: 'getCachedContext',
             cacheKey 
+              
               }
+ 
+              
             });
         return contextData;
       }
@@ -726,7 +729,10 @@ export class BusinessContextService {
           service: 'BusinessContextService',
           operation: 'cleanupExpiredCache',
           cleanedCount 
+              
               }
+ 
+              
             });
     }
     // Nettoyage DB en arrière-plan
@@ -1600,7 +1606,10 @@ export class BusinessContextService {
         service: 'BusinessContextService',
         operation: 'getEnrichedSchemaMetadata',
         tablesCount: Object.keys(metadata.tables).length 
+              
               }
+ 
+              
             });
   }
   /**
@@ -2820,7 +2829,10 @@ export class BusinessContextService {
           examplesIncluded: relevantExamples.length,
           generationTime: Date.now() - startTime,
           contextSize: finalContext.length 
+              
               }
+ 
+              
             });
       return finalContext;
     },

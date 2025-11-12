@@ -99,8 +99,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * POST /api/admin/rules/seed
@@ -160,8 +161,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * POST /api/admin/rules/reset
@@ -230,8 +232,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * GET /api/admin/rules/validate
@@ -298,8 +301,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   // ========================================
   // INTELLIGENCE SYSTEM HEALTH ROUTES
@@ -417,8 +421,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * GET /api/admin/intelligence/test-integration
@@ -486,8 +491,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   // ========================================
   // INTELLIGENCE RULES ROUTES
@@ -564,8 +570,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * POST /api/intelligence-rules
@@ -693,8 +700,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   /**
    * PATCH /api/admin/sync-config
@@ -781,8 +789,9 @@ export function createAdminRouter(storage: IStorage, eventBus: EventBus): Router
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   return router;
 }

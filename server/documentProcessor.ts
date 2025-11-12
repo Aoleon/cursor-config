@@ -205,9 +205,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length }
 
 
-          }
+                }
 
-        });
+              });
 
       // Parser la réponse JSON en gérant les blocs markdown
       let jsonText = responseText.trim();
@@ -243,7 +243,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       };
 
       logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots 
-        }
+              }
+ 
             });
       return cleanedData;
 
@@ -253,8 +254,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       operation: 'Anthropic',
       service: 'documentProcessor',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       };
     }
   }
@@ -296,7 +298,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       // Traiter tous les contacts extraits
       if (contactsToProcess.length > 0) {
         logger.info('DocumentProcessor - Processing contacts', { metadata: { count: contactsToProcess.length 
-        }
+              }
+ 
             });
         
         const results = await contactService.processExtractedContacts(contactsToProcess);
@@ -309,12 +312,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
           if (contactData.role === 'maitre_ouvrage') {
             linkedContacts.maitreOuvrage = result;
             logger.info('DocumentProcessor - Maître d\'ouvrage processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
-        }
+              }
+ 
             });
           } else if (contactData.role === 'maitre_oeuvre') {
             linkedContacts.maitreOeuvre = result;
             logger.info('DocumentProcessor - Maître d\'œuvre processed', { metadata: { found: result.found, nom: result.contact.nom, confidence: Math.round(result.confidence * 100) 
-        }
+              }
+ 
             });
           }
         }
@@ -332,8 +337,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       operation: 'Anthropic',
       service: 'documentProcessor',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -361,7 +367,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         const response = await fetch(fileUrl);
         if (!response.ok) {
           logger.warn('DocumentProcessor - Cannot fetch file', { metadata: { filename, statusText: response.statusText 
-        }
+              }
+ 
             });
           // Utiliser un contenu de démonstration basé sur le nom du fichier
           return this.generateDemoContent(filename);
@@ -391,8 +398,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       operation: 'Anthropic',
       service: 'documentProcessor',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
         return this.generateDemoContent(filename);
       }
 
@@ -400,9 +408,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.error('DocumentProcessor - Error extracting text', error as Error, { metadata: { filename }
 
 
-          }
+                }
 
-        });
+              });
       return this.generateDemoContent(filename);
     }
   }
@@ -487,9 +495,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length }
 
 
-          }
+                }
 
-        });
+              });
 
       // Parser la réponse JSON
       let jsonText = responseText.trim();
@@ -505,9 +513,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename }
 
 
-            }
+                  }
 
-          });
+                });
         return [];
       }
 
@@ -537,10 +545,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       logger.info('DocumentProcessor - Extracted lots', { metadata: { filename, lotsCount: cleanedLots.length }
 
 
-          }
+                }
 
-
-        });
+              });
       return cleanedLots;
     },
     {

@@ -105,7 +105,8 @@ export class CircuitBreaker {
           circuitName: this.name,
           state: this.state,
           consecutiveFailures: this.consecutiveFailures
-        }
+              }
+
             });
       
       throw error;
@@ -212,7 +213,8 @@ export class CircuitBreaker {
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-        }
+              }
+
             });
     
     if (this.onClose) {
@@ -235,7 +237,8 @@ export class CircuitBreaker {
         previousState,
         consecutiveFailures: this.consecutiveFailures,
         stats: this.getStats()
-        }
+              }
+
             });
     
     if (this.onOpen) {
@@ -259,7 +262,8 @@ export class CircuitBreaker {
         circuitName: this.name,
         previousState,
         stats: this.getStats()
-        }
+              }
+
             });
     
     if (this.onHalfOpen) {
@@ -302,7 +306,8 @@ export class CircuitBreaker {
         service: 'CircuitBreaker',
         operation: 'reset',
         circuitName: this.name
-        }
+              }
+
             });
   }
   
@@ -354,7 +359,8 @@ export class CircuitBreakerManager {
           service: 'CircuitBreakerManager',
           operation: 'getBreaker',
           circuitName: name
-        }
+              }
+
             });
     }
     
@@ -393,7 +399,8 @@ export class CircuitBreakerManager {
         service: 'CircuitBreakerManager',
         operation: 'resetAll',
         count: this.breakers.size
-        }
+              }
+
             });
   }
   

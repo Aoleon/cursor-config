@@ -146,11 +146,13 @@ export class ObjectStorageService {
       });
 
       logger.debug('ObjectStorage - Download response', { metadata: { objectPath, status: response.status 
-        }
+              }
+ 
             });
       if (!response.ok) {
         logger.warn('ObjectStorage - Download failed', { metadata: { objectPath, status: response.status 
-        }
+              }
+ 
             });
         return res.status(404).json({ error: "File not found" });
       }
@@ -181,8 +183,9 @@ export class ObjectStorageService {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
     }
   }
@@ -228,17 +231,20 @@ export class ObjectStorageService {
       });
       
       logger.debug('ObjectStorage - Object exists response', { metadata: { objectPath, status: response.status 
-        }
+              }
+ 
             });
       if (!response.ok) {
         logger.warn('ObjectStorage - Object exists check failed', { metadata: { objectPath, status: response.status 
-        }
+              }
+ 
             });
         return false;
       }
       const data = await response.json();
       logger.debug('ObjectStorage - Object exists result', { metadata: { objectPath, exists: data.exists 
-        }
+              }
+ 
             });
       return data.exists === true;
     
@@ -247,8 +253,9 @@ export class ObjectStorageService {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
@@ -312,8 +319,9 @@ export class ObjectStorageService {
       operation: 'sanitizeFileName',
       service: 'objectStorage',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     }
     
     return { basePath, folders };
@@ -339,7 +347,8 @@ export class ObjectStorageService {
     
     // Log security-related upload attempts for monitoring
     logger.info('ObjectStorage - Secure upload URL generated', { metadata: { offerId, folder: validatedFolder, file: sanitizedFileName 
-        }
+              }
+ 
             });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
@@ -375,7 +384,8 @@ export class ObjectStorageService {
     const filePath = `${privateObjectDir}/supplier-quotes/${sessionId}/${timestamp}_${sanitizedFileName}`;
     
     logger.info('ObjectStorage - Uploading supplier document', { metadata: { sessionId, file: sanitizedFileName, size: fileBuffer.length 
-        }
+              }
+ 
             });
     
     const { bucketName, objectName } = parseObjectPath(filePath);
@@ -412,7 +422,8 @@ export class ObjectStorageService {
     }
 
     logger.info('ObjectStorage - Supplier document uploaded successfully', { metadata: { filePath 
-        }
+              }
+ 
             });
 
     return {

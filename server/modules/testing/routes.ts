@@ -155,7 +155,8 @@ ${serverInfo.serverLogs}
 
     const issueData = await response.json();
     logger.info('[Testing] Issue GitHub créée', { metadata: { issueUrl: issueData.html_url 
-        }
+              }
+ 
             });
     return issueData.html_url;
 
@@ -194,8 +195,10 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
           method: 'POST',
           userId: req.user?.id
 
-        }
-                });
+              }
+
+
+            });
 
       const testProjects = [
         {
@@ -346,7 +349,8 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
       logger.info('[Testing] Données planning test créées', { metadata: { 
           projectsCreated: createdProjects.length, 
           tasksCreated: createdTasks.length + createdTasks2.length 
-        }
+              }
+ 
             });
 
       res.json({
@@ -376,8 +380,10 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
           method: 'POST',
           userId: req.user?.id
 
-        }
-                });
+              }
+
+
+            });
       
       const serverInfo = await collectServerInfo();
       
@@ -403,7 +409,8 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
         const [savedBugReport] = await db.insert(bugReports).values(bugReportData).returning();
         
         logger.info('[Testing] Rapport sauvegardé en base', { metadata: { bugReportId: savedBugReport.id 
-        }
+              }
+ 
             });
 
         let githubIssueUrl: string | null = null;
@@ -425,7 +432,8 @@ service: 'routes',;
             userId: savedBugReport.userId,
             githubCreated: !!githubIssueUrl,
             serverInfoCollected: !!serverInfo.timestamp
-        }
+              }
+
             });
 
         const responseMessage = githubIssueUrl 
@@ -447,7 +455,8 @@ service: 'routes',;
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             userId: req.user?.id
-        }
+              }
+
             });
         throw createError.database('Erreur lors de la création du rapport de bug');
             }

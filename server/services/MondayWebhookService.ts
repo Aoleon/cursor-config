@@ -17,7 +17,10 @@ export class MondayWebhookService {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
           payload 
+              
               }
+ 
+              
             });
       return;
     }
@@ -27,7 +30,10 @@ export class MondayWebhookService {
           module: 'MondayWebhookService',
           operation: 'processWebhook',
           eventId 
+              
               }
+ 
+              
             });
       return;
     }
@@ -42,7 +48,10 @@ export class MondayWebhookService {
           operation: 'processWebhook',
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest 
+              
               }
+ 
+              
             });
     }
     // Extract data
@@ -55,7 +64,10 @@ export class MondayWebhookService {
           operation: 'processWebhook',
           eventId,
           event 
+              
               }
+ 
+              
             });
       return;
     }
@@ -67,7 +79,10 @@ export class MondayWebhookService {
         itemId: itemIdentifier,
         type,
         userId 
+              
               }
+ 
+              
             });
     return withErrorHandling(
     async () => {
@@ -106,7 +121,10 @@ export class MondayWebhookService {
           eventId,
           boardId,
           itemId: itemIdentifier 
+              
               }
+ 
+              
             });
     },
     {

@@ -280,7 +280,8 @@ export function registerTeamsRoutes(app: Express) {
     });
 
     logger.info('[Teams] Équipe modifiée avec succès', { metadata: { teamId 
-        }
+              }
+ 
             });
 
     res.json(team);

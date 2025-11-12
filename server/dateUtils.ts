@@ -35,7 +35,8 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     logger.debug('DateUtils - Date remise calculée', { metadata: { 
         dateLimite: dateLimite.formatDateFR(new Date()), 
         dateRemise: dateRemise.formatDateFR(new Date()) 
-        }
+              }
+ 
             });
     
     return dateRemise;
@@ -75,7 +76,8 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
         dateSortie: dateSortie.formatDateFR(new Date()), 
         dateLimite: dateLimite.formatDateFR(new Date()),
         delaiJours 
-        }
+              }
+ 
             });
     
     return dateLimite;

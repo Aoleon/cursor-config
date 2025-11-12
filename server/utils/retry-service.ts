@@ -94,8 +94,9 @@ export async function withRetry<T>(
       operation: 'isRetryableError',
       service: 'retry-service',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       
       // Vérifier si l'erreur est retryable
       if (!isRetryableError(lastError, opts.retryableErrors)) {
@@ -104,7 +105,8 @@ export async function withRetry<T>(
             operation: 'withRetry',
             error: lastError.message,
             attempt
-        }
+              }
+
             });
         throw lastError;
       }
@@ -119,7 +121,8 @@ export async function withRetry<T>(
           maxAttempts: opts.maxAttempts,
           delayMs,
           error: lastError.message
-        }
+              }
+
             });
       
       if (options.onRetry) {

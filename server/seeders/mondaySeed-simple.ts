@@ -180,8 +180,9 @@ export class MondaySimpleSeed {
       operation: 'AOS',
       service: 'mondaySeed-simple',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       };
     }
   }
@@ -239,8 +240,9 @@ export class MondaySimpleSeed {
       operation: 'AOS',
       service: 'mondaySeed-simple',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     }
 
     return seededCount;

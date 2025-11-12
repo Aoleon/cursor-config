@@ -116,7 +116,8 @@ app.use((req, res, next) => {
       operation: 'startup',
       nodeVersion: process.version,
       environment: process.env.NODE_ENV || 'development'
-        }
+              }
+
             });
   
   // Initialize WebSocket manager with eventBus
@@ -142,7 +143,8 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateAlertDetectionService'
-        }
+              }
+
             });
   
   // Cast storage to IStorage to resolve TypeScript interface compatibility issues
@@ -156,7 +158,8 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'AuditService'
-        }
+              }
+
             });
   
   // CORRECTIF SÉCURITÉ : Vérifier qu'aucune instance n'existe déjà
@@ -168,7 +171,8 @@ app.use((req, res, next) => {
         service: 'AuditService',
         error: 'SINGLETON VIOLATION: AuditService already initialized',
         stack: undefined
-        }
+              }
+
             });
     throw new AppError('SINGLETON VIOLATION: AuditService already initialized', 500);
   }
@@ -196,14 +200,16 @@ app.use((req, res, next) => {
       operation: 'initializeServices',
       service: 'AuditService',
       context: { singleton: true, frozen: true }
-                                                                            }
-                                                                          });
+                                                                                  }
+
+                                                                                });
   
   logger.info('Création DateIntelligenceService', { metadata: {
       module: 'ExpressApp',
       operation: 'initializeServices',
       service: 'DateIntelligenceService'
-        }
+              }
+
             });
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
@@ -233,8 +239,9 @@ app.use((req, res, next) => {
         metadata: {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngine'
-        }
-      });
+              }
+
+            });
       await eventBus.integratePredictiveEngine(predictiveEngineService);
       logger.info('Intégration PredictiveEngine terminée', {
         metadata: {
@@ -276,8 +283,9 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'initializeServices',
       context: { periodicSchedulerActive: true }
-                                                                            }
-                                                                          });
+                                                                                  }
+
+                                                                                });
   
   // Rendre les services disponibles pour les routes
   app.set('dateAlertDetectionService', dateAlertDetectionService);
@@ -379,8 +387,9 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'integratePredictiveEngineFinal',
       context: { timing: 'after_registerRoutes' }
-                                                                            }
-                                                                          });
+                                                                                  }
+
+                                                                                });
   
   await withErrorHandling(
     async () => {
@@ -394,8 +403,9 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngineFinal',
           context: { instanceAvailable: !!predictiveEngineService }
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       
       // INTÉGRATION CRITIQUE pour activation preloading background
       eventBus.integratePredictiveEngine(predictiveEngineService);
@@ -409,8 +419,9 @@ app.use((req, res, next) => {
             cacheOptimizationEnabled: true,
             targetLatencyReduction: '25s→10s'
           }
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     },
     {
       operation: 'integratePredictiveEngineFinal',
@@ -430,32 +441,37 @@ app.use((req, res, next) => {
       module: 'ExpressApp',
       operation: 'setupViteOrStatic',
       environment: env
-        }
+              }
+
             });
   
   if (env === "development") {
     logger.info('Appel setupVite...', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-        }
+              }
+
             });
     await setupVite(app, server);
     logger.info('setupVite terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'setupVite'
-        }
+              }
+
             });
   } else {
     logger.info('Appel serveStatic...', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-        }
+              }
+
             });
     serveStatic(app);
     logger.info('serveStatic terminé avec succès', { metadata: {
         module: 'ExpressApp',
         operation: 'serveStatic'
-        }
+              }
+
             });
   }
   
@@ -505,7 +521,8 @@ app.use((req, res, next) => {
         module: 'ExpressApp',
         operation: 'gracefulShutdown',
         signal
-        }
+              }
+
             });
     
     try {
@@ -514,7 +531,8 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'closeHttpServer'
-        }
+              }
+
             });
       await new Promise<void>((resolve) => {
         server.close(() => {
@@ -522,7 +540,8 @@ app.use((req, res, next) => {
               module: 'ExpressApp',
               operation: 'gracefulShutdown',
               step: 'httpServerClosed'
-        }
+              }
+
             });
           resolve();
         });
@@ -533,14 +552,16 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'closeDbPool'
-        }
+              }
+
             });
       await closePool();
       logger.info('Pool DB fermé', { metadata: {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'dbPoolClosed'
-        }
+              }
+
             });
       
       // 3. Fermer les WebSocket connections (géré automatiquement par la fermeture du serveur)
@@ -548,7 +569,8 @@ app.use((req, res, next) => {
           module: 'ExpressApp',
           operation: 'gracefulShutdown',
           step: 'websocketsClosed'
-        }
+              }
+
             });
       
       logger.info('Arrêt propre terminé avec succès', { metadata: {
@@ -556,7 +578,8 @@ app.use((req, res, next) => {
           operation: 'gracefulShutdown',
           signal,
           exitCode: 0
-        }
+              }
+
             });
       process.exit(0);
     } catch (error) {
@@ -565,7 +588,8 @@ app.use((req, res, next) => {
           operation: 'gracefulShutdown',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       process.exit(1);
     }
@@ -583,7 +607,8 @@ app.use((req, res, next) => {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         fatal: true
-        }
+              }
+
             });
     gracefulShutdown('UNCAUGHT_EXCEPTION');
   });
@@ -595,7 +620,8 @@ app.use((req, res, next) => {
         error: reason instanceof Error ? reason.message : String(reason),
         stack: reason instanceof Error ? reason.stack : undefined,
         fatal: true
-        }
+              }
+
             });
     gracefulShutdown('UNHANDLED_REJECTION');
   });

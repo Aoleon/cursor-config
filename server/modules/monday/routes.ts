@@ -1288,8 +1288,9 @@ router.get('/api/monday/migration-stats',
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
 /**
  * GET /api/monday/all-data
@@ -1482,8 +1483,9 @@ router.get('/api/monday/all-data',
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
 /**
  * GET /api/monday/validation
@@ -1552,8 +1554,9 @@ router.get('/api/monday/validation',
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
 /**
  * GET /api/monday/logs
@@ -1595,7 +1598,8 @@ message: `Migration Monday.com - ${mondayAOs.length} AOs et ${mondayProjects.len
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
 export default router;

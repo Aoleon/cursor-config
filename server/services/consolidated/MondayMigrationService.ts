@@ -186,7 +186,10 @@ class ExcelImportStrategy implements IMigrationStrategy {
         migrationId,
         entityType: config.entityType,
         dryRun: config.options?.dryRun 
+              
               }
+ 
+              
             });
     return withErrorHandling(
     async () => {
@@ -246,7 +249,10 @@ class ExcelImportStrategy implements IMigrationStrategy {
           duration: result.duration,
           totalMigrated: result.totalMigrated,
           totalErrors: result.totalErrors 
+              
               }
+ 
+              
             });
       return result;
     },
@@ -677,7 +683,10 @@ export class MondayMigrationService {
         service: 'MondayMigrationService',
         entityType: config.entityType,
         strategyType: config.strategyType || 'auto-detect' 
+              
               }
+ 
+              
             });
     // Auto-select strategy if not specified
     const strategyType = config.strategyType || this.autoSelectStrategy(config);
@@ -704,7 +713,10 @@ export class MondayMigrationService {
         duration: result.duration,
         totalMigrated: result.totalMigrated,
         totalErrors: result.totalErrors 
+              
               }
+ 
+              
             });
     return result;
   }

@@ -170,7 +170,8 @@ export abstract class BaseRepository<
       this.logger.debug(`${operation} completed successfully`, { metadata: {
           module: this.repositoryName,
           operation
-        }
+              }
+
             });
 
       return result;
@@ -180,8 +181,9 @@ export abstract class BaseRepository<
       operation: 'create',
       service: 'BaseRepository',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -268,7 +270,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation,
         entityId: id
-        }
+              }
+
             });
     throw new DatabaseError(message);
   }
@@ -285,7 +288,8 @@ export abstract class BaseRepository<
         this.logger.debug(`Event emitted: ${eventName}`, { metadata: {
             module: this.repositoryName,
             event: eventName
-        }
+              }
+
             });
       
     },
@@ -319,7 +323,8 @@ export abstract class BaseRepository<
     this.logger.debug('Creating entity', { metadata: {
         module: this.repositoryName,
         operation: 'create'
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -356,7 +361,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'createMany',
         count: data.length
-        }
+              }
+
             });
 
     if (data.length === 0) {
@@ -406,7 +412,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'update',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -457,7 +464,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'delete',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -512,7 +520,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'softDelete',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -574,7 +583,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'restore',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -636,7 +646,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'updateMany',
         count: ids.length
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -661,7 +672,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'updateMany',
         count: result.length
-        }
+              }
+
             });
     
     return result;
@@ -696,7 +708,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'upsert',
         conflictTarget: conflictTarget as string
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -749,7 +762,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'count',
         hasFilters: !!filters
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -808,7 +822,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'archive',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);
@@ -860,7 +875,8 @@ export abstract class BaseRepository<
         module: this.repositoryName,
         operation: 'unarchive',
         entityId: id
-        }
+              }
+
             });
 
     const dbInstance = this.getDb(tx);

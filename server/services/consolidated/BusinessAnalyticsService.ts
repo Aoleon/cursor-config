@@ -227,7 +227,10 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculateAOToOfferConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       return {
         rate: 0,
@@ -294,7 +297,10 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculateOfferToProjectConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       return {
         rate: 0,
@@ -330,7 +336,10 @@ class ConversionCalculator extends BaseCalculator {
           operation: 'calculatePipelineConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       return {
         aoToOffer: 0,

@@ -105,17 +105,15 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     asyncHandler(async (req: Request, res: Response) => {
       const { search, specialization, status, limit, offset } = req.query;
       
-      logger.info('[Suppliers] Récupération fournisseurs', { metadata: {
+      logger.info('[Suppliers] Récupération fournisseurs', { 
+        metadata: {
           route: '/api/suppliers',
           method: 'GET',
           search,
           status,
           userId: req.user?.id
-
-            })
-
-
-          );
+        }
+      });
 
       // Get all suppliers (storage.getSuppliers returns Supplier[])
       const allSuppliers = await storage.getSuppliers(search, status);

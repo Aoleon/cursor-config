@@ -107,7 +107,10 @@ export class RBACService {
           userId,
           role,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw new DatabaseError('Erreur lors de la récupération des permissions utilisateur', error as Error);
     }

@@ -19,7 +19,8 @@ export function verifyMondaySignature(
         operation: 'verifySignature',
         correlationId,
         headers: Object.keys(req.headers)
-        }
+              }
+
             });
     return res.status(401).json({ error: 'Missing signature' });
   }
@@ -29,7 +30,8 @@ export function verifyMondaySignature(
         module: 'MondayWebhook',
         operation: 'verifySignature',
         correlationId
-        }
+              }
+
             });
     return res.status(500).json({ error: 'Webhook not configured' });
   }
@@ -56,7 +58,8 @@ export function verifyMondaySignature(
         correlationId,
         received: signature.substring(0, 20) + '...',
         expected: expectedSignature.substring(0, 20) + '...'
-        }
+              }
+
             });
     return res.status(401).json({ error: 'Invalid signature' });
   }
@@ -65,7 +68,8 @@ export function verifyMondaySignature(
       module: 'MondayWebhook',
       operation: 'verifySignature',
       correlationId
-        }
+              }
+
             });
   
   // Parse JSON body pour le handler

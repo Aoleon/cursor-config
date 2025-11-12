@@ -96,7 +96,10 @@ export class MicrosoftOAuthService {
           let user = await this.storage.getUserByMicrosoftId(microsoftId);
           if (!user) {
             logger.info('[MicrosoftOAuth] Creating new user from Microsoft profile', { metadata: { microsoftId, email  
+              
               }
+  
+              
             });
             user = await this.storage.createUser({
               email,
@@ -109,7 +112,10 @@ export class MicrosoftOAuthService {
             });
           } else {
             logger.info('[MicrosoftOAuth] Existing user found', { metadata: { userId: user.id, email: user.email  
+              
               }
+  
+              
             });
           }
           // SECURITY: Store OAuth tokens securely in session
@@ -127,7 +133,10 @@ export class MicrosoftOAuthService {
               expiresAt: new Date(expiresAt * 1000).toISOString(),
               hasAccessToken: !!accessToken,
               hasRefreshToken: !!refreshToken 
+              
               }
+ 
+              
             });
           return done(null, authenticatedUser);
     },
@@ -198,7 +207,10 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
     logger.info('[MicrosoftOAuth] Token refreshed successfully', { metadata: {
         hasAccessToken: !!data.access_token,
         hasRefreshToken: !!data.refresh_token 
+              
               }
+ 
+              
             });
     return {
       accessToken: data.access_token,

@@ -46,8 +46,10 @@ export function getSession() {
         operation: 'getSession',
         context: { store: 'memory', reason: 'Éviter cold starts Neon en dev' 
 
-        }
-          });
+              }
+ 
+
+            });
   } else {
     // PostgreSQL pour production avec timeouts optimisés
     const pgStore = connectPg(session);
@@ -67,8 +69,10 @@ export function getSession() {
         operation: 'getSession',
         context: { store: 'postgresql' 
 
-        }
-          });
+              }
+ 
+
+            });
   }
   
   // Configuration adaptée selon l'environnement
@@ -86,8 +90,10 @@ export function getSession() {
         isProduction,
         isDevelopment
 
-        }
-          });
+              }
+
+
+            });
   
   // CORRECTION CRITIQUE : FORCER HTTP en développement même avec REPLIT_DOMAINS
   let cookieConfig;
@@ -105,8 +111,10 @@ export function getSession() {
         operation: 'initializeSession',
         context: { mode: 'development', protocol: 'http', sameSite: 'lax' 
 
-        }
-          });
+              }
+ 
+
+            });
   } else if (isReplit && !isDevelopment) {
     // Mode Replit production (iframe/third-party HTTPS)
     cookieConfig = {
@@ -120,8 +128,10 @@ export function getSession() {
         operation: 'initializeSession',
         context: { mode: 'replit', protocol: 'https', sameSite: 'none' 
 
-        }
-          });
+              }
+ 
+
+            });
   } else {
     // Mode production standard (HTTPS)
     cookieConfig = {
@@ -135,8 +145,10 @@ export function getSession() {
         operation: 'initializeSession',
         context: { mode: 'production', protocol: 'https', sameSite: 'strict' 
 
-        }
-          });
+              }
+ 
+
+            });
   }
   
   return session({
@@ -205,7 +217,8 @@ export async function setupAuth(app: Express) {
             operation: 'verifyOIDC',
             error: 'No claims returned from OIDC token',
             stack: undefined
-        }
+              }
+
             });
         return verified(new Error('No claims returned from OIDC token'), null);
       }
@@ -215,7 +228,8 @@ export async function setupAuth(app: Express) {
           operation: 'verifyOIDC',
           userId: claims.sub,
           userEmail: claims.email
-        }
+              }
+
             });
       
       // Upsert user in database
@@ -230,7 +244,8 @@ export async function setupAuth(app: Express) {
             userId: claims.sub,
             error: 'User not found in database after upsert',
             stack: undefined
-        }
+              }
+
             });
         return verified(new Error('Failed to create user'), null);
       }
@@ -257,7 +272,8 @@ export async function setupAuth(app: Express) {
           userId: user.id,
           userEmail: user.email,
           hasTokens: !!(user.access_token && user.refresh_token)
-        }
+              }
+
             });
       
       verified(null, user);
@@ -266,7 +282,8 @@ export async function setupAuth(app: Express) {
           module: 'ReplitAuth',
           operation: 'verifyOIDC',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       verified(error, null);
     }
@@ -304,7 +321,8 @@ export async function setupAuth(app: Express) {
         operation: 'serializeUser',
         userId: user.id,
         isOIDC: user.isOIDC
-        }
+              }
+
             });
     // Sérialiser seulement l'ID utilisateur pour éviter les problèmes de taille/persistance
     cb(null, { id: user.id, isOIDC: user.isOIDC });
@@ -316,14 +334,16 @@ export async function setupAuth(app: Express) {
           module: 'ReplitAuth',
           operation: 'deserializeUser',
           userId: serializedUser?.id
-        }
+              }
+
             });
       
       if (!serializedUser || !serializedUser.id) {
         logger.warn('Données utilisateur sérialisées invalides', { metadata: {
             module: 'ReplitAuth',
             operation: 'deserializeUser'
-        }
+              }
+
             });
         return cb(null, null);
       }
@@ -335,7 +355,8 @@ export async function setupAuth(app: Express) {
             module: 'ReplitAuth',
             operation: 'deserializeUser',
             userId: serializedUser.id
-        }
+              }
+
             });
         return cb(null, null);
       }
@@ -364,7 +385,8 @@ export async function setupAuth(app: Express) {
             operation: 'deserializeUser',
             userId: user.id,
             userEmail: user.email
-        }
+              }
+
             });
         return cb(null, user);
       }
@@ -376,7 +398,8 @@ export async function setupAuth(app: Express) {
           module: 'ReplitAuth',
           operation: 'deserializeUser',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       cb(error, null);
     });
@@ -455,7 +478,8 @@ export async function setupAuth(app: Express) {
               operation: 'testLogin',
               error: err instanceof Error ? err.message : String(err),
               stack: err instanceof Error ? err.stack : undefined
-        }
+              }
+
             });
           return res.status(500).json({
             success: false,
@@ -467,7 +491,8 @@ export async function setupAuth(app: Express) {
             module: 'ReplitAuth',
             operation: 'testLogin',
             userId: testUser.id
-        }
+              }
+
             });
         res.json({
           success: true,
@@ -481,7 +506,8 @@ export async function setupAuth(app: Express) {
           module: 'ReplitAuth',
           operation: 'testLogin',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       res.status(500).json({
         success: false,
@@ -518,8 +544,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         logger.info('[Auth] Microsoft token expired, attempting refresh', { metadata: {
             userId: user.id,
             expiresAt: new Date(user.expiresAt * 1000).toISOString()
-                                }
-                              });
+                                      }
+
+                                    });
 
         // Import token refresh utilities
         const { refreshMicrosoftToken } = await import('./services/MicrosoftOAuthService');
@@ -537,7 +564,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
  as unknunknunknown)(req as any).session.user = updateas unknoas unknunknunknown)    (req as any).user = updatedUser;
 
         logger.info('[Auth] Microsoft token refreshed successfully', { metadata: { userId: user.id 
-        }
+              }
+ 
             });
 
         return next();
@@ -547,7 +575,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
             operation: 'isAuthenticated',
             userId: user.id,
             error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
         
         // Clear session and return 401
@@ -578,7 +607,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         module: 'ReplitAuth',
         operation: 'isAuthenticated',
         path: req.path
-        }
+              }
+
             });
     // Créer un utilisateur test pour les tests E2E
     (req as any).user = {
@@ -608,7 +638,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         module: 'ReplitAuth',
         operation: 'isAuthenticated',
         path: req.path
-        }
+              }
+
             });
     // Créer un utilisateur test pour les tests E2E en mode development
     (req as any).user = {
@@ -661,7 +692,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
           userId: defaultDevUser.id,
           userEmail: defaultDevUser.email,
           path: req.path
-        }
+              }
+
             });
       
       return withErrorHandling(
@@ -682,7 +714,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
                   operation: 'isAuthenticated',
                   error: err instanceof Error ? err.message : String(err),
                   stack: err instanceof Error ? err.stack : undefined
-        }
+              }
+
             });
               reject(err);
             } else {
@@ -690,7 +723,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
                   module: 'ReplitAuth',
                   operation: 'isAuthenticated',
                   userId: defaultDevUser.id
-        }
+              }
+
             });
               resolve();
             });
@@ -700,7 +734,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
             module: 'ReplitAuth',
             operation: 'isAuthenticated',
             userId: defaultDevUser.id
-        }
+              }
+
             });
         return next();
         
@@ -730,8 +765,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         sessionUserId: session?.user?.id,
         userType: session?.user?.isBasicAuth ? 'basic_auth' : (user ? 'oidc' : 'none')
 
-        }
-          });
+              }
+
+
+            });
 
   // CORRECTIF URGENT - Vérifier d'abord si c'est un utilisateur basic auth
   if (session?.user?.isBasicAuth) {
@@ -741,7 +778,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
           module: 'ReplitAuth',
           operation: 'isAuthenticated',
           userId: session.user.id
-        }
+              }
+
             });
     }
     // Pour l'auth basique, utiliser les données de session
@@ -757,7 +795,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
           module: 'ReplitAuth',
           operation: 'isAuthenticated',
           userId: user.id
-        }
+              }
+
             });
     }
     return next();

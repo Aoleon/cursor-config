@@ -339,8 +339,9 @@ export class ChatbotOrchestrationService {
             operation: 'processQueryParallel',
             warnings: businessValidation.warnings,
             suggestions: businessValidation.suggestions   
-              }
-            });
+              
+        }
+      });
         return this.createErrorResponse(
           conversationId,
           request.query,
@@ -426,8 +427,9 @@ export class ChatbotOrchestrationService {
           modelSuccess,
           modelTimeMs: modelTime,
           totalTimeMs: parallelTime   
-              }
-            });
+              
+        }
+      });
       // Validation de réussite minimum
       if (!contextSuccess && !modelSuccess) {
         logger.warn('Échec total parallélisme, fallback séquentiel', { metadata: {
@@ -661,8 +663,9 @@ export class ChatbotOrchestrationService {
           operation: 'handleParallelQuery',
           totalExecutionTimeMs: totalExecutionTime,
           timeSavingMs: debugInfo.parallel_execution?.timeSaving || 0   
-              }
-            });
+              
+        }
+      });
       // Construire réponse finale selon interface ChatbotQueryResponse
       return {
         success: true,

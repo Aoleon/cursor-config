@@ -131,12 +131,18 @@ export class MondayMigrationService {
     logger.info('SOLUTION FINALE: Utilisation données authentiques Monday.com', { metadata: {
         service: 'MondayMigrationService',
         operation: 'migrateFromRealMondayData' 
+              
               }
+ 
+              
             });
     logger.info('RÉSOUT problème architect: exports Excel réels au lieu de synthétiques', { metadata: {
         service: 'MondayMigrationService',
         operation: 'migrateFromRealMondayData' 
+              
               }
+ 
+              
             });
     
     return withErrorHandling(
@@ -181,7 +187,10 @@ export class MondayMigrationService {
     logger.info('Validation authentique dry-run - exports Excel Monday.com réels', { metadata: {
         service: 'MondayMigrationService',
         operation: 'validateAuthenticMondayDataIntegrity' 
+              
               }
+ 
+              
             });
     return withErrorHandling(
     async () => {
@@ -272,7 +281,10 @@ service: 'MondayMigrationService',
             operation: 'migrateAosFromAnalysis',
             progress: Math.min(i + batchSize, mondayAoData.length),
             total: mondayAoData.length 
+              
               }
+ 
+              
             });
       }
       result.duration = Date.now() - startTime;
@@ -283,7 +295,10 @@ service: 'MondayMigrationService',
           migrated: result.migrated,
           errors: result.errors,
           duration: result.duration 
+              
               }
+ 
+              
             });
       
       // Log warnings de parsing dates
@@ -293,7 +308,10 @@ service: 'MondayMigrationService',
             operation: 'migrateAosFromAnalysis',
             warningsCount: this.warnings.length,
             warnings: this.warnings.slice(0, 5) 
+              
               }
+ 
+              
             });
       }
       return result;
@@ -361,7 +379,10 @@ service: 'MondayMigrationService',
             operation: 'migrateChantiersFromAnalysis',
             progress: Math.min(i + batchSize, mondayProjectData.length),
             total: mondayProjectData.length 
+              
               }
+ 
+              
             });
       }
       result.duration = Date.now() - startTime;
@@ -372,7 +393,10 @@ service: 'MondayMigrationService',
           migrated: result.migrated,
           errors: result.errors,
           duration: result.duration 
+              
               }
+ 
+              
             });
       
       return result;
@@ -389,7 +413,10 @@ service: 'MondayMigrationService',
     logger.info('Validation post-migration en cours', { metadata: {
         service: 'MondayMigrationService',
         operation: 'validateMigration' 
+              
               }
+ 
+              
             });
     // Compter les entités migrées
     const [aos, projects] = await Promise.all([
@@ -448,7 +475,10 @@ service: 'MondayMigrationService',
         operation: 'validateMigration',
         errors: report.errors.length,
         warnings: report.warnings.length 
+              
               }
+ 
+              
             });
     return report;
   }
@@ -542,7 +572,10 @@ service: 'MondayMigrationService',
             service: 'MondayMigrationService',
             operation: 'parseEstimatedDelayWithWarnings',
             warning: result.warning 
+              
               }
+ 
+              
             });
       }
       // Continuer avec null au lieu d'échouer (specs JLM)

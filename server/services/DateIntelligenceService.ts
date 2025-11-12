@@ -232,7 +232,10 @@ class CalculationEngine {
           service: 'DateIntelligenceService',
           phase,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       // Fallback sécurisé
       return this.getDefaultDuration(phase, context);
@@ -500,7 +503,10 @@ export class DateIntelligenceService {
           phase,
           projectId,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw new DatabaseError(`Impossible de calculer la durée pour la phase ${phase}`, error as Error);
     }

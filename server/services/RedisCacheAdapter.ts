@@ -29,7 +29,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
               service: 'RedisCacheAdapter',
               operation: 'retryStrategy',
               attempts: times 
+              
               }
+ 
+              
             });
           return null;
         }
@@ -39,7 +42,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
             operation: 'retryStrategy',
             attempt: times,
             delayMs: delay 
+              
               }
+ 
+              
             });
         return delay;
       },
@@ -54,7 +60,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
       logger.info('[RedisCacheAdapter] Connected to Redis', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'connect' 
+              
               }
+ 
+              
             });
     });
 
@@ -62,7 +71,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
       logger.info('[RedisCacheAdapter] Redis client ready', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'ready' 
+              
               }
+ 
+              
             });
     });
 
@@ -72,7 +84,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
           service: 'RedisCacheAdapter',
           operation: 'error',
           error: error.message 
+              
               }
+ 
+              
             });
     });
 
@@ -81,7 +96,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
       logger.warn('[RedisCacheAdapter] Redis connection closed', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'close' 
+              
               }
+ 
+              
             });
     });
 
@@ -89,7 +107,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
         service: 'RedisCacheAdapter',
         operation: 'constructor',
         redisUrl: connectionString.replace(/:[^:]*@/, ':***@') // Mask password 
+              
               }
+ 
+              
             });
   }
   async get<T>(key: string): Promise<T | null> {

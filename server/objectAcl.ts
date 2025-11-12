@@ -117,7 +117,9 @@ export async function setObjectAclPolicy(
   // This could be expanded to use Replit's metadata system later
   logger.debug('ObjectAcl - Setting ACL policy', { metadata: { objectPath, aclPolicy 
 
-        }
+              }
+ 
+
             });
 }
 

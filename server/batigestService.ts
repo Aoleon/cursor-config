@@ -273,8 +273,9 @@ export class BatigestService {
       operation: 'parseInt',
       service: 'batigestService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -530,8 +531,9 @@ export class BatigestService {
       operation: 'parseInt',
       service: 'batigestService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -723,8 +725,9 @@ export class BatigestService {
       operation: 'parseInt',
       service: 'batigestService',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**

@@ -65,8 +65,9 @@ export class ScoringService {
         triggeredCriteria: triggeredCriteria.join(', ') || 'aucun',
         shouldAlert,
         details 
-              }
-            });
+              
+        }
+      });
     return {
       totalScore,
       triggeredCriteria,

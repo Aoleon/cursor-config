@@ -359,6 +359,7 @@ export class DpgfComputeService {
       },
       metadata: {
         ...data.metadata,
-        generatedAt: data.metadata.generatedAt.toISOString() } });
+        generatedAt: data.metadata.generatedAt.toISOString()       }
+     });
   }
 }

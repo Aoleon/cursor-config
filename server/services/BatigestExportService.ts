@@ -264,7 +264,10 @@ export class BatigestExportService {
           service: 'BatigestExportService',
           operation: 'exportClientQuote',
           reference: quote.reference 
+              
               }
+ 
+              
             });
       const xml = this.convertClientQuoteToXML(quote);
       const csv = this.convertClientQuoteToCSV(quote);
@@ -276,14 +279,18 @@ export class BatigestExportService {
           documentType: 'devis_client',
           documentReference: quote.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both' } });
+          format: 'both'       }
+     });
     } catch (error) {
       logger.error('[BatigestExport] Erreur lors de l\'export du devis client', { metadata: {
           service: 'BatigestExportService',
           operation: 'exportClientQuote',
           reference: quote.reference,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       return {
         success: false,
@@ -320,7 +327,8 @@ export class BatigestExportService {
           documentType: 'bon_commande',
           documentReference: order.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both' } });
+          format: 'both'       }
+     });
     },
     {
       operation: 'Saxium',

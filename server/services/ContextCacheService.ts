@@ -158,8 +158,9 @@ export class ContextCacheService {
             cacheKey,
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
         });
 
         // Nettoyage si nécessaire
@@ -194,8 +195,9 @@ export class ContextCacheService {
         entityType,
         entityId,
         changeType 
-              }
-            });
+              
+        }
+      });
     // Tags intelligents basés sur l'entité et le contexte
     const smartTags = this.generateSmartInvalidationTags(entityType, entityId, changeType, additionalContext);
     for (const rule of rules) {
@@ -224,8 +226,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'invalidateOnEntityChange',
         smartTagsCount: smartTags.length 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Invalide les entrées correspondant à un pattern
@@ -249,8 +252,9 @@ export class ContextCacheService {
           pattern,
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
     });
 
     logger.info('Invalidé entrées pour pattern', { metadata: {
@@ -258,8 +262,9 @@ export class ContextCacheService {
         operation: 'invalidateByPattern',
         pattern,
         invalidatedCount 
-              }
-            });
+              
+        }
+      });
     return invalidatedCount;
   }
   /**
@@ -287,8 +292,9 @@ export class ContextCacheService {
               operation: 'invalidateBySmartTags',
               matchScore: matchScore.toFixed(2),
               cacheKey: key.substring(0, 50) 
-              }
-            });
+              
+        }
+      });
         }
       }
     }
@@ -300,8 +306,9 @@ export class ContextCacheService {
           operation: 'invalidateBySmartTags',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
     });
 
     const duration = Date.now() - startTime;
@@ -310,8 +317,9 @@ export class ContextCacheService {
         operation: 'invalidateBySmartTags',
         invalidatedCount,
         durationMs: duration 
-              }
-            });
+              
+        }
+      });
     return invalidatedCount;
   }
   /**
@@ -394,8 +402,9 @@ export class ContextCacheService {
     logger.info('Cache entièrement vidé', { metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateAll' 
-              }
-            });
+              
+        }
+      });
   }
   // ========================================
   // OPTIMISATIONS ET NETTOYAGE
@@ -426,8 +435,9 @@ export class ContextCacheService {
           service: 'ContextCacheService',
           operation: 'cleanupExpiredEntries',
           cleanedCount 
-              }
-            });
+              
+        }
+      });
     }
     return cleanedCount;
   }
@@ -440,8 +450,9 @@ export class ContextCacheService {
     logger.info('Démarrage prewarming intelligent', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadFrequentContexts' 
-              }
-            });
+              
+        }
+      });
     // Analyser les patterns d'usage fréquents
     const frequentPatterns = await this.analyzeUsagePatterns();
     // Patterns de prewarming spécialisés par période
@@ -476,8 +487,9 @@ export class ContextCacheService {
       operation: 'preloadFrequentContexts',
         durationMs: duration,
         patternsCount: frequentPatterns.length 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Préchargement intelligent pour les heures de pointe
@@ -486,8 +498,9 @@ export class ContextCacheService {
     logger.info('Prewarming heures de pointe activé', { metadata: {
         service: 'ContextCacheService',
         operation: 'prewarmPeakHourContexts' 
-              }
-            });
+              
+        }
+      });
     // Précharger les contextes AO/Offres récents (dernières 48h)
     const recentThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
     return withErrorHandling(
@@ -526,8 +539,9 @@ export class ContextCacheService {
     logger.info('Prewarming contextes business', { metadata: {
       service: 'ContextCacheService',
       operation: 'prewarmBusinessContexts' 
-              }
-            });
+              
+        }
+      });
     return withErrorHandling(
       async () => {
         // Précharger les contextes fournisseurs actifs
@@ -857,8 +871,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'invalidateFromPersistentCacheByTags',
         tags: tags.join(', ') 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Calcule la complexité d'une requête de contexte
@@ -910,8 +925,9 @@ export class ContextCacheService {
         operation: 'prewarmEntityType',
         entityType,
         filters: JSON.stringify(filters) 
-              }
-            });
+              
+        }
+      });
     // Simulation du préchargement - dans un vrai système, on interrogerait la DB
     // et on génèrerait les contextes pour les entités correspondantes
     const limit = filters.limit || 10;
@@ -962,8 +978,9 @@ export class ContextCacheService {
         operation: 'prewarmEntityType',
         entityType,
         contextsGenerated: limit 
-              }
-            });
+              
+        }
+      });
   }
   private async analyzeUsagePatterns(): Promise<string[]> {
     // Analyse basique des patterns fréquents
@@ -987,8 +1004,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'preloadContextForPattern',
         pattern 
-              }
-            });
+              
+        }
+      });
   }
   private async invalidateRelatedEntities(
     entityType: string, 
@@ -1008,8 +1026,9 @@ export class ContextCacheService {
         operation: 'invalidateRelatedEntities',
         entityType,
         relatedEntityId: entityId 
-              }
-            });
+              
+        }
+      });
   }
   // ========================================
   // PREWARMING INTELLIGENT AVEC BACKGROUND TASKS PHASE 2 PERFORMANCE
@@ -1033,8 +1052,9 @@ export class ContextCacheService {
       logger.info('Prewarming déjà en cours', { metadata: {
         service: 'ContextCacheService',
         operation: 'startIntelligentPrewarming' 
-              }
-            });
+              
+        }
+      });
       return;
     }
     this.backgroundTasksRunning = true;
@@ -1051,8 +1071,9 @@ export class ContextCacheService {
     logger.info('Système de prewarming intelligent démarré', { metadata: {
         service: 'ContextCacheService',
         operation: 'startIntelligentPrewarming' 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Arrête le système de prewarming
@@ -1067,8 +1088,9 @@ export class ContextCacheService {
     logger.info('Système de prewarming arrêté', { metadata: {
         service: 'ContextCacheService',
         operation: 'stopIntelligentPrewarming' 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Planifie le prewarming périodique intelligent
@@ -1104,8 +1126,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'executeIntelligentPrewarming',
         isPeakHours 
-              }
-            });
+              
+        }
+      });
       
       // Analyser les patterns d'usage récents
       const popularContexts = await this.analyzePopularContexts();
@@ -1134,8 +1157,9 @@ export class ContextCacheService {
         operation: 'executeIntelligentPrewarming',
         durationMs: Date.now() - startTime,
         contextsPrewarmed: prewarmingResults.contextsPrewarmed 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'executeIntelligentPrewarming',
@@ -1366,8 +1390,9 @@ export class ContextCacheService {
     logger.info('Prewarming initial au démarrage', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeInitialPrewarming' 
-              }
-            });
+              
+        }
+      });
     // Précharger les contextes essentiels
     const essentialEntityTypes = ['ao', 'offer', 'project'];
     for (const entityType of essentialEntityTypes) {
@@ -1381,8 +1406,9 @@ export class ContextCacheService {
     logger.info('Prewarming initial terminé', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeInitialPrewarming' 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Planifie le monitoring de performance
@@ -1405,15 +1431,17 @@ export class ContextCacheService {
         operation: 'monitorPrewarmingEffectiveness',
         prewarmingHitRate: (prewarmingHitRate * 100).toFixed(1) + '%',
         cacheUtilization: (cacheUtilization * 100).toFixed(1) + '%' 
-              }
-            });
+              
+        }
+      });
     // Alerter si l'efficacité est faible
     if (prewarmingHitRate < 0.4) {
       logger.warn('Efficacité prewarming faible - révision recommandée', { metadata: {
         service: 'ContextCacheService',
         operation: 'monitorPrewarmingEffectiveness' 
-              }
-            });
+              
+        }
+      });
     }
   }
 
@@ -1537,8 +1565,9 @@ export class ContextCacheService {
     logger.info('Intégration PredictiveEngine activée', { metadata: {
         service: 'ContextCacheService',
         operation: 'integratePredictiveEngine' 
-              }
-            });
+              
+        }
+      });
     // Démarrer cycles prédictifs automatiques
     this.startPredictiveCycles();
   }
@@ -1556,8 +1585,9 @@ export class ContextCacheService {
       logger.info('Preloading prédictif désactivé', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadContextByPrediction' 
-              }
-            });
+              
+        }
+      });
       return false;
     }
     return withErrorHandling(
@@ -1580,8 +1610,9 @@ export class ContextCacheService {
         operation: 'preloadContextByPrediction',
         entityType,
         entityId 
-              }
-            });
+              
+        }
+      });
         return true;
       }
       // 2. GÉNÉRATION CONTEXTE PRÉDICTIF OPTIMISÉ
@@ -1624,8 +1655,9 @@ export class ContextCacheService {
         entityType,
         entityId,
         durationMs: duration 
-              }
-            });
+              
+        }
+      });
       return true;
     },
     {
@@ -1647,8 +1679,9 @@ export class ContextCacheService {
       logger.info('PredictiveEngine non intégré', { metadata: {
         service: 'ContextCacheService',
         operation: 'integrateHeatMapData' 
-              }
-            });
+              
+        }
+      });
       return;
     }
     return withErrorHandling(
@@ -1671,8 +1704,9 @@ export class ContextCacheService {
         logger.info('Intégration heat-map terminée', { metadata: {
           service: 'ContextCacheService',
           operation: 'integrateHeatMapData' 
-              }
-            });
+              
+        }
+      });
       },
       {
         operation: 'integrateHeatMapData',
@@ -1732,8 +1766,9 @@ export class ContextCacheService {
         operation: 'optimizeLRUWithPredictiveScoring',
         cacheKey: item.key.substring(0, 40) + '...',
         predictiveScore: item.predictiveScore 
-              }
-            });
+              
+        }
+      });
         }
       }
       this.predictiveStats.lruOptimizationsApplied++;
@@ -1741,8 +1776,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'optimizeLRUWithPredictiveScoring',
         evictedCount 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'optimizeLRUWithPredictiveScoring',
@@ -1760,8 +1796,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'preloadHotEntities',
         hotEntitiesCount: hotEntities.length 
-              }
-            });
+              
+        }
+      });
     // Limite concurrent preloading pour éviter surcharge
     const MAX_CONCURRENT = 3;
     const hotBatch = hotEntities.slice(0, 10); // Top 10 entités chaudes
@@ -1807,8 +1844,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'evictColdEntities',
         entityKey 
-              }
-            });
+              
+        }
+      });
         }
       }
     }
@@ -1818,8 +1856,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'evictColdEntities',
         evictedCount 
-              }
-            });
+              
+        }
+      });
     }
   }
 
@@ -1858,24 +1897,27 @@ export class ContextCacheService {
       logger.info('Mode preloading agressif - heures de pointe', { metadata: {
         service: 'ContextCacheService',
         operation: 'calculatePreloadingBudget' 
-              }
-            });
+              
+        }
+      });
       await this.activateAggressivePreloading();
     } else if (businessMultiplier > 1.2) {
       // Mode modéré pendant horaires business
       logger.info('Mode preloading modéré - horaires business', { metadata: {
         service: 'ContextCacheService',
         operation: 'calculatePreloadingBudget' 
-              }
-            });
+              
+        }
+      });
       await this.activateModeratePreloading();
     } else {
       // Mode conservateur hors horaires
       logger.info('Mode preloading conservateur - hors horaires', { metadata: {
         service: 'ContextCacheService',
         operation: 'calculatePreloadingBudget' 
-              }
-            });
+              
+        }
+      });
       await this.activateConservativePreloading();
     }
   }
@@ -2036,8 +2078,9 @@ export class ContextCacheService {
         cacheKey,
         ttlHours,
         priority 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Démarre les cycles prédictifs automatiques
@@ -2067,8 +2110,9 @@ export class ContextCacheService {
     logger.info('Cycles prédictifs automatiques démarrés', { metadata: {
         service: 'ContextCacheService',
         operation: 'startPredictiveCycles' 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Exécute un cycle complet de preloading prédictif
@@ -2102,8 +2146,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'runPredictivePreloadingCycle',
         contextsPreloaded: viablePredictions.length 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'runPredictivePreloadingCycle',
@@ -2295,8 +2340,9 @@ export class ContextCacheService {
         service: 'ContextCacheService',
         operation: 'togglePredictivePreloading',
         enabled 
-              }
-            });
+              
+        }
+      });
   }
   /**
    * Statistiques preloading prédictif pour monitoring

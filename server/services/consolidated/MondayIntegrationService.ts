@@ -203,7 +203,8 @@ export class MondayIntegrationService {
     {
       operation: 'MondayService',
       service: 'MondayIntegrationService',
-      metadata: { } });
+      metadata: {       }
+     });
       },
       'GraphQL Query'
     );
@@ -579,7 +580,8 @@ export class MondayIntegrationService {
     {
       operation: 'MondayService',
       service: 'MondayIntegrationService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**

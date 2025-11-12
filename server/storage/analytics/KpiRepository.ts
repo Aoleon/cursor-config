@@ -162,7 +162,8 @@ export class KpiRepository {
         granularity,
         weeksBetween,
         daysBetween
-        }
+              }
+
             });
 
     try {
@@ -465,7 +466,8 @@ export class KpiRepository {
           operation: 'getConsolidatedKpis',
           service: 'KpiRepository',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       throw error;
     }

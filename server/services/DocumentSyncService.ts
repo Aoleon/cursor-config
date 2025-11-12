@@ -100,7 +100,10 @@ export class DocumentSyncService {
         await oneDriveService.invalidateCache(categoryPath);
       }
       logger.debug('[DocumentSyncService] Cache OneDrive invalidé', { metadata: { aoId, aoReference, categoriesInvalidated: categories.length  
+              
               }
+  
+              
             });
       // Récupérer les documents existants en DB
       const existingDocs = await this.storage.getDocumentsByEntity('ao', aoId);
@@ -125,7 +128,8 @@ export class DocumentSyncService {
     {
       operation: 'Set',
 service: 'DocumentSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
         for (const file of files) {
           oneDriveFilesMap.set(file.id, { ...file, category });
         }
@@ -134,7 +138,10 @@ service: 'DocumentSyncService',
           aoId,
           categories: categories.length,
           filesFound: oneDriveFilesMap.size 
+              
               }
+ 
+              
             });
       // Ajouter les nouveaux documents
       for (const [oneDriveId, fileData] of Array.from(oneDriveFilesMap.entries())) {
@@ -160,13 +167,17 @@ service: 'DocumentSyncService',
             });
             result.documentsAdded++;
             logger.debug('[DocumentSyncService] Document ajouté', { metadata: { aoId, documentName: fileData.name, category: fileData.category  
+              
               }
+  
+              
             });
     },
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
         } else {
           // ✅ Mettre à jour les métadonnées (nom, path, url, category, filePath) + lastSyncedAt
           const existingDoc = existingDocsMap.get(oneDriveId)!;
@@ -196,7 +207,10 @@ service: 'DocumentSyncService',
             });
             if (needsBackfill) {
               logger.info('[DocumentSyncService] Backfill aoId effectué', { metadata: { documentId: existingDoc.id, aoId  
+              
               }
+  
+              
             });
             }
             if (needsUpdate) {
@@ -206,7 +220,10 @@ service: 'DocumentSyncService',
                   newName: fileData.name,
                   oldCategory: existingDoc.category,
                   newCategory: fileData.category 
+              
               }
+ 
+              
             });
             }
             result.documentsUpdated++;
@@ -214,7 +231,8 @@ service: 'DocumentSyncService',
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
         }
       }
       // Marquer comme supprimés les documents qui ne sont plus dans OneDrive
@@ -230,14 +248,18 @@ service: 'DocumentSyncService',
     {
       operation: 'Set',
       service: 'DocumentSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
         }
       }
       logger.info('[DocumentSyncService] Synchronisation terminée', { metadata: {
           aoId,
           aoReference,
           ...result 
+              
               }
+ 
+              
             });
     } catch (error: unknown) {
       result.success = false;
@@ -247,7 +269,8 @@ service: 'DocumentSyncService',
         message: `Erreur globale de synchronisation: ${error.message || String(error)}`,
         originalError: error
       });
-      logger.error('[DocumentSyncService] Erreur synchronisation', error, { metadata: { aoId, aoReference  } });
+      logger.error('[DocumentSyncService] Erreur synchronisation', error, { metadata: { aoId, aoReference        }
+      });
     } finally {
       this.syncInProgress.delete(aoId);
     }

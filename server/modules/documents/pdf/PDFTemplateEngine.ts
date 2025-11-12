@@ -208,8 +208,9 @@ export class PDFTemplateEngine {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -351,8 +352,9 @@ export class PDFTemplateEngine {
       operation: 'Logger',
       service: 'PDFTemplateEngine',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
 
       return {

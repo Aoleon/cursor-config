@@ -137,22 +137,29 @@ if [ -d "$PROJECT_ROOT/server/utils" ]; then
     success "Utilitaires agents copiés"
 fi
 
-# Copier scripts agents
+# Copier scripts agents et configuration
 if [ -d "$PROJECT_ROOT/scripts" ]; then
-    info "Copie des scripts agents..."
+    info "Copie des scripts agents et configuration..."
     AGENT_SCRIPTS=(
         "sync-to-repo.sh"
         "setup-auto-sync.sh"
         "setup-git-hooks.sh"
         "watch-cursor-config.sh"
     )
+    COPIED_COUNT=0
     for script in "${AGENT_SCRIPTS[@]}"; do
         if [ -f "$PROJECT_ROOT/scripts/$script" ]; then
-            cp "$PROJECT_ROOT/scripts/$script" "$EXPORT_DIR/scripts/" 2>/dev/null || true
-            chmod +x "$EXPORT_DIR/scripts/$script" 2>/dev/null || true
+            if cp "$PROJECT_ROOT/scripts/$script" "$EXPORT_DIR/scripts/" 2>/dev/null; then
+                chmod +x "$EXPORT_DIR/scripts/$script" 2>/dev/null || true
+                COPIED_COUNT=$((COPIED_COUNT + 1))
+            fi
         fi
     done
-    success "Scripts agents copiés"
+    if [ $COPIED_COUNT -gt 0 ]; then
+        success "$COPIED_COUNT scripts agents copiés"
+    else
+        warning "Aucun script agent trouvé à copier"
+    fi
 fi
 
 # Copier documentation agents

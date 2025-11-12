@@ -74,7 +74,8 @@ export class MicrosoftAuthService {
     {
       operation: 'constructor',
       service: 'MicrosoftAuthService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   async refreshToken(): Promise<void> {

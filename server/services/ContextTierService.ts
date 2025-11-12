@@ -91,7 +91,10 @@ export class ContextTierService implements ContextTierServiceInterface {
     logger.info('Service initialisé avec configuration BTP/Menuiserie', { metadata: {
         service: 'ContextTierService',
         operation: 'constructor' 
+              
               }
+ 
+              
             });
   }
   // ========================================
@@ -157,7 +160,10 @@ export class ContextTierService implements ContextTierServiceInterface {
           confidence: confidence.toFixed(2),
           detectionTimeMs: detectionTime,
           entityType 
+              
               }
+ 
+              
             });
       return result;
     },
@@ -723,7 +729,10 @@ export class ContextTierService implements ContextTierServiceInterface {
         operation: 'compressContextByPriority',
         tier: profile.tier,
         entityType: fullContext.entityType 
+              
               }
+ 
+              
             });
     const compressedContext = { ...fullContext };
     // 1. Préservation données critiques
@@ -749,7 +758,10 @@ case 'relevance_based':;
         operation: 'compressContextByPriority',
         tier: profile.tier,
         compressionTimeMs: compressionTime 
+              
               }
+ 
+              
             });
     // Mise à jour métriques compression
     compressedContext.generationMetrics.executionTimeMs += compressionTime;
@@ -992,7 +1004,10 @@ case 'relevance_based':;
         operation: 'validateMinimalContext',
         tier: profile.tier,
         entityType: context.entityType 
+              
               }
+ 
+              
             });
     // Vérifications critiques
     const validations = [
@@ -1012,7 +1027,10 @@ case 'relevance_based':;
           operation: 'validateMinimalContext',
           tier: profile.tier,
           entityType: context.entityType 
+              
               }
+ 
+              
             });
     }
     

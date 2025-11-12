@@ -98,10 +98,10 @@ export const createError = {
   badRequest: (message: string, details?: unknown) => 
     new AppError(message, 400, ErrorType.BAD_REQUEST, details),
   
-  fileUpload: (message: stri: unknown)unknown)unknown any) => 
+  fileUpload: (message: string, details?: unknown) => 
     new AppError(message, 400, ErrorType.FILE_UPLOAD, details),
   
-  database: (message: string = 'Erreur de base de do: unknown)unknown)unknownls?: any) => 
+  database: (message: string = 'Erreur de base de données', details?: unknown) => 
     new AppError(message, 500, ErrorType.DATABASE, details),
   
   externalAPI: (service: string, message?: string) => 
@@ -114,7 +114,7 @@ export const createError = {
 
 // Logger d'erreurs avec différents niveaux
 export class ErrorLogger {
-  static logError(error: Error, req?: Requ: unknown)unknown)unknownalInfo?: any) {
+  static logError(error: Error, req?: Request, additionalInfo?: unknown) {
     const errorInfo = {
       message: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
@@ -152,7 +152,8 @@ export class ErrorLogger {
         method: req?.method,
         type: 'VALIDATION',
         issues: error.issues
-        }
+              }
+
             });
   }
 }
@@ -336,7 +337,7 @@ export function notFoundHandler(req: Request, res: Response): void {
 }
 
 // Wrapper pour les gestionnaires async pour éviter les erreurs non capturées
-export function asyncunknowndler<unknown>any>(
+export function asyncHandler<T>(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {

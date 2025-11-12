@@ -150,7 +150,9 @@ export class ContextBuilderService {
           operation: 'generateEnrichedContext',
           entityType: config.entityType,
           entityId: config.entityId
-        } });
+              }
+
+            });
 
       // PHASE 3 : Routage vers système tiéré si activé et configuration étendue
       if (this.TIERED_SYSTEM_ENABLED && this.isTieredConfig(config)) {
@@ -166,7 +168,8 @@ export class ContextBuilderService {
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
 
   /**
    * PHASE 3 : Construction contexte avec système tiéré adaptatif
@@ -240,7 +243,8 @@ export class ContextBuilderService {
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   // Fallback vers COMPREHENSIVE
   selectedProfile = this.contextTierService.getContextProfile('comprehensive', config.entityType, 'system');
         }
@@ -253,7 +257,8 @@ export class ContextBuilderService {
             operation: 'generateTieredContext',
             forcedTier,
             context: { tierSelection: 'forced' 
-            }  } });
+            }        }
+      });
       }
       // 4. CONSTRUCTION SÉLECTIVE selon profil tier
       if (traceId && this.performanceMetricsService) {
@@ -340,8 +345,9 @@ export class ContextBuilderService {
           executionTime,
           tokenEstimate: contextData.tokenEstimate,
           tokenReductionPercent: tokenReductionPercentage.toFixed(1)   
-              }
-            });
+              
+        }
+      });
       return result;
     } catch (error) {
       logger.error('Erreur contexte tiéré', { metadata: {
@@ -349,8 +355,9 @@ export class ContextBuilderService {
           operation: 'generateTieredContext',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined   
-              }
-            });
+              
+        }
+      });
       if (traceId && this.performanceMetricsService) {
         this.performanceMetricsService.endStep(traceId, 'context_generation', false);
         await this.performanceMetricsService.endPipelineTrace(
@@ -466,7 +473,9 @@ case 'client':;
           service: 'ContextBuilderService',
           operation: 'buildAoContext',
           aoId: config.entityId
-        } });
+              }
+
+            });
       // OPTIMISATION: Requête groupée avec index composite ao_entity_status_priority_idx
       const [aoResults, lotsResults, offersResults] = await Promise.all([
         // Données principales AO avec utilisation index
@@ -516,7 +525,9 @@ case 'client':;
           operation: 'buildAoContext',
           queryTimeMs: queryTime   
               }
-             } });
+                   }
+
+                 });
       // OPTIMISATION: Requêtes relationnelles parallèles
       const [maitreouvrage, maitreoeuvreData] = await Promise.all([
         // Maître d'ouvrage
@@ -618,7 +629,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   /**
    * Construit le contexte pour une Offre (OPTIMISÉ POUR INDEX)
    */
@@ -630,7 +642,9 @@ case 'client':;
           service: 'ContextBuilderService',
           operation: 'buildOfferContext',
           offerId: config.entityId
-        } });
+              }
+
+            });
       // OPTIMISATION: Requêtes groupées avec index composites offer_ao_status_idx et offer_status_created_idx
       const [offerResults, chiffrageResults, milestonesResults, beWorkloadResults] = await Promise.all([
         // Offre avec AO associé (JOIN optimisé avec index)
@@ -690,7 +704,9 @@ case 'client':;
           queryTimeMs: queryTime,
           chiffrageItemsCount: chiffrageItems.length   
               }
-             } });
+                   }
+
+                 });
       // Construction contexte métier enrichi avec données optimisées
       contextData.businessContext = {
         currentPhase: offerData.offerStatus,
@@ -753,7 +769,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   /**
    * Construit le contexte pour un Projet
    */
@@ -874,7 +891,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   /**
    * Construit le contexte pour un Fournisseur
    */
@@ -972,7 +990,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   /**
    * Construit le contexte pour une Équipe
    */
@@ -1056,7 +1075,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
   /**
    * Construit le contexte pour un Client
    */
@@ -1067,7 +1087,9 @@ case 'client':;
         operation: 'buildClientContext',
         status: 'in_development'   
               }
-             } });
+                   }
+
+                 });
   }
   // ========================================
   // ENRICHISSEMENT CONTEXTUEL PAR TYPE
@@ -1598,7 +1620,9 @@ case 'client':;
         tier: profile.tier,
         maxTokens: profile.maxTokens   
               }
-             } });
+                   }
+
+                 });
     // 1. Initialisation contexte avec profil
     const contextData: AIContextualData = {
       entityType: config.entityType,
@@ -1652,7 +1676,9 @@ case 'client':;
         operation: 'buildSelectiveContext',
         tokenEstimate: contextData.tokenEstimate   
               }
-             } });
+                   }
+
+                 });
     return contextData;
   });
   /**
@@ -1801,7 +1827,8 @@ case 'client':;
     {
       operation: 'constructor',
       service: 'ContextBuilderService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
   /**
@@ -1819,7 +1846,9 @@ case 'client':;
         operation: 'buildLimitedOfferContext',
         tier: profile.tier   
               }
-             } });
+                   }
+
+                 });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1836,7 +1865,9 @@ case 'client':;
         operation: 'buildLimitedProjectContext',
         tier: profile.tier   
               }
-             } });
+                   }
+
+                 });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1852,7 +1883,9 @@ case 'client':;
         operation: 'buildLimitedSupplierContext',
         tier: profile.tier   
               }
-             } });
+                   }
+
+                 });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1868,7 +1901,9 @@ case 'client':;
         operation: 'buildLimitedTeamContext',
         tier: profile.tier   
               }
-             } });
+                   }
+
+                 });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1884,7 +1919,9 @@ case 'client':;
         operation: 'buildLimitedClientContext',
         tier: profile.tier   
               }
-             } });
+                   }
+
+                 });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1945,7 +1982,9 @@ case 'client':;
         operation: 'performSelectiveEnrichment',
         priorityContextTypes: profile.priorityContextTypes.join(', ')   
               }
-             } });
+                   }
+
+                 });
     // Enrichissement seulement pour types prioritaires
     for (const contextType of profile.priorityContextTypes) {
       switch (contextType) {
@@ -2283,8 +2322,9 @@ export function getContextBuilderService(
             service: 'ContextBuilderService',
             operation: 'initialize',
             note: 'Segments personnalisés skipped - méthode legacy'   
-              }
-            });
+              
+        }
+      });
       }
     }
   });

@@ -184,7 +184,8 @@ export class MondayDataService {
     {
       operation: 'MondayImportService',
 service: 'MondayDataService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**
@@ -1136,7 +1137,8 @@ service: 'MondayDataService',
     {
       operation: 'MondayImportService',
 service: 'MondayDataService',
-      metadata: { } });
+      metadata: {       }
+     });
         data: { error: error.stack });
 
       throw error;

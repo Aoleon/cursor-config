@@ -149,8 +149,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -235,8 +236,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -303,8 +305,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -427,8 +430,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -516,8 +520,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -613,8 +618,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -681,8 +687,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -743,8 +750,9 @@ export class AnalyticsStorage {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 }
 

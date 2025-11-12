@@ -117,7 +117,10 @@ function initializeCircuitBreakers() {
       service: 'Resilience',
       operation: 'initializeCircuitBreakers',
       providers: ['monday', 'gpt', 'claude', 'openai', 'sendgrid', 'onedrive'] 
+              
               }
+ 
+              
             });
 }
 // Initialize breakers at module load
@@ -289,6 +292,9 @@ export function resetAllBreakers() {
   logger.info('All circuit breakers reset', { metadata: {
       service: 'Resilience',
       operation: 'resetAllBreakers' 
+              
               }
+ 
+              
             });
 }

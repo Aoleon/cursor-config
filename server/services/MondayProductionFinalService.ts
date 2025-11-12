@@ -127,14 +127,16 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'migrateProductionMondayData',
         context: { source: 'authentic_monday_exports'  
-        }
-          });
+              }
+  
+            });
     logger.info('RÉSOLUTION problème architect: données réelles au lieu de synthétiques', { metadata: {
         service: 'MondayProductionFinalService',
         operation: 'migrateProductionMondayData',
         context: { approach: 'real_data_instead_of_synthetic'  
-        }
-          });
+              }
+  
+            });
     this.resetWarnings();
     return withErrorHandling(
     async () => {
@@ -176,8 +178,9 @@ export class MondayProductionFinalService {
           duration: result.duration,
           errors: totalErrors,
           context: { migrationStep: 'completed'  
-        }
-          });
+              }
+  
+            });
       if (this.warnings.length > 0) {
         logger.warn('Warnings non bloquants détectés', { metadata: {
             service: 'MondayProductionFinalService',
@@ -185,8 +188,9 @@ export class MondayProductionFinalService {
             warningsCount: this.warnings.length,
             topWarnings: this.warnings.slice(0, 5),
             context: { migrationStep: 'warnings_detected'  
-        }
-          });
+              }
+  
+            });
       }
       return result;
     },
@@ -207,8 +211,9 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'loadAuthenticMondayData',
         context: { migrationStep: 'loading_excel_exports'  
-        }
-          });
+              }
+  
+            });
     const aoFilePath = path.join(MONDAY_EXPORTS_BASE_PATH, AO_PLANNING_FILE);
     const chantiersFilePath = path.join(MONDAY_EXPORTS_BASE_PATH, CHANTIERS_FILE);
     // Vérification existence fichiers
@@ -240,7 +245,8 @@ export class MondayProductionFinalService {
           projectSourceFile: CHANTIERS_FILE,
           totalExcelRows,
           processedRows: totalExcelRows,
-          skippedRows: 0 } });
+          skippedRows: 0       }
+     });
     },
     {
       operation: 'xlsx',
@@ -259,8 +265,9 @@ export class MondayProductionFinalService {
         operation: 'readAuthenticAOPlanningFile',
         fileName: AO_PLANNING_FILE,
         context: { fileType: 'ao_planning'  
-        }
-          });
+              }
+  
+            });
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
@@ -271,8 +278,9 @@ export class MondayProductionFinalService {
         sheetName,
         rawDataLines: rawData.length,
         context: { loadStep: 'sheet_loaded'  
-        }
-          });
+              }
+  
+            });
     const aos: MondayAoData[] = [];
     let processedCount = 0;
     let skippedCount = 0;
@@ -311,8 +319,9 @@ export class MondayProductionFinalService {
         processedCount,
         skippedCount,
         context: { fileType: 'ao_planning', step: 'extraction_complete'  
-        }
-          });
+              }
+  
+            });
     return aos;
   }
   /**
@@ -324,8 +333,9 @@ export class MondayProductionFinalService {
         operation: 'readAuthenticChantiersFile',
         fileName: CHANTIERS_FILE,
         context: { fileType: 'chantiers'  
-        }
-          });
+              }
+  
+            });
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Première feuille
     const worksheet = workbook.Sheets[sheetName];
@@ -336,8 +346,9 @@ export class MondayProductionFinalService {
         sheetName,
         rawDataLines: rawData.length,
         context: { loadStep: 'sheet_loaded'  
-        }
-          });
+              }
+  
+            });
     const projects: MondayProjectData[] = [];
     let processedCount = 0;
     let skippedCount = 0;
@@ -376,8 +387,9 @@ export class MondayProductionFinalService {
         processedCount,
         skippedCount,
         context: { fileType: 'chantiers', step: 'extraction_complete'  
-        }
-          });
+              }
+  
+            });
     return projects;
   }
   /**
@@ -457,8 +469,9 @@ export class MondayProductionFinalService {
         aoCount: aoData.length,
         sourceFile,
         context: { migrationStep: 'aos_migration_start'  
-        }
-          });
+              }
+  
+            });
     const results: BatchResult[] = [];
     for (const [index, ao] of aoData.entries()) {
       await withErrorHandling(
@@ -483,14 +496,16 @@ export class MondayProductionFinalService {
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100),
               context: { migrationStep: 'aos_batch_progress'  
-        }
-          });
+              }
+  
+            });
         }
     },
     {
       operation: 'xlsx',
       service: 'MondayProductionFinalService',
-      metadata: { } });
+      metadata: {       }
+     });
       }
     }
     return this.analyzeBatchResults('AO_AUTHENTIC', results, aoData.length, sourceFile);
@@ -505,8 +520,9 @@ export class MondayProductionFinalService {
         projectCount: projectData.length,
         sourceFile,
         context: { migrationStep: 'projects_migration_start'  
-        }
-          });
+              }
+  
+            });
     const results: BatchResult[] = [];
     for (const [index, project] of projectData.entries()) {
       await withErrorHandling(
@@ -531,14 +547,16 @@ export class MondayProductionFinalService {
               total: projectData.length,
               percentage: Math.round(((index + 1) / projectData.length) * 100),
               context: { migrationStep: 'projects_batch_progress'  
-        }
-          });
+              }
+  
+            });
         }
     },
     {
       operation: 'xlsx',
       service: 'MondayProductionFinalService',
-      metadata: { } });
+      metadata: {       }
+     });
       }
     }
     return this.analyzeBatchResults('PROJECTS_AUTHENTIC', results, projectData.length, sourceFile);
@@ -627,7 +645,8 @@ export class MondayProductionFinalService {
     {
       operation: 'xlsx',
       service: 'MondayProductionFinalService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
   /**
    * CORRECTION FINALE ERREUR DATES - Validation Date Robuste
@@ -688,8 +707,9 @@ export class MondayProductionFinalService {
         validationRate: Math.round(migrationResult.validationRate * 100),
         sourceFile,
         context: { migrationStep: 'batch_results'  
-        }
-          });
+              }
+  
+            });
     if (failed.length > 0) {
       logger.warn('Erreurs détectées migration authentique', { metadata: {
           service: 'MondayProductionFinalService',
@@ -720,8 +740,9 @@ export class MondayProductionFinalService {
         service: 'MondayProductionFinalService',
         operation: 'validateAuthenticData',
         context: { validationMode: 'dry_run'  
-        }
-          });
+              }
+  
+            });
     try {
       // Charger données authentiques
       const authenticData = await this.loadAuthenticMondayData();

@@ -43,8 +43,10 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Éléments récupérés', { metadata: { offerId, count: elements.length 
 
-        }
-                });
+              }
+ 
+
+            });
     
     res.json(elements);
         }
@@ -80,7 +82,8 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const element = await storage.createChiffrageElement(validationResult.data);
     
     logger.info('[Chiffrage] Élément créé', { metadata: { offerId, elementId: element.id 
-        }
+              }
+ 
             });
     
     res.status(201).json(element);
@@ -114,8 +117,9 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const element = await storage.updateChiffrageElement(elementId, validationResult.data);
     
     logger.info('[Chiffrage] Élément modifié', { metadata: { offerId, elementId 
-        }
-                });
+              }
+ 
+            });
     
     res.json(element);
         }
@@ -142,8 +146,10 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     
     logger.info('[Chiffrage] Élément supprimé', { metadata: { offerId, elementId 
 
-        }
-                });
+              }
+ 
+
+            });
     
     res.status(204).send();
         }
@@ -236,7 +242,8 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
 
     // Génération du PDF
     logger.info('[Chiffrage] Génération PDF DPGF', { metadata: { offerId 
-        }
+              }
+ 
             });
     const pdfResult = await PdfGeneratorService.generateDpgfPdf(dpgfData);
     
@@ -342,7 +349,8 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
 
     logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId 
-        }
+              }
+ 
             });
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");

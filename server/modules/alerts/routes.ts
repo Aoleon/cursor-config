@@ -569,8 +569,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
 
           );
           }
-                                      }
-                                    });
+                                            }
+
+                                          });
 
   // PUT /api/date-alerts/:id/acknowledge - Accusé de réception alerte
   router.put("/api/date-alerts/:id/acknowledge",

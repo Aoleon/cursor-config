@@ -197,7 +197,8 @@ function fallbackClientName(name: string): string {
   
   if (!isValidForProduction(normalized)) {
     logger.warn('MondayValidator - Client name normalized', { metadata: { original: name, fallback: 'CLIENT_EXCEL_NORMALISE' 
-        }
+              }
+ 
             });
     return 'CLIENT_EXCEL_NORMALISE';
   }
@@ -218,7 +219,8 @@ function fallbackGeographicName(name: string): string {
   
   if (!isValidForProduction(normalized)) {
     logger.warn('MondayValidator - Geographic name normalized', { metadata: { original: name, fallback: 'ZONE_EXCEL_NORMALISEE' 
-        }
+              }
+ 
             });
     return 'ZONE_EXCEL_NORMALISEE';
   }
@@ -239,7 +241,8 @@ function debugValidationValue(fieldName: string, value: string): void {
         chars: JSON.stringify([...value]), 
         charCodes: [...value].map(c => c.charCodeAt(0)).join(', '),
         isValid: isValidForProduction(value)
-        }
+              }
+
             });
   }
 }

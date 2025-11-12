@@ -152,8 +152,9 @@ export class PlaceholderResolver {
       operation: 'Logger',
       service: 'PlaceholderResolver',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
     }
 

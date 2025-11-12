@@ -392,13 +392,19 @@ export class HandlebarsTemplateService {
           service: 'EmailService',
           operation: 'renderTemplate',
           templatePreview: templateContent.substring(0, 200) + '...' 
+              
               }
+ 
+              
             });
       logger.error('Template data provided', { metadata: {
           service: 'EmailService',
           operation: 'renderTemplate',
           data: JSON.stringify(data, null, 2) 
+              
               }
+ 
+              
             });
       
       // Fallback: rendu naïf en cas d'erreur Handlebars
@@ -413,7 +419,10 @@ export class HandlebarsTemplateService {
     logger.warn('Utilisation du fallback naïf', { metadata: {
           service: 'EmailService',
           operation: 'renderTemplate' 
+              
               }
+ 
+              
             });
     let result = template;
     Object.entries(data).forEach(([key, value]) => {
@@ -466,12 +475,16 @@ export class HandlebarsTemplateService {
     {
       operation: 'MockEmailService',
       service: 'emailService',
-      metadata: { } });
+      metadata: {       }
+     });
       logger.info('Service email SendGrid configuré', { metadata: {
         service: 'EmailService',
         operation: 'constructor',
         provider: 'SendGrid' 
+              
               }
+ 
+              
             });
     }
   }
@@ -606,7 +619,10 @@ export class HandlebarsTemplateService {
           data: emailData.dynamicData,
           htmlLength: htmlContent.length,
           textLength: textContent.length 
+              
               }
+ 
+              
             });
       // Validation du rendu conditionnel pour les instructions
       if (emailData.templateId === 'SUPPLIER_INVITATION') {
@@ -615,14 +631,20 @@ export class HandlebarsTemplateService {
         service: 'EmailService',
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
+              
               }
+ 
+              
             });
         } else {
           logger.info('Pas d\'instructions - bloc conditionnel masqué', { metadata: {
         service: 'EmailService',
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
+              
               }
+ 
+              
             });
         }
       }
@@ -738,7 +760,10 @@ export function createEmailService(config?: Partial<EmailServiceConfig>): IEmail
         service: 'EmailService',
         operation: 'createEmailService',
         provider 
+              
               }
+ 
+              
             });
   switch (provider) {
     case 'sendgrid':
@@ -760,7 +785,10 @@ logger.info('Service actif', { metadata: {
         service: 'EmailService',
         operation: 'init',
         serviceName: emailService.constructor.name 
+              
               }
+ 
+              
             });
 // ========================================
 // HELPER FUNCTIONS POUR WORKFLOW FOURNISSEURS
@@ -807,7 +835,10 @@ export function scheduleSessionReminders(session: SupplierQuoteSession): void {
         service: 'EmailService',
         operation: 'scheduleSessionReminders',
         sessionId: session.id 
+              
               }
+ 
+              
             });
 }
 // ========================================

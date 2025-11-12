@@ -62,8 +62,9 @@ export class DateIntelligenceRulesSeeder {
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
       
       logger.info(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
@@ -161,8 +162,9 @@ service: 'dateIntelligenceRulesSeeder',;
       operation: 'seedDefaultRules',
 service: 'dateIntelligenceRulesSeeder',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
         }
       }
       
@@ -218,8 +220,9 @@ service: 'dateIntelligenceRulesSeeder',;
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
   
   /**
@@ -299,8 +302,9 @@ service: 'dateIntelligenceRulesSeeder',;
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 }
 
@@ -355,6 +359,7 @@ export async function initializeDefaultRules(): Promise<void> {
       operation: 'seedDefaultRules',
       service: 'dateIntelligenceRulesSeeder',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
 }

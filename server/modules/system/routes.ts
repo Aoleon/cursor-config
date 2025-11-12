@@ -416,8 +416,9 @@ export function createSystemRoutes(storage: IStorage, eventBus: unknown) {
       // Download and serve object
       await objectStorageService.downloadObject(objectPath, res);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   return router;
 }

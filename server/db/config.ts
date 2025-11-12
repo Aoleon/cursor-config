@@ -86,7 +86,8 @@ class ConnectionManager extends EventEmitter {
           operation: 'initializePool',
           poolSize: 25,
           minConnections: 5
-        }
+              }
+
             });
 
     
@@ -95,8 +96,9 @@ class ConnectionManager extends EventEmitter {
       operation: 'now',
       service: 'config',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
 
     // Connection lifecycle events
     this.pool.on('connect', (client: PoolClient) => {
@@ -106,7 +108,8 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'poolConnect',
           totalConnections: this.connectionStats.totalConnections
-        }
+              }
+
             });
       
       this.emit('connect', client);
@@ -118,16 +121,19 @@ class ConnectionManager extends EventEmitter {
         logger.debug('Connection acquired from pool', { metadata: {
             module: 'DatabaseConfig',
             operation: 'poolAcquire'
-        }
+              }
+
             });
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.pool.on('remove', (client: PoolClient) => {
       logger.debug('Connection removed from pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'poolRemove'
-        }
+              }
+
             });
     });
   }
@@ -162,8 +168,9 @@ class ConnectionManager extends EventEmitter {
     logger.error('Failed to initialize database pool', error as Error, { metadata: {
         module: 'DatabaseConfig',
         operation: 'initializePool'
-                                }
-                              });
+                                      }
+
+                                    });
 
     // Schedule reconnection attempt
     this.handleReconnection();
@@ -201,7 +208,8 @@ class ConnectionManager extends EventEmitter {
         operation: 'handleReconnection',
         attempt: this.reconnectAttempts + 1,
         delayMs: delay
-        }
+              }
+
             });
 
     this.reconnectTimer = setTimeout(() => {
@@ -218,7 +226,8 @@ class ConnectionManager extends EventEmitter {
         module: 'DatabaseConfig',
         operation: 'reconnect',
         attempt: this.reconnectAttempts
-        }
+              }
+
             });
 
     return withErrorHandling(
@@ -242,8 +251,9 @@ class ConnectionManager extends EventEmitter {
       operation: 'disconnect',
       service: 'config',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -294,7 +304,8 @@ class ConnectionManager extends EventEmitter {
             module: 'DatabaseConfig',
             operation: 'healthCheck',
             error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
         
         if (this.isCriticalError(error as Error)) {
@@ -314,8 +325,9 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'gracefulShutdown',
           signal
-                                }
-                              });
+                                      }
+
+                                    });
 
       await this.close();
       process.exit(0);
@@ -400,7 +412,8 @@ class ConnectionManager extends EventEmitter {
       logger.info('Closing database pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'close'
-        }
+              }
+
             });
 
       return withErrorHandling(
@@ -418,8 +431,9 @@ class ConnectionManager extends EventEmitter {
       operation: 'now',
       service: 'config',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
 
       this.pool = null;
       this.isConnected = false;

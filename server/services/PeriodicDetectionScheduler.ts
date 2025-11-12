@@ -86,8 +86,9 @@ export class PeriodicDetectionScheduler {
           mode: process.env.NODE_ENV,
           disableScheduler: process.env.DISABLE_SCHEDULER,
           ci: process.env.CI 
-              }
-            });
+              
+        }
+      });
       return;
     }
     if (this.isRunning) {
@@ -95,15 +96,17 @@ export class PeriodicDetectionScheduler {
           service: 'PeriodicDetectionScheduler',
           operation: 'start',
           status: 'already_running' 
-              }
-            });
+              
+        }
+      });
       return;
     }
     logger.info('Démarrage système de surveillance', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'start' 
-              }
-            });
+              
+        }
+      });
     // Surveillance horaire projets actifs
     this.scheduleHourlyDetection();
     // Vérification quotidienne échéances
@@ -121,8 +124,9 @@ export class PeriodicDetectionScheduler {
         service: 'PeriodicDetectionScheduler',
         operation: 'start',
         status: 'started' 
-              }
-            });
+              
+        }
+      });
   }
 
   stop(): void {
@@ -130,8 +134,9 @@ export class PeriodicDetectionScheduler {
         service: 'PeriodicDetectionScheduler',
         operation: 'stop',
         activeIntervals: this.activeIntervals.length 
-              }
-            });
+              
+        }
+      });
     // Arrêter tous les intervalles
     this.activeIntervals.forEach(interval => clearInterval(interval));
     this.activeIntervals = [];
@@ -140,8 +145,9 @@ export class PeriodicDetectionScheduler {
         service: 'PeriodicDetectionScheduler',
         operation: 'stop',
         status: 'stopped' 
-              }
-            });
+              
+        }
+      });
   }
 
   // ========================================
@@ -153,8 +159,9 @@ export class PeriodicDetectionScheduler {
         service: 'PeriodicDetectionScheduler',
         operation: 'scheduleHourlyDetection',
         intervalMs: 60 * 60 * 1000 
-              }
-            });
+              
+        }
+      });
     const interval = setInterval(async () => {
       return withErrorHandling(
     async () => {
@@ -236,8 +243,9 @@ service: 'PeriodicDetectionScheduler',
           runId,
           totalAlertsGenerated: summary.totalAlertsGenerated,
           executionTimeMs: summary.executionTimeMs 
-              }
-            });
+              
+        }
+      });
       // Notification si alertes critiques détectées
       if (summary.criticalAlertsCount > 0) {
         await this.notifyCriticalAlertsDetected(summary);
@@ -253,8 +261,9 @@ service: 'PeriodicDetectionScheduler',
           runId,
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
     }
     this.runHistory.push(summary);
     this.cleanupRunHistory();
@@ -270,8 +279,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Programmation vérification quotidienne échéances', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'scheduleDailyDeadlineCheck' 
-              }
-            });
+              
+        }
+      });
     // Programmation à 8h00 chaque jour
     const scheduleDaily = () => {
       const now = new Date();
@@ -340,8 +350,9 @@ service: 'PeriodicDetectionScheduler',
           runId,
           totalAlertsGenerated: summary.totalAlertsGenerated,
           executionTimeMs: summary.executionTimeMs 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'constructor',
@@ -361,8 +372,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Programmation vérification bi-quotidienne optimisations', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'scheduleTwiceDailyOptimizationCheck' 
-              }
-            });
+              
+        }
+      });
     // 9h00 et 17h00 chaque jour
     const scheduleOptimizations = () => {
       const scheduleNext = () => {
@@ -397,8 +409,9 @@ service: 'PeriodicDetectionScheduler',
           service: 'PeriodicDetectionScheduler',
           operation: 'runOptimizationCheck',
           opportunitiesCount: optimizationAlerts.length 
-              }
-            });
+              
+        }
+      });
       // Notification des meilleures opportunités (gain > 3 jours)
       const highValueOpportunities = optimizationAlerts.filter(alert  => {
         const suggestedActions = alert.suggestedActions as unknown;
@@ -426,8 +439,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Initialisation écoute événements temps réel', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'initializeEventListeners' 
-              }
-            });
+              
+        }
+      });
     // Écoute modifications projets
     this.eventBus.subscribe((event) => {
       if (event.entity === 'project' && event.type.includes('status_changed')) {
@@ -461,8 +475,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Configuration triggers évaluation seuils business', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'setupBusinessThresholdTriggers' 
-              }
-            });
+              
+        }
+      });
     // Trigger évaluation sur calculs analytics
     this.eventBus.subscribe((event) => {
       if (event.type.includes('analytics.calculated') && event.metadata?.triggers_evaluation) {
@@ -470,16 +485,18 @@ service: 'PeriodicDetectionScheduler',
             service: 'PeriodicDetectionScheduler',
             operation: 'setupBusinessThresholdTriggers',
             eventType: event.type 
-              }
-            });
+              
+        }
+      });
         this.dateAlertDetectionService.evaluateBusinessThresholds().catch((error: unknown) => {
           logger.error('Erreur évaluation seuils (analytics trigger)', { metadata: {
               service: 'PeriodicDetectionScheduler',
               operation: 'setupBusinessThresholdTriggers',
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
         });
       });
     
@@ -492,16 +509,18 @@ service: 'PeriodicDetectionScheduler',
             operation: 'setupBusinessThresholdTriggers',
             entity: event.entity,
             eventType: event.type 
-              }
-            });
+              
+        }
+      });
         this.dateAlertDetectionService.evaluateBusinessThresholds().catch((error: unknown) => {
           logger.error('Erreur évaluation seuils (statut trigger)', { metadata: {
               service: 'PeriodicDetectionScheduler',
               operation: 'setupBusinessThresholdTriggers',
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
         });
       });
   }
@@ -511,8 +530,9 @@ service: 'PeriodicDetectionScheduler',
         service: 'PeriodicDetectionScheduler',
         operation: 'scheduleBusinessThresholdEvaluation',
         intervalMs: 30 * 60 * 1000 
-              }
-            });
+              
+        }
+      });
     // Trigger évaluation périodique (toutes les 30 minutes)
     const interval = setInterval(async () => {
       return withErrorHandling(
@@ -540,8 +560,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Démarrage détection périodique complète', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'runPeriodicDetection' 
-              }
-            });
+              
+        }
+      });
     const startTime = Date.now();
     return withErrorHandling(
     async () => {
@@ -550,16 +571,18 @@ service: 'PeriodicDetectionScheduler',
           service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           step: 1 
-              }
-            });
+              
+        }
+      });
       const delayAlerts = await this.dateAlertDetectionService.detectDelayRisks();
       
       logger.info('Étape 2: Détection conflits planning', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           step: 2 
-              }
-            });
+              
+        }
+      });
       const conflictAlerts = await this.dateAlertDetectionService.detectPlanningConflicts({
         startDate: new Date(),
         endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // +60 jours
@@ -569,15 +592,17 @@ service: 'PeriodicDetectionScheduler',
           service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           step: 3 
-              }
-            });
+              
+        }
+      });
       const deadlineAlerts = await this.dateAlertDetectionService.checkCriticalDeadlines(7);
       logger.info('Étape 4: Détection optimisations', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           step: 4 
-              }
-            });
+              
+        }
+      });
       const optimizationAlerts = await this.dateAlertDetectionService.detectOptimizationOpportunities();
       
       // 2. NOUVELLE ÉTAPE - Évaluation business seuils (PHASE 3.1.7.4)
@@ -585,8 +610,9 @@ service: 'PeriodicDetectionScheduler',
           service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           step: 5 
-              }
-            });
+              
+        }
+      });
       await this.dateAlertDetectionService.evaluateBusinessThresholds();
       // 3. Rapport final
       const duration = Date.now() - startTime;
@@ -596,8 +622,9 @@ service: 'PeriodicDetectionScheduler',
           operation: 'runPeriodicDetection',
           totalAlerts,
           durationMs: duration 
-              }
-            });
+              
+        }
+      });
       
     
     },
@@ -630,8 +657,9 @@ service: 'PeriodicDetectionScheduler',
               operation: 'handleProjectStatusChanged',
               projectId,
               alertsCount: alerts.length 
-              }
-            });
+              
+        }
+      });
         }
         // Mise à jour profil de risque
         await this.updateProjectRiskProfile(projectId, alerts);
@@ -674,7 +702,8 @@ service: 'PeriodicDetectionScheduler',
       logger.info('Offre signée, préparation surveillance projet', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'handleOfferSigned',
-          offerId } });
+          offerId       }
+     });
       // Lorsqu'une offre est signée, on s'attend à ce qu'elle devienne projet
       // Programmer une vérification dans 1 heure pour détecter le nouveau projet
       setTimeout(async () => {
@@ -688,8 +717,9 @@ service: 'PeriodicDetectionScheduler',
                 operation: 'handleOfferSigned',
                 projectId: newProject.id,
                 offerId 
-              }
-            });
+              
+        }
+      });
             
             // Détection initiale risques nouveau projet
             const alerts = await this.detectAndNotifyProjectRisks(newProject);
@@ -715,8 +745,9 @@ service: 'PeriodicDetectionScheduler',
           offerId,
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
-              }
-            });
+              
+        }
+      });
     }
   }
 
@@ -727,7 +758,8 @@ service: 'PeriodicDetectionScheduler',
       logger.info('Alerte technique critique, analyse impact planning', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'handleTechnicalAlertImpact',
-          alertId } });
+          alertId       }
+     });
       // Si alerte technique liée à un projet, vérifier impact planning
       if (metadata?.projectId) {
         const project = await this.storage.getProject(metadata.projectId);
@@ -739,8 +771,9 @@ service: 'PeriodicDetectionScheduler',
               operation: 'handleTechnicalAlertImpact',
               technicalAlertId: alertId,
               projectAlertsCount: alerts.length 
-              }
-            });
+              
+        }
+      });
         }
       }
       
@@ -762,8 +795,9 @@ service: 'PeriodicDetectionScheduler',
     logger.info('Programmation nettoyage hebdomadaire', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'scheduleWeeklyCleanup' 
-              }
-            });
+              
+        }
+      });
     // Dimanche à 2h00
     const scheduleWeekly = () => {
       const now = new Date();
@@ -811,8 +845,9 @@ service: 'PeriodicDetectionScheduler',
               service: 'PeriodicDetectionScheduler',
               operation: 'runWeeklyCleanup',
               projectId 
-              }
-            });
+              
+        }
+      });
         }
       }
       // Nettoyage alertes expirées en base
@@ -820,8 +855,9 @@ service: 'PeriodicDetectionScheduler',
       logger.info('Nettoyage hebdomadaire terminé', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'runWeeklyCleanup' 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'constructor',
@@ -951,8 +987,9 @@ service: 'PeriodicDetectionScheduler',
                 operation: 'detectCascadeImpacts',
                 projectId,
                 alertsCount: alerts.length 
-              }
-            });
+              
+        }
+      });
           }
         }
       }
@@ -1060,8 +1097,9 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       logger.info('Rapport planning quotidien généré et notifié', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'generateDailyPlanningReport' 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'constructor',
@@ -1079,8 +1117,9 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         operation: 'runImmediateDetection',
         trigger,
         runId 
-              }
-            });
+              
+        }
+      });
     const detectionSummary = await this.dateAlertDetectionService.runPeriodicDetection();
     const summary: DetectionRunSummary = {
       runId,
@@ -1101,8 +1140,9 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
         operation: 'runImmediateDetection',
         runId,
         totalAlertsGenerated: summary.totalAlertsGenerated 
-              }
-            });
+              
+        }
+      });
     
     return summary;
   }
@@ -1277,8 +1317,9 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
       logger.info('Nettoyage alertes expirées terminé', { metadata: {
           service: 'PeriodicDetectionScheduler',
           operation: 'cleanupExpiredAlerts' 
-              }
-            });
+              
+        }
+      });
     },
     {
       operation: 'constructor',
@@ -1296,8 +1337,9 @@ Alertes 24h: ${totalRecentAlerts} total (${criticalRecentAlerts} critiques)
     logger.info('Détection manuelle déclenchée', { metadata: {
         service: 'PeriodicDetectionScheduler',
         operation: 'triggerManualDetection' 
-              }
-            });
+              
+        }
+      });
     return await this.runImmediateDetection('manual');
   }
   getMetrics(): SchedulerMetrics {

@@ -38,7 +38,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       module: 'RoutesIndex',
       operation: 'registerModularRoutes',
       stage: 'initialization'
-        }
+              }
+
             });
 
   // ========================================
@@ -68,7 +69,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'auth',
       routes: ['/api/login/basic', '/api/auth/health', '/api/auth/user', '/api/debug-auth-state']
-        }
+              }
+
             });
 
   // Chiffrage Module
@@ -79,7 +81,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'chiffrage',
       routes: ['/api/dpgf', '/api/chiffrage', '/api/validation/milestones', '/api/quotations']
-        }
+              }
+
             });
 
   // Suppliers Module
@@ -90,7 +93,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'suppliers',
       routes: ['/api/suppliers', '/api/supplier-sessions', '/api/supplier-quotes']
-        }
+              }
+
             });
 
   // Projects Module
@@ -101,7 +105,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'projects',
       routes: ['/api/projects', '/api/sav', '/api/visa-architecte']
-        }
+              }
+
             });
 
   // Analytics Module
@@ -112,7 +117,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'analytics',
       routes: ['/api/analytics', '/api/predictive', '/api/dashboard']
-        }
+              }
+
             });
 
   // Documents Module
@@ -123,7 +129,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'documents',
       routes: ['/api/ocr', '/api/pdf', '/api/documents', '/api/objects', '/api/templates']
-        }
+              }
+
             });
 
   // Batigest Integration Module
@@ -134,7 +141,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'batigest',
       routes: ['/api/batigest/exports', '/api/batigest/status', '/api/documents/generate-purchase-order', '/api/documents/generate-client-quote']
-        }
+              }
+
             });
 
   // Monitoring Module
@@ -144,7 +152,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       operation: 'mountRouter',
       moduleName: 'monitoring',
       routes: ['/api/monitoring/health', '/api/monitoring/metrics', '/api/monitoring/errors', '/api/monitoring/alerts']
-        }
+              }
+
             });
 
   logger.info('Routes modulaires initialisées avec succès', { metadata: {
@@ -153,7 +162,8 @@ export async function registerModularRoutes(app: Express): Promise<void> {
       stage: 'complete',
       modulesLoaded: ['auth', 'chiffrage', 'suppliers', 'projects', 'analytics', 'documents', 'batigest'],
       modulesPending: []
-        }
+              }
+
             });
 }
 
@@ -177,7 +187,8 @@ export function mountModuleRouter(
       moduleName,
       mountPath: mountPath || '/',
       timestamp: new Date().toISOString()
-        }
+              }
+
             });
 }
 

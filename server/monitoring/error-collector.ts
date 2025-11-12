@@ -480,8 +480,8 @@ export class ErrorCollector {
     const duration = windowDurations[window];
     const startTime = new Date(now.getTime() - duration);
     
-    const errorsByCategory: Record<ErrorCategory, number> = {} as unknown;
-    const errorsByLevel: Record<ErrorLevel, number> =as unknown;unknown;
+    const errorsByCategory: Record<ErrorCategory, number> = {} as unknown as Record<ErrorCategory, number>;
+    const errorsByLevel: Record<ErrorLevel, number> = {} as unknown as Record<ErrorLevel, number>;
     
     events.forEach(event => {
       errorsByCategory[event.category] = (errorsByCategory[event.category] || 0) + 1;
@@ -552,7 +552,7 @@ export class ErrorCollector {
     this.errorGroups.clear();
     this.metrics.clear();
     Object.keys(this.timeWindows).forEach(window => {
-      (this.timeWindas unknown)unknown)[window] = [];
+      this.timeWindows[window] = [];
     });
   }
 

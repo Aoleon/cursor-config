@@ -66,7 +66,7 @@ export function isRetryableError(error: unknown): boolean {
  */
 export function isConnectionError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = (eras unknown)unknown).code;
+    const code = (error as { code?: string }).code;
     return CONNECTION_ERROR_CODES.includes(code);
   }
   

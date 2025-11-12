@@ -152,7 +152,8 @@ export class AuditService {
         metadata: {
           ...event.metadata,
           source: 'audit_service',
-          version: '1.0' } });
+          version: '1.0'       }
+     });
 
       // Insérer l'événement d'audit
       await db.insert(auditLogs).values({
@@ -219,7 +220,8 @@ export class AuditService {
         logger.info('Alerte en cooldown, ignorée', { metadata: {
             service: 'AuditService',
             operation: 'createSecurityAlert',
-            alertType: alertData.type } });
+            alertType: alertData.type       }
+     });
         return '';
       }
       // Préparer données d'alerte
@@ -238,7 +240,8 @@ export class AuditService {
         metadata: {
           ...alertData.metadata,
           createdBy: 'audit_service',
-          detectionTimestamp: timestamp.toISOString() } });
+          detectionTimestamp: timestamp.toISOString()       }
+     });
 
       // Insérer l'alerte
       await db.insert(securityAlerts).values({
@@ -282,7 +285,10 @@ export class AuditService {
           operation: 'createSecurityAlert',
           alertType: alertData.type,
           severity: alertData.severity 
+              
               }
+ 
+              
             });
       return alertId;
     },
@@ -1013,7 +1019,10 @@ export class AuditService {
           operation: 'archiveOldLogs',
           archived: archivedResult.rowCount || 0,
           deleted: deletedResult.rowCount || 0 
+              
               }
+ 
+              
             });
       return {
         archived: archivedResult.rowCount || 0,

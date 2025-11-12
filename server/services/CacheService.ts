@@ -55,7 +55,10 @@ export class MemoryCacheAdapter implements ICacheAdapter {
         service: 'MemoryCacheAdapter',
         operation: 'constructor',
         cleanupIntervalMs 
+              
               }
+ 
+              
             });
   }
   async get<T>(key: string): Promise<T | null> {
@@ -88,7 +91,10 @@ export class MemoryCacheAdapter implements ICacheAdapter {
     logger.info('[MemoryCacheAdapter] Cache vidé', { metadata: {
         service: 'MemoryCacheAdapter',
         operation: 'flush' 
+              
               }
+ 
+              
             });
   }
   async keys(): Promise<string[]> {
@@ -117,7 +123,10 @@ export class MemoryCacheAdapter implements ICacheAdapter {
           operation: 'cleanup',
           cleanedCount,
           remainingSize: this.cache.size 
+              
               }
+ 
+              
             });
     }
   }
@@ -157,7 +166,10 @@ export class CacheService {
         service: 'CacheService',
         operation: 'constructor',
         adapterType: adapter ? 'custom' : 'MemoryCacheAdapter' 
+              
               }
+ 
+              
             });
   }
   /**
@@ -193,7 +205,10 @@ export class CacheService {
             operation: 'get',
             key,
             hit: true 
+              
               }
+ 
+              
             });
       } else {
         this.misses++;
@@ -202,7 +217,10 @@ export class CacheService {
             operation: 'get',
             key,
             hit: false 
+              
               }
+ 
+              
             });
       }
 
@@ -213,7 +231,10 @@ export class CacheService {
           operation: 'get',
           key,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       this.misses++;
       return null;
@@ -232,7 +253,10 @@ export class CacheService {
           operation: 'set',
           key,
           ttlSeconds 
+              
               }
+ 
+              
             });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de la mise en cache', { metadata: {
@@ -240,7 +264,10 @@ export class CacheService {
           operation: 'set',
           key,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -257,7 +284,10 @@ export class CacheService {
           service: 'CacheService',
           operation: 'invalidate',
           key 
+              
               }
+ 
+              
             });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de l\'invalidation', { metadata: {
@@ -265,7 +295,10 @@ export class CacheService {
           operation: 'invalidate',
           key,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -290,7 +323,10 @@ export class CacheService {
           operation: 'invalidatePattern',
           pattern,
           invalidatedCount: matchingKeys.length 
+              
               }
+ 
+              
             });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de l\'invalidation du pattern', { metadata: {
@@ -298,7 +334,10 @@ export class CacheService {
           operation: 'invalidatePattern',
           pattern,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -316,14 +355,20 @@ export class CacheService {
       logger.info('[CacheService] Cache complètement vidé', { metadata: {
           service: 'CacheService',
           operation: 'flush' 
+              
               }
+ 
+              
             });
     } catch (error) {
       logger.error('[CacheService] Erreur lors du vidage du cache', { metadata: {
           service: 'CacheService',
           operation: 'flush',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -351,7 +396,10 @@ export class CacheService {
           service: 'CacheService',
           operation: 'getStats',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       // Return empty stats on error
       return {
@@ -422,7 +470,10 @@ export class CacheService {
           'project:updated',
           'analytics:calculated'
         ] 
+              
               }
+ 
+              
             });
   }
   /**
@@ -433,7 +484,10 @@ export class CacheService {
         service: 'CacheService',
         operation: 'warmupCache',
         functionsCount: warmupFunctions.length 
+              
               }
+ 
+              
             });
     const results = await Promise.allSettled(
       warmupFunctions.map(fn => fn())
@@ -446,7 +500,10 @@ export class CacheService {
         successCount,
         failureCount,
         totalFunctions: warmupFunctions.length 
+              
               }
+ 
+              
             });
 
     if (failureCount > 0) {
@@ -458,7 +515,10 @@ export class CacheService {
           service: 'CacheService',
           operation: 'warmupCache',
           errors 
+              
               }
+ 
+              
             });
     }
   }
@@ -482,7 +542,10 @@ export function createCacheAdapter(): ICacheAdapter {
           operation: 'createCacheAdapter',
           adapter: 'Redis',
           redisUrl: redisUrl.replace(/:[^:]*@/, ':***@') // Mask password 
+              
               }
+ 
+              
             });
       return new RedisCacheAdapter(redisUrl);
     } catch (error) {
@@ -491,7 +554,10 @@ export function createCacheAdapter(): ICacheAdapter {
           operation: 'createCacheAdapter',
           adapter: 'Redis',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       // Fall back to memory adapter
     }
@@ -502,7 +568,10 @@ export function createCacheAdapter(): ICacheAdapter {
       operation: 'createCacheAdapter',
       adapter: 'Memory',
       reason: redisUrl ? 'Redis connection failed' : 'No REDIS_URL configured' 
+              
               }
+ 
+              
             });
   return new MemoryCacheAdapter();
 }

@@ -57,7 +57,8 @@ export class Notifier {
       logger.info('Service de notification email configuré', { metadata: {
           service: 'Notifier',
           recipients: this.alertEmailRecipients.length
-        }
+              }
+
             });
     }
     
@@ -68,7 +69,8 @@ export class Notifier {
       
       logger.info('Service de notification Slack configuré', { metadata: {
           service: 'Notifier'
-        }
+              }
+
             });
     }
   }
@@ -92,8 +94,9 @@ export class Notifier {
       operation: 'constructor',
       service: 'notifier',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
     }
     
@@ -180,8 +183,9 @@ export class Notifier {
       operation: 'constructor',
       service: 'notifier',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -212,7 +216,8 @@ export class Notifier {
       logger.info('Alerte Slack envoyée', { metadata: {
           service: 'Notifier',
           alertId: alert.id
-        }
+              }
+
             });
     
     },
@@ -220,8 +225,9 @@ export class Notifier {
       operation: 'constructor',
       service: 'notifier',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -266,7 +272,8 @@ export class Notifier {
           service: 'Notifier',
           alertId: alert.id,
           url: webhookUrl
-        }
+              }
+
             });
     
     },
@@ -274,8 +281,9 @@ export class Notifier {
       operation: 'constructor',
       service: 'notifier',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 
   /**
@@ -293,8 +301,9 @@ export class Notifier {
         status: alert.status,
         message: alert.message,
         metrics: alert.details?.metrics
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     // Log selon la sévérité
     switch (alert.severity) {
@@ -594,7 +603,8 @@ case 'medium':;
     logger.info('Tests de notification terminés', { metadata: {
         service: 'Notifier',
         results
-        }
+              }
+
             });
     
     return results;

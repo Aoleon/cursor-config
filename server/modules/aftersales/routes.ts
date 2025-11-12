@@ -431,8 +431,10 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       routesCount: 11,
       modules: ['reserves', 'sav-interventions', 'warranty-claims', 'sav-workflow']
     
-        }
-                });
+              }
+
+    
+            });
 
   return router;
 }

@@ -99,8 +99,9 @@ router.get('/health', async (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -145,8 +146,9 @@ router.get('/metrics', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -179,8 +181,9 @@ router.get('/metrics/:window', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -214,8 +217,9 @@ router.get('/timeline', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -269,8 +273,9 @@ router.get('/errors', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -306,8 +311,9 @@ router.get('/errors/:errorId', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -349,8 +355,9 @@ router.get('/alerts', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -385,8 +392,9 @@ router.get('/alerts/history', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -420,8 +428,9 @@ router.post('/alerts/:alertId/acknowledge', requireAuth, (req: Request, res: Res
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -455,8 +464,9 @@ router.get('/alerts/rules', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -497,8 +507,9 @@ router.put('/alerts/rules/:ruleId', requireAuth, (req: Request, res: Response) =
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -528,8 +539,9 @@ router.post('/test/notifications', requireAuth, async (req: Request, res: Respon
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                      }
-                                    });
+                                            }
+
+                                          });
   });
 
 /**
@@ -577,8 +589,9 @@ router.post('/test/error', requireAuth, (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 /**
@@ -621,8 +634,9 @@ as unknownkunknown))useunknowns unknunknown)unknownany).user || (req as any).ses
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -657,8 +671,9 @@ async function checkDatabase(): Promise<{
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 }
 
@@ -748,8 +763,9 @@ as unknown) methas unknunknown)unknown
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // ========================================
@@ -771,8 +787,10 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
         userId: (req as any).user?.id,
         filters: { correlationId, level, limit 
 
-        }
-                });
+              }
+ 
+
+            });
     
     // Note: Dans une implémentation complète, les logs seraient stockés dans une base de données
     // ou un système de log aggregation (Elasticsearch, Datadog, etc.) qui permettrait
@@ -816,8 +834,9 @@ router.get('/logs', requireAuth, async (req: Request, res: Response) => {
       operation: 'Router',
       service: 'monitoring',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   });
 
 // Démarrer le gestionnaire d'alertes au démarrage

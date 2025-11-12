@@ -55,7 +55,10 @@ export class MondaySchemaAnalyzer {
         operation: 'analyzeBoards',
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all' 
+              
               }
+ 
+              
             });
     return withErrorHandling(
     async () => {
@@ -76,7 +79,10 @@ export class MondaySchemaAnalyzer {
           operation: 'analyzeBoards',
           totalBoards: result.totalBoards,
           totalColumns: result.totalColumns 
+              
               }
+ 
+              
             });
 
       return result;
@@ -109,7 +115,10 @@ export class MondaySchemaAnalyzer {
           operation: 'analyzeBoardStructure',
           boardId,
           cacheHit: true 
+              
               }
+ 
+              
             });
       return cached;
     }
@@ -118,7 +127,10 @@ export class MondaySchemaAnalyzer {
         operation: 'analyzeBoardStructure',
         boardId,
         boardName 
+              
               }
+ 
+              
             });
     return withErrorHandling(
     async () => {
@@ -156,7 +168,10 @@ export class MondaySchemaAnalyzer {
           boardId,
           columnCount: enrichedColumns.length,
           cacheTTL: this.CACHE_TTL 
+              
               }
+ 
+              
             });
       return structure;
     },
@@ -185,7 +200,10 @@ export class MondaySchemaAnalyzer {
         boardId: boardStructure.boardId,
         mondayColumns: boardStructure.columns.length,
         saxiumFields: saxiumFields.length 
+              
               }
+ 
+              
             });
     const suggestions = new Map<string, { saxiumField: string; confidence: number; reason: string }>();
     for (const column of boardStructure.columns) {
@@ -198,7 +216,10 @@ export class MondaySchemaAnalyzer {
             mondayColumn: column.title,
             saxiumField: match.saxiumField,
             confidence: match.confidence 
+              
               }
+ 
+              
             });
       }
     }
@@ -208,7 +229,10 @@ export class MondaySchemaAnalyzer {
         operation: 'suggestMappings',
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length 
+              
               }
+ 
+              
             });
     return suggestions;
   }
@@ -247,7 +271,10 @@ export class MondaySchemaAnalyzer {
       logger.warn('Impossible de parser settings JSON', { metadata: {
           service: 'MondaySchemaAnalyzer',
           operation: 'parseSettings' 
+              
               }
+ 
+              
             });
       return {};
     }
@@ -372,7 +399,10 @@ export class MondaySchemaAnalyzer {
         service: 'MondaySchemaAnalyzer',
         operation: 'invalidateBoardCache',
         boardId 
+              
               }
+ 
+              
             });
   }
 }

@@ -53,7 +53,8 @@ export function getBoardConfig(boardId: string): MondaySplitterConfig | null {
     {
       operation: 'fileURLToPath',
       service: 'defaultMappings',
-      metadata: { } });
+      metadata: {       }
+     });
   
   // 2. Fallback vers config hardcodée
   if (boardId === '8952933832') {

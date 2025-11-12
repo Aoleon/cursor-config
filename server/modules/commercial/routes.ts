@@ -106,7 +106,8 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
       const actualLimit = Number(limit) || 20;
       const actualOffset = Number(offset) || 0;
       
-      logger.info('[Commercial] Récupération AOs', { metadata: {
+      logger.info('[Commercial] Récupération AOs', { 
+        metadata: {
           route: '/api/aos',
           method: 'GET',
           search,
@@ -114,11 +115,8 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
           limit: actualLimit,
           offset: actualOffset,
           userId: req.user?.id
-
-            })
-
-
-          );
+        }
+      });
       
       const { aos, total } = await storage.getAOsPaginated(
         search as string,

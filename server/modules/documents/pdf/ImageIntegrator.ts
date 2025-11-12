@@ -155,8 +155,9 @@ export class ImageIntegrator {
       operation: 'Logger',
       service: 'ImageIntegrator',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
             failed.push(reference);
           }
         } else {
@@ -271,8 +272,9 @@ case 'signature':;
       operation: 'Logger',
 service: 'ImageIntegrator',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
         width: metadata?.width || 0,
         height: metadata?.height || 0,
         format: metadata?.format || 'png',

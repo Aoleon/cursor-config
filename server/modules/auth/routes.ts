@@ -43,7 +43,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
   /**
    * Middleware pour vérifier permissions administrateur (version simplifiée)
    */
-  const requireAdminForHealth = asyncHandler(async : unknown,: unknown,es: unknown, next: unknown) => {
+  const requireAdminForHealth = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
     if (!user) {
       throw new AuthenticationError('Authentification requise pour diagnostic health');
@@ -71,16 +71,14 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     
     // SECURITY: Strict development-only enforcement
     if (process.env.NODE_ENV !== 'development') {
-      logger.warn('[Auth] Tentative accès route basic en production bloquée', { metadata: {
+      logger.warn('[Auth] Tentative accès route basic en production bloquée', { 
+        metadata: {
           route: '/api/login/basic',
           method: 'POST',
           ip: req.ip,
           userAgent: req.headers['user-agent']
-
-            })
-
-
-          );
+        }
+      });
       return res.status(404).json({ message: 'Not found' });
     }
     
@@ -91,16 +89,14 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     const validatedRole = role && allowedRoles.includes(role) ? role : 'admin';
     
     if (role && !allowedRoles.includes(role)) {
-      logger.warn('[Auth] Tentative assignation rôle invalide bloquée', { metadata: {
+      logger.warn('[Auth] Tentative assignation rôle invalide bloquée', { 
+        metadata: {
           route: '/api/login/basic',
           method: 'POST',
           attemptedRole: role,
           username
-
-            })
-
-
-          );
+        }
+      });
     }
 
     logger.info('[Auth] Tentative connexion basic', { metadata: { 

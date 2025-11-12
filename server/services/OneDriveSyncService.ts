@@ -60,7 +60,10 @@ export class OneDriveSyncService {
       const files = await this.scanFolder(basePath, options.recursive || false);
       result.filesScanned = files.length;
       logger.info('Files scanned from OneDrive', { metadata: { count: files.length, path: basePath  
+              
               }
+  
+              
             });
       // Importer ou mettre à jour chaque fichier
       for (const file of files) {
@@ -77,7 +80,8 @@ export class OneDriveSyncService {
     {
       operation: 'constructor',
 service: 'OneDriveSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
         }
       }
       result.success = result.errors.length === 0;
@@ -89,7 +93,10 @@ service: 'OneDriveSyncService',
           filesSkipped: result.filesSkipped,
           errors: result.errors.length,
           duration: result.duration 
+              
               }
+ 
+              
             });
 
       // Émettre un événement de synchronisation
@@ -142,7 +149,8 @@ service: 'OneDriveSyncService',
     {
       operation: 'constructor',
 service: 'OneDriveSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**
@@ -219,7 +227,8 @@ service: 'OneDriveSyncService',
     {
       operation: 'constructor',
       service: 'OneDriveSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**
@@ -277,7 +286,10 @@ service: 'OneDriveSyncService',
               aoId: matchedAO.id,
               fileName: doc.name,
               aoReference: matchedAO.reference 
+              
               }
+ 
+              
             });
           linkedCount++;
         }
@@ -289,7 +301,8 @@ service: 'OneDriveSyncService',
     {
       operation: 'constructor',
       service: 'OneDriveSyncService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**

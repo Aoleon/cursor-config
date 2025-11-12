@@ -182,12 +182,18 @@ export class MondayProductionMigrationService {
     logger.info('Début migration complète 1911 lignes JLM Menuiserie', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
+              
               }
+ 
+              
             });
     logger.info('Utilisation données analysées réelles (non synthétiques)', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
+              
               }
+ 
+              
             });
     
     this.resetWarnings();
@@ -227,7 +233,10 @@ export class MondayProductionMigrationService {
           totalLines,
           totalErrors,
           duration: result.duration 
+              
               }
+ 
+              
             });
       if (this.warnings.length > 0) {
         logger.info('Warnings non bloquants', { metadata: {
@@ -235,7 +244,10 @@ export class MondayProductionMigrationService {
             operation: 'migrateProductionData',
             warningsCount: this.warnings.length,
             warnings: this.warnings.slice(0, 5) 
+              
               }
+ 
+              
             });
       }
       return result;
@@ -257,7 +269,10 @@ export class MondayProductionMigrationService {
     logger.info('Génération données basées analyses JLM réelles', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'loadJLMAnalyzedData' 
+              
               }
+ 
+              
             });
     return {
       aos: this.generateJLMRealisticAOs(911),      // Basé analyse AO_Planning  
@@ -297,7 +312,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'generateJLMRealisticAOs',
         count 
+              
               }
+ 
+              
             });
     return aos;
   }
@@ -333,7 +351,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'generateJLMRealisticProjects',
         count 
+              
               }
+ 
+              
             });
     return projects;
   }
@@ -373,7 +394,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedAOs',
         count: aoData.length 
+              
               }
+ 
+              
             });
     const results: BatchResult[] = [];
     for (const [index, ao] of aoData.entries()) {
@@ -398,14 +422,18 @@ export class MondayProductionMigrationService {
               progress: index + 1,
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100) 
+              
               }
+ 
+              
             });
         }
     },
     {
       operation: 'com',
       service: 'MondayProductionMigrationService',
-      metadata: { } });
+      metadata: {       }
+     });
       }
     }
     
@@ -420,7 +448,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'migrateAnalyzedProjects',
         count: projectData.length 
+              
               }
+ 
+              
             });
     const results: BatchResult[] = [];
     for (const [index, project] of projectData.entries()) {
@@ -445,14 +476,18 @@ export class MondayProductionMigrationService {
               progress: index + 1,
               total: projectData.length,
               percentage: Math.round(((index + 1) / projectData.length) * 100) 
+              
               }
+ 
+              
             });
         }
     },
     {
       operation: 'com',
       service: 'MondayProductionMigrationService',
-      metadata: { } });
+      metadata: {       }
+     });
       }
     }
     
@@ -647,7 +682,10 @@ export class MondayProductionMigrationService {
         migrated: successful.length,
         totalLines,
         validationRate: Math.round(migrationResult.validationRate * 100) 
+              
               }
+ 
+              
             });
     if (failed.length > 0) {
       logger.info('Erreurs migration batch', { metadata: {
@@ -669,7 +707,10 @@ export class MondayProductionMigrationService {
     logger.info('Début validation dry-run sans insertion BDD', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'validateProductionData' 
+              
               }
+ 
+              
             });
     let totalWarnings = 0;
     let totalErrors = 0;
@@ -709,7 +750,10 @@ export class MondayProductionMigrationService {
         errors: result.errors,
         warnings: result.warnings,
         dateFormatIssues: result.dateFormatIssues 
+              
               }
+ 
+              
             });
     return result;
   }

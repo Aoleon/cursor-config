@@ -52,7 +52,8 @@ export async function registerRoutes(app: Express) {
   logger.info('✅ DocumentSyncService initialized', { metadata: {
       module: 'DocumentSyncService',
       operation: 'initialize'
-        }
+              }
+
             });
   
   // 5. Initialize SyncScheduler for automatic OneDrive sync
@@ -64,7 +65,8 @@ export async function registerRoutes(app: Express) {
       module: 'SyncScheduler',
       operation: 'initialize',
       status: syncScheduler.getStatus()
-        }
+              }
+
             });
   
   // Store syncScheduler in app for access in routes
@@ -116,40 +118,46 @@ export async function registerRoutes(app: Express) {
   logger.info('✅ Admin routes registered', { metadata: {
       module: 'Admin',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   logger.info('✅ Ops routes registered (dev/maintenance)', { metadata: {
       module: 'Ops',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   logger.info('✅ Team routes registered', { metadata: {
       module: 'Team',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   logger.info('✅ HR routes registered', { metadata: {
       module: 'HR',
       operation: 'registerRoutes',
       routes: ['employee-labels']
-        }
+              }
+
             });
   
   logger.info('✅ Testing routes registered', { metadata: {
       module: 'Testing',
       operation: 'registerRoutes',
       routes: ['test-data', 'bug-reports']
-        }
+              }
+
             });
   
   logger.info('✅ AfterSales routes registered', { metadata: {
       module: 'AfterSales',
       operation: 'registerRoutes',
       routes: ['reserves', 'sav-interventions', 'warranty-claims']
-        }
+              }
+
             });
   
   // Mount Monday.com integration module
@@ -162,14 +170,16 @@ export async function registerRoutes(app: Express) {
   logger.info('[CacheService] Intégration EventBus configurée', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   // 6. Warmup cache with frequently accessed data
   logger.info('[CacheService] Démarrage warmup cache', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   await cacheService.warmupCache([
@@ -181,8 +191,11 @@ export async function registerRoutes(app: Express) {
             metadata: {
               module: 'Routes',
               operation: 'warmupCache'
-            }
-          });
+            
+              }
+
+            
+            });
         },
         {
           operation: 'registerRoutes',
@@ -195,7 +208,8 @@ export async function registerRoutes(app: Express) {
   logger.info('[CacheService] Warmup cache terminé', { metadata: {
       module: 'Routes',
       operation: 'registerRoutes'
-        }
+              }
+
             });
   
   // 7. Register legacy POC routes and create HTTP server (must be last)

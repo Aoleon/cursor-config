@@ -258,8 +258,9 @@ export async function withRetry<T>(
             operation: 'withRetry',
             attempt: attempt + 1,
             error: error instanceof Error ? error.message : String(error)
-                                }
-                              });
+                                      }
+
+                                    });
         
         stats.totalDuration = Date.now() - startTime;
         

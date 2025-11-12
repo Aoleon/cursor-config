@@ -252,7 +252,8 @@ export class AlertManager {
         service: 'AlertManager',
         rulesCount: this.rules.size,
         intervalMs: this.checkIntervalMs
-        }
+              }
+
             });
 
     // Vérification immédiate
@@ -274,7 +275,8 @@ export class AlertManager {
       
       logger.info('Arrêt du gestionnaire d\'alertes', { metadata: {
           service: 'AlertManager'
-        }
+              }
+
             });
     }
   }
@@ -307,8 +309,9 @@ export class AlertManager {
       operation: 'async',
       service: 'alert-manager',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     }
 
     // Résoudre les alertes qui ne sont plus déclenchées
@@ -382,7 +385,8 @@ export class AlertManager {
         alertId: alert.id,
         severity: alert.severity,
         metrics: alert.details?.metrics
-        }
+              }
+
             });
   }
 
@@ -515,8 +519,9 @@ export class AlertManager {
         severity: alert.severity,
         status: alert.status,
         metrics: alert.details?.metrics
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     const message = `🚨 ALERTE [${alert.severity.toUpperCase()}]: ${alert.message}`;
     
@@ -559,7 +564,8 @@ export class AlertManager {
         service: 'AlertManager',
         alertId: alert.id,
         notificationsSent: alert.notificationsSent
-        }
+              }
+
             });
   }
 
@@ -574,7 +580,8 @@ export class AlertManager {
         service: 'AlertManager',
         alertId: alert.id,
         duration: now.getTime() - alert.triggeredAt.getTime()
-        }
+              }
+
             });
     
     // Retirer de la liste des alertes actives
@@ -611,7 +618,8 @@ export class AlertManager {
           service: 'AlertManager',
           alertId: alert.id,
           acknowledgedBy: userId
-        }
+              }
+
             });
       
       return true;
@@ -682,7 +690,8 @@ export class AlertManager {
       logger.info(`Règle ${enabled ? 'activée' : 'désactivée'}: ${rule.name}`, { metadata: {
           service: 'AlertManager',
           ruleId
-        }
+              }
+
             });
       
       return true;
@@ -701,7 +710,8 @@ export class AlertManager {
         service: 'AlertManager',
         ruleId: rule.id,
         severity: rule.severity
-        }
+              }
+
             });
   }
 
@@ -719,7 +729,8 @@ export class AlertManager {
       logger.info(`Règle supprimée: ${rule.name}`, { metadata: {
           service: 'AlertManager',
           ruleId
-        }
+              }
+
             });
       
       return true;

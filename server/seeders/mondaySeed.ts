@@ -200,8 +200,9 @@ export class MondaySeed {
       operation: 'constructor',
 service: 'mondaySeed',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
 
       // Seeder les relations après les entités principales
@@ -370,8 +371,9 @@ service: 'mondaySeed',;
       operation: 'constructor',
       service: 'mondaySeed',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
       }
     }
 
@@ -400,8 +402,9 @@ service: 'mondaySeed',;
       operation: 'constructor',
       service: 'mondaySeed',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     }
 
     return seededCount;
@@ -620,8 +623,9 @@ service: 'mondaySeed',;
       operation: 'constructor',
 service: 'mondaySeed',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
 
     return seededCount;
   }
@@ -677,8 +681,9 @@ service: 'mondaySeed',;
       operation: 'constructor',
 service: 'mondaySeed',;
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
 
     return seededCount;
   }

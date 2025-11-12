@@ -68,7 +68,10 @@ export class PdfGeneratorService {
         logger.info('Puppeteer browser started successfully', { metadata: {
             service: 'PDFGeneratorService',
             operation: 'initialize' 
+              
               }
+ 
+              
             });
       }
       // Compilation du template Handlebars
@@ -83,7 +86,10 @@ export class PdfGeneratorService {
         logger.info('DPGF template compiled successfully', { metadata: {
             service: 'PDFGeneratorService',
             operation: 'initialize' 
+              
               }
+ 
+              
             });
       }
     } catch (error) {
@@ -91,7 +97,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'initialize',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw new AppError(`Failed to initialize PDF generator: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
@@ -152,7 +161,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPdf',
           offerReference: data.metadata.offerReference 
+              
               }
+ 
+              
             });
       const pdfBuffer = Buffer.from(await page.pdf(pdfOptions));
       // Generation du nom de fichier
@@ -163,7 +175,10 @@ export class PdfGeneratorService {
           operation: 'generateDpgfPdf',
           filename,
           size: pdfBuffer.length 
+              
               }
+ 
+              
             });
       
       return {
@@ -177,7 +192,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPdf',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw new AppError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
@@ -190,7 +208,10 @@ export class PdfGeneratorService {
               service: 'PDFGeneratorService',
               operation: 'generateDpgfPdf',
               error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
         }
       }
@@ -212,7 +233,10 @@ export class PdfGeneratorService {
       logger.info('DPGF preview HTML generated successfully', { metadata: {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPreview' 
+              
               }
+ 
+              
             });
       return html;
     } catch (error) {
@@ -220,7 +244,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateDpgfPreview',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw new AppError(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
@@ -237,14 +264,20 @@ export class PdfGeneratorService {
         logger.info('Puppeteer browser closed', { metadata: {
             service: 'PDFGeneratorService',
             operation: 'cleanup' 
+              
               }
+ 
+              
             });
       } catch (error) {
         logger.error('[PDFGeneratorService] Erreur lors de la fermeture du browser', { metadata: {
             service: 'PDFGeneratorService',
             operation: 'cleanup',
             error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
         // Reset browser even on error
         this.browser = null;
@@ -332,7 +365,10 @@ export class PdfGeneratorService {
     logger.info('Handlebars helpers registered', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'registerHandlebarsHelpers' 
+              
               }
+ 
+              
             });
   }
   /**
@@ -349,7 +385,10 @@ export class PdfGeneratorService {
     logger.info('Restarting PDF generator service', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
+              
               }
+ 
+              
             });
     await this.cleanup();
     this.template = null;
@@ -357,7 +396,10 @@ export class PdfGeneratorService {
     logger.info('PDF generator service restarted', { metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
+              
               }
+ 
+              
             });
   }
 
@@ -443,7 +485,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generateFromTemplate',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -479,7 +524,10 @@ export class PdfGeneratorService {
           operation: 'generateLDMPdf',
           templateType,
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     }
@@ -519,7 +567,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'validateTemplate',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       return {
         valid: false,
@@ -597,7 +648,10 @@ export class PdfGeneratorService {
           operation: 'generatePdfFromHtml',
           filename,
           size: pdfBuffer.length 
+              
               }
+ 
+              
             });
       return {
         buffer: pdfBuffer,
@@ -610,7 +664,10 @@ export class PdfGeneratorService {
           service: 'PDFGeneratorService',
           operation: 'generatePdfFromHtml',
           error: error instanceof Error ? error.message : String(error) 
+              
               }
+ 
+              
             });
       throw error;
     } finally {
@@ -622,7 +679,10 @@ export class PdfGeneratorService {
               service: 'PDFGeneratorService',
               operation: 'generatePdfFromHtml',
               error: closeError instanceof Error ? closeError.message : String(closeError) 
+              
               }
+ 
+              
             });
         }
       }

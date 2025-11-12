@@ -881,8 +881,9 @@ export class EventBus extends EventEmitter {
         cacheKey: params.cacheKey,
         action: params.action,
         executionTimeMs: params.executionTimeMs
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -914,8 +915,9 @@ export class EventBus extends EventEmitter {
         executionTimeMs: params.executionTimeMs,
         isScheduled: params.isScheduled,
         action: 'prewarming_completed'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -949,8 +951,9 @@ export class EventBus extends EventEmitter {
         afterValue: params.afterValue,
         entityType: params.entityType,
         action: 'optimization_detected'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -990,8 +993,9 @@ export class EventBus extends EventEmitter {
         constraintsApplied: params.constraintsApplied,
         calculationMethod: params.calculationMethod,
         action: 'timeline_calculated'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1030,8 +1034,9 @@ export class EventBus extends EventEmitter {
         totalImpactDays: params.totalImpactDays,
         recalculationType: params.recalculationType,
         action: 'cascade_recalculated'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1067,8 +1072,9 @@ export class EventBus extends EventEmitter {
         confidence: params.confidence,
         impact: params.impact,
         action: 'rule_applied'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1110,8 +1116,9 @@ export class EventBus extends EventEmitter {
         entityType: params.entityType,
         entityId: params.entityId,
         action: 'alert_created'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1147,8 +1154,9 @@ export class EventBus extends EventEmitter {
         affectedPhases: params.affectedPhases,
         recommendations: params.recommendations,
         action: 'planning_issue_detected'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1200,8 +1208,9 @@ export class EventBus extends EventEmitter {
         affectedUsers: params.metadata.affectedUsers,
         actionRequired: params.metadata.actionRequired,
         action: 'alert_created'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1240,8 +1249,9 @@ export class EventBus extends EventEmitter {
         acknowledgedAt: params.metadata.acknowledgedAt,
         note: params.metadata.note,
         action: 'alert_acknowledged'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1280,8 +1290,9 @@ export class EventBus extends EventEmitter {
         resolvedAt: params.metadata.resolvedAt,
         resolution: params.metadata.resolution,
         action: 'alert_resolved'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1316,8 +1327,9 @@ export class EventBus extends EventEmitter {
         escalationLevel: params.metadata.escalationLevel,
         immediateAction: params.metadata.immediateAction,
         action: 'critical_escalation'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1352,8 +1364,9 @@ export class EventBus extends EventEmitter {
         resourceType: params.resourceType,
         shortfall: params.shortfall,
         action: 'resource_conflict_detected'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1386,8 +1399,9 @@ export class EventBus extends EventEmitter {
         estimatedGainDays: params.estimatedGainDays,
         feasibility: params.feasibility,
         action: 'optimization_detected'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1423,8 +1437,9 @@ export class EventBus extends EventEmitter {
         riskFactors: params.riskFactors,
         suggestedActions: params.suggestedActions,
         action: 'delay_risk_detected'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1467,8 +1482,9 @@ export class EventBus extends EventEmitter {
         preparationStatus: params.preparationStatus,
         requiredActions: params.requiredActions,
         action: 'critical_deadline_alert'
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
 
     this.publish(event);
   }
@@ -1864,8 +1880,9 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'integratePredictiveEngine',
         context: { triggersEnabled: true, automaticPreloading: true }
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
     
     // Démarrer cycles background preloading
     this.startBackgroundPreloadingCycles();
@@ -1884,7 +1901,8 @@ export class EventBus extends EventEmitter {
     logger.info('Démarrage cycles preloading background', { metadata: {
         module: 'EventBus',
         operation: 'startBackgroundPreloadingCycles'
-        }
+              }
+
             });
 
     // 1. CYCLE BUSINESS HOURS PRELOADING (toutes les 30 minutes pendant horaires business)
@@ -1929,8 +1947,9 @@ export class EventBus extends EventEmitter {
         context: {
           cycles: ['business_hours', 'weekend_warming', 'peak_hours', 'nightly_maintenance']
         }
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
   }
 
   /**
@@ -1940,7 +1959,8 @@ export class EventBus extends EventEmitter {
     logger.info('Configuration déclencheurs prédictifs événementiels', { metadata: {
         module: 'EventBus',
         operation: 'setupPredictiveEventTriggers'
-        }
+              }
+
             });
 
     // Déclencheur AO : Prédict étude technique et fournisseurs
@@ -1998,8 +2018,9 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'setupPredictiveEventTriggers',
         context: { triggersCount: 5 }
-                                                                              }
-                                                                            });
+                                                                                    }
+
+                                                                                  });
   }
 
   /**
@@ -2013,7 +2034,8 @@ export class EventBus extends EventEmitter {
       logger.info('Exécution preloading business hours', { metadata: {
           module: 'EventBus',
           operation: 'executeBusinessHoursPreloading'
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading business hours
     } catch (error) {
@@ -2021,7 +2043,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'executeBusinessHoursPreloading',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2038,7 +2061,8 @@ export class EventBus extends EventEmitter {
       logger.info('Exécution weekend warming', { metadata: {
           module: 'EventBus',
           operation: 'weekendWarming'
-        }
+              }
+
             });
       // TODO: Implémenter la logique de weekend warming
     } catch (error) {
@@ -2046,7 +2070,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'weekendWarming',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2062,7 +2087,8 @@ export class EventBus extends EventEmitter {
       logger.info('Optimisation peak hours', { metadata: {
           module: 'EventBus',
           operation: 'peakHoursOptimization'
-        }
+              }
+
             });
 
       // 3. ÉVICTION AGGRESSIVE ENTITÉS FROIDES
@@ -2073,7 +2099,8 @@ export class EventBus extends EventEmitter {
           operation: 'peakHoursOptimization',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2089,20 +2116,23 @@ export class EventBus extends EventEmitter {
       logger.info('Maintenance nocturne', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance'
-        }
+              }
+
             });
 
       logger.info('Maintenance nocturne terminée', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance'
-        }
+              }
+
             });
     } catch (error) {
       logger.error('Erreur executeNightlyMaintenance', { metadata: {
           module: 'EventBus',
           operation: 'nightlyMaintenance',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2123,7 +2153,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'triggerAOWorkflowPreloading',
           entityId: event.entityId
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading AO workflow
     } catch (error) {
@@ -2132,7 +2163,8 @@ export class EventBus extends EventEmitter {
           operation: 'triggerAOWorkflowPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2149,7 +2181,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'triggerOfferToProjectPreloading',
           entityId: event.entityId
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading Offre→Projet
     } catch (error) {
@@ -2158,7 +2191,8 @@ export class EventBus extends EventEmitter {
           operation: 'triggerOfferToProjectPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2175,7 +2209,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'triggerProjectWorkflowPreloading',
           entityId: event.entityId
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading Projet workflow
     } catch (error) {
@@ -2184,7 +2219,8 @@ export class EventBus extends EventEmitter {
           operation: 'triggerProjectWorkflowPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2202,7 +2238,8 @@ export class EventBus extends EventEmitter {
           operation: 'triggerTaskRelatedPreloading',
           entityId: event.entityId,
           projectId: event.projectId
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading Tâche
     } catch (error) {
@@ -2210,7 +2247,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'triggerTaskRelatedPreloading',
           error: error instanceof Error ? error.message : String(error)
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2226,7 +2264,8 @@ export class EventBus extends EventEmitter {
       logger.info('Déclencheur Analytics dashboard preloading', { metadata: {
           module: 'EventBus',
           operation: 'triggerAnalyticsDashboardPreloading'
-        }
+              }
+
             });
       // TODO: Implémenter la logique de preloading Analytics dashboard
     } catch (error) {
@@ -2235,7 +2274,8 @@ export class EventBus extends EventEmitter {
           operation: 'triggerAnalyticsDashboardPreloading',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
-        }
+              }
+
             });
       this.backgroundStats.failedBackgroundTasks++;
     }
@@ -2316,7 +2356,8 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'setPredictiveTriggersEnabled',
         enabled
-        }
+              }
+
             });
   }
 
@@ -2329,7 +2370,8 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'setBusinessHoursPreloadingEnabled',
         enabled
-        }
+              }
+
             });
   }
 
@@ -2342,7 +2384,8 @@ export class EventBus extends EventEmitter {
         module: 'EventBus',
         operation: 'setWeekendWarmingEnabled',
         enabled
-        }
+              }
+
             });
   }
 
@@ -2364,7 +2407,8 @@ export class EventBus extends EventEmitter {
           module: 'EventBus',
           operation: 'cleanupPredictiveIntegration',
           intervalName: name
-        }
+              }
+
             });
     }
     
@@ -2374,7 +2418,8 @@ export class EventBus extends EventEmitter {
     logger.info('Intégration prédictive nettoyée', { metadata: {
         module: 'EventBus',
         operation: 'cleanupPredictiveIntegration'
-        }
+              }
+
             });
   }
 

@@ -112,7 +112,10 @@ export class SafetyGuardsService {
     logger.info('Service démarré avec protection système BTP', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'constructor' 
+              
               }
+ 
+              
             });
   }
   // ========================================
@@ -146,7 +149,10 @@ export class SafetyGuardsService {
         service: 'SafetyGuardsService',
         operation: 'initializeCircuitBreakers',
         breakers: breakers 
+              
               }
+ 
+              
             });
   }
   /**
@@ -172,7 +178,10 @@ export class SafetyGuardsService {
               service: 'SafetyGuardsService',
               operation: 'checkCircuitBreaker',
               componentName 
+              
               }
+ 
+              
             });
           return { allowed: true };
         }
@@ -207,7 +216,10 @@ export class SafetyGuardsService {
             service: 'SafetyGuardsService',
             operation: 'recordOperationSuccess',
             componentName 
+              
               }
+ 
+              
             });
       }
     } else if (breaker.state === 'closed') {
@@ -235,7 +247,10 @@ export class SafetyGuardsService {
           operation: 'recordOperationFailure',
           componentName,
           failureCount: breaker.failureCount 
+              
               }
+ 
+              
             });
     }
   }
@@ -263,7 +278,10 @@ export class SafetyGuardsService {
     logger.info('Monitoring système démarré (10s/60s intervals)', { metadata: {
         service: 'SafetyGuardsService',
         operation: 'startSystemMonitoring' 
+              
               }
+ 
+              
             });
   }
   /**
@@ -357,7 +375,10 @@ export class SafetyGuardsService {
         operation: 'activateThrottling',
         reason,
         aggressiveness: this.adaptiveConfig.preloadingAggressiveness 
+              
               }
+ 
+              
             });
   }
   /**
@@ -381,7 +402,10 @@ export class SafetyGuardsService {
         operation: 'deactivateThrottling',
         reason,
         duration: Math.round(throttleDuration/1000) 
+              
               }
+ 
+              
             });
   }
   /**
@@ -397,7 +421,10 @@ export class SafetyGuardsService {
         cpuUsage: this.systemMetrics.cpuUsage,
         memoryUsage: this.systemMetrics.memoryUsage,
         stack: new Error().stack 
+              
               }
+ 
+              
             });
     // Actions d'urgence
     await this.emergencyResourceCleanup();
@@ -412,7 +439,10 @@ export class SafetyGuardsService {
             service: 'SafetyGuardsService',
             operation: 'handleCriticalOverload',
             circuitBreaker: name 
+              
               }
+ 
+              
             });
       });
   }
@@ -487,7 +517,10 @@ export class SafetyGuardsService {
         adaptationScore: (adaptationScore*100).toFixed(1),
         aggressiveness: newAggressiveness.toFixed(1),
         confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1) 
+              
               }
+ 
+              
             });
   }
   // ========================================
@@ -519,7 +552,10 @@ export class SafetyGuardsService {
           service: 'SafetyGuardsService',
           operation: 'emergencyResourceCleanup',
           tasksStopped 
+              
               }
+ 
+              
             });
     },
     {
@@ -551,7 +587,10 @@ export class SafetyGuardsService {
             operation: 'comprehensiveSystemEvaluation',
             systemHealth: report.systemHealth,
             recommendations: report.recommendations.slice(0, 3) 
+              
               }
+ 
+              
             });
       }
     },

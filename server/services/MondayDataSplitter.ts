@@ -370,7 +370,8 @@ export class MondayDataSplitter {
     {
       operation: 'constructor',
 service: 'MondayDataSplitter',
-      metadata: { } });
+      metadata: {       }
+     });
         data: { error: error.stack });
 
       throw error;

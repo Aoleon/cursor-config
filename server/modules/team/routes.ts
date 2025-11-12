@@ -49,8 +49,9 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       
       res.json(resources);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   /**
    * POST /api/team-resources
@@ -73,8 +74,9 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       
       res.status(201).json(resource);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   /**
    * PATCH /api/team-resources/:id
@@ -98,8 +100,9 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       
       res.json(resource);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   // ========================================
   // BE WORKLOAD ROUTES - Indicateurs charge BE
@@ -132,8 +135,9 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       
       res.json(workload);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   /**
    * POST /api/be-workload
@@ -157,8 +161,9 @@ export function createTeamRouter(storage: IStorage, eventBus: EventBus): Router 
       
       res.status(201).json(workload);
           }
-                                  }
-                                });
+                                        }
+
+                                      });
 
   return router;
 }

@@ -115,7 +115,8 @@ export class OneDriveService {
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**
@@ -142,7 +143,8 @@ export class OneDriveService {
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
   }
 
   /**
@@ -285,13 +287,19 @@ export class OneDriveService {
               path,
               totalItems: allItems.length,
               hasDeltaLink: true 
+              
               }
+ 
+              
             });
         } else if (response['@odata.nextLink']) {
           // More pages available
           nextLink = response['@odata.nextLink'];
           logger.info('OneDrive delta: fetching next page', { metadata: { path, currentItems: allItems.length  
+              
               }
+  
+              
             });
         } else {
           // No more data
@@ -398,7 +406,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
 service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -467,7 +476,10 @@ service: 'OneDriveService',
           size: fileSize,
           actualName: uploadedItem.name,
           oneDriveId: uploadedItem.id 
+              
               }
+ 
+              
             });
       // Return the metadata from the upload response (handles renamed files correctly)
       return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
@@ -475,7 +487,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
 service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -503,7 +516,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
 service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -531,7 +545,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -549,7 +564,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -573,7 +589,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -598,7 +615,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -624,7 +642,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
 service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 
@@ -650,7 +669,8 @@ service: 'OneDriveService',
     {
       operation: 'constructor',
       service: 'OneDriveService',
-      metadata: { } });
+      metadata: {       }
+     });
     }
   }
 

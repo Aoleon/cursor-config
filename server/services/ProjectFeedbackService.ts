@@ -70,7 +70,10 @@ export class ProjectFeedbackService {
             operation: 'createFeedback',
             feedbackId: feedback.id,
             projectId: data.projectId 
+              
               }
+ 
+              
             });
         return feedback;
       },
@@ -131,7 +134,10 @@ export class ProjectFeedbackService {
             operation: 'assignFeedback',
             feedbackId,
             assignedTo 
+              
               }
+ 
+              
             });
         return updated;
       },
@@ -197,7 +203,10 @@ export class ProjectFeedbackService {
             operation: 'resolveFeedback',
             feedbackId,
             resolvedBy 
+              
               }
+ 
+              
             });
         return updated;
       },

@@ -182,8 +182,8 @@ class Logger {
     return () => {
       const duration = Date.now() - start;
       this.debug(`${label} completed in ${duration}ms`, {
-        metadata: { duration, label }
-      });
+        metadata: { duration, label       }
+     });
     };
   }
 }

@@ -178,7 +178,10 @@ export class TechnicalMetricsService {
         operation: 'startPipelineTrace',
         traceId,
         complexity 
+              
               }
+ 
+              
             });
   }
   /**
@@ -192,7 +195,10 @@ export class TechnicalMetricsService {
           operation: 'startStep',
           stepName,
           traceId 
+              
               }
+ 
+              
             });
       return;
     }
@@ -217,7 +223,10 @@ export class TechnicalMetricsService {
           operation: 'endStep',
           stepName,
           traceId 
+              
               }
+ 
+              
             });
       return;
     }
@@ -230,7 +239,10 @@ export class TechnicalMetricsService {
           operation: 'endStep',
           stepName,
           traceId 
+              
               }
+ 
+              
             });
       return;
     }
@@ -261,7 +273,10 @@ export class TechnicalMetricsService {
           service: 'TechnicalMetricsService',
           operation: 'endPipelineTrace',
           traceId 
+              
               }
+ 
+              
             });
       return this.createEmptyTimings();
     }
@@ -298,7 +313,10 @@ export class TechnicalMetricsService {
           operation: 'endPipelineTrace',
           traceId,
           totalDuration: timings.total 
+              
               }
+ 
+              
             });
     },
     {
@@ -353,7 +371,10 @@ export class TechnicalMetricsService {
         service: 'TechnicalMetricsService',
         operation: 'recordParallelismFailure',
         consecutiveFailures: this.circuitBreakerFailureCount 
+              
               }
+ 
+              
             });
   }
   /**

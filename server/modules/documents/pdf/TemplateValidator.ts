@@ -101,8 +101,9 @@ export class TemplateValidator {
       operation: 'Logger',
       service: 'TemplateValidator',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
         severity: 'critical'
       });
 

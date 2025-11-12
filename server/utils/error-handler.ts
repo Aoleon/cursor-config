@@ -131,8 +131,8 @@ export async function withErrorHandling<T>(
     
     logger.info(`${context.operation} - succès (${duration}ms)`, {
       ...logContext,
-      metadata: { ...logContext.metadata, duration }
-    });
+      metadata: { ...logContext.metadata, duration       }
+     });
     
     return result;
   } catch (error) {
@@ -158,8 +158,9 @@ export async function withErrorHandling<T>(
           ...logContext.metadata, 
           duration,
           errorCode: (normalizedError as AppError).code
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
     
     throw normalizedError;
   }

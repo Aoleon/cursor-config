@@ -39,7 +39,8 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
         userEmail,
         path: req.originalUrl,
         ip: req.ip
-        }
+              }
+
             });
     return `user:${userId}`;
   }
@@ -47,7 +48,8 @@ const generateKey = (req: AuthenticatedRequest): string | undefined => {
   logger.debug('[RateLimiter] Using IP-based rate limiting', { metadata: {
       ip: req.ip,
       path: req.originalUrl
-        }
+              }
+
             });
   // Let express-rate-limit handle IP normalization (IPv4/IPv6 compatible)
   return undefined;
@@ -71,7 +73,8 @@ const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
       userEmail,
       ip: req.ip,
       userAgent: req.get('user-agent')
-        }
+              }
+
             });
   
   const retryAfter = res.getHeader('Retry-After');

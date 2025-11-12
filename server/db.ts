@@ -42,7 +42,8 @@ logger.info('Provider de base de données détecté', { metadata: {
     operation: 'detectProvider',
     provider: dbProvider,
     hasDatabaseUrl: !!process.env.DATABASE_URL
-        }
+              }
+
             });
 
 // ========================================
@@ -112,7 +113,8 @@ pool.on('error', (err: Error, client: NeonPoolClient | PgPoolClient) => {
       provider: dbProvider,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined
-        }
+              }
+
             });
 });
 
@@ -121,7 +123,8 @@ pool.on('connect', (client: NeonPoolClient | PgPoolClient) => {
       module: 'DatabaseConfig',
       operation: 'handlePoolConnect',
       provider: dbProvider
-        }
+              }
+
             });
 });
 
@@ -135,7 +138,8 @@ pool.on('remove', (client: NeonPoolClient | PgPoolClient) => {
       module: 'DatabaseConfig',
       operation: 'handlePoolRemove',
       provider: dbProvider
-        }
+              }
+
             });
 });
 
@@ -199,14 +203,16 @@ export async function closePool() {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { action: 'shutdown' }
-                                                                            }
-                                                                          });
+                                                                                  }
+
+                                                                                });
   await pool.end();
   logger.info('Pool de connexions fermé proprement', {
     metadata: {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { status: 'closed' }
-                                                                            }
-                                                                          });
+                                                                                  }
+
+                                                                                });
 }

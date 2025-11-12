@@ -78,7 +78,8 @@ export class UnitOfWork {
     logger.info('Démarrage d\'une Unit of Work', { metadata: {
         module: 'UnitOfWork',
         operation: 'execute'
-        }
+              }
+
             });
 
     return withErrorHandling(
@@ -93,7 +94,8 @@ export class UnitOfWork {
       logger.info('Unit of Work complétée avec succès', { metadata: {
           module: 'UnitOfWork',
           operation: 'execute'
-        }
+              }
+
             });
 
       return result;
@@ -103,8 +105,9 @@ export class UnitOfWork {
       operation: 'begin',
       service: 'UnitOfWork',
       metadata: {
-                                                                                }
-                                                                              });
+                                                                                      }
+
+                                                                                    });
   }
 }
 

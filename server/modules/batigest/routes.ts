@@ -68,8 +68,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           method: 'GET',
           limit,
           agentId
-        }
-      });
+              }
+
+            });
 
       const exports = await storage.getBatigestExportsByStatus('pending', parseInt(limit as string));
 
@@ -104,8 +105,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportId: id,
           batigestReference,
           agentId
-        }
-      });
+              }
+
+            });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -150,8 +152,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportId: id,
           errorMessage,
           agentId
-        }
-      });
+              }
+
+            });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -194,8 +197,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           method: 'GET',
           exportId: id,
           format
-        }
-      });
+              }
+
+            });
 
       const exportItem = await storage.getBatigestExportById(id);
       if (!exportItem) {
@@ -248,16 +252,17 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: (req as unknown as { user?: { id: string } }).user?.id
-        }
-      });
+              }
+
+            });
 
       // ========================================
       // MODE PREVIEW: Générer PDF sans persister en DB
       // ========================================
       if (generatePDF && !exportToBatigest) {
         logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
-          metadata: { reference: orderData.reference }
-        });
+          metadata: { reference: orderData.reference       }
+     });
 
         try {
           // Charger le template purchase-order
@@ -286,8 +291,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                   operation: 'getSupplierById',
                   supplierId: orderData.supplierId,
                   error: error instanceof Error ? error.message : String(error)
-                }
-              });
+                
+        }
+      });
             }
           }
 
@@ -332,12 +338,14 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           };
 
           // Wrapper avec retry pour gérer l'initialization asynchrone de Puppeteer
-          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', { metadata: { reference: orderData.reference 
-
-            })
+          logger.debug('[Batigest] Tentative de génération PDF avec retry automatique', { 
+            metadata: { 
+              reference: orderData.reference 
+            
+              }
  
-
-          );
+            
+            });
 
           const result = await withRetry(
             () => pdfEngine.render(renderOptions),
@@ -353,9 +361,12 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                     attempt,
                     delay,
                     error: error instanceof Error ? error.message : String(error)
-                  }
-                });
+                  
+        }
+      });
               }
+            }
+          );
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 
@@ -367,8 +378,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               reference: orderData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-            }
-          });
+            
+              }
+
+            
+            });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -459,16 +473,17 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: (req as unknown as { user?: { id: string } }).user?.id
-        }
-      });
+              }
+
+            });
 
       // ========================================
       // MODE PREVIEW: Générer PDF sans persister en DB
       // ========================================
       if (generatePDF && !exportToBatigest) {
         logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
-          metadata: { reference: quoteData.reference }
-        });
+          metadata: { reference: quoteData.reference       }
+     });
 
         try {
           // Charger le template client-quote
@@ -552,8 +567,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                     attempt,
                     delay,
                     error: error instanceof Error ? error.message : String(error)
-                  }
-                });
+                  
+        }
+      });
               }
 
           if (!result.success || !result.pdf) {
@@ -566,8 +582,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               reference: quoteData.reference,
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
-            }
-          });
+            
+              }
+
+            
+            });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -652,8 +671,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         metadata: {
           route: '/api/batigest/status',
           method: 'GET'
-        }
-      });
+              }
+
+            });
 
       const [pending, ready, downloaded, imported, errors] = await Promise.all([
         storage.getBatigestExportsByStatus('pending'),
@@ -689,8 +709,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           route: '/api/batigest/exports/all',
           method: 'GET',
           filters: { status, documentType, page, limit }
-        }
-      });
+              }
+
+            });
 
       const result = await storage.getBatigestExportsAll({
         status: status as string,
@@ -714,8 +735,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         metadata: {
           route: '/api/batigest/stats',
           method: 'GET'
-        }
-      });
+              }
+
+            });
 
       const stats = await storage.getBatigestStats();
 

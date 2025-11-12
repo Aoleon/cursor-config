@@ -196,7 +196,8 @@ export function monitorRateLimit(
       ip,
       timestamp: new Date().toISOString(),
       event: 'rate_limit_exceeded'
-        }
+              }
+
             });
   
   // Record in monitor
@@ -239,7 +240,8 @@ function incrementRateLimitMetric(endpoint: string): void {
       metric: 'rate_limit_exceeded',
       endpoint,
       timestamp: new Date().toISOString()
-        }
+              }
+
             });
 }
 
@@ -280,7 +282,8 @@ setInterval(() => {
         totalViolations: stats.totalViolations,
         uniqueEndpoints: Object.keys(stats.violationsByEndpoint).length,
         topViolator: stats.topViolators[0]
-        }
+              }
+
             });
   }
 }, 3600000); // 1 hour

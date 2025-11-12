@@ -1,4 +1,3 @@
-
 # Guide d'Installation - Configuration Cursor
 
 ## 📋 Prérequis
@@ -138,3 +137,4 @@ git add .cursorrules
 # Forcer version spécifique
 echo "3.0.0" > .cursor-version
 ```
+

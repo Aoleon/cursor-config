@@ -37,7 +37,7 @@ info "Version actuelle: $CURRENT_VERSION"
 if [ -d "$CONFIG_DIR" ]; then
     info "Mise à jour du dépôt..."
     cd "$CONFIG_DIR"
-
+    
     if ! git fetch --tags origin 2>/dev/null; then
         warning "Échec du fetch, tentative de pull direct..."
         git pull origin main || {
@@ -46,7 +46,7 @@ if [ -d "$CONFIG_DIR" ]; then
             exit 1
         }
     fi
-
+    
     LATEST_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || cat VERSION 2>/dev/null || echo "unknown")
     cd "$PROJECT_ROOT"
 else

@@ -326,7 +326,7 @@ export function catchDatabaseErrors(
  * Create a database error response object
  * Useful for manual error handling in routes
  */
-export function createDatabaseErrorResponse(e: unknunknown)unknown): {
+export function createDatabaseErrorResponse(e: unknown): {
   success: false;
   error: {
     message: string;
@@ -351,6 +351,7 @@ export function createDatabaseErrorResponse(e: unknunknown)unknown): {
 /**
  * Middleware to add request ID for tracing
  */
-export function addRequestId(req: Request, res: Response, next: NextFunction): void {as unknown) as unknown).id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+export function addRequestId(req: Request, res: Response, next: NextFunction): void {
+  (req as unknown as { id?: string }).id = Date.now().toString(36) + Math.random().toString(36).substr(2);
   next();
 }

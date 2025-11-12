@@ -1,4 +1,3 @@
-
 # Guide de Personnalisation
 
 ## 🎨 Personnalisation par Projet

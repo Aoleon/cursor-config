@@ -98,12 +98,12 @@ fi
 # Personnaliser .cursorrules si nécessaire
 if [ "$PROJECT_NAME" != "Mon Projet" ]; then
     info "Personnalisation pour $PROJECT_NAME..."
-
+    
     # Utiliser sed compatible (macOS et Linux)
     # Échapper les caractères spéciaux pour sed
     ESCAPED_PROJECT_NAME=$(printf '%s\n' "$PROJECT_NAME" | sed 's/[[\.*^$()+?{|]/\\&/g')
     ESCAPED_DESCRIPTION=$(printf '%s\n' "$PROJECT_DESCRIPTION" | sed 's/[[\.*^$()+?{|]/\\&/g')
-
+    
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i.bak \
             -e "s/Saxium/${ESCAPED_PROJECT_NAME}/g" \

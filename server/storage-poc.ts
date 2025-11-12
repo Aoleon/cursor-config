@@ -1104,10 +1104,10 @@ export class DatabaseStorage implements IStorage {
       query = query.where(eq(projectFeedbackTerrain.status, filters.status as unknown));
     }
     if (filters?.feedbackType) {
-      query = query.where(eq(projectFeedbackTerrain.feedbackType, filters.feedbackTas unknown)unknown));
+      query = query.where(eq(projectFeedbackTerrain.feedbackType, filters.feedbackType as unknown));
     }
     if (filters?.severity) {
-      query = query.where(eq(projectFeedbackTerrain.severity, filters.sas unknown) as unknown));
+      query = query.where(eq(projectFeedbackTerrain.severity, filters.severity as unknown));
     }
     
     return await query.orderBy(desc(projectFeedbackTerrain.createdAt));
@@ -1145,10 +1145,10 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(savDemandes.projectId, filters.projectId));
     }
     if (filters?.status) {
-      conditions.push(eq(savDemandes.status, filas unknown)aas unknunknown)unknown));
+      conditions.push(eq(savDemandes.status, filters.status as unknown));
     }
     if (filters?.demandeType) {
-      conditions.push(eq(savDemandes.demandeType, filtas unknown)aas unknunknown)unknown any));
+      conditions.push(eq(savDemandes.demandeType, filters.demandeType as unknown));
     }
     if (filters?.dateFrom) {
       conditions.push(gte(savDemandes.createdAt, filters.dateFrom));

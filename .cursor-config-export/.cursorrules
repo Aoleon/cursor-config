@@ -1,4 +1,4 @@
-# Règles Cursor - Test Project
+# Règles Cursor - Saxium
 
 **Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
 **Version:** 3.0.0  
@@ -12,7 +12,7 @@ Les règles complètes sont organisées dans `.cursor/rules/` et sont automatiqu
 
 ### Contexte du Projet
 
-Test Project est une Test Description pour **JLM Menuiserie** (BTP/Menuiserie française). Stack: React 19 + TypeScript, Express 5, PostgreSQL (Drizzle ORM), IA multi-modèles (Claude Sonnet 4 + GPT-5).
+Saxium est une application full-stack de gestion de projets pour **JLM Menuiserie** (BTP/Menuiserie française). Stack: React 19 + TypeScript, Express 5, PostgreSQL (Drizzle ORM), IA multi-modèles (Claude Sonnet 4 + GPT-5).
 
 **Architecture:** Migration progressive vers modules (`server/modules/*`), services métier (`server/services/*`), types partagés (`shared/schema.ts`)
 

@@ -92,10 +92,10 @@ export const createError = {
   forbidden: (message: string = 'Accès interdit') => 
     new AppError(message, 403, ErrorType.AUTHORIZATION),
   
-  conflict: (message: string, deta: unknown)unknown) => 
+  conflict: (message: string, details?: unknown) => 
     new AppError(message, 409, ErrorType.CONFLICT, details),
   
-  badRequest: (message: string, : unknown)unknown)unknown) => 
+  badRequest: (message: string, details?: unknown) => 
     new AppError(message, 400, ErrorType.BAD_REQUEST, details),
   
   fileUpload: (message: stri: unknown)unknown)unknown any) => 

@@ -236,21 +236,19 @@ export class DateAlertDetectionService {
         }
       }
       
-      logger.info('Détection risques de retard', { metadata: {
+      logger.info('Détection risques de retard', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectDelayRisks',
           alertsCount: alerts.length
-              }
-
-            });
+                }
+      });
       return alerts;
     },
     {
-      operation: 'constructor',
+      operation: 'detectDelayRisks',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      return [];
+      metadata: {}
     }
   );
   }
@@ -297,21 +295,19 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      logger.info('Détection conflits de planning', { metadata: {
+      logger.info('Détection conflits de planning', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectPlanningConflicts',
           alertsCount: alerts.length
-              }
-
-            });
+        }
+      });
       return alerts;
     },
     {
-      operation: 'constructor',
+      operation: 'detectPlanningConflicts',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      return [];
+      metadata: {}
     }
   );
   }
@@ -378,22 +374,19 @@ export class DateAlertDetectionService {
         if (alert) alerts.push(alert);
       }
       
-      logger.info('Détection échéances critiques', { metadata: {
+      logger.info('Détection échéances critiques', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectCriticalDeadlines',
-          alertsCount: alerts.length   
-              }
-                   }
-
-                 });
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
     },
     {
-      operation: 'constructor',
+      operation: 'detectCriticalDeadlines',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      return [];
+      metadata: {}
     }
   );
   }
@@ -437,22 +430,19 @@ export class DateAlertDetectionService {
         }
       }
       
-      logger.info('Détection opportunités d\'optimisation', { metadata: {
+      logger.info('Détection opportunités d\'optimisation', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'detectOptimizationOpportunities',
-          alertsCount: alerts.length   
-              }
-                   }
-
-                 });
+          alertsCount: alerts.length
+        }
+      });
       return alerts;
     },
     {
-      operation: 'constructor',
+      operation: 'detectOptimizationOpportunities',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      return [];
+      metadata: {}
     }
   );
   }

@@ -193,10 +193,10 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
           method: 'POST',
           userId: req.user?.id
 
-              }
+                      }
 
 
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
       const testProjects = [
         {
@@ -378,10 +378,10 @@ export function createTestingRouter(storage: IStorage, eventBus: EventBus): Rout
           method: 'POST',
           userId: req.user?.id
 
-              }
+                      }
 
 
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
       
       const serverInfo = await collectServerInfo();
       

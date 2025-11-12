@@ -56,10 +56,10 @@ export class MondaySchemaAnalyzer {
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
     return withErrorHandling(
     async () => {
       // Récupérer les boards à analyser
@@ -80,10 +80,10 @@ export class MondaySchemaAnalyzer {
           totalBoards: result.totalBoards,
           totalColumns: result.totalColumns 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
 
       return result;
 
@@ -115,10 +115,10 @@ export class MondaySchemaAnalyzer {
           boardId,
           cacheHit: true 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
       return cached;
     }
     logger.info('Analyse structure board', { metadata: {
@@ -167,10 +167,10 @@ export class MondaySchemaAnalyzer {
           columnCount: enrichedColumns.length,
           cacheTTL: this.CACHE_TTL 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
       return structure;
     },
     {
@@ -198,10 +198,10 @@ export class MondaySchemaAnalyzer {
         mondayColumns: boardStructure.columns.length,
         saxiumFields: saxiumFields.length 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
     const suggestions = new Map<string, { saxiumField: string; confidence: number; reason: string }>();
     for (const column of boardStructure.columns) {
       const match = this.findBestMatch(column, saxiumFields);
@@ -214,10 +214,10 @@ export class MondaySchemaAnalyzer {
             saxiumField: match.saxiumField,
             confidence: match.confidence 
 
-                }
+                        }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
       }
 
     logger.info('Suggestions mapping générées', { metadata: {
@@ -226,10 +226,10 @@ export class MondaySchemaAnalyzer {
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
     return suggestions;
   }
   /**
@@ -268,10 +268,10 @@ export class MondaySchemaAnalyzer {
           service: 'MondaySchemaAnalyzer',
           operation: 'parseSettings' 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
       return {};
     }
 

@@ -52,7 +52,7 @@ export enum ErrorType {
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly type: ErrorType;
-  public readonly deta: unknown;unknown;
+  public readonly details?: unknown;
   public readonly isOperational: boolean;
 
   constructor(
@@ -72,6 +72,7 @@ export class AppError extends Error {
     // Maintenir la stack trace pour le debugging
     Error.captureStackTrace(this, this.constructor);
   }
+}
 
 // Helper pour créer des erreurs communes
 export const createError = {

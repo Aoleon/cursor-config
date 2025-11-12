@@ -113,10 +113,10 @@ export class SafetyGuardsService {
         service: 'SafetyGuardsService',
         operation: 'constructor' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   // ========================================
   // CIRCUIT BREAKERS PROTECTION
@@ -149,10 +149,10 @@ export class SafetyGuardsService {
         operation: 'initializeCircuitBreakers',
         breakers: breakers 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   /**
    * Vérifie l'état d'un circuit breaker avant opération
@@ -245,10 +245,10 @@ export class SafetyGuardsService {
           componentName,
           failureCount: breaker.failureCount 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     }
 
   // ========================================
@@ -275,10 +275,10 @@ export class SafetyGuardsService {
         service: 'SafetyGuardsService',
         operation: 'startSystemMonitoring' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   /**
    * Met à jour les métriques système
@@ -370,10 +370,10 @@ export class SafetyGuardsService {
         reason,
         aggressiveness: this.adaptiveConfig.preloadingAggressiveness 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   /**
    * Désactive le throttling système
@@ -397,10 +397,10 @@ export class SafetyGuardsService {
         reason,
         duration: Math.round(throttleDuration/1000) 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   /**
    * Gestion surcharge système critique
@@ -416,10 +416,10 @@ export class SafetyGuardsService {
         memoryUsage: this.systemMetrics.memoryUsage,
         stack: new Error().stack 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     // Actions d'urgence
     await this.emergencyResourceCleanup();
     // Arrêt temporaire preloading
@@ -434,10 +434,10 @@ export class SafetyGuardsService {
                   operation: 'handleCriticalOverload',
             circuitBreaker: name 
 
-                }
+                        }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
 
   // ========================================
@@ -510,10 +510,10 @@ export class SafetyGuardsService {
         aggressiveness: newAggressiveness.toFixed(1),
         confidenceThreshold: this.adaptiveConfig.predictionConfidenceThreshold.toFixed(1) 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   // ========================================
   // MEMORY MANAGEMENT & CLEANUP

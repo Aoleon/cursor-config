@@ -134,10 +134,10 @@ export class MicrosoftOAuthService {
               hasAccessToken: !!accessToken,
               hasRefreshToken: !!refreshToken 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
           return done(null, authenticatedUser);
     },
     {
@@ -206,10 +206,10 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
         hasAccessToken: !!data.access_token,
         hasRefreshToken: !!data.refresh_token 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,

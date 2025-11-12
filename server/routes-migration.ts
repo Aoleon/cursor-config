@@ -313,10 +313,10 @@ migrationRoutes.get('/status',
         route: '/api/migration/status',
         isRunning: status.isRunning
 
-            }
+                    }
 
 
-                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                      });
     
     res.json({
       success: true,
@@ -363,10 +363,10 @@ migrationRoutes.post('/validate',
         errorsCount: validation.errors.length,
         warningsCount: validation.warnings.length
 
-            }
+                    }
 
 
-                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                      });
     
     const response: unknown = {
       success: true,
@@ -530,10 +530,10 @@ migrationRoutes.get('/sample-data',
         aosCount: sampleData.aos.length,
         projectsCount: sampleData.projects.length
 
-            }
+                    }
 
 
-                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                      });
     
     res.json({
       success: true,

@@ -192,10 +192,10 @@ export async function registerRoutes(app: Express) {
                       module: 'Routes',
                       operation: 'warmupCache'
 
-                    }
+                            }
 
             
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         },
         {
           operation: 'registerRoutes',

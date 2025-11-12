@@ -162,14 +162,15 @@ export class ChatbotOrchestrationService {
     const cachedResult = this.getCacheLRU(cacheKey);
     
     if (cachedResult) {
-      logger.info('Cache hit LRU', { metadata: {
+      logger.info('Cache hit LRU', {
+        metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'processQueryParallel',
           cacheKey,
           queryType: queryPattern.queryType,
-          complexity: queryComplexity   
-              }
-             } });
+          complexity: queryComplexity
+                }
+      });
       // Retourner le résultat caché avec enrichissement
       return {
         ...cachedResult,
@@ -179,7 +180,8 @@ export class ChatbotOrchestrationService {
           ...cachedResult.metadata,
           cache_source: 'lru',
           original_execution_time: cachedResult.execution_time_ms
-               });
+                }
+      };
     }
 
     // === INSTRUMENTATION PERFORMANCE : Démarrage tracing pipeline parallèle ===
@@ -210,13 +212,14 @@ export class ChatbotOrchestrationService {
       const circuitBreakerCheck = this.performanceMetrics.checkCircuitBreaker();
       const circuitBreakerTime = Date.now() - circuitBreakerStartTime;
       if (!circuitBreakerCheck.allowed) {
-        logger.warn('Circuit breaker ouvert, fallback séquentiel', { metadata: {
+        logger.warn('Circuit breaker ouvert, fallback séquentiel', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleParallelQuery',
+            operation: 'handleParallelQuery',
             reason: circuitBreakerCheck.reason,
-            context: { fallback: 'sequential'   
-            }
-          });
+            context: { fallback: 'sequential' }
+          }
+        });
         this.performanceMetrics.endStep(traceId, 'circuit_breaker_check', false, { 
           circuitBreakerTime,
           reason: circuitBreakerCheck.reason,
@@ -237,14 +240,15 @@ export class ChatbotOrchestrationService {
       const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        logger.info('Action détectée', { metadata: {
+        logger.info('Action détectée', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleQuery',
+            operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
-            context: { detectionStep: 'action_intention'    
-                }
-          });
+            context: { detectionStep: 'action_intention' }
+          }
+        });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
           detectionTime: actionDetectionTime,
@@ -267,7 +271,8 @@ export class ChatbotOrchestrationService {
             userRole: request.userRole,
                   sessionId: request.sessionId,
             conversationId,
-            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true  
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence, parallelMode: true }
+          };
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
           await this.performanceMetrics.endPipelineTrace(
             traceId, request.userId, request.userRole, request.query, 
@@ -374,7 +379,8 @@ export class ChatbotOrchestrationService {
           context: { parallelExecution: 'context_model_dispatch' },
           queryType: queryPattern.queryType,
           complexity: queryComplexity
-        });
+        }
+      });
       // Préparation des promesses parallèles avec contexte enrichi
       const businessContextRequest = {
         userId: request.userId,
@@ -432,12 +438,13 @@ export class ChatbotOrchestrationService {
       });
       // Validation de réussite minimum
       if (!contextSuccess && !modelSuccess) {
-        logger.warn('Échec total parallélisme, fallback séquentiel', { metadata: {
+        logger.warn('Échec total parallélisme, fallback séquentiel', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleParallelQuery',
-            context: { fallback: 'sequential_mode'   
-            }
-          });
+            operation: 'handleParallelQuery',
+            context: { fallback: 'sequential_mode' }
+          }
+        });
         this.performanceMetrics.endParallelTrace(traceId, 'context_and_model_parallel', false, {
           contextSuccess,
           modelSuccess,
@@ -469,21 +476,23 @@ export class ChatbotOrchestrationService {
       };
       // Fallback partiel si nécessaire
       if (!contextSuccess) {
-        logger.warn('Contexte échoué, contexte minimal', { metadata: {
+        logger.warn('Contexte échoué, contexte minimal', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleParallelQuery',
-            context: { fallback: 'minimal_context'   
-            }
-          });
+            operation: 'handleParallelQuery',
+            context: { fallback: 'minimal_context' }
+          }
+        });
         // Continuer avec contexte minimal mais modèle OK
       }
       if (!modelSuccess) {
-        logger.warn('Sélection modèle échouée, modèle par défaut', { metadata: {
+        logger.warn('Sélection modèle échouée, modèle par défaut', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleParallelQuery',
-            context: { fallback: 'default_model'   
-            }
-          });
+            operation: 'handleParallelQuery',
+            context: { fallback: 'default_model' }
+          }
+        });
         // Continuer avec modèle par défaut mais contexte OK
       }
       // ========================================
@@ -709,12 +718,13 @@ export class ChatbotOrchestrationService {
               }
       );
       // Fallback vers méthode séquentielle en cas d'erreur critique
-      logger.info('Fallback séquentiel après erreur parallèle', { metadata: {
+      logger.info('Fallback séquentiel après erreur parallèle', {
+        metadata: {
           service: 'ChatbotOrchestrationService',
           operation: 'handleParallelQuery',
-          context: { fallback: 'sequential_after_error'    
-              }
-          });
+          context: { fallback: 'sequential_after_error' }
+        }
+      });
       return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
     }
   }
@@ -794,14 +804,15 @@ export class ChatbotOrchestrationService {
       const actionIntention = this.actionExecutionService.detectActionIntention(request.query);
       const actionDetectionTime = Date.now() - actionDetectionStartTime;
       if (actionIntention.hasActionIntention && actionIntention.confidence > 0.7) {
-        logger.info('Action détectée', { metadata: {
+        logger.info('Action détectée', {
+          metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleQuery',
+            operation: 'handleQuery',
             actionType: actionIntention.actionType,
             entity: actionIntention.entity,
-            context: { detectionStep: 'action_intention'    
-                }
-          });
+            context: { detectionStep: 'action_intention' }
+          }
+        });
         this.performanceMetrics.endStep(traceId, 'context_generation', true, { 
           step: 'action_detected',
           detectionTime: actionDetectionTime,

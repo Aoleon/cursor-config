@@ -415,10 +415,10 @@ export class HandlebarsTemplateService {
           service: 'EmailService',
           operation: 'renderTemplate' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     let result = template;
     Object.entries(data).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
@@ -477,10 +477,10 @@ export class HandlebarsTemplateService {
         operation: 'constructor',
         provider: 'SendGrid' 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     }
 
   /**
@@ -614,10 +614,10 @@ export class HandlebarsTemplateService {
           htmlLength: htmlContent.length,
           textLength: textContent.length 
 
-                                                                                                                                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                                                                                                                                              }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
       // Validation du rendu conditionnel pour les instructions
       if (emailData.templateId === 'SUPPLIER_INVITATION') {
         if (emailData.dynamicData.instructions) {
@@ -626,20 +626,20 @@ export class HandlebarsTemplateService {
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         } else {
           logger.info('Pas d\'instructions - bloc conditionnel masqué', { metadata: {
         service: 'EmailService',
         operation: 'sendSupplierInvitation',
         provider: 'SendGrid' 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         }
       return {
         success: true,
@@ -775,10 +775,10 @@ logger.info('Service actif', { metadata: {
         operation: 'init',
         serviceName: emailService.constructor.name 
 
-        }
+                }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 // ========================================
 // HELPER FUNCTIONS POUR WORKFLOW FOURNISSEURS
 // ========================================
@@ -825,10 +825,10 @@ export function scheduleSessionReminders(session: SupplierQuoteSession): void {
         operation: 'scheduleSessionReminders',
         sessionId: session.id 
 
-          }
+                  }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 }
 // ========================================
 // EXPORTS POUR COMPATIBILITÉ ET USAGE FACILE

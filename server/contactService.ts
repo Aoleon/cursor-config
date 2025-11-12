@@ -353,9 +353,8 @@ export class ContactService {
                       id: existingMatch.contact.id,
               confidence: Math.round(existingMatch.confidence * 100),
               reason: existingMatch.reason
-                    }
+                          }
                         });
-          reason: 'Nouveau maître d\'œuvre créé automatiquement'
         };
       }
       
@@ -537,5 +536,5 @@ export class ContactService {
                 lastName: existingMatch.contact.lastName,
             confidence: existingMatch.confidence,
             reason: existingMatch.reason
-              }
+                    }
                   });

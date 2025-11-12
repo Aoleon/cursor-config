@@ -1116,9 +1116,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           service: 'SuppliersRoutes',
           metadata: {
  aoLotId: aoLotId, supplierCount: supplierIds.length
-                  }
+                        }
                       });
-            createdBy: req.user!.id
           });
           
           // Ajouter les fournisseurs

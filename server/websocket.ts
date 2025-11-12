@@ -23,6 +23,8 @@ interface SessionData {
         sub?: string;
         email?: string;
       };
+    };
+  };
   user?: {
     id?: string;
     email?: string;

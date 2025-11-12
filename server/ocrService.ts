@@ -400,8 +400,8 @@ export class OCRService {
   private safePatternMatch(text: string, patterns: RegExp[]): RegExpMatchArray | null {
     for (const pattern of patterns) {
       const match = this.safeMatch(text, pattern);
-      if (match) {}
-returnmatch;
+      if (match) {
+        return match;
       }
     }
     return null;
@@ -435,12 +435,12 @@ returnmatch;
     
     try {
       this.isInitializingTesseract = true;
-      logger.info('Initialisation Tesseract worker', { metadata: {
+      logger.info('Initialisation Tesseract worker', {
+        metadata: {
           service: 'OCRService',
           operation: 'initialize'
-              }
-
-            });
+        }
+      });
       
       this.tesseractWorker = await createWorker(['fra', 'eng']);
       await this.tesseractWorker.setParameters({
@@ -755,7 +755,7 @@ returnmatch;
   /**
    * Mappe une finition spéciale vers l'enum approprié
    */
-  private mapSpecialFinishToEnum(finish: strinunknown any {
+  private mapSpecialFinishToEnum(finish: string): string {
     const finishLower = finish.toLowerCase();
     // Retourner la finition spéciale appropriée
     return finishLower;

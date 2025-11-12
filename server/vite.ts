@@ -12,7 +12,8 @@ export async function setupVite(app: Express, server: Server) {
       middlewareMode: true,
       hmr: {
         server,
-      },
+      }
+    },
     appType: "custom",
   });
   // Stocker l'instance Vite pour l'utiliser ailleurs

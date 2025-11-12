@@ -313,10 +313,10 @@ export class TechnicalMetricsService {
           traceId,
           totalDuration: timings.total 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     },
     {
       operation: 'statistics',
@@ -371,10 +371,10 @@ export class TechnicalMetricsService {
         operation: 'recordParallelismFailure',
         consecutiveFailures: this.circuitBreakerFailureCount 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
   }
   /**
    * Record parallelism success

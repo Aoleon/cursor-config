@@ -183,18 +183,18 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     logger.info('Utilisation données analysées réelles (non synthétiques)', { metadata: {
         service: 'MondayProductionMigrationService',
         operation: 'migrateProductionData' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     
     this.resetWarnings();
     
@@ -234,10 +234,10 @@ export class MondayProductionMigrationService {
           totalErrors,
           duration: result.duration 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
       if (this.warnings.length > 0) {
         logger.info('Warnings non bloquants', { metadata: {
             service: 'MondayProductionMigrationService',
@@ -269,10 +269,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'loadJLMAnalyzedData' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     return {
       aos: this.generateJLMRealisticAOs(911),      // Basé analyse AO_Planning  
       projects: this.generateJLMRealisticProjects(1000)  // Basé analyse CHANTIERS
@@ -394,10 +394,10 @@ export class MondayProductionMigrationService {
         operation: 'migrateAnalyzedAOs',
         count: aoData.length 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     const results: BatchResult[] = [];
     for (const [index, ao] of aoData.entries()) {
       await withErrorHandling(
@@ -422,10 +422,10 @@ export class MondayProductionMigrationService {
               total: aoData.length,
               percentage: Math.round(((index + 1) / aoData.length) * 100) 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         }
     },
     {
@@ -447,10 +447,10 @@ export class MondayProductionMigrationService {
         operation: 'migrateAnalyzedProjects',
         count: projectData.length 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     const results: BatchResult[] = [];
     for (const [index, project] of projectData.entries()) {
       await withErrorHandling(
@@ -475,10 +475,10 @@ export class MondayProductionMigrationService {
               total: projectData.length,
               percentage: Math.round(((index + 1) / projectData.length) * 100) 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         }
     },
     {
@@ -678,10 +678,10 @@ export class MondayProductionMigrationService {
         totalLines,
         validationRate: Math.round(migrationResult.validationRate * 100) 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     if (failed.length > 0) {
       logger.info('Erreurs migration batch', { metadata: {
           service: 'MondayProductionMigrationService',
@@ -703,10 +703,10 @@ export class MondayProductionMigrationService {
         service: 'MondayProductionMigrationService',
         operation: 'validateProductionData' 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     let totalWarnings = 0;
     let totalErrors = 0;
     let dateFormatIssues = 0;
@@ -746,10 +746,10 @@ export class MondayProductionMigrationService {
         warnings: result.warnings,
         dateFormatIssues: result.dateFormatIssues 
 
-            }
+                    }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     return result;
   }
   /**

@@ -93,10 +93,10 @@ service: 'OneDriveSyncService',
           errors: result.errors.length,
           duration: result.duration 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
       // Émettre un événement de synchronisation
       if (this.eventBus) {
@@ -284,10 +284,10 @@ service: 'OneDriveSyncService',
               fileName: doc.name,
               aoReference: matchedAO.reference 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
           linkedCount++;
         }
 

@@ -49,10 +49,10 @@ export class MondayWebhookService {
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     }
     // Extract data
     const { pulseId, itemId, boardId, type, columnValues, userId } = event;
@@ -122,10 +122,10 @@ export class MondayWebhookService {
           boardId,
           itemId: itemIdentifier 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
     },
     {
       operation: 'processWebhook',

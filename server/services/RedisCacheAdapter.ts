@@ -30,10 +30,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
                     operation: 'retryStrategy',
               attempts: times 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
           return null;
         }
         const delay = Math.min(times * 1000, 5000);
@@ -43,10 +43,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
             attempt: times,
             delayMs: delay 
 
-                }
+                        }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
         return delay;
       },
       reconnectOnError: (err) => {
@@ -61,20 +61,20 @@ export class RedisCacheAdapter implements ICacheAdapter {
           service: 'RedisCacheAdapter',
           operation: 'connect' 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
     this.client.on('ready', () => {
       logger.info('[RedisCacheAdapter] Redis client ready', { metadata: {
           service: 'RedisCacheAdapter',
           operation: 'ready' 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
     this.client.on('error', (error) => {
       this.isConnected = false;
@@ -83,10 +83,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
           operation: 'error',
           error: error.message 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
     this.client.on('close', () => {
       this.isConnected = false;
@@ -94,10 +94,10 @@ export class RedisCacheAdapter implements ICacheAdapter {
           service: 'RedisCacheAdapter',
           operation: 'close' 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
     logger.info('[RedisCacheAdapter] Initialized', { metadata: {
         service: 'RedisCacheAdapter',

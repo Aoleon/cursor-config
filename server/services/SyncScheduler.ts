@@ -51,10 +51,10 @@ export class SyncScheduler {
           cronExpression,
           nextRun: this.getNextRun() 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
       await this.storage.updateSyncConfig({
         nextSyncAt: this.getNextRun()
       });
@@ -133,10 +133,10 @@ export class SyncScheduler {
               documentsAdded: result.documentsAdded,
               documentsUpdated: result.documentsUpdated 
 
-                  }
+                          }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
     },
     {
       operation: 'constructor',
@@ -191,10 +191,10 @@ service: 'SyncScheduler',
           operation: 'runSync',
           error: error instanceof Error ? error.message : String(error) 
 
-              }
+                      }
  
               
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
     } finally {
       this.isRunning = false;
     }

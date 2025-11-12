@@ -72,6 +72,7 @@ class Logger {
       // Format JSON pour production (facilite parsing par outils monitoring)
       return JSON.stringify(entry);
     }
+  }
 
   /**
    * Emoji pour visualisation rapide du niveau

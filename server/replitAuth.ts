@@ -69,10 +69,10 @@ export function getSession() {
         operation: 'getSession',
         context: { store: 'postgresql' 
 
-            }
+                    }
  
 
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
   }
   
   // Configuration adaptée selon l'environnement
@@ -756,10 +756,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         sessionUserId: session?.user?.id,
         userType: session?.user?.isBasicAuth ? 'basic_auth' : (user ? 'oidc' : 'none')
 
-                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                      }
 
 
-                                                                                                                                                                                                                                                                        });
+                                                                                                                                                                                                                                                                              });
 
   // CORRECTIF URGENT - Vérifier d'abord si c'est un utilisateur basic auth
   if (session?.user?.isBasicAuth) {

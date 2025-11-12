@@ -165,14 +165,12 @@ export class ContextBuilderService {
 
       // Système classique si tiéré désactivé ou configuration basique
       return await this.buildClassicContext(config);
-
-    
     },
     {
-      operation: 'constructor',
+      operation: 'buildContextualData',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
 
   /**
    * PHASE 3 : Construction contexte avec système tiéré adaptatif
@@ -238,35 +236,40 @@ export class ContextBuilderService {
               confidence: tierDetectionResult.confidence
             });
           }
-          logger.info('Tier détecté', { metadata: {
+          logger.info('Tier détecté', {
+            metadata: {
               service: 'ContextBuilderService',
-                    operation: 'generateTieredContext',
+                      operation: 'generateTieredContext',
               detectedTier: tierDetectionResult.detectedTier,
               confidence: tierDetectionResult.confidence.toFixed(2),
               context: {
                 detectionStep: 'tier_detected'
-                  }
-            });
-          } catch (error) {
-            logger.warn('Erreur détection tier', { metadata: {
+                    }
+            }
+          });
+        } catch (error) {
+          logger.warn('Erreur détection tier', {
+            metadata: {
               service: 'ContextBuilderService',
                       operation: 'generateTieredContext',
                       error: error instanceof Error ? error.message : String(error)
-            }});
-          }
+            }
+          });
         }
       } else {
         // Tier forcé ou détection désactivée
         const forcedTier = config.tierConfig?.forceTier || 'comprehensive';
         selectedProfile = this.contextTierService.getContextProfile(forcedTier, config.entityType, 'system');
-        logger.info('Tier forcé', { metadata: {
+        logger.info('Tier forcé', {
+          metadata: {
             service: 'ContextBuilderService',
-                  operation: 'generateTieredContext',
+                    operation: 'generateTieredContext',
             forcedTier,
             context: {
               tierSelection: 'forced'
             }
-          });
+          }
+        });
       }
       // 4. CONSTRUCTION SÉLECTIVE selon profil tier
       if (traceId && this.performanceMetricsService) {
@@ -292,14 +295,16 @@ export class ContextBuilderService {
       const criticalDataPreserved = this.contextTierService.validateMinimalContext(contextData, selectedProfile);
       // 7. Fallback si validation échoue
       if (!criticalDataPreserved && this.FALLBACK_TO_COMPREHENSIVE && selectedProfile.tier !== 'comprehensive') {
-        logger.warn('Échec validation tier, fallback COMPREHENSIVE', { metadata: {
+        logger.warn('Échec validation tier, fallback COMPREHENSIVE', {
+          metadata: {
             service: 'ContextBuilderService',
-                  operation: 'generateTieredContext',
+                    operation: 'generateTieredContext',
             attemptedTier: selectedProfile.tier,
             context: {
               fallbackTier: 'COMPREHENSIVE'
             }
-          });
+          }
+        });
         const fallbackProfile = this.contextTierService.getContextProfile('comprehensive', config.entityType, 'system');
         const fallbackContext = await this.buildSelectiveContext(config, fallbackProfile);
         Object.assign(contextData, fallbackContext);
@@ -347,14 +352,15 @@ export class ContextBuilderService {
           menuiserieContextMaintained: this.validateMenuiserieContext(contextData)
         }
       };
-      logger.info('Contexte tiéré généré', { metadata: {
+      logger.info('Contexte tiéré généré', {
+        metadata: {
           service: 'ContextBuilderService',
           operation: 'generateTieredContext',
           tier: selectedProfile.tier,
           executionTime,
           tokenEstimate: contextData.tokenEstimate,
           tokenReductionPercent: tokenReductionPercentage.toFixed(1)
-              }
+                }
       });
       return result;
     }, {
@@ -362,39 +368,22 @@ export class ContextBuilderService {
       service: 'ContextBuilderService',
       metadata: {}
     });
-  } catch (error) {
-      logger.error('Erreur contexte tiéré', { metadata: {
-          service: 'ContextBuilderService',
-          operation: 'generateTieredContext',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined   
-              
-              }
-      });
-      if (traceId && this.performanceMetricsService) {
-        this.performanceMetricsService.endStep(traceId, 'context_generation', false);
-        await this.performanceMetricsService.endPipelineTrace(
-          traceId, 'system', 'system', 
-          config.query || '', 'complex', false, false, 
-          { error: error.message }
-        );
-      }
-      return this.buildTieredErrorResult('unknown', 'Erreur système tiéré', error);
-    }
   }
   /**
    * Construction contexte classique (système original)
    */
   async buildClassicContext(config: ContextGenerationConfig): Promise<ContextGenerationResult> {
-    logger.info('Mode CLASSIQUE', { metadata: {
+    logger.info('Mode CLASSIQUE', {
+      metadata: {
         service: 'ContextBuilderService',
         operation: 'generateClassicContext',
         entityType: config.entityType,
         entityId: config.entityId,
         context: {
           mode: 'classic'
-            }
-      });
+              }
+      }
+    });
     // 1. Validation de la configuration
     const validationResult = this.validateConfig(config);
     if (!validationResult.valid) {
@@ -483,13 +472,13 @@ export class ContextBuilderService {
     return withErrorHandling(
     async () => {
       const startTime = Date.now();
-      logger.info('Construction contexte AO optimisée', { metadata: {
+      logger.info('Construction contexte AO optimisée', {
+        metadata: {
           service: 'ContextBuilderService',
           operation: 'buildAoContext',
           aoId: config.entityId
-              }
-
-            });
+                }
+      });
       // OPTIMISATION: Requête groupée avec index composite ao_entity_status_priority_idx
       const [aoResults, lotsResults, offersResults] = await Promise.all([
         // Données principales AO avec utilisation index
@@ -539,15 +528,15 @@ export class ContextBuilderService {
           service: 'ContextBuilderService',
           operation: 'buildAoContext',
           queryTimeMs: queryTime
-        }
+                }
       });
       // OPTIMISATION: Requêtes relationnelles parallèles
       const [maitreouvrage, maitreoeuvreData] = await Promise.all([
         // Maître d'ouvrage
         aoData.maitreOuvrageId ? 
           db.select({
-                id: maitresOuvrage.id,
-                nom: maitresOuvrage.nom,
+                  id: maitresOuvrage.id,
+                  nom: maitresOuvrage.nom,
             typeClient: maitresOuvrage.typeClient
           })
           .from(maitresOuvrage)
@@ -558,9 +547,9 @@ export class ContextBuilderService {
         // Maître d'œuvre avec contacts (jointure optimisée)
         aoData.maitreOeuvreId ?
           db.select({
-                id: maitresOeuvre.id,
-                nom: maitresOeuvre.nom,
-                specialites: maitresOeuvre.specialites,
+                  id: maitresOeuvre.id,
+                  nom: maitresOeuvre.nom,
+                  specialites: maitresOeuvre.specialites,
             contactNom: contactsMaitreOeuvre.nom,
             contactEmail: contactsMaitreOeuvre.email,
             contactTelephone: contactsMaitreOeuvre.telephone
@@ -578,13 +567,13 @@ export class ContextBuilderService {
       contextData.relationalContext = {
         mainActors: {
           client: {
-                name: maitreouvrage?.nom || 'Client non spécifié',
+                  name: maitreouvrage?.nom || 'Client non spécifié',
             type: 'private', // Simplifié pour le moment
             recurrency: 'Nouveau client', // À enrichir avec historique
             criticalRequirements: this.extractCriticalRequirements(aoData, lots)
           },
           architect: maitreoeuvre ? {
-                name: maitreoeuvre.nom,
+                  name: maitreoeuvre.nom,
             experience: 'Confirmé', // À enrichir avec données
             previousCollaborations: 0, // À calculer
             specialties: [maitreoeuvre.specialites || 'Non spécifié']
@@ -603,7 +592,7 @@ export class ContextBuilderService {
           recommendedSuppliers: [],
           blacklistedSuppliers: [],
           strategicPartners: []
-        });
+        }
       };
       // Construction du contexte métier simplifié
       contextData.businessContext = {
@@ -640,10 +629,10 @@ export class ContextBuilderService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'buildAOContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   /**
    * Construit le contexte pour une Offre (OPTIMISÉ POUR INDEX)
    */
@@ -651,13 +640,13 @@ export class ContextBuilderService {
     return withErrorHandling(
     async () => {
       const startTime = Date.now();
-      logger.info('Construction contexte Offre optimisée', { metadata: {
+      logger.info('Construction contexte Offre optimisée', {
+        metadata: {
           service: 'ContextBuilderService',
           operation: 'buildOfferContext',
           offerId: config.entityId
-              }
-
-            });
+                }
+      });
       // OPTIMISATION: Requêtes groupées avec index composites offer_ao_status_idx et offer_status_created_idx
       const [offerResults, chiffrageResults, milestonesResults, beWorkloadResults] = await Promise.all([
         // Offre avec AO associé (JOIN optimisé avec index)
@@ -705,21 +694,20 @@ export class ContextBuilderService {
       const offerData = offerResults[0];
       if (!offerData) {
         throw new NotFoundError(`Offre ${config.entityId}`);
-      });
+      }
       const chiffrageItems = chiffrageResults;
       const milestones = milestonesResults;
       const beWorkloadData = beWorkloadResults;
       this.addToMetrics('offers', 'aos', 'chiffrageElements', 'validationMilestones', 'beWorkload');
       const queryTime = Date.now() - startTime;
-      logger.info('Requêtes Offre optimisées', { metadata: {
+      logger.info('Requêtes Offre optimisées', {
+        metadata: {
           service: 'ContextBuilderService',
           operation: 'buildOfferContext',
           queryTimeMs: queryTime,
-          chiffrageItemsCount: chiffrageItems.length   
-              }
-                   }
-
-                 });
+          chiffrageItemsCount: chiffrageItems.length
+                }
+      });
       // Construction contexte métier enrichi avec données optimisées
       contextData.businessContext = {
         currentPhase: offerData.offerStatus,
@@ -776,14 +764,14 @@ export class ContextBuilderService {
           dimensional: this.extractDimensionalConstraints(chiffrageItems),
           installation: this.extractInstallationConstraints(chiffrageItems),
           environmental: this.extractEnvironmentalConstraints(chiffrageItems)
-        });
+        }
       };
     },
     {
-      operation: 'constructor',
+      operation: 'buildOfferContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   /**
    * Construit le contexte pour un Projet
    */
@@ -902,10 +890,10 @@ export class ContextBuilderService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'buildProjectContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   /**
    * Construit le contexte pour un Fournisseur
    */
@@ -1001,10 +989,10 @@ export class ContextBuilderService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'buildSupplierContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   /**
    * Construit le contexte pour une Équipe
    */
@@ -1086,23 +1074,22 @@ export class ContextBuilderService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'buildTeamContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   /**
    * Construit le contexte pour un Client
    */
   private async buildClientContext(contextData: AIContextualData, config: ContextGenerationConfig): Promise<void> {
     // À implémenter selon le modèle client dans la base
-    logger.info('Construction contexte Client en cours de développement', { metadata: {
+    logger.info('Construction contexte Client en cours de développement', {
+      metadata: {
         service: 'ContextBuilderService',
         operation: 'buildClientContext',
-        status: 'in_development'   
-            }
-                   }
-
-                 });
+        status: 'in_development'
+      }
+    });
   }
   // ========================================
   // ENRICHISSEMENT CONTEXTUEL PAR TYPE
@@ -1627,15 +1614,14 @@ export class ContextBuilderService {
     config: ContextGenerationConfig,
     profile: ContextTierProfile
   ): Promise<AIContextualData> {
-    logger.info('Construction sélective tier', { metadata: {
+    logger.info('Construction sélective tier', {
+      metadata: {
         service: 'ContextBuilderService',
         operation: 'buildSelectiveContext',
         tier: profile.tier,
-        maxTokens: profile.maxTokens   
-            }
-                   }
-
-                 });
+        maxTokens: profile.maxTokens
+      }
+    });
     // 1. Initialisation contexte avec profil
     const contextData: AIContextualData = {
       entityType: config.entityType,
@@ -1688,10 +1674,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildSelectiveContext',
         tokenEstimate: contextData.tokenEstimate   
-            }
-                   }
-
-                 });
+            } });
     return contextData;
   });
   /**
@@ -1839,11 +1822,10 @@ case 'client':
       this.queryMetrics.executionTimeMs += Date.now() - startTime;
     },
     {
-      operation: 'constructor',
+      operation: 'buildSelectiveContext',
       service: 'ContextBuilderService',
-      metadata: {       }
-     });
-    }
+      metadata: {}
+    });
   }
   /**
    * Construction offre avec limitations selon profil  
@@ -1859,10 +1841,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildLimitedOfferContext',
         tier: profile.tier   
-            }
-                   }
-
-                 });
+            } });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1878,10 +1857,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildLimitedProjectContext',
         tier: profile.tier   
-            }
-                   }
-
-                 });
+            } });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1896,10 +1872,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildLimitedSupplierContext',
         tier: profile.tier   
-            }
-                   }
-
-                 });
+            } });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1914,10 +1887,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildLimitedTeamContext',
         tier: profile.tier   
-            }
-                   }
-
-                 });
+            } });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1932,10 +1902,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'buildLimitedClientContext',
         tier: profile.tier   
-            }
-                   }
-
-                 });
+            } });
     // TODO: Implémenter selon pattern buildAOContextLimited
   });
   /**
@@ -1995,10 +1962,7 @@ case 'client':
         service: 'ContextBuilderService',
         operation: 'performSelectiveEnrichment',
         priorityContextTypes: profile.priorityContextTypes.join(', ')   
-            }
-                   }
-
-                 });
+            } });
     // Enrichissement seulement pour types prioritaires
     for (const contextType of profile.priorityContextTypes) {
       switch (contextType) {
@@ -2340,9 +2304,7 @@ export function getContextBuilderService(
               
                 }
       });
-      }
-    }
-  });
+      } });
   return globalContextBuilderService;
 }
 /**

@@ -395,5 +395,5 @@ export async function waitForDatabase(
           module: 'DatabaseHelpers',
           operation: 'waitForDatabase',
           waitTime: Date.now() - startTime
-              }
+                    }
                   });

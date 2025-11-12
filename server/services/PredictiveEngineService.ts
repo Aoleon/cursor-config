@@ -325,11 +325,12 @@ export class PredictiveEngineService {
     setInterval(() => this.cleanupEntityAccess(), 30 * 60 * 1000); // Toutes les 30 minutes
     setInterval(() => this.updateBTPPatterns(), 2 * 60 * 60 * 1000); // Toutes les 2 heures
     
-    logger.info('Service initialisé avec preloading prédictif', { metadata: {
+    logger.info('Service initialisé avec preloading prédictif', {
+      metadata: {
         service: 'PredictiveEngineService',
         operation: 'constructor'
-        }       }
-     });
+      }
+    });
   }
   // ========================================
   // MÉTHODES PRINCIPALES
@@ -341,33 +342,38 @@ export class PredictiveEngineService {
     const cacheKey = this.getCacheKey('forecast_revenue', params);
     const cached = this.getCachedEntry<PredictiveRevenueForecast[]>(cacheKey);
     if (cached) {
-      logger.info('Cache hit', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'forecastRevenue',
-        cacheHit: true
-          }       }
-     });      return cached;
+      logger.info('Cache hit', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'forecastRevenue',
+          cacheHit: true
+                }
+      });
+      return cached;
     }
     return withErrorHandling(
       async () => {
-        logger.info('Calcul forecast revenue', { metadata: {
-          service: 'PredictiveEngineService',
-          operation: 'forecastRevenue',
-          params
-            }       }
-     });      // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
+        logger.info('Calcul forecast revenue', {
+          metadata: {
+            service: 'PredictiveEngineService',
+                    operation: 'forecastRevenue',
+            params
+          }
+        });
+        // 1. RÉCUPÉRATION DONNÉES HISTORIQUES
         const historicalData = await this.getMonthlyRevenueHistory({
           start_date: params.start_date,
           end_date: params.end_date
         });
         if (historicalData.length === 0) {
-          logger.info('Aucune donnée historique trouvée', { metadata: {
-          service: 'PredictiveEngineService',
-          operation: 'forecastRevenue'
-              }       }
-     });
-;       return [];
-                  }
+          logger.info('Aucune donnée historique trouvée', {
+            metadata: {
+              service: 'PredictiveEngineService',
+                      operation: 'forecastRevenue'
+            }
+          });
+          return [];
+        }
         // 2. ALGORITHMES FORECASTING
         let forecasts: ForecastPoint[] = [];
       
@@ -402,43 +408,49 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, results);
       
-      logger.info('Forecast calculé', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'forecastRevenue',
-        forecastCount: results.length
-          }       }
-     });
- ;  return results;
+      logger.info('Forecast calculé', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'forecastRevenue',
+          forecastCount: results.length
+        }
+      });
+      return results;
     },
     {
       operation: 'forecastRevenue',
       service: 'PredictiveEngineService',
-      metadata: {}       }
-     });
-  ; /**
+      metadata: {}
+    }
+  );
+  }
+
+  /**
    * Détection de risques projets avec scoring algorithmique
    */
   async detectProjectRisks(params: RiskQueryParams): Promise<ProjectRiskAssessment[]> {
     const cacheKey = this.getCacheKey('project_risks', params);
     const cached = this.getCachedEntry<ProjectRiskAssessment[]>(cacheKey);
     if (cached) {
-      logger.info('Cache hit', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'detectProjectRisks',
-        cacheHit: true
-          }       }
-     });
-   ;return cached;
+      logger.info('Cache hit', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'detectProjectRisks',
+          cacheHit: true
+        }
+      });
+      return cached;
     }
     return withErrorHandling(
     async () => {
-      logger.info('Détection risques projets', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'detectProjectRisks',
-        params
-          }       }
-     });
-    ;/ 1. DONNÉES HISTORIQUES DÉLAIS
+      logger.info('Détection risques projets', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'detectProjectRisks',
+          params
+        }
+      });
+      // 1. DONNÉES HISTORIQUES DÉLAIS
       const delayHistory = await this.getProjectDelayHistory({
         start_date: subMonths(new Date(), 12).toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0]
@@ -484,44 +496,49 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, results);
       
-      logger.info('Risques détectés', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'detectProjectRisks',
-        risksCount: results.length
-          }       }
-     });
-     ;turn results;
+      logger.info('Risques détectés', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'detectProjectRisks',
+          risksCount: results.length
+        }
+      });
+      return results;
     },
     {
       operation: 'detectProjectRisks',
       service: 'PredictiveEngineService',
-      metadata: {}       }
-     });
+      metadata: {}
+    }
+  );
   }
-  ;
+
+  /**
    * Génération de recommandations business actionables
    */
   async generateRecommendations(context: BusinessContext): Promise<BusinessRecommendation[]> {
     const cacheKey = this.getCacheKey('business_recommendations', context);
     const cached = this.getCachedEntry<BusinessRecommendation[]>(cacheKey);
     if (cached) {
-      logger.info('Cache hit', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generateBusinessRecommendations',
-        cacheHit: true
-          }       }
-     });
-      r;rn cached;
+      logger.info('Cache hit', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'generateBusinessRecommendations',
+          cacheHit: true
+        }
+      });
+      return cached;
     }
     return withErrorHandling(
     async () => {
-      logger.info('Génération recommandations business', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generateBusinessRecommendations',
-        context
-          }       }
-     });
-      co; recommendations: BusinessRecommendation[] = [];
+      logger.info('Génération recommandations business', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'generateBusinessRecommendations',
+          context
+        }
+      });
+      const recommendations: BusinessRecommendation[] = [];
       // 1. ANALYSE KPIs ACTUELS via AnalyticsService
       const currentKPIs = await this.getCurrentKPIs(context.analysis_period);
       // 2. BENCHMARKS SECTEUR
@@ -559,21 +576,24 @@ export class PredictiveEngineService {
       // 5. MISE EN CACHE
       this.setCacheEntry(cacheKey, filteredRecs);
       
-      logger.info('Recommandations générées', { metadata: {
-        service: 'PredictiveEngineService',
-        operation: 'generateBusinessRecommendations',
-        recommendationsCount: filteredRecs.length
-          }       }
-     });
-      ret; filteredRecs;
+      logger.info('Recommandations générées', {
+        metadata: {
+          service: 'PredictiveEngineService',
+          operation: 'generateBusinessRecommendations',
+          recommendationsCount: filteredRecs.length
+        }
+      });
+      return filteredRecs;
     },
     {
       operation: 'generateBusinessRecommendations',
       service: 'PredictiveEngineService',
-      metadata: {}       }
-     });
+      metadata: {}
+    }
+  );
   }
-  // =;====================================
+
+  // ========================================
   // ALGORITHMES FORECASTING
   // ========================================
   /**
@@ -896,6 +916,7 @@ export class PredictiveEngineService {
       case 'high': return 60;
       default: return 30; // 'all' ou undefined
     }
+  }
 
   // ========================================
   // MÉTHODES POUR RECOMMANDATIONS BUSINESS
@@ -932,8 +953,9 @@ export class PredictiveEngineService {
     {
       operation: 'getBenchmarks',
       service: 'PredictiveEngineService',
-      metadata: {}       }
-     });.catch(() => {
+      metadata: {}
+    }
+  ).catch(() => {
     // Fallback avec valeurs par défaut
     return {
       conversion_rate: 25,
@@ -948,17 +970,19 @@ export class PredictiveEngineService {
    */
   private async getSectorBenchmarks(): Promise<unknown> {
     return withErrorHandling(
-    async () => {
-      return await this.storage.getSectorBenchmarks();
-    },
-    {
-      operation: 'getSectorBenchmarks',
-      service: 'PredictiveEngineService',
-      metadata: {}       }
-     });
+      async () => {
+        return await this.storage.getSectorBenchmarks();
+      },
+      {
+        operation: 'getSectorBenchmarks',
+        service: 'PredictiveEngineService',
+        metadata: {}
+      }
+    );
   }
+
   /**
- ; Génère recommandations revenue/conversion
+   * Génère recommandations revenue/conversion
    */
   private async generateRevenueRecommendations(currentKPIs: unknown, benchmarks: unknown): Promise<BusinessRecommendation[]> {
     const recommendations: BusinessRecommendation[] = [];

@@ -292,8 +292,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                           supplierId: orderData.supplierId,
                           error: error instanceof Error ? error.message : String(error)
 
-                        }
-                                                                                                                                                                                                                                                                              });
+                                }
+                                                                                                                                                                                                                                                                                    });
             }
 
           // Calculer les totaux
@@ -341,10 +341,10 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             metadata: { 
                       reference: orderData.reference
 
-                    }
+                            }
  
             
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
           const result = await withRetry(
             () => pdfEngine.render(renderOptions),
@@ -361,8 +361,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                     delay,
                             error: error instanceof Error ? error.message : String(error)
 
-                          }
-                                                                                                                                                                                                                                                                              });
+                                  }
+                                                                                                                                                                                                                                                                                    });
               }
           );
 
@@ -377,10 +377,10 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
 
-                    }
+                            }
 
             
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');
@@ -560,8 +560,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                     delay,
                             error: error instanceof Error ? error.message : String(error)
 
-                          }
-                                                                                                                                                                                                                                                                              });
+                                  }
+                                                                                                                                                                                                                                                                                    });
               }
 
           if (!result.success || !result.pdf) {
@@ -575,10 +575,10 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
               pdfSize: result.pdf.length,
               renderTime: result.metadata?.renderTime
 
-                    }
+                            }
 
             
-                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                          });
 
           // Retourner le PDF en tant que blob
           res.setHeader('Content-Type', 'application/pdf');

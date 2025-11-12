@@ -140,6 +140,78 @@ const y = 2;  // 1 ligne vide max
 - ✅ Réduire à 1 ligne vide max
 - ✅ Préserver séparation logique
 
+### 6. Metadata Logger Vides
+
+**Détection:**
+```typescript
+// Pattern à détecter
+logger.info('Message', {
+  metadata: {}
+});
+
+logger.info('Message', {
+  metadata: {       }  // Avec espaces
+});
+```
+
+**Correction Automatique:**
+```typescript
+// ✅ Corrigé automatiquement
+logger.info('Message', {
+  metadata: {
+    service: 'ServiceName',
+    operation: 'methodName',
+    context: { /* contexte pertinent */ }
+  }
+});
+```
+
+**Règles:**
+- ✅ Détecter `metadata: {}` ou `metadata: {       }`
+- ✅ Enrichir avec service, operation, contexte
+- ✅ Préserver structure logger
+
+**Référence:** `@.cursor/rules/metadata-empty-detection.md` - Détection metadata vides détaillée
+
+### 7. withErrorHandling Mal Formé
+
+**Détection:**
+```typescript
+// Pattern à détecter
+return withErrorHandling(
+  async () => {
+    // code
+  },
+  {
+    operation: 'method',
+    service: 'Service',
+    metadata: {       }  // Vide ou mal fermé
+   });  // Fermeture incorrecte
+```
+
+**Correction Automatique:**
+```typescript
+// ✅ Corrigé automatiquement
+return withErrorHandling(
+  async () => {
+    // code
+  },
+  {
+    operation: 'method',
+    service: 'Service',
+    metadata: {
+      // contexte pertinent
+    }
+  }
+);
+```
+
+**Règles:**
+- ✅ Détecter withErrorHandling mal fermé
+- ✅ Vérifier structure complète
+- ✅ Corriger fermeture
+- ✅ Enrichir metadata si vide
+
 ## 🔧 Correction Automatique
 
 ### Workflow de Correction

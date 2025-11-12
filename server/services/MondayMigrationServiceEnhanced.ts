@@ -100,8 +100,8 @@ export class MondayMigrationServiceEnhanced {
         dryRun: options.dryRun,
         verbose: options.verbose 
 
-            }
-                                                                                                                                                                                                                                                                              });
+                    }
+                                                                                                                                                                                                                                                                                    });
     const report: MigrationReport = {
       entityType: options.entityType,
       boardId: options.boardId || getMappingConfig(options.entityType).boardId || '',
@@ -135,8 +135,8 @@ export class MondayMigrationServiceEnhanced {
           operation: 'migrate',
           totalFetched: report.totalFetched 
 
-              }
-                                                                                                                                                                                                                                                                              });
+                      }
+                                                                                                                                                                                                                                                                                    });
 
       // Étape 2: Transform & Validate
       const transformedI: unknown[]ny[] = [];
@@ -172,8 +172,8 @@ service: 'MondayMigrationServiceEnhanced',
             totalValidated: report.totalValidated,
             previewCount: report.preview.length 
 
-                }
-                                                                                                                                                                                                                                                                              });
+                        }
+                                                                                                                                                                                                                                                                                    });
       } else {
         // Bulk insert avec skip doublons
         const insertResult = await this.bulkInsert(
@@ -205,8 +205,8 @@ service: 'MondayMigrationServiceEnhanced',
           totalErrors: report.totalErrors,
           totalSkipped: report.totalSkipped 
 
-              }
-                                                                                                                                                                                                                                                                              });
+                      }
+                                                                                                                                                                                                                                                                                    });
       return report;
     } catch (error) {
       report.completedAt = new Date();
@@ -217,8 +217,8 @@ service: 'MondayMigrationServiceEnhanced',
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined 
 
-              }
-                                                                                                                                                                                                                                                                              });
+                      }
+                                                                                                                                                                                                                                                                                    });
 
       throw error;
     }
@@ -258,8 +258,8 @@ service: 'MondayMigrationServiceEnhanced',
           operation: 'fetchAllItems',
           totalItems: items.length 
 
-              }
-                                                                                                                                                                                                                                                                              });
+                      }
+                                                                                                                                                                                                                                                                                    });
       return items;
     },
     {
@@ -396,8 +396,8 @@ service: 'MondayMigrationServiceEnhanced',
         parallelBatchSize: PARALLEL_BATCH_SIZE,
         skipExisting: options.skipExisting 
 
-            }
-                                                                                                                                                                                                                                                                              });
+                    }
+                                                                                                                                                                                                                                                                                    });
     const totalBatches = Math.ceil(items.length / PARALLEL_BATCH_SIZE);
     let batchNumber = 0;
     // Traiter par batches parallèles
@@ -490,8 +490,8 @@ return{
           skipped: result.skipped,
           errors: result.errors.length 
 
-                                                                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                              });
+                                                                                                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                    });
     }
     logger.info('Bulk insert terminé', { metadata: {
         service: 'MondayMigrationServiceEnhanced',
@@ -500,8 +500,8 @@ return{
         skipped: result.skipped,
         errors: result.errors.length 
 
-            }
-                                                                                                                                                                                                                                                                              });
+                    }
+                                                                                                                                                                                                                                                                                    });
     return result;
   }
   /**

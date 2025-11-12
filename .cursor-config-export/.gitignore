@@ -1,0 +1,17 @@
+# Fichiers temporaires
+*.tmp
+*.bak
+*.swp
+*~
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace

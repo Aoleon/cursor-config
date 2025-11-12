@@ -1,0 +1,304 @@
+# Règles Cursor - Test Project
+
+**Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
+**Version:** 3.0.0  
+**Dernière mise à jour:** 2025-01-29
+
+Ce fichier garantit que les règles du projet sont automatiquement chargées dans tous les nouveaux chats Cursor.
+
+## 📋 Règles Essentielles
+
+Les règles complètes sont organisées dans `.cursor/rules/` et sont automatiquement chargées selon leur priorité. Ce fichier garantit que les règles fondamentales sont toujours appliquées.
+
+### Contexte du Projet
+
+Test Project est une Test Description pour **JLM Menuiserie** (BTP/Menuiserie française). Stack: React 19 + TypeScript, Express 5, PostgreSQL (Drizzle ORM), IA multi-modèles (Claude Sonnet 4 + GPT-5).
+
+**Architecture:** Migration progressive vers modules (`server/modules/*`), services métier (`server/services/*`), types partagés (`shared/schema.ts`)
+
+### Philosophie de Qualité
+
+**Priorités (dans l'ordre):**
+1. **Robustesse** - Résistance aux erreurs, gestion d'erreurs complète
+2. **Maintenabilité** - Code clair, documenté, testé, évolutif
+3. **Performance** - Optimisation continue, latence minimale
+
+**Référence:** `@.cursor/rules/quality-principles.md` - Principes de qualité complets
+
+## 🎯 Priorités des Règles
+
+Les règles sont organisées en 3 niveaux de priorité pour optimiser le chargement :
+
+### P0 - Règles Critiques (Toujours Appliquées)
+
+**Chargement:** Automatique dans tous les contextes
+
+- `@.cursor/rules/core.md` - Règles fondamentales du projet
+- `@.cursor/rules/quality-principles.md` - Philosophie de qualité
+- `@.cursor/rules/code-quality.md` - Standards stricts de qualité code
+
+### P1 - Règles Importantes (Selon Contexte)
+
+**Chargement:** Automatique selon le type de modification
+
+- `@.cursor/rules/backend.md` - Si modification dans `server/**/*.ts`
+- `@.cursor/rules/frontend.md` - Si modification dans `client/src/**/*.tsx`
+- `@.cursor/rules/database.md` - Si modification schéma DB
+- `@.cursor/rules/ai-services.md` - Si modification services IA
+- `@.cursor/rules/testing.md` - Si modification tests
+
+### P2 - Règles d'Optimisation (Optionnelles)
+
+**Chargement:** Sur demande ou pour tâches complexes
+
+- `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
+- `@.cursor/rules/pre-task-quick.md` - Évaluation préalable rapide
+- `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
+- `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
+
+**Référence:** `@.cursor/rules/priority.md` - Priorités détaillées et matrice de chargement
+
+## ✅ Checklist Rapide des Règles Essentielles
+
+### Avant Toute Modification
+
+- [ ] Lire `activeContext.md` pour connaître l'état actuel
+- [ ] Lire `projectbrief.md` pour comprendre le périmètre
+- [ ] Lire `systemPatterns.md` pour comprendre l'architecture
+- [ ] Consulter `@.cursor/rules/quick-start.md` pour checklist rapide
+- [ ] Évaluer approche avec `@.cursor/rules/pre-task-quick.md` (si complexe)
+
+### Règles Fondamentales
+
+**TOUJOURS:**
+- ✅ Utiliser `asyncHandler` pour toutes les routes (pas de try-catch)
+- ✅ Utiliser `logger` de `server/utils/logger.ts` (jamais `console.log`)
+- ✅ Utiliser erreurs typées (`ValidationError`, `NotFoundError`, etc.)
+- ✅ Valider avec Zod avant traitement
+- ✅ Utiliser types depuis `@shared/schema.ts`
+- ✅ Superviser, prioriser, piloter et revoir le code avec critères d'architecte (IMPÉRATIF)
+- ✅ Valider alignement business/métier avec cahier des charges, audit et objectifs business (IMPÉRATIF)
+- ✅ Vérifier que les développements résolvent les problématiques de base identifiées (IMPÉRATIF)
+- ✅ Superviser migration modulaire et détecter régressions (IMPÉRATIF si migration/refactoring)
+- ✅ Identifier et éliminer dette technique (services dupliqués, fichiers monolithiques) (IMPÉRATIF si consolidation/dette technique)
+- ✅ Réduire radicalement les erreurs avec approche hard coding (IMPÉRATIF si tâche complexe nécessitant hard coding)
+- ✅ Automatiser tâches très complexes avec approche créative innovante (IMPÉRATIF si tâche complexe nécessitant automatisation)
+- ✅ Évaluer performances après chaque tâche (IMPÉRATIF)
+- ✅ Prioriser intelligemment les tâches selon impact, urgence, dette technique (IMPÉRATIF)
+- ✅ Vérifier l'état de tous les todos avant de s'arrêter (IMPÉRATIF)
+- ✅ Continuer jusqu'à completion de tous les todos en cours (IMPÉRATIF)
+- ✅ Itérer automatiquement jusqu'à ce que tous les problèmes soient résolus (IMPÉRATIF)
+- ✅ Valider complètement avant de s'arrêter (IMPÉRATIF)
+- ✅ Vérifier exhaustivement avant TOUT arrêt (todos, erreurs, tests, fonctionnalités, validation) (IMPÉRATIF)
+- ✅ Forcer continuation si vérifications échouent (IMPÉRATIF)
+- ✅ Détecter signes d'arrêt prématuré et forcer continuation (IMPÉRATIF)
+- ✅ Maintenir keep-alive pendant runs longs (checkpoints réguliers) (IMPÉRATIF)
+- ✅ Optimiser contexte régulièrement pour éviter saturation (IMPÉRATIF)
+- ✅ Sauvegarder état régulièrement (toutes les 5-10 minutes) (IMPÉRATIF)
+- ✅ Détecter stagnation et forcer progression (IMPÉRATIF)
+- ✅ Continuer jusqu'à completion complète même pour runs très longs (IMPÉRATIF)
+- ✅ Apprendre des patterns d'erreurs précédents pour optimiser itérations (IMPÉRATIF)
+- ✅ Prioriser corrections selon apprentissages (fréquence, impact, succès) (IMPÉRATIF)
+- ✅ Adapter stratégies selon apprentissages (IMPÉRATIF)
+- ✅ Coordonner rôles avec apprentissage collectif (IMPÉRATIF)
+- ✅ Valider avec validation croisée améliorée entre rôles (IMPÉRATIF)
+- ✅ Améliorer continuellement les stratégies d'itération (IMPÉRATIF)
+- ✅ Adapter itérations selon complexité de la tâche (IMPÉRATIF)
+- ✅ Réutiliser solutions efficaces pour erreurs similaires (IMPÉRATIF)
+- ✅ Rechercher code similaire avant création/modification (IMPÉRATIF)
+- ✅ Réutiliser apprentissages et solutions efficaces (IMPÉRATIF)
+- ✅ Valider préventivement avant modification (IMPÉRATIF)
+- ✅ Détecter et corriger automatiquement les problèmes de performance (IMPÉRATIF)
+- ✅ Gérer intelligemment le contexte pour éviter la saturation (IMPÉRATIF)
+- ✅ Consolider automatiquement les workflows réussis (IMPÉRATIF)
+- ✅ Gérer intelligemment les dépendances pour éviter les régressions (IMPÉRATIF)
+- ✅ Sélectionner automatiquement le modèle IA le plus adapté à la tâche (IMPÉRATIF)
+- ✅ Mettre en cache les recherches fréquentes pour réduire la latence (IMPÉRATIF)
+- ✅ Exécuter plusieurs opérations en parallèle si indépendantes (IMPÉRATIF)
+- ✅ Traiter plusieurs tâches similaires en lot pour optimiser l'efficacité (IMPÉRATIF)
+- ✅ Récupérer automatiquement après erreurs (IMPÉRATIF)
+- ✅ Détecter automatiquement les conflits potentiels avant modification (IMPÉRATIF)
+- ✅ Détecter automatiquement les bugs potentiels avant qu'ils ne se produisent (IMPÉRATIF)
+- ✅ **DÉTECTER AUTOMATIQUEMENT les mentions de "prochaines étapes", "étapes suivantes", "next steps", "tâches restantes", "il reste", "il faudra", "ensuite", "plus tard" dans la réponse (IMPÉRATIF)**
+- ✅ **PLANIFIER AUTOMATIQUEMENT les prochaines étapes identifiées dès qu'elles sont mentionnées (IMPÉRATIF)**
+- ✅ **EXÉCUTER IMMÉDIATEMENT les prochaines étapes planifiées sans s'arrêter (IMPÉRATIF)**
+- ✅ **NE JAMAIS s'arrêter si des prochaines étapes sont mentionnées dans la réponse (IMPÉRATIF)**
+
+**NE JAMAIS:**
+- ❌ Utiliser `console.log`/`error` dans le code serveur
+- ❌ Créer des `try-catch` dans les routes
+- ❌ Lancer des erreurs génériques `throw new Error()`
+- ❌ Exécuter SQL brut (toujours via Drizzle ORM)
+- ❌ Créer nouvelles instances de services IA (utiliser getters)
+- ❌ Ignorer supervision architecturale pour tâches complexes (IMPÉRATIF)
+- ❌ Ignorer validation business/métier pour tâches complexes (IMPÉRATIF)
+- ❌ Ignorer supervision migration pour tâches de migration/refactoring (IMPÉRATIF)
+- ❌ Ignorer gestion dette technique pour tâches de consolidation (IMPÉRATIF)
+- ❌ Ignorer hard coding pour tâches complexes nécessitant réduction radicale erreurs (IMPÉRATIF)
+- ❌ Ignorer automatisation créative pour tâches très complexes (IMPÉRATIF)
+- ❌ Développer fonctionnalités hors périmètre ou contraires aux attentes client (IMPÉRATIF)
+- ❌ Développer fonctionnalités qui ne résolvent pas les problématiques de base (IMPÉRATIF)
+- ❌ Ne pas prioriser intelligemment les tâches (IMPÉRATIF)
+- ❌ Ne pas revoir le code avec critères d'architecte (IMPÉRATIF)
+- ❌ S'arrêter tant qu'il reste des todos `in_progress` ou `pending` (IMPÉRATIF)
+- ❌ S'arrêter s'il reste des erreurs TypeScript ou des tests qui échouent (IMPÉRATIF)
+- ❌ S'arrêter sans valider complètement (IMPÉRATIF)
+- ❌ Créer du code sans rechercher code similaire (IMPÉRATIF)
+- ❌ Ignorer la mémoire des apprentissages (IMPÉRATIF)
+- ❌ Modifier sans validation préventive (IMPÉRATIF)
+- ❌ Ignorer les problèmes de performance potentiels (IMPÉRATIF)
+- ❌ Saturer le contexte avec trop de fichiers (IMPÉRATIF)
+- ❌ Ignorer les workflows réussis à consolider (IMPÉRATIF)
+- ❌ Modifier sans analyser les dépendances (IMPÉRATIF)
+- ❌ Utiliser un modèle IA sans analyser le type de tâche (IMPÉRATIF)
+- ❌ Refaire les mêmes recherches sans utiliser le cache (IMPÉRATIF)
+- ❌ Exécuter séquentiellement des opérations indépendantes (IMPÉRATIF)
+- ❌ Traiter individuellement des tâches similaires multiples (IMPÉRATIF)
+- ❌ Ignorer les erreurs sans tentative de récupération (IMPÉRATIF)
+- ❌ Modifier sans détecter conflits potentiels (IMPÉRATIF)
+- ❌ Ignorer les bugs potentiels détectés (IMPÉRATIF)
+- ❌ **S'arrêter en annonçant des "prochaines étapes" ou "étapes suivantes" sans les exécuter (IMPÉRATIF)**
+- ❌ **Mentionner des tâches restantes sans les planifier et exécuter immédiatement (IMPÉRATIF)**
+- ❌ **Mentionner qu'on va faire quelque chose "ensuite" ou "plus tard" sans l'exécuter immédiatement (IMPÉRATIF)**
+- ❌ **S'arrêter si la réponse contient des phrases comme "prochaines étapes", "il reste", "il faudra", "dans un second temps" (IMPÉRATIF)**
+
+## ⚠️ RÈGLE ANTI-INTERRUPTION : PROCHAINES ÉTAPES (CRITIQUE)
+
+**PROBLÈME IDENTIFIÉ:** L'agent s'arrête encore alors qu'il mentionne des "prochaines étapes" dans sa réponse.
+
+**SOLUTION STRICTE:**
+
+### Workflow Obligatoire Avant TOUT Arrêt
+
+**ÉTAPE 1 - Détection Automatique (OBLIGATOIRE):**
+Avant de s'arrêter, l'agent DOIT analyser sa propre réponse pour détecter :
+- Phrases contenant "prochaines étapes", "étapes suivantes", "next steps"
+- Phrases contenant "tâches restantes", "il reste", "il faudra", "actions à faire"
+- Phrases contenant "ensuite", "plus tard", "dans un second temps", "then", "later"
+
+**ÉTAPE 2 - Planification Automatique (OBLIGATOIRE):**
+Si des mentions sont détectées, l'agent DOIT :
+- Identifier toutes les prochaines étapes mentionnées
+- Créer un plan détaillé pour ces étapes
+- Créer des todos pour chaque étape identifiée
+
+**ÉTAPE 3 - Exécution Immédiate (OBLIGATOIRE):**
+L'agent DOIT :
+- Exécuter immédiatement les todos créés
+- Ne pas s'arrêter tant que toutes les étapes ne sont pas complétées
+- Vérifier que toutes les étapes sont complétées avant de s'arrêter
+
+**RÈGLE ABSOLUE:**
+**Si l'agent mentionne des "prochaines étapes" dans sa réponse, il DOIT les planifier et les exécuter immédiatement. Aucun arrêt n'est autorisé tant que ces étapes ne sont pas complétées.**
+
+**Pattern de Détection:**
+```typescript
+// Avant de s'arrêter, analyser la réponse
+const response = getLastResponse();
+const nextStepsPhrases = [
+  'prochaines étapes', 'étapes suivantes', 'next steps',
+  'tâches restantes', 'il reste', 'il faudra', 'actions à faire',
+  'ensuite', 'plus tard', 'dans un second temps', 'then', 'later'
+];
+
+const hasNextSteps = nextStepsPhrases.some(phrase => 
+  response.toLowerCase().includes(phrase.toLowerCase())
+);
+
+if (hasNextSteps) {
+  // FORCER planification et exécution
+  await planAndExecuteNextSteps(response);
+  // NE PAS s'arrêter
+}
+```
+
+## 🔗 Documentation Complète
+
+### Règles Détaillées
+
+**P0 - Critiques:**
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/quality-principles.md` - Principes de qualité
+- `@.cursor/rules/code-quality.md` - Standards qualité code
+
+**P1 - Importantes:**
+- `@.cursor/rules/backend.md` - Patterns backend
+- `@.cursor/rules/frontend.md` - Patterns frontend
+- `@.cursor/rules/database.md` - Règles base de données
+- `@.cursor/rules/ai-services.md` - Services IA
+- `@.cursor/rules/testing.md` - Patterns tests
+- `@.cursor/rules/performance.md` - Optimisations performance
+- `@.cursor/rules/senior-architect-oversight.md` - Supervision architecte sénior (IMPÉRATIF - supervision, priorisation, pilotage, code review)
+- `@.cursor/rules/client-consultant-oversight.md` - Supervision consultant client (IMPÉRATIF - validation cahier des charges, audit, objectifs business, problématiques de base)
+- `@.cursor/rules/migration-refactoring-manager.md` - Gestionnaire migration/refactoring (IMPÉRATIF - supervision migration modulaire, détection régressions, validation cohérence)
+- `@.cursor/rules/tech-debt-manager.md` - Gestionnaire dette technique (IMPÉRATIF - identification services dupliqués, planification consolidation, réduction monolithiques)
+- `@.cursor/rules/hard-coding-specialist.md` - Spécialiste hard coding (IMPÉRATIF - réduction radicale erreurs, automatisation tâches complexes, approche créative innovante)
+- `@.cursor/rules/todo-completion.md` - Completion des todos (IMPÉRATIF - éviter interruptions)
+- `@.cursor/rules/iterative-perfection.md` - Itération automatique jusqu'à perfection (IMPÉRATIF - éviter arrêt prématuré)
+- `@.cursor/rules/persistent-execution.md` - Exécution persistante (IMPÉRATIF - éviter arrêts prématurés, runs longs)
+- `@.cursor/rules/advanced-iteration-and-role-coordination.md` - Itérations avancées et coordination des rôles (IMPÉRATIF - maximiser autonomie, durée, qualité)
+- `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF - critères de taille optimale, pensée séquentielle, Background Agent, listes structurées)
+- `@.cursor/rules/intelligent-task-detection.md` - Détection intelligente des tâches (détection automatique complexité, chargement optimisé)
+- `@.cursor/rules/rule-cache.md` - Cache intelligent des règles (éviter rechargement, optimiser performances)
+- `@.cursor/rules/rule-feedback-loop.md` - Boucle de feedback pour règles (ajustement automatique selon résultats)
+- `@.cursor/rules/metadata-standard.md` - Standardisation des métadonnées (format standardisé pour détection automatique)
+- `@.cursor/rules/auto-documentation.md` - Auto-documentation intelligente du code (documentation automatique)
+- `@.cursor/rules/cost-optimization.md` - Optimisation des coûts IA (sélection modèle, cache, batching)
+- `@.cursor/rules/timeout-management.md` - Gestion intelligente des timeouts (décomposition, checkpoints, retry)
+- `@.cursor/rules/intelligent-preloading.md` - Préchargement intelligent (prédiction fichiers, cache prédictif)
+- `@.cursor/rules/context-compression.md` - Compression intelligente du contexte (résumé, compression sémantique)
+- `@.cursor/rules/validation-pipeline.md` - Pipeline de validation en cascade (validation progressive)
+- `@.cursor/rules/predictive-problem-detection.md` - Prédiction proactive des problèmes (analyse risques, alertes)
+- `@.cursor/rules/auto-refactoring.md` - Auto-refactoring intelligent (élimination duplication, patterns)
+- `@.cursor/rules/code-sentiment-analysis.md` - Analyse de sentiment du code (score qualité, code smells)
+- `@.cursor/rules/auto-test-generation.md` - Génération automatique de tests (tests unitaires, régression)
+- `@.cursor/rules/tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (checkpointing, continuation) (détails)
+- `@.cursor/rules/cursor-limits-workaround.md` - Système unifié de contournement toutes limites Cursor (tool calls, contexte, MCP, fichiers, quotas) (IMPÉRATIF si approche de limite)
+- `@.cursor/rules/similar-code-detection.md` - Détection proactive de code similaire (éviter duplication)
+- `@.cursor/rules/learning-memory.md` - Mémoire persistante des apprentissages (réutiliser solutions)
+- `@.cursor/rules/preventive-validation.md` - Validation préventive (prévenir erreurs)
+- `@.cursor/rules/auto-performance-detection.md` - Détection et correction automatique des problèmes de performance
+- `@.cursor/rules/context-optimization.md` - Gestion intelligente du contexte (éviter saturation)
+- `@.cursor/rules/workflow-consolidation.md` - Consolidation automatique des workflows réussis
+- `@.cursor/rules/dependency-intelligence.md` - Intelligence des dépendances (éviter régressions)
+- `@.cursor/rules/intelligent-model-selection.md` - Sélection intelligente du modèle IA (optimiser performances/coûts)
+- `@.cursor/rules/search-cache.md` - Cache intelligent des recherches (réduire latence)
+- `@.cursor/rules/parallel-execution.md` - Exécution parallèle (améliorer performances)
+- `@.cursor/rules/batch-processing.md` - Traitement par lots (optimiser efficacité)
+- `@.cursor/rules/error-recovery.md` - Récupération automatique après erreurs (améliorer robustesse)
+- `@.cursor/rules/conflict-detection.md` - Détection proactive des conflits (éviter problèmes)
+- `@.cursor/rules/bug-prevention.md` - Détection proactive des bugs (améliorer qualité)
+
+**P2 - Optimisation:**
+- `@.cursor/rules/workflows.md` - Workflows courants
+- `@.cursor/rules/agent-optimization.md` - Stratégies d'optimisation
+- `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
+- `@.cursor/rules/pre-task-evaluation.md` - Évaluation préalable complète
+- `@.cursor/rules/pre-task-quick.md` - Évaluation préalable rapide
+
+### Guides et Références
+
+- `@.cursor/rules/quick-start.md` - Guide de démarrage rapide
+- `@.cursor/rules/priority.md` - Priorités et matrice de chargement
+- `@.cursor/rules/anti-patterns.md` - Anti-patterns consolidés
+- `@.cursor/rules/examples.md` - Exemples concrets par type de tâche
+- `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
+- `@.cursor/rules/context-detection.md` - Détection automatique du contexte
+- `@.cursor/rules/load-strategy.md` - Stratégie de chargement optimisée
+- `@AGENTS.md` - Index simplifié des règles
+
+### Fichiers de Contexte
+
+- `@projectbrief.md` - Objectifs et périmètre
+- `@activeContext.md` - Focus actuel
+- `@systemPatterns.md` - Patterns architecturaux
+- `@productContext.md` - Expérience utilisateur
+- `@techContext.md` - Stack technique
+- `@progress.md` - État du projet
+
+---
+
+**Note:** Les règles détaillées sont dans `.cursor/rules/` et sont automatiquement chargées par Cursor selon le contexte et la priorité. Consultez `@.cursor/rules/priority.md` pour comprendre le système de priorisation.
+
+**Version:** 3.0.0  
+**Dernière mise à jour:** 2025-01-29

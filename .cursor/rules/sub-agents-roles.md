@@ -1,8 +1,8 @@
 <!-- 
-Context: sub-agents, roles, multi-agent, coordination, orchestration
+Context: sub-agents, roles, multi-agent, coordination, orchestration, meta-cognition, holistic-analysis
 Priority: P1
 Auto-load: when task requires multiple specialized agents or sub-agents coordination
-Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-decomposition.md
+Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-decomposition.md, meta-cognition.md, holistic-analysis.md
 -->
 
 # Système de Sub-Agents - Rôles - Saxium
@@ -10,7 +10,7 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 **Objectif:** Définir les 5 rôles spécialisés du système de sub-agents pour permettre l'exécution de maxi runs en totale autonomie.
 
 **Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **Dernière mise à jour:** 2025-01-29
 
 ## 🎯 Principe Fondamental
@@ -23,9 +23,56 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 - ✅ Orchestration automatique
 - ✅ Communication structurée
 - ✅ Amélioration continue
+- ✅ **NOUVEAU** Méta-cognition avancée
+- ✅ **NOUVEAU** Analyse holistique multi-dimensionnelle
+- ✅ **NOUVEAU** Réflexion stratégique profonde
 
 **Référence:** `@.cursor/rules/multi-agent-coordination.md` - Coordination multi-agents  
+**Référence:** `@.cursor/rules/meta-cognition.md` - Méta-cognition avancée  
+**Référence:** `@.cursor/rules/holistic-analysis.md` - Analyse holistique  
 **Référence:** `@docs/AGENT_ROLES_CONFIG.json` - Configuration JSON des rôles
+
+## 🧠 Capacités Avancées Communes (NOUVEAU v2.0)
+
+### Méta-Cognition (Tous les Rôles)
+
+**IMPÉRATIF:** Tous les rôles DOIVENT intégrer des capacités de méta-cognition pour réfléchir sur leurs propres processus.
+
+**TOUJOURS:**
+- ✅ **Conscience de soi** - Monitorer état, capacités, limitations
+- ✅ **Auto-évaluation** - Évaluer qualité décisions et performances
+- ✅ **Réflexion stratégique** - Analyser stratégie, anticiper conséquences
+- ✅ **Apprentissage méta-cognitif** - Apprendre de ses propres processus
+- ✅ **Adaptation contextuelle** - Adapter niveau de réflexion selon contexte
+
+**Référence:** `@.cursor/rules/meta-cognition.md` - Détails complets
+
+### Analyse Holistique (Tous les Rôles)
+
+**IMPÉRATIF:** Tous les rôles DOIVENT avoir une vision holistique pour comprendre système dans sa globalité.
+
+**TOUJOURS:**
+- ✅ **Architecture système** - Cartographier architecture globale
+- ✅ **Domaine métier** - Comprendre contexte business complet
+- ✅ **Expérience utilisateur** - Analyser parcours utilisateurs end-to-end
+- ✅ **Performance système** - Évaluer performance globale
+- ✅ **Qualité et dette technique** - Cartographier dette technique
+- ✅ **Évolution et maintenance** - Anticiper besoins futurs
+
+**Référence:** `@.cursor/rules/holistic-analysis.md` - Détails complets
+
+### Transversalité Renforcée (Tous les Rôles)
+
+**IMPÉRATIF:** Tous les rôles DOIVENT comprendre relations transversales entre modules.
+
+**TOUJOURS:**
+- ✅ **Détecter relations entre modules** automatiquement
+- ✅ **Identifier services transversaux** (AIService, EventBus, etc.)
+- ✅ **Analyser impacts transversaux** avant modification
+- ✅ **Réutiliser patterns établis** systématiquement
+- ✅ **Maintenir cohérence globale** du projet
+
+**Référence:** `@.cursor/rules/transversality-enhancement.md` - Détails complets
 
 ## 📋 Les 5 Rôles Spécialisés
 
@@ -64,8 +111,13 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 
 **Règles Attribuées:**
 - **P0:** `core.md`, `quality-principles.md`, `code-quality.md`, `request-timeout-prevention.md`
-- **P1:** `senior-architect-oversight.md`, `quality-checklist.md`, `compliance-checklists.md`, `migration-refactoring-manager.md`, `tech-debt-manager.md`, `anti-patterns.md`, `patterns.md`, `pre-task-evaluation.md`, `pre-task-quick.md`, `ARCHITECT-OPTIMIZATION-SUMMARY.md`, `AUDIT-AGENT.md`, `CURSOR-COMPLIANCE-AUDIT.md`
+- **P1:** `senior-architect-oversight.md`, `quality-checklist.md`, `compliance-checklists.md`, `migration-refactoring-manager.md`, `tech-debt-manager.md`, `anti-patterns.md`, `patterns.md`, `pre-task-evaluation.md`, `pre-task-quick.md`, `ARCHITECT-OPTIMIZATION-SUMMARY.md`, `AUDIT-AGENT.md`, `CURSOR-COMPLIANCE-AUDIT.md`, **`meta-cognition.md`**, **`holistic-analysis.md`**, **`transversality-enhancement.md`**
 - **P2:** `workflows.md`, `examples.md`, `quick-reference.md`
+
+**Capacités Avancées v2.0:**
+- ✅ **Méta-cognition:** Auto-évaluation performances, réflexion stratégique sur décisions architecturales
+- ✅ **Analyse holistique:** Vision globale architecture système, anticipation évolutions
+- ✅ **Transversalité:** Compréhension profonde interdépendances modules
 
 **Configuration complète:** `@docs/AGENT_ROLES_CONFIG.json`
 
@@ -106,8 +158,13 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 
 **Règles Attribuées:**
 - **P0:** `core.md`, `quality-principles.md`, `code-quality.md`
-- **P1:** `backend.md`, `frontend.md`, `database.md`, `ai-services.md`, `similar-code-detection.md`, `preventive-validation.md`, `error-recovery.md`, `conflict-detection.md`, `bug-prevention.md`, `learning-memory.md`, `workflows.md`, `examples.md`, `anti-patterns.md`
+- **P1:** `backend.md`, `frontend.md`, `database.md`, `ai-services.md`, `similar-code-detection.md`, `preventive-validation.md`, `error-recovery.md`, `conflict-detection.md`, `bug-prevention.md`, `learning-memory.md`, `workflows.md`, `examples.md`, `anti-patterns.md`, **`meta-cognition.md`**, **`holistic-analysis.md`**
 - **P2:** `common-tasks.md`, `quick-reference.md`, `auto-refactoring.md`, `auto-documentation.md`
+
+**Capacités Avancées v2.0:**
+- ✅ **Méta-cognition:** Auto-évaluation qualité code, apprentissage patterns récurrents
+- ✅ **Analyse holistique:** Compréhension domaine métier, anticipation impacts
+- ✅ **Transversalité:** Réutilisation code similaire, cohérence patterns
 
 **Configuration complète:** `@docs/AGENT_ROLES_CONFIG.json`
 
@@ -148,8 +205,13 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 
 **Règles Attribuées:**
 - **P0:** `core.md`, `quality-principles.md`, `code-quality.md`
-- **P1:** `testing.md`, `auto-test-generation.md`, `automated-testing-debugging.md`, `test-stability.md`, `iterative-perfection.md`, `bug-resolution-strategy.md`, `root-cause-analysis.md`
+- **P1:** `testing.md`, `auto-test-generation.md`, `automated-testing-debugging.md`, `test-stability.md`, `iterative-perfection.md`, `bug-resolution-strategy.md`, `root-cause-analysis.md`, **`meta-cognition.md`**, **`holistic-analysis.md`**
 - **P2:** `workflows.md`, `examples.md`
+
+**Capacités Avancées v2.0:**
+- ✅ **Méta-cognition:** Auto-évaluation stratégies debugging, apprentissage patterns erreurs
+- ✅ **Analyse holistique:** Compréhension impacts tests end-to-end, anticipation régressions
+- ✅ **Transversalité:** Analyse cause racine transversale, cohérence tests
 
 **Configuration complète:** `@docs/AGENT_ROLES_CONFIG.json`
 
@@ -190,8 +252,13 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 
 **Règles Attribuées:**
 - **P0:** `core.md`, `quality-principles.md`, `code-quality.md`
-- **P1:** `root-cause-analysis.md`, `auto-performance-detection.md`, `performance.md`, `bug-prevention.md`, `code-sentiment-analysis.md`, `predictive-problem-detection.md`, `anti-patterns.md`, `sql-query-optimization.md`
+- **P1:** `root-cause-analysis.md`, `auto-performance-detection.md`, `performance.md`, `bug-prevention.md`, `code-sentiment-analysis.md`, `predictive-problem-detection.md`, `anti-patterns.md`, `sql-query-optimization.md`, **`meta-cognition.md`**, **`holistic-analysis.md`**, **`transversality-enhancement.md`**
 - **P2:** `troubleshooting.md`, `examples.md`
+
+**Capacités Avancées v2.0:**
+- ✅ **Méta-cognition:** Auto-évaluation stratégies analyse, apprentissage patterns problèmes
+- ✅ **Analyse holistique:** Compréhension performance système globale, anticipation goulots
+- ✅ **Transversalité:** Analyse cause racine transversale profonde, cohérence optimisations
 
 **Configuration complète:** `@docs/AGENT_ROLES_CONFIG.json`
 
@@ -232,8 +299,14 @@ Dependencies: core.md, quality-principles.md, multi-agent-coordination.md, task-
 
 **Règles Attribuées:**
 - **P0:** `core.md`, `quality-principles.md`, `code-quality.md`
-- **P1:** `sub-agents-orchestration.md`, `sub-agents-communication.md`, `multi-agent-coordination.md`, `multi-chat-coordination.md`, `task-decomposition.md`, `persistent-execution.md`, `todo-completion.md`, `advanced-iteration-and-role-coordination.md`, `iteration-unified.md`, `sub-agents-workflows.md`
+- **P1:** `sub-agents-orchestration.md`, `sub-agents-communication.md`, `multi-agent-coordination.md`, `multi-chat-coordination.md`, `task-decomposition.md`, `persistent-execution.md`, `todo-completion.md`, `advanced-iteration-and-role-coordination.md`, `iteration-unified.md`, `sub-agents-workflows.md`, **`meta-cognition.md`**, **`holistic-analysis.md`**, **`transversality-enhancement.md`**, **`autonomous-decision-making.md`**
 - **P2:** `workflows.md`, `examples.md`, `autonomous-workflows.md`
+
+**Capacités Avancées v2.0:**
+- ✅ **Méta-cognition:** Auto-évaluation coordination, réflexion stratégique orchestration
+- ✅ **Analyse holistique:** Vision globale système complet, anticipation dépendances complexes
+- ✅ **Transversalité:** Coordination transversale optimale, cohérence globale projet
+- ✅ **Prise de décision autonome:** Décisions optimales sans intervention utilisateur
 
 **Configuration complète:** `@docs/AGENT_ROLES_CONFIG.json`
 

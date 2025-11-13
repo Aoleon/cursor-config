@@ -87,7 +87,9 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── sub-agents-modes.md # Modes sub-agents (P1)
 ├── sub-agents-quick-activation.md # Activation rapide sub-agents (P1)
 ├── sub-agents-usage-patterns.md # Patterns d'usage sub-agents (P1)
-└── sub-agents-background-integration.md # Intégration background sub-agents (P1)
+├── sub-agents-background-integration.md # Intégration background sub-agents (P1)
+├── meta-cognition.md # Méta-cognition et réflexion avancée (P1 - IMPÉRATIF)
+└── holistic-analysis.md # Analyse holistique et vision globale (P1 - IMPÉRATIF)
 ```
 
 ## 🎯 Organisation des Règles
@@ -227,6 +229,12 @@ Le système de sub-agents permet l'exécution de tâches complexes en totale aut
 - **bug-resolution-strategy.md** : Stratégie résolution bugs (analyse cause racine, correction ciblée, prévention) (P1)
 - **root-cause-analysis.md** : Analyse cause racine avancée (débogage profond, patterns d'erreurs) (P1)
 - **transversality-enhancement.md** : Amélioration transversalité (coordination multi-domaines, validation globale) (P1)
+
+### Capacités Cognitives Avancées
+**Appliquées pour réflexion et compréhension profondes** - Méta-cognition et vision holistique
+
+- **meta-cognition.md** : Méta-cognition et réflexion avancée (conscience de soi, auto-évaluation, réflexion stratégique, apprentissage méta-cognitif, adaptation contextuelle) (P1 - IMPÉRATIF)
+- **holistic-analysis.md** : Analyse holistique et vision globale (architecture système, domaine métier, expérience utilisateur, performance système, qualité, évolution) (P1 - IMPÉRATIF)
 
 ## 📊 Matrice de Responsabilités des Rôles
 

@@ -289,6 +289,7 @@
 
 Avant de modifier un fichier dans un chat Cursor:
 
+- [ ] **AUTOMATIQUE**: Exécuter `tsx scripts/detect-chat-conflicts.ts --file <filepath>`
 - [ ] Vérifier git status: fichier non modifié ailleurs
 - [ ] Lire ce document: fichier non assigné à un autre chat
 - [ ] Vérifier priorité: phase actuelle appropriée
@@ -297,6 +298,11 @@ Avant de modifier un fichier dans un chat Cursor:
 - [ ] Tester compilation
 - [ ] Commit avec message clair
 - [ ] Mettre à jour ce document avec statut
+
+**Script de Détection Automatique:**
+- `scripts/detect-chat-conflicts.ts` - Détecte automatiquement les conflits
+- Usage: `tsx scripts/detect-chat-conflicts.ts --file <filepath>`
+- Référence: `scripts/README-DETECT-CONFLICTS.md`
 
 ---
 
@@ -347,6 +353,34 @@ Avant de modifier un fichier dans un chat Cursor:
 2. **Chat Chatbot**: Analyser ChatbotOrchestrationService.ts (erreurs syntaxe)
 3. **Tous les chats**: Mettre à jour ce document après chaque modification
 4. **Validation**: Compilation réussie après Phase 1
+
+## 🔧 Outils Automatiques
+
+### Script de Détection de Conflits
+
+**Nouveau:** Script automatique de détection de conflits intégré dans les règles agents.
+
+**Fichier:** `scripts/detect-chat-conflicts.ts`
+
+**Utilisation:**
+```bash
+# Vérifier un fichier avant modification
+tsx scripts/detect-chat-conflicts.ts --file server/services/CacheService.ts
+
+# Analyser tous les fichiers modifiés
+tsx scripts/detect-chat-conflicts.ts --check-all
+
+# Sortie JSON pour intégration
+tsx scripts/detect-chat-conflicts.ts --file <filepath> --json
+```
+
+**Intégration Agents:**
+- ✅ Intégré dans `@.cursor/rules/multi-chat-coordination.md`
+- ✅ Intégré dans `@.cursor/rules/pre-task-quick.md` (checklist point 0)
+- ✅ Intégré dans `@.cursor/rules/core.md` (règles fondamentales)
+- ✅ Exécution automatique recommandée avant toute modification
+
+**Documentation:** `scripts/README-DETECT-CONFLICTS.md`
 
 ---
 

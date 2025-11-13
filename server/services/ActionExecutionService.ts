@@ -182,11 +182,14 @@ export class ActionExecutionService {
     confidence: number;
     operation?: string;
   } {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const queryLower = query.toLowerCase();
-      let bestMatch = { type: null, entity: null, confidence: 0, operation: null };
+      let bestMatch: {
+        type: 'create' | 'update' | 'delete' | 'business_action' | null;
+        entity: string | null;
+        confidence: number;
+        operation: string | null;
+      } = { type: null, entity: null, confidence: 0, operation: null };
 
       // Parcourir les patterns d'actions
       for (const [actionType, patterns] of Object.entries(ACTION_INTENTION_PATTERNS)) {
@@ -344,7 +347,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           resource: `action:${request.entity}:${request.operation}`,
           action: 'propose_action',
           entityType: 'action',
-          errorDetails: rbacCheck.denialReason
+          metadata: { denialReason: rbacCheck.denialReason }
         });
         return {
           success: false,
@@ -455,7 +458,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: request.operation,
           riskLevel,
           confirmationRequired
-        });
+        }
+      });
       return {
         success: true,
         actionId,
@@ -508,7 +512,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-            });
+        }});
       // 1. Récupérer l'action
       const actionResults = await db
         .select()
@@ -631,11 +635,11 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         entityId: executionResult.entityId,
         payload: { actionParameters: currentAction.parameters },
         response: executionResult,
-        errorDetails: executionResult.error,
         metadata: { 
-          executionTime: Date.now() - startTime,
+          executionTimeMs: Date.now() - startTime,
           riskLevel: currentAction.riskLevel
-        });
+        }
+      });
       // 9. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
@@ -659,7 +663,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: currentAction.operation,
           executionTime: Date.now() - startTime,
           success: executionResult.success
-        });
+        }});
       return {
         success: executionResult.success,
         result: executionResult,
@@ -667,41 +671,20 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         executionTime: Date.now() - startTime,
         error: executionResult.error ? {
           type: 'execution',
-          message: executionResult.error.message,
-          details: executionResult.error.details
+          message: executionResult.error.message
         } : undefined
       };
     },
     {
-      operation: 'constructor',
+      operation: 'executeAction',
       service: 'ActionExecutionService',
-      metadata: {}
-    } );
-      // Marquer l'action comme échouée si possible
-      if (currentAction) {
-        await this.updateActionStatus(request.actionId, 'failed', `Erreur système: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-      }
-      await this.auditService.logEvent({
-        userId: request.userId,
-        userRole: currentAction?.userRole || 'unknown',
-        eventType: 'system.error',
-        result: 'error',
-        severity: 'critical',
-        resource: `action:execution:${request.actionId}`,
-        action: 'execute_action',
-        errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
-        metadata: { executionTimeMs: Date.now() - startTime }
-      });
-      return {
-        success: false,
+      metadata: {
         actionId: request.actionId,
-        executionTime: Date.now() - startTime,
-        error: {
-          type: 'execution',
-          message: 'Erreur système lors de l\'exécution'
-        }
-      };
+        userId: request.userId
+      }
     }
+    );
+  }
   // ========================================
   // MÉTHODES UTILITAIRES PRIVÉES
   // ========================================
@@ -942,7 +925,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       await db
         .update(actions)
         .set({
-         as unknown,:as unknownsunknown,unknown,
+          status,
           updatedAt: new Date(),
           ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
           ...(status === 'executing' ? { executedAt: new Date() } : {}),
@@ -953,7 +936,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       const historyData: InsertActionHistory = {
         actionId,
         fromStatus: oldStatus,
-     as unknown,aas unknowntunknown,unknown unknown,
+        toStatus: status,
         changeReason: reason,
         changeType: 'system_update',
         success: true
@@ -961,11 +944,11 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       await db.insert(actionHistory).values([historyData]);
     },
     {
-      operation: 'constructor',
+      operation: 'updateActionStatus',
       service: 'ActionExecutionService',
       metadata: {}
-    } );
-    }
+    });
+  }
   private async performActionExecution(action: Action): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {
@@ -974,7 +957,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: 'performActionExecution',
           actionOperation: action.operation,
           entity: action.entity
-            });
+        }});
       switch (action.entity) {
         case 'offer':
           return await this.executeOfferAction(action);
@@ -1002,15 +985,15 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       operation: 'constructor',
       service: 'ActionExecutionService',
       metadata: {}
-    } );
+    }).catch((error: unknown) => {
       return {
         success: false,
         error: {
-          type: 'execution',
+          type: 'execution' as const,
           message: error instanceof Error ? error.message : 'Erreur d\'exécution inconnue'
-              }
+        }
       };
-    }
+    });
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
       case 'create_offer':
@@ -1058,10 +1041,10 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   }
   private async executeTaskAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-case 'create_project_task':;
+      case 'create_project_task':
         return await this.createProjectTask(action.parameters);
-case 'update_task_status':;
-        return await this.updateTaskStatus(action.targetEntityId!, (acas unknown unknown)unknownnown) as unknown).status);
+      case 'update_task_status':
+        return await this.updateTaskStatus(action.targetEntityId!, (action.parameters as { status: string }).status);
       default:
         return {
           success: false,
@@ -1180,8 +1163,15 @@ case 'update_task_status':;
         total: 0,
         hasMore: false,
         error: {
-          type: 'query',
+          type: 'execution',
           message: 'Erreur lors de la récupération de l\'historique'
-              }
+        }
       };
+    },
+    {
+      operation: 'getActionHistory',
+      service: 'ActionExecutionService',
+      metadata: {}
     }
+    );
+  }

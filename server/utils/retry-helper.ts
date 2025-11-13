@@ -37,7 +37,9 @@ export interface RetryStats {
  * @param error L'erreur à évaluer
  * @returns true si l'erreur est retriable
  */
-export function isRetryableErr: unknown): boolean {
+export function isRetryableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
   }
   
   // Ne pas retry sur les erreurs de ressource non trouvée

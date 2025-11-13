@@ -520,7 +520,8 @@ function main() {
   }
 }
 
-if (require.main === module) {
+// ES Module check
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 

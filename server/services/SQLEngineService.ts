@@ -1037,17 +1037,15 @@ INSTRUCTIONS DE BASE:
         service: 'SQLEngineService',
         operation: 'validateSQL',
         userId,
-        userRole 
-              
-            }
-      });
+        userRole
+      }
+    });
     logger.info('SQL à valider', { metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        sqlPreview: sql.substring(0, 200) + (sql.length > 200 ? '...' : '') 
-              
-            }
-      });
+      service: 'SQLEngineService',
+      operation: 'validateSQL',
+      sqlPreview: sql.substring(0, 200) + (sql.length > 200 ? '...' : '')
+    }
+    });
 
     return withErrorHandling(
     async () => {
@@ -1076,6 +1074,15 @@ INSTRUCTIONS DE BASE:
           }
         }
       });
+      } catch (error) {
+        // Si le nettoyage échoue, utiliser le SQL original
+        logger.warn('Erreur nettoyage SQL, utilisation SQL original', { metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      }
       
       // 1. PRÉTRAITEMENT pour supporter la syntaxe PostgreSQL INTERVAL
       // Utiliser la méthode commune de prétraitement
@@ -1086,91 +1093,83 @@ INSTRUCTIONS DE BASE:
           operation: 'validateSQL',
           intervalReplacementsCount: intervalReplacements.size,
           hasSemicolon,
-          sqlForParsingPreview: sqlForParsing.substring(0, 150) 
-              
-              }
+          sqlForParsingPreview: sqlForParsing.substring(0, 150)
+        }
       });
-      // 2. ANALYSE AST COMPLÈTE avec node-sql-parser
-      logger.info('Parsing AST', { metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        step: 1 
-
-              }
-                              });
-      const ast = sqlParser.astify(sqlForParsing, { database: 'postgresql' });
-      logger.info('Parsing AST réussi', { metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL' 
-
-              }
-                              });
-      // 2. ENFORCEMENT READ-ONLY STRICT
-      const astArray = Array.isArray(ast) ? ast : [ast];
-      logger.info('Vérification READ-ONLY', { metadata: {
-        service: 'SQLEngineService',
-        operation: 'validateSQL',
-        step: 2,
-        statementsCount: astArray.length 
-
-              }
-                              });
       
-      for (const statement of astArray) {
+      try {
+        // 2. ANALYSE AST COMPLÈTE avec node-sql-parser
+        logger.info('Parsing AST', { metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          step: 1
+        }
+      });
+        const ast = sqlParser.astify(sqlForParsing, { database: 'postgresql' });
+        logger.info('Parsing AST réussi', { metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL'
+        }
+      });
+        // 2. ENFORCEMENT READ-ONLY STRICT
+        const astArray = Array.isArray(ast) ? ast : [ast];
+        logger.info('Vérification READ-ONLY', { metadata: {
+          service: 'SQLEngineService',
+          operation: 'validateSQL',
+          step: 2,
+          statementsCount: astArray.length
+        }
+      });
+        
+        for (const statement of astArray) {
         // Vérifier que TOUTES les statements sont SELECT
         if (statement.type !== 'select') {
           const violation = `Opération dangereuse détectée: ${statement.type.toUpperCase()}. Seuls les SELECT sont autorisés.`;
           logger.warn('Violation sécurité SQL', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        violation 
-              
-                  }
+        violation
+        }
       });
           violations.push(violation);
           continue;
         }
         logger.info('Statement type: SELECT', { metadata: {
         service: 'SQLEngineService',
-        operation: 'validateSQL' 
-
-                }
-                              });
+        operation: 'validateSQL'
+      }
+    });
         // 3. EXTRACTION ET VALIDATION DES TABLES
         logger.info('Validation des tables', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        step: 3 
-
-                }
-                              });
+        step: 3
+      }
+    });
         const tablesInQuery = this.extractTablesFromAST(statement);
         logger.info('Tables extraites', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        tables: tablesInQuery.join(', ') 
-              
-                }
-      });
+        tables: tablesInQuery.join(', ')
+      }
+    });
         for (const tableName of tablesInQuery) {
           if (ALLOWED_BUSINESS_TABLES.includes(tableName)) {
             allowedTables.push(tableName);
             logger.info('Table autorisée', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        tableName 
-              
-                    }
-      });
+        tableName
+      }
+    });
           } else {
             const violation = `Table non autorisée: ${tableName}`;
             logger.warn('Violation sécurité SQL', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        violation 
-              
-                    }
-      });
+        violation
+      }
+    });
             violations.push(violation);
           }
         }
@@ -1179,18 +1178,16 @@ INSTRUCTIONS DE BASE:
         logger.info('Validation des colonnes', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        step: 4 
-
-                }
-                              });
+        step: 4
+      }
+    });
         const columnsInQuery = this.extractColumnsFromAST(statement);
         logger.info('Colonnes extraites', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        columnsCount: columnsInQuery.length 
-
-                }
-                              });
+        columnsCount: columnsInQuery.length
+      }
+    });
         
         // SÉCURITÉ CRITIQUE : Vérification stricte des colonnes sensibles
         const accessedSensitiveColumns: string[] = [];
@@ -1210,10 +1207,9 @@ INSTRUCTIONS DE BASE:
                     table,
                     column,
                     userRole,
-                    severity: 'CRITICAL' 
-
-                        }
-                              });
+                    severity: 'CRITICAL'
+                  }
+                });
                 violations.push(violation);
                 accessedSensitiveColumns.push(`${table}.${column}`);
                 // Ne pas ajouter aux colonnes autorisées
@@ -1225,10 +1221,9 @@ INSTRUCTIONS DE BASE:
                           operation: 'validateSQL',
                     table,
                     column,
-                    userRole: 'admin' 
-
-                        }
-                              });
+                    userRole: 'admin'
+                  }
+                });
               }
             }
           }
@@ -1246,74 +1241,67 @@ INSTRUCTIONS DE BASE:
                     operation: 'validateSQL',
               accessedSensitiveColumns,
               userRole,
-              severity: 'CRITICAL' 
-
-                  }
-                              });
+              severity: 'CRITICAL'
+            }
+          });
           violations.push(`REJET SÉCURITÉ: Accès refusé aux colonnes sensibles: ${accessedSensitiveColumns.join(', ')}`);
         }
         // 5. DÉTECTION INJECTIONS AVANCÉES VIA AST
         logger.info('Détection patterns d\'injection', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        step: 5 
-
-                }
-                              });
+        step: 5
+      }
+    });
         const injectionViolationsBefore = violations.length;
         this.detectAdvancedInjectionPatterns(statement, violations);
         if (violations.length > injectionViolationsBefore) {
           logger.warn('Patterns d\'injection détectés', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        patterns: violations.slice(injectionViolationsBefore).join(', ') 
-              
-                  }
-      });
+        patterns: violations.slice(injectionViolationsBefore).join(', ')
+      }
+    });
         } else {
           logger.info('Aucun pattern d\'injection détecté', { metadata: {
         service: 'SQLEngineService',
-        operation: 'validateSQL' 
-
-                  }
-                              });
+        operation: 'validateSQL'
+      }
+    });
         }
         // 6. VALIDATION CONTRAINTES MÉTIER
         logger.info('Validation contraintes métier', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        step: 6 
-
-                }
-                              });
+        step: 6
+      }
+    });
         const businessViolationsBefore = violations.length;
         this.validateBusinessConstraints(statement, userRole, violations);
         if (violations.length > businessViolationsBefore) {
           logger.warn('Contraintes métier violées', { metadata: {
         service: 'SQLEngineService',
         operation: 'validateSQL',
-        violations: violations.slice(businessViolationsBefore).join(', ') 
-              
-                  }
-      });
+        violations: violations.slice(businessViolationsBefore).join(', ')
+      }
+    });
         } else {
           logger.info('Contraintes métier respectées', { metadata: {
         service: 'SQLEngineService',
-        operation: 'validateSQL' 
-
-                  }
-                              });
+        operation: 'validateSQL'
+      }
+    });
         }
       }
-
-    } catch (parseError) {
+      } catch (parseError) {
       // Ne pas rejeter immédiatement, essayer une validation basique
       logger.warn('Parsing SQL échoué, validation basique', { metadata: {
           service: 'SQLEngineService',
           operation: 'validateSQL',
           error: parseError instanceof Error ? parseError.message : String(parseError),
-          sql: sql.substring(0, 100)       }
-     });
+          sql: sql.substring(0, 100)
+        }
+      });
       // Validation basique si le parser échoue
       const basicViolations: string[] = [];
       // Vérifier les opérations dangereuses
@@ -1369,10 +1357,9 @@ INSTRUCTIONS DE BASE:
     if (violations.length > 0) {
       logger.info('Détail violations', { metadata: {
         service: 'SQLEngineService',
-        operation: 'validateSQL' 
-
-              }
-                              });
+        operation: 'validateSQL'
+      }
+    });
       violations.forEach((v, i) => logger.info('Violation', { metadata: {
           service: 'SQLEngineService',
           operation: 'validateSQL',

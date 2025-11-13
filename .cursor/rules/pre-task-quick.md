@@ -8,6 +8,17 @@ Checklist rapide en 5 points pour évaluation préalable des tâches. Version si
 
 ## 🚀 Checklist Rapide (5 Points)
 
+### 0. Vérification Conflits Multi-Chats (NOUVEAU - PRIORITÉ)
+
+**Avant toute modification de fichier:**
+- [ ] Exécuter `tsx scripts/detect-chat-conflicts.ts --file <filepath>` si modification fichier
+- [ ] Vérifier si fichier dans zone de travail assignée
+- [ ] Vérifier conflits critiques/haute priorité
+- [ ] S'assigner dans zone si libre
+- [ ] Bloquer modification si conflits critiques détectés
+
+**Référence:** `@.cursor/rules/multi-chat-coordination.md` - Coordination multi-chats complète
+
 ### 1. Analyser la Tâche
 
 **Avant toute implémentation:**

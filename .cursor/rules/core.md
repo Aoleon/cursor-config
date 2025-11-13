@@ -57,11 +57,15 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 
 ### 1. Toujours Lire la Documentation Avant de Modifier
 
+- ✅ **Vérifier conflits multi-chats** avec `tsx scripts/detect-chat-conflicts.ts --file <filepath>` avant modification
 - ✅ **Lire `server/utils/README-UTILS.md`** avant toute modification backend
 - ✅ **Lire `projectbrief.md`** pour comprendre le périmètre
 - ✅ **Lire `systemPatterns.md`** pour comprendre l'architecture
 - ✅ **Lire `activeContext.md`** pour connaître l'état actuel
+- ✅ **Lire `docs/COORDINATION_CHATS_CURSOR.md`** pour connaître zones de travail
 - ✅ **Évaluer préalablement** différentes approches avec `@.cursor/rules/pre-task-quick.md` (checklist rapide) ou `@.cursor/rules/pre-task-evaluation.md` (évaluation complète)
+
+**Référence:** `@.cursor/rules/multi-chat-coordination.md` - Coordination multi-chats
 
 ### 2. Utilisation des Utilitaires Partagés
 

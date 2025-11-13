@@ -344,7 +344,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             }
           });
 
-          const result = await withRetry(
+          const result: RenderResult = await withRetry<RenderResult>(
             async () => {
               const pdfEngine: any = await createPDFEngine();
               // @ts-ignore - TypeScript ne reconnaît pas toujours la méthode render sur PDFTemplateEngine

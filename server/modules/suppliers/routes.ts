@@ -33,10 +33,8 @@ import {
   insertSupplierQuoteAnalysisSchema
 } from '@shared/schema';
 import { OCRService } from '../../ocrService';
-// Import emailService - using default export pattern
-import emailServiceDefault from '../../services/emailService';
-import { inviteSupplierForQuote } from '../../services/emailService';
-const emailService = emailServiceDefault;
+import { emailService, inviteSupplierForQuote } from '../../services/emailService';
+const emailServiceInstance = emailService;
 import type {
   SupplierQueryParams,
   SupplierRequestQueryParams,
@@ -510,7 +508,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const session = await storage.getSupplierQuoteSession(sessionId);
       if (!session) {
-        throw new NotFoundError('Session devis', sessionId);
+        throw new NotFoundError('Session devis');
       }
 
       const documents = await storage.getDocumentsBySession(sessionId);
@@ -547,7 +545,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const [ao, supplier, documents] = await Promise.all([
         session.aoId ? storage.getAo(session.aoId).catch(() => null) : Promise.resolve(null),
         storage.getSupplier(session.supplierId).catch(() => null),
-        storage.getSupplierDocuments(session.id).catch(() => [])
+        storage.getDocumentsBySession(session.id).catch(() => [])
       ]);
 
       // Return limited public data
@@ -555,7 +553,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         sessionId: session.id,
         aoReference: ao?.reference || null,
         aoDescription: ao?.description || null,
-        deadline: ao?.limitDate || null,
+        deadline: ao?.dateLimiteRemise || null,
         supplierName: supplier?.name || null,
         documents: documents.map((d: unknown) => {
           const doc = d as { id: string; filename: string; uploadedAt: Date | null };
@@ -597,11 +595,18 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
+      // Récupérer la session pour obtenir aoLotId
+      const session = await storage.getSupplierQuoteSession(sessionId);
+      if (!session) {
+        throw new NotFoundError('Session devis');
+      }
+
       // Store document
       // Note: content is not in InsertSupplierDocument schema, will be stored separately
       const document = await storage.createSupplierDocument({
         sessionId,
         supplierId,
+        aoLotId: session.aoLotId, // Requis par le schema
         documentType: documentType || 'quote',
         filename: req.file.originalname,
         originalName: req.file.originalname,
@@ -641,7 +646,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const document = await storage.getSupplierDocument(id);
       if (!document) {
-        throw new NotFoundError('Document fournisseur', id);
+        throw new NotFoundError('Document fournisseur');
       }
 
       // Initialize OCR service
@@ -709,7 +714,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const document = await storage.getSupplierDocument(id);
       if (!document) {
-        throw new NotFoundError('Document fournisseur', id);
+        throw new NotFoundError('Document fournisseur');
       }
 
       sendSuccess(res, {
@@ -773,7 +778,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const session = await storage.getSupplierQuoteSession(id);
       if (!session) {
-        throw new NotFoundError('Session devis', id);
+        throw new NotFoundError('Session devis');
       }
 
       // Get all sessions for the same AO
@@ -1043,9 +1048,9 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           await storage.createAnalysisNoteHistory({
             analysisId,
             notes,
+            timestamp: new Date(),
             isInternal,
-            createdBy: userId,
-            createdAt: new Date()
+            createdBy: userId
           });
         }
         
@@ -1092,12 +1097,12 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       const session = await storage.getSupplierQuoteSession(sessionId);
       if (!session) {
-        throw new NotFoundError('Session devis', sessionId);
+        throw new NotFoundError('Session devis');
       }
 
       const supplier = await storage.getSupplier(session.supplierId);
       if (!supplier) {
-        throw new NotFoundError('Fournisseur', session.supplierId);
+        throw new NotFoundError('Fournisseur');
       }
 
       // Generate invite token
@@ -1115,11 +1120,14 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       // Send email
+      // Récupérer l'AO pour les détails
+      const ao = await storage.getAo(session.aoId);
+      
       await inviteSupplierForQuote(
         session,
         supplier,
-        session.aoReference || '',
-        session.aoDescription || '',
+        ao?.reference || '',
+        ao?.description || '',
         undefined // instructions
       );
 
@@ -1158,16 +1166,23 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           const { aoLotId, supplierIds } = req.body;
           
           const lotSuppliers = await Promise.all(
-            supplierIds.map(supplierId => 
-              storage.createAoLotSupplier({
+            supplierIds.map(async (supplierId: string) => {
+              // Récupérer l'AO depuis le lot
+              // Récupérer tous les lots pour trouver l'aoId
+              const lots = await storage.getAoLots(aoLotId);
+              const lot = lots.find(l => l.id === aoLotId);
+              if (!lot) {
+                throw new NotFoundError('Lot AO');
+              }
+              return storage.createAoLotSupplier({
+                aoId: lot.aoId,
                 aoLotId,
-                supplierId,
-                invitedAt: new Date()
-              })
-            )
+                supplierId
+              });
+            })
           );
           
-          sendSuccess(res, { lotSuppliers, count: lotSuppliers.length }, 'Fournisseurs ajoutés au lot avec succès');
+          sendSuccess(res, { lotSuppliers, count: lotSuppliers.length }, 201);
         },
         {
           operation: 'addLotSuppliers',

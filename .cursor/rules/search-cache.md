@@ -15,13 +15,18 @@
 
 ## 📋 Règles de Cache Intelligent
 
-### 1. Cache Automatique des Recherches Sémantiques
+### 1. Cache Automatique des Recherches Sémantiques (RENFORCÉ)
+
+**IMPÉRATIF:** Détecter recherches similaires avant exécution pour éviter recherches redondantes.
 
 **TOUJOURS:**
+- ✅ **Détecter recherches similaires avant exécution** (IMPÉRATIF - éviter recherches redondantes)
 - ✅ Mettre en cache les résultats de `codebase_search`
-- ✅ Réutiliser les résultats de recherche similaires
+- ✅ Réutiliser les résultats de recherche similaires (>80% similarité)
 - ✅ Invalider le cache si code modifié
 - ✅ Limiter la taille du cache
+- ✅ **TTL adaptatif selon type recherche** (NOUVEAU - optimiser cache)
+- ✅ **Cache résultats intermédiaires** (NOUVEAU - éviter recalculs)
 
 **Pattern:**
 ```typescript
@@ -34,21 +39,52 @@ async function cachedCodebaseSearch(
   // 1. Générer clé de cache
   const cacheKey = generateCacheKey(query, targetDirectories);
   
-  // 2. Vérifier cache
+  // 2. Vérifier cache exact
   const cached = await getCachedSearch(cacheKey);
   if (cached && !isCacheExpired(cached)) {
-    logger.info('Cache hit pour recherche', {
+    logger.info('Cache hit exact pour recherche', {
       metadata: { query, cacheKey }
     });
     return cached.result;
   }
   
-  // 3. Effectuer recherche
+  // 3. NOUVEAU: Chercher recherches similaires avant exécution (IMPÉRATIF)
+  const similarSearches = await findSimilarSearches(query, targetDirectories, {
+    similarityThreshold: 0.8,
+    maxResults: 5
+  });
+  
+  if (similarSearches.length > 0 && similarSearches[0].similarity > 0.8) {
+    logger.info('Cache hit similaire pour recherche', {
+      metadata: {
+        query,
+        similarQuery: similarSearches[0].query,
+        similarity: similarSearches[0].similarity
+      }
+    });
+    
+    // Adapter résultats similaires au contexte actuel
+    const adapted = await adaptSearchResults(
+      similarSearches[0].result,
+      query,
+      context
+    );
+    
+    // Mettre en cache adaptation
+    await setCachedSearch(cacheKey, adapted, {
+      ttl: calculateTTL(query, adapted),
+      invalidation: generateInvalidationRules(targetDirectories)
+    });
+    
+    return adapted;
+  }
+  
+  // 4. Effectuer nouvelle recherche si pas de match
   const result = await codebase_search(query, targetDirectories);
   
-  // 4. Mettre en cache
+  // 5. Mettre en cache avec TTL adaptatif
   await setCachedSearch(cacheKey, result, {
-    ttl: calculateTTL(query, result),
+    ttl: calculateAdaptiveTTL(query, result, targetDirectories), // NOUVEAU: TTL adaptatif
     invalidation: generateInvalidationRules(targetDirectories)
   });
   

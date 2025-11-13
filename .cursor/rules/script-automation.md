@@ -1,10 +1,26 @@
 # Automatisation par Script - Saxium
 
-**Objectif:** Détecter si une tâche est automatisable par script et créer/exécuter automatiquement le script si c'est plus rapide et efficace
+**⚠️ RÈGLE CRITIQUE - INTERDICTION DES SCRIPTS:**
 
-## 🎯 Principe Fondamental
+**L'utilisation de `run_terminal_cmd` pour exécuter des scripts (`.ts`, `.sh`, `.js`, etc.) est STRICTEMENT INTERDITE.**
 
-**IMPÉRATIF:** Avant toute implémentation, l'agent DOIT évaluer si la tâche est automatisable par script plutôt que par des actions manuelles.
+**Les automatisations doivent être faites avec les outils (tools) disponibles:**
+- ✅ `read_file`, `write`, `search_replace` pour modifications de fichiers
+- ✅ `codebase_search`, `grep` pour recherches
+- ✅ `list_dir`, `glob_file_search` pour navigation
+- ✅ Tous les autres outils (tools) disponibles
+
+**Cette règle remplace les recommandations d'automatisation par script dans ce fichier. Les automatisations doivent être faites directement avec les outils, pas via l'exécution de scripts.**
+
+---
+
+**Objectif (OBSOLÈTE - À NE PLUS SUIVRE):** Détecter si une tâche est automatisable par script et créer/exécuter automatiquement le script si c'est plus rapide et efficace
+
+## 🎯 Principe Fondamental (OBSOLÈTE)
+
+**⚠️ Cette section est OBSOLÈTE. L'utilisation de scripts via `run_terminal_cmd` est INTERDITE.**
+
+**IMPÉRATIF:** Avant toute implémentation, l'agent DOIT évaluer si la tâche peut être automatisée avec les outils (tools) disponibles plutôt que par des actions manuelles répétitives.
 
 **Critères d'Automatisation:**
 1. **Répétitivité** - Tâche répétitive ou batch

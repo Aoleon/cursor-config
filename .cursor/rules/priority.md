@@ -57,6 +57,11 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 
 **Autonomie:**
 - `senior-architect-oversight.md` - Supervision architecte sénior (IMPÉRATIF - supervision, priorisation, pilotage, code review)
+- `sub-agents-quick-activation.md` - Activation rapide sub-agents (P0 - IMPÉRATIF - activation automatique)
+- `sub-agents-orchestration.md` - Orchestration sub-agents (P1 - IMPÉRATIF - orchestration principale)
+- `sub-agents-roles.md` - Rôles sub-agents (P1 - IMPÉRATIF - définition rôles)
+- `sub-agents-communication.md` - Communication sub-agents (P1 - IMPÉRATIF - communication inter-agents)
+- `sub-agents-usage-patterns.md` - Patterns d'utilisation sub-agents (P1 - patterns pratiques)
 - `client-consultant-oversight.md` - Supervision consultant client (IMPÉRATIF - validation cahier des charges, audit, objectifs business, problématiques de base)
 - `migration-refactoring-manager.md` - Gestionnaire migration/refactoring (IMPÉRATIF - supervision migration modulaire, détection régressions, validation cohérence)
 - `tech-debt-manager.md` - Gestionnaire dette technique (IMPÉRATIF - identification services dupliqués, planification consolidation, réduction monolithiques)
@@ -67,6 +72,13 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `persistent-execution.md` - Exécution persistante (IMPÉRATIF - éviter arrêts prématurés, runs longs)
 - `advanced-iteration-and-role-coordination.md` - Itérations avancées et coordination des rôles (IMPÉRATIF - maximiser autonomie, durée, qualité)
 - `task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF - critères de taille optimale, pensée séquentielle, Background Agent, listes structurées)
+- `sub-agents-roles.md` - Rôles des sub-agents (IMPÉRATIF - exécution autonome maxi runs)
+- `sub-agents-orchestration.md` - Orchestration principale (IMPÉRATIF - coordination sub-agents)
+- `sub-agents-communication.md` - Communication inter-agents (IMPÉRATIF - coordination efficace)
+- `sub-agents-workflows.md` - Workflows standards (IMPÉRATIF - patterns réutilisables)
+- `sub-agents-monitoring.md` - Monitoring et métriques (IMPÉRATIF - amélioration continue)
+- `sub-agents-learning.md` - Amélioration continue (IMPÉRATIF - apprentissage patterns)
+- `multi-agent-coordination.md` - Coordination multi-agents (IMPÉRATIF - coordination améliorée avec sub-agents)
 - `similar-code-detection.md` - Détection proactive de code similaire (éviter duplication)
 - `learning-memory.md` - Mémoire persistante des apprentissages (réutiliser solutions)
 - `preventive-validation.md` - Validation préventive (prévenir erreurs)
@@ -79,6 +91,10 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `parallel-execution.md` - Exécution parallèle (améliorer performances)
 - `batch-processing.md` - Traitement par lots (optimiser efficacité)
 - `error-recovery.md` - Récupération automatique après erreurs (améliorer robustesse)
+- `root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF - éviter corrections superficielles, problèmes récurrents)
+- `bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF - priorisation, validation, documentation)
+- `agent-performance-optimization.md` - Optimisation performances agent (IMPÉRATIF - cache, parallélisation, contexte, priorisation)
+- `transversality-enhancement.md` - Amélioration transversalité agent (IMPÉRATIF - relations modules, patterns, vision globale)
 - `conflict-detection.md` - Détection proactive des conflits (éviter problèmes)
 - `bug-prevention.md` - Détection proactive des bugs (améliorer qualité)
 - `intelligent-task-detection.md` - Détection intelligente des tâches (détection automatique complexité)
@@ -97,6 +113,7 @@ Ces règles sont importantes mais spécifiques à un domaine. Elles sont chargé
 - `auto-test-generation.md` - Génération automatique de tests (tests unitaires, régression, performance)
 - `tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (checkpointing, continuation)
 - `cursor-limits-workaround.md` - Système unifié de contournement toutes limites Cursor (tool calls, contexte, MCP, fichiers, quotas) (IMPÉRATIF)
+- `autonomous-decision-making.md` - Prise de décision autonome (IMPÉRATIF - détection propositions choix, analyse options, décision robuste, exécution autonome)
 
 **Quand charger:**
 - Automatiquement si modification dans le domaine correspondant
@@ -195,6 +212,9 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 - Tâche avec plusieurs todos → Charger `todo-completion.md` (IMPÉRATIF) + `task-decomposition.md` (IMPÉRATIF - génération listes structurées avec dépendances)
 - Tâche nécessitant itération → Charger `iterative-perfection.md` (IMPÉRATIF)
 - Tâche de création/modification → Charger `similar-code-detection.md` + `preventive-validation.md` + `dependency-intelligence.md` + `auto-documentation.md` (si documentation nécessaire)
+- Modification multi-modules → Charger `transversality-enhancement.md` (IMPÉRATIF - relations modules, coordination) + `transversal-performance.md` (performance transversale)
+- Tâche nécessitant vision globale → Charger `transversality-enhancement.md` (IMPÉRATIF - vision globale consolidée) + `transversal-performance.md` (compréhension multi-domaines)
+- Recherche patterns établis → Charger `transversality-enhancement.md` (IMPÉRATIF - réutilisation patterns) + `similar-code-detection.md` (détection code similaire)
 - Tâche utilisant IA → Charger `cost-optimization.md` (optimisation coûts) + `intelligent-model-selection.md`
 - Tâche avec opérations longues → Charger `timeout-management.md` (gestion timeouts) + `task-decomposition.md`
 - Tâche avec contexte large → Charger `context-compression.md` (compression contexte) + `intelligent-preloading.md` (préchargement)
@@ -209,12 +229,15 @@ Ces règles optimisent le comportement de l'agent mais ne sont pas essentielles 
 - Quotas mensuels < 50 → Charger `cursor-limits-workaround.md` (système unifié) (IMPÉRATIF)
 - Tâche récurrente → Charger `learning-memory.md` + `workflow-consolidation.md`
 - Tâche avec problèmes de performance → Charger `auto-performance-detection.md`
-- Contexte saturé → Charger `context-optimization.md` (IMPÉRATIF)
+- Optimisation performances → Charger `agent-performance-optimization.md` (IMPÉRATIF - cache, parallélisation, contexte, priorisation)
+- Contexte saturé → Charger `context-optimization.md` (IMPÉRATIF) + `agent-performance-optimization.md` (optimisation proactive)
 - Tâche nécessitant IA → Charger `intelligent-model-selection.md` (IMPÉRATIF)
-- Recherches répétitives → Charger `search-cache.md` (IMPÉRATIF) + `rule-cache.md` (cache règles)
-- Opérations indépendantes → Charger `parallel-execution.md` (IMPÉRATIF) + `task-decomposition.md` (si décomposition nécessaire avec Background Agent)
-- Tâches similaires multiples → Charger `batch-processing.md` (IMPÉRATIF)
-- Erreur détectée → Charger `error-recovery.md` (IMPÉRATIF)
+- Recherches répétitives → Charger `search-cache.md` (IMPÉRATIF) + `agent-performance-optimization.md` (cache intelligent)
+- Opérations indépendantes → Charger `parallel-execution.md` (IMPÉRATIF) + `agent-performance-optimization.md` (parallélisation systématique) + `task-decomposition.md` (si décomposition nécessaire avec Background Agent)
+- Tâches similaires multiples → Charger `batch-processing.md` (IMPÉRATIF) + `agent-performance-optimization.md` (priorisation intelligente)
+- Erreur détectée → Charger `error-recovery.md` (IMPÉRATIF) + `root-cause-analysis.md` (IMPÉRATIF - recherche cause racine avant récupération)
+- Bug à résoudre → Charger `bug-resolution-strategy.md` (IMPÉRATIF - stratégie systématique) + `root-cause-analysis.md` (IMPÉRATIF - recherche cause racine)
+- Problème à résoudre → Charger `root-cause-analysis.md` (IMPÉRATIF - recherche cause racine systématique)
 - Conflit potentiel → Charger `conflict-detection.md` (IMPÉRATIF)
 - Bug potentiel → Charger `bug-prevention.md` (IMPÉRATIF)
 - Optimisation paramétrage → Charger `rule-feedback-loop.md` (ajustement automatique) + `rule-cache.md` (cache intelligent)

@@ -1665,6 +1665,10 @@ class MultiLevelValidation {
 - `@.cursor/rules/senior-architect-oversight.md` - Supervision architecte sénior
 - `@.cursor/rules/persistent-execution.md` - Exécution persistante
 - `@.cursor/rules/error-recovery.md` - Récupération automatique après erreurs
+- `@.cursor/rules/sub-agents-roles.md` - Rôles des sub-agents (coordination avancée des rôles)
+- `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale (coordination multi-rôles)
+- `@.cursor/rules/sub-agents-learning.md` - Amélioration continue (apprentissage et adaptation)
+- `@.cursor/rules/multi-agent-coordination.md` - Coordination multi-agents (coordination améliorée)
 
 ---
 

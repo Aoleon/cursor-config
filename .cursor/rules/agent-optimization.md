@@ -656,23 +656,44 @@ const result = await exploitWorkflow(workflow, task);
 
 ## 🔗 Références
 
+### Règles d'Optimisation Performances
+
+- `@.cursor/rules/agent-performance-optimization.md` - Optimisation performances agent (IMPÉRATIF - cache, parallélisation, contexte, priorisation)
+- `@.cursor/rules/search-cache.md` - Cache intelligent recherches
+- `@.cursor/rules/context-optimization.md` - Optimisation contexte
+- `@.cursor/rules/parallel-execution.md` - Exécution parallèle
+- `@.cursor/rules/batch-processing.md` - Traitement par lots
+
+### Règles de Transversalité
+
+- `@.cursor/rules/transversality-enhancement.md` - Amélioration transversalité agent (IMPÉRATIF - relations modules, patterns, vision globale)
+- `@.cursor/rules/transversal-performance.md` - Performance transversale
+- `@.cursor/rules/similar-code-detection.md` - Détection code similaire
+
+### Règles de Résolution Problèmes
+
+- `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF)
+- `@.cursor/rules/bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF)
+- `@.cursor/rules/error-recovery.md` - Récupération automatique après erreurs
+- `@.cursor/rules/bug-prevention.md` - Détection proactive des bugs
+
 ### Documentation Essentielle
+
 - `@AGENTS.md` - Instructions complètes pour l'agent
 - `@.cursor/rules/context-usage.md` - Utilisation optimale du contexte
-- `@.cursor/rules/autonomous-workflows.md` - **NOUVEAU** Workflows autonomes
+- `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
 - `@.cursor/rules/common-tasks.md` - Tâches courantes
 - `@.cursor/rules/quick-reference.md` - Référence rapide
+- `@.cursor/rules/core.md` - Règles fondamentales
+- `@.cursor/rules/quality-principles.md` - Principes de qualité
+- `@.cursor/rules/workflows.md` - Workflows détaillés
 
 ### Fichiers de Mémoire
+
 - `@projectbrief.md` - Objectifs et périmètre
 - `@activeContext.md` - État actuel et focus
 - `@systemPatterns.md` - Patterns architecturaux
 - `@techContext.md` - Stack technique
-
-### Règles Cursor
-- `@.cursor/rules/core.md` - Règles fondamentales
-- `@.cursor/rules/quality-principles.md` - Principes de qualité
-- `@.cursor/rules/workflows.md` - Workflows détaillés
 
 ---
 

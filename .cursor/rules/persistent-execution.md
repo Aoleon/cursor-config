@@ -453,12 +453,15 @@ async function forcePlanAndExecuteNextSteps(
 **IMPÉRATIF:** Maintenir l'agent actif pendant les runs longs avec mécanismes de keep-alive.
 
 **TOUJOURS:**
-- ✅ Sauvegarder état régulièrement (toutes les 5-10 minutes)
+- ✅ Sauvegarder état régulièrement (toutes les 5 minutes - RENFORCÉ)
 - ✅ Créer checkpoint après chaque étape importante
-- ✅ Vérifier progression régulièrement
-- ✅ Détecter stagnation et forcer progression
+- ✅ Créer checkpoint préventif si tool calls > 800 (au lieu de 900)
+- ✅ Vérifier progression régulièrement (toutes les 2-3 minutes)
+- ✅ Détecter stagnation et forcer progression (seuil réduit à 5 minutes)
 - ✅ Maintenir contexte actif même pendant pauses
 - ✅ Reprendre automatiquement après interruption
+- ✅ Optimiser contexte proactivement (toutes les 15 minutes)
+- ✅ Activer Max Mode automatiquement si contexte > 80%
 
 **Pattern:**
 ```typescript
@@ -466,8 +469,12 @@ async function forcePlanAndExecuteNextSteps(
 class KeepAliveManager {
   private lastActivity: number = Date.now();
   private checkpoints: Checkpoint[] = [];
-  private readonly CHECKPOINT_INTERVAL = 5 * 60 * 1000; // 5 minutes
-  private readonly STAGNATION_THRESHOLD = 10 * 60 * 1000; // 10 minutes
+  private readonly CHECKPOINT_INTERVAL = 5 * 60 * 1000; // 5 minutes (RENFORCÉ)
+  private readonly STAGNATION_THRESHOLD = 5 * 60 * 1000; // 5 minutes (RÉDUIT de 10 min)
+  private readonly PROGRESSION_CHECK_INTERVAL = 2 * 60 * 1000; // 2 minutes (NOUVEAU)
+  private readonly CONTEXT_OPTIMIZATION_INTERVAL = 15 * 60 * 1000; // 15 minutes (NOUVEAU)
+  private lastProgressionCheck: number = Date.now();
+  private lastContextOptimization: number = Date.now();
   
   async maintainKeepAlive(
     executionState: ExecutionState,
@@ -498,7 +505,33 @@ class KeepAliveManager {
       await this.createCheckpoint(executionState, context);
     }
     
-    // 3. Mettre à jour dernière activité
+    // 3. Vérifier progression régulièrement (NOUVEAU)
+    const timeSinceLastProgressionCheck = now - this.lastProgressionCheck;
+    if (timeSinceLastProgressionCheck > this.PROGRESSION_CHECK_INTERVAL) {
+      await this.checkProgression(executionState, context);
+      this.lastProgressionCheck = now;
+    }
+    
+    // 4. Optimiser contexte proactivement (NOUVEAU)
+    const timeSinceLastContextOptimization = now - this.lastContextOptimization;
+    if (timeSinceLastContextOptimization > this.CONTEXT_OPTIMIZATION_INTERVAL) {
+      await this.optimizeContextProactively(context, executionState);
+      this.lastContextOptimization = now;
+    }
+    
+    // 5. Vérifier tool calls et créer checkpoint préventif (NOUVEAU)
+    const toolCallsCount = await getToolCallsCount();
+    if (toolCallsCount > 800) {
+      logger.warn('Tool calls > 800, création checkpoint préventif', {
+        metadata: {
+          toolCallsCount,
+          checkpointInterval: this.CHECKPOINT_INTERVAL
+        }
+      });
+      await this.createCheckpoint(executionState, context);
+    }
+    
+    // 6. Mettre à jour dernière activité
     this.lastActivity = now;
     
     return {
@@ -558,6 +591,86 @@ class KeepAliveManager {
     executionState.remainingTasks = executionState.remainingTasks.slice(1);
     executionState.currentTask = null;
     this.lastActivity = Date.now();
+  }
+  
+  async checkProgression(
+    executionState: ExecutionState,
+    context: Context
+  ): Promise<void> {
+    // 1. Calculer métriques progression
+    const totalTasks = executionState.completedTasks.length + executionState.remainingTasks.length;
+    const progress = totalTasks > 0 
+      ? (executionState.completedTasks.length / totalTasks) * 100 
+      : 0;
+    
+    // 2. Détecter stagnation potentielle
+    const timeSinceLastCompletion = Date.now() - (executionState.lastTaskCompletion || Date.now());
+    if (timeSinceLastCompletion > this.STAGNATION_THRESHOLD * 0.5) { // 50% du seuil
+      logger.warn('Stagnation potentielle détectée', {
+        metadata: {
+          timeSinceLastCompletion,
+          progress,
+          remainingTasks: executionState.remainingTasks.length
+        }
+      });
+    }
+    
+    // 3. Logger progression
+    logger.info('Vérification progression', {
+      metadata: {
+        progress: `${progress.toFixed(1)}%`,
+        completedTasks: executionState.completedTasks.length,
+        remainingTasks: executionState.remainingTasks.length,
+        timeSinceLastCompletion
+      }
+    });
+  }
+  
+  async optimizeContextProactively(
+    context: Context,
+    executionState: ExecutionState
+  ): Promise<void> {
+    // 1. Vérifier utilisation contexte
+    const contextUsage = await getContextUsage(context);
+    const contextLimit = await getContextLimit(); // 200k ou 1M avec Max Mode
+    const usagePercentage = (contextUsage / contextLimit) * 100;
+    
+    // 2. Si > 80%, activer Max Mode si disponible
+    if (usagePercentage > 80 && !context.maxModeEnabled) {
+      logger.info('Contexte > 80%, activation Max Mode', {
+        metadata: {
+          usagePercentage: `${usagePercentage.toFixed(1)}%`,
+          contextUsage,
+          contextLimit
+        }
+      });
+      await enableMaxMode(context);
+      context.maxModeEnabled = true;
+    }
+    
+    // 3. Si > 70%, compresser contexte
+    if (usagePercentage > 70) {
+      logger.info('Contexte > 70%, compression proactive', {
+        metadata: {
+          usagePercentage: `${usagePercentage.toFixed(1)}%`
+        }
+      });
+      await compressContext(context, executionState);
+    }
+    
+    // 4. Évincer fichiers non essentiels si > 60%
+    if (usagePercentage > 60) {
+      const nonEssentialFiles = await identifyNonEssentialFiles(context, executionState);
+      if (nonEssentialFiles.length > 0) {
+        logger.info('Éviction fichiers non essentiels', {
+          metadata: {
+            usagePercentage: `${usagePercentage.toFixed(1)}%`,
+            evictedFiles: nonEssentialFiles.length
+          }
+        });
+        await evictNonEssentialFiles(context, nonEssentialFiles);
+      }
+    }
   }
 }
 ```
@@ -956,6 +1069,9 @@ async function persistentExecutionWorkflow(
 - `@.cursor/rules/long-term-autonomy.md` - Autonomie longue durée
 - `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes
 - `@.cursor/rules/context-optimization.md` - Optimisation du contexte
+- `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale (coordination sub-agents pour runs longs)
+- `@.cursor/rules/sub-agents-background-integration.md` - Intégration Background Agent (gestion état persistante)
+- `@.cursor/rules/sub-agents-communication.md` - Communication inter-agents (coordination efficace)
 
 ---
 

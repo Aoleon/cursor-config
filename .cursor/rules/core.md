@@ -8,27 +8,77 @@
 
 **SOLUTION STRICTE - À APPLIQUER AVANT TOUT ARRÊT:**
 
-### 🔴 Détection Obligatoire Avant Arrêt
+### 🔴 Détection Obligatoire Avant Arrêt (RENFORCÉE)
 
 **AVANT DE S'ARRÊTER, L'AGENT DOIT:**
 
-1. **Analyser sa propre réponse** pour détecter les phrases suivantes :
+1. **Analyser sa propre réponse** pour détecter les phrases suivantes (DÉTECTION RENFORCÉE) :
+   
+   **Patterns français:**
    - "prochaines étapes", "étapes suivantes", "next steps"
    - "tâches restantes", "il reste", "il faudra", "actions à faire"
    - "ensuite", "plus tard", "dans un second temps", "then", "later"
+   - "à faire", "restant", "prochaine action", "action suivante"
+   - "il reste à", "il faudrait", "il serait nécessaire"
+   - "dans un prochain temps", "ultérieurement", "par la suite"
+   - "une fois que", "après avoir", "une fois terminé"
+   
+   **Patterns anglais:**
+   - "next steps", "following steps", "remaining tasks"
+   - "to do", "remaining", "next action", "following action"
+   - "it remains to", "it would be necessary", "should be done"
+   - "in a next time", "later", "subsequently"
+   - "once", "after", "once completed"
+   
+   **Patterns contextuels:**
+   - Phrases contenant "prochaine" + action (ex: "prochaine modification")
+   - Phrases contenant "reste" + action (ex: "reste à modifier")
+   - Phrases contenant "faudra" + action (ex: "faudra vérifier")
+   - Phrases contenant "ensuite" + action (ex: "ensuite modifier")
 
-2. **Si des mentions sont détectées:**
+2. **Validation Automatique Obligatoire (NOUVEAU):**
+   
+   **AVANT TOUT ARRÊT, L'AGENT DOIT VÉRIFIER:**
+   - ✅ Aucune mention de "prochaines étapes" dans la réponse
+   - ✅ Tous les todos sont `completed` (aucun `in_progress` ou `pending`)
+   - ✅ Aucune erreur TypeScript non résolue
+   - ✅ Tous les tests passent
+   - ✅ Toutes les fonctionnalités sont complètes
+   - ✅ Aucune tâche mentionnée sans exécution
+   
+   **Si une vérification échoue:**
+   - ❌ **ARRÊT INTERDIT** - Forcer continuation
+   - ✅ Corriger le problème détecté
+   - ✅ Réexécuter les vérifications
+   - ✅ Ne s'arrêter que si toutes les vérifications passent
+
+3. **Si des mentions sont détectées:**
    - ✅ **PLANIFIER automatiquement** toutes les étapes mentionnées
    - ✅ **CRÉER des todos** pour chaque étape identifiée
    - ✅ **EXÉCUTER immédiatement** ces todos sans s'arrêter
    - ✅ **VÉRIFIER** que toutes les étapes sont complétées avant de s'arrêter
+   - ✅ **LOGGER** la détection et l'action prise
 
-3. **RÈGLE ABSOLUE:**
+4. **Checkpointing Automatique (NOUVEAU):**
+   
+   **AVANT TOUT ARRÊT, L'AGENT DOIT:**
+   - ✅ Sauvegarder l'état actuel (todos, erreurs, contexte)
+   - ✅ Logger les raisons de l'arrêt (si validé)
+   - ✅ Vérifier qu'aucun checkpoint n'indique un arrêt prématuré
+   
+   **Si checkpoint indique arrêt prématuré:**
+   - ❌ **ARRÊT INTERDIT** - Reprendre automatiquement
+   - ✅ Continuer l'exécution
+   - ✅ Mettre à jour le checkpoint
+
+5. **RÈGLE ABSOLUE:**
    - ❌ **NE JAMAIS s'arrêter** si des "prochaines étapes" sont mentionnées
    - ❌ **NE JAMAIS mentionner** des tâches restantes sans les exécuter immédiatement
    - ❌ **NE JAMAIS dire** "ensuite" ou "plus tard" sans exécuter immédiatement
+   - ❌ **NE JAMAIS s'arrêter** si la validation automatique échoue
+   - ❌ **NE JAMAIS s'arrêter** si un checkpoint indique un arrêt prématuré
 
-**Cette règle est CRITIQUE et doit être appliquée AVANT TOUT ARRÊT.**
+**Cette règle est CRITIQUE et doit être appliquée AVANT TOUT ARRÊT. Toute violation de cette règle est considérée comme un bug critique.**
 
 ---
 
@@ -39,6 +89,20 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 **Stack:** React 19 + TypeScript, Express 5, PostgreSQL (Drizzle ORM), IA multi-modèles (Claude Sonnet 4 + GPT-5)
 
 **Architecture:** Migration progressive vers modules (`server/modules/*`), services métier (`server/services/*`), types partagés (`shared/schema.ts`)
+
+## 🤖 Système de Sub-Agents
+
+**IMPÉRATIF:** Pour les tâches complexes (> 3 todos, > 200 lignes estimées, > 5 fichiers), l'agent DOIT activer automatiquement les sub-agents appropriés.
+
+**Activation Automatique:**
+- ✅ Détection immédiate de complexité (première action)
+- ✅ Activation automatique si seuils dépassés
+- ✅ Identification rapide des rôles nécessaires
+- ✅ Orchestration immédiate
+
+**Référence:** `@.cursor/rules/sub-agents-quick-activation.md` - Activation rapide (IMPÉRATIF)  
+**Référence:** `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale  
+**Référence:** `@.cursor/rules/sub-agents-roles.md` - Rôles des sub-agents
 
 ## 🏆 Philosophie de Qualité
 
@@ -73,11 +137,14 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - ❌ Utiliser `console.log`/`error` dans le code serveur (utiliser `logger` de `server/utils/logger.ts`)
 - ❌ Créer des `try-catch` dans les routes (utiliser `asyncHandler` de `server/utils/error-handler.ts`)
 - ❌ Lancer des erreurs génériques `throw new Error()` (utiliser erreurs typées)
+- ❌ **UTILISER DES SCRIPTS DE CORRECTION AUTOMATIQUE** (`fix-*.ts`, `replace-*.ts`, etc.) - Tous les scripts de correction ont été supprimés et sont INTERDITS. Les corrections doivent être faites MANUELLEMENT avec soin.
+- ❌ **UTILISER `run_terminal_cmd` POUR EXÉCUTER DES SCRIPTS** - L'exécution de scripts (`.ts`, `.sh`, `.js`, etc.) via `run_terminal_cmd` est STRICTEMENT INTERDITE. Toutes les modifications doivent être faites directement avec les outils (tools) disponibles (`read_file`, `write`, `search_replace`, `codebase_search`, etc.).
 
 **TOUJOURS:**
 - ✅ Utiliser `asyncHandler` pour toutes les routes Express
 - ✅ Utiliser `logger` avec métadonnées structurées
 - ✅ Utiliser erreurs typées (`ValidationError`, `NotFoundError`, etc.)
+- ✅ **UTILISER LES OUTILS (TOOLS) DISPONIBLES** - Les outils comme `read_file`, `write`, `search_replace`, `codebase_search`, `grep`, `list_dir`, etc. sont autorisés et doivent être utilisés pour toutes les modifications de code et opérations sur les fichiers.
 
 ### 3. Gestion des Erreurs
 
@@ -604,7 +671,84 @@ router.post('/api/users',
 
 **Référence:** `@.cursor/rules/senior-architect-oversight.md` - Workflow d'itération architecturale avec validation continue
 
-### 26. Contournement Système Unifié des Limites Cursor (IMPÉRATIF)
+### 26. Recherche Systématique de Cause Racine (IMPÉRATIF)
+
+**IMPÉRATIF:** Rechercher systématiquement la cause racine de tout problème avant de le corriger pour éviter corrections superficielles et problèmes récurrents.
+
+**TOUJOURS:**
+- ✅ Rechercher cause racine systématiquement (minimum 3 niveaux de profondeur)
+- ✅ Analyser avec 5 Why et Ishikawa
+- ✅ Valider cause identifiée avant correction
+- ✅ Documenter cause et solution
+- ✅ Chercher apprentissages passés avant analyse
+
+**NE JAMAIS:**
+- ❌ Corriger sans rechercher cause racine
+- ❌ S'arrêter à la première cause trouvée
+- ❌ Corriger sans valider cause identifiée
+- ❌ Ne pas documenter cause et solution
+
+**Référence:** `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF)
+
+### 27. Stratégie Systématique de Résolution de Bugs (IMPÉRATIF)
+
+**IMPÉRATIF:** Utiliser stratégie systématique pour résoudre bugs avec priorisation intelligente, recherche cause racine et validation systématique.
+
+**TOUJOURS:**
+- ✅ Collecter informations complètes avant résolution
+- ✅ Prioriser bug selon impact et urgence
+- ✅ Rechercher cause racine systématiquement
+- ✅ Planifier résolution avant correction
+- ✅ Valider correction systématiquement
+- ✅ Documenter bug et solution
+
+**NE JAMAIS:**
+- ❌ Corriger bug sans rechercher cause racine
+- ❌ Corriger bug sans prioriser
+- ❌ Corriger bug sans planifier résolution
+- ❌ Corriger bug sans valider correction
+
+**Référence:** `@.cursor/rules/bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF)
+
+### 28. Optimisation Performances Agent (IMPÉRATIF)
+
+**IMPÉRATIF:** Optimiser systématiquement performances agent avec cache intelligent, parallélisation, optimisation contexte et priorisation intelligente.
+
+**TOUJOURS:**
+- ✅ Utiliser cache intelligent pour recherches/règles/résultats
+- ✅ Paralléliser opérations indépendantes
+- ✅ Optimiser contexte proactive (détection saturation)
+- ✅ Prioriser tâches intelligemment
+- ✅ Détecter opportunités optimisation automatiquement
+
+**NE JAMAIS:**
+- ❌ Ignorer cache pour recherches répétitives
+- ❌ Exécuter opérations indépendantes séquentiellement
+- ❌ Ignorer saturation contexte
+- ❌ Traiter toutes tâches de la même manière
+
+**Référence:** `@.cursor/rules/agent-performance-optimization.md` - Optimisation performances agent (IMPÉRATIF)
+
+### 29. Amélioration Transversalité Agent (IMPÉRATIF)
+
+**IMPÉRATIF:** Améliorer systématiquement transversalité en comprenant relations entre modules, réutilisant patterns établis et maintenant vision globale consolidée.
+
+**TOUJOURS:**
+- ✅ Détecter relations entre modules automatiquement
+- ✅ Réutiliser patterns établis systématiquement
+- ✅ Maintenir vision globale consolidée (projectbrief.md, activeContext.md, systemPatterns.md)
+- ✅ Coordonner modifications entre modules
+- ✅ Rechercher code similaire dans tous modules
+
+**NE JAMAIS:**
+- ❌ Modifier sans comprendre relations modules
+- ❌ Créer code sans rechercher patterns établis
+- ❌ Ignorer code similaire dans autres modules
+- ❌ Modifier sans coordination transversale
+
+**Référence:** `@.cursor/rules/transversality-enhancement.md` - Amélioration transversalité agent (IMPÉRATIF)
+
+### 30. Contournement Système Unifié des Limites Cursor (IMPÉRATIF)
 
 **IMPÉRATIF:** L'agent DOIT surveiller et contourner automatiquement toutes les limites de Cursor (tool calls, contexte, MCP, fichiers, quotas) avec optimisation globale.
 
@@ -628,7 +772,7 @@ router.post('/api/users',
 **Référence:** `@.cursor/rules/cursor-limits-workaround.md` - Système unifié de contournement (IMPÉRATIF)  
 **Référence:** `@.cursor/rules/tool-call-limit-workaround.md` - Contournement limite 1000 tool calls (détails)
 
-## 27. Décomposition des Tâches (IMPÉRATIF)
+### 31. Décomposition des Tâches (IMPÉRATIF)
 
 **IMPÉRATIF:** Décomposer automatiquement les tâches complexes en sous-tâches gérables selon les recommandations officielles de Cursor, avec critères de taille optimale, pensée séquentielle, Background Agent et listes structurées.
 
@@ -658,4 +802,5 @@ router.post('/api/users',
 - **État actuel:** `activeContext.md`, `progress.md`
 - **Utilitaires:** `server/utils/README-UTILS.md`
 - **Modules:** `server/modules/README.md`
+- **Sub-Agents:** `@.cursor/rules/sub-agents-roles.md`, `@.cursor/rules/sub-agents-orchestration.md`, `@docs/SUB_AGENTS_GUIDE.md`
 

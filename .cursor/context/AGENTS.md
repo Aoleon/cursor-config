@@ -85,6 +85,25 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - `@.cursor/rules/conflict-detection.md` - Détection proactive des conflits (éviter problèmes)
 - `@.cursor/rules/bug-prevention.md` - Détection proactive des bugs (améliorer qualité)
 
+**Sub-Agents (Maxi Runs Autonomes):**
+- `@.cursor/rules/sub-agents-orchestration.md` - Orchestration sub-agents (IMPÉRATIF - analyse, planification, coordination)
+- `@.cursor/rules/sub-agents-roles.md` - Rôles sub-agents (IMPÉRATIF - 5 rôles spécialisés)
+- `@.cursor/rules/sub-agents-workflows.md` - Workflows sub-agents (collaboration, coordination)
+- `@.cursor/rules/sub-agents-communication.md` - Communication sub-agents (protocoles, messages)
+- `@.cursor/rules/sub-agents-learning.md` - Apprentissage sub-agents (amélioration continue)
+- `@.cursor/rules/sub-agents-monitoring.md` - Monitoring sub-agents (performances, métriques)
+- `@.cursor/rules/sub-agents-modes.md` - Modes sub-agents (séquentiel, parallèle, hybride)
+- `@.cursor/rules/sub-agents-quick-activation.md` - Activation rapide sub-agents
+- `@.cursor/rules/sub-agents-usage-patterns.md` - Patterns d'usage sub-agents
+- `@.cursor/rules/sub-agents-background-integration.md` - Intégration Background Agent
+
+**Optimisations Agent:**
+- `@.cursor/rules/agent-performance-optimization.md` - Optimisation performances agent
+- `@.cursor/rules/autonomous-decision-making.md` - Prise de décision autonome (IMPÉRATIF)
+- `@.cursor/rules/bug-resolution-strategy.md` - Stratégie résolution bugs
+- `@.cursor/rules/root-cause-analysis.md` - Analyse cause racine
+- `@.cursor/rules/transversality-enhancement.md` - Amélioration transversalité
+
 ### P2 - Règles d'Optimisation (Optionnelles)
 
 **Chargement:** Sur demande ou pour tâches complexes

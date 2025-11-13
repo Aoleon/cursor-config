@@ -69,10 +69,25 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── tool-call-limit-workaround.md # Contournement limite 1000 tool calls (P1 - détails)
 ├── cursor-limits-workaround.md # Système unifié de contournement toutes limites Cursor (P1 - IMPÉRATIF)
 ├── multi-agent-coordination.md # Coordination multi-agents (P2)
-└── reinforcement-learning.md # Apprentissage par renforcement (P2)
+├── reinforcement-learning.md # Apprentissage par renforcement (P2)
 ├── context-detection.md  # Détection automatique du contexte
 ├── load-strategy.md      # Stratégie de chargement optimisée
-└── context-usage.md      # Utilisation contexte @
+├── context-usage.md      # Utilisation contexte @
+├── agent-performance-optimization.md # Optimisation performances agent (P1)
+├── autonomous-decision-making.md # Prise de décision autonome (P1 - IMPÉRATIF)
+├── bug-resolution-strategy.md # Stratégie résolution bugs (P1)
+├── root-cause-analysis.md # Analyse cause racine (P1)
+├── transversality-enhancement.md # Amélioration transversalité (P1)
+├── sub-agents-orchestration.md # Orchestration sub-agents (P1 - IMPÉRATIF)
+├── sub-agents-roles.md # Rôles sub-agents (P1 - IMPÉRATIF)
+├── sub-agents-workflows.md # Workflows sub-agents (P1)
+├── sub-agents-communication.md # Communication sub-agents (P1)
+├── sub-agents-learning.md # Apprentissage sub-agents (P1)
+├── sub-agents-monitoring.md # Monitoring sub-agents (P1)
+├── sub-agents-modes.md # Modes sub-agents (P1)
+├── sub-agents-quick-activation.md # Activation rapide sub-agents (P1)
+├── sub-agents-usage-patterns.md # Patterns d'usage sub-agents (P1)
+└── sub-agents-background-integration.md # Intégration background sub-agents (P1)
 ```
 
 ## 🎯 Organisation des Règles
@@ -187,6 +202,31 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **cursor-limits-workaround.md** : Système unifié de contournement toutes limites Cursor (surveillance multi-limites, contournements coordonnés, optimisation globale, validation)
 - **multi-agent-coordination.md** : Coordination multi-agents (orchestration, communication, collaboration)
 - **reinforcement-learning.md** : Apprentissage par renforcement (récompenses/pénalités, ajustement stratégies)
+
+### Système de Sub-Agents
+**Appliqués pour maxi runs autonomes** - Orchestration et coordination de 5 rôles spécialisés
+
+Le système de sub-agents permet l'exécution de tâches complexes en totale autonomie via 5 rôles spécialisés :
+
+- **sub-agents-orchestration.md** : Orchestration principal (analyse tâches, identification rôles, planification, gestion dépendances) (P1 - IMPÉRATIF)
+- **sub-agents-roles.md** : Définition des 5 rôles spécialisés (Architect, Consultant, Developer, Tester, Reviewer) (P1 - IMPÉRATIF)
+- **sub-agents-workflows.md** : Workflows collaboratifs entre sub-agents (P1)
+- **sub-agents-communication.md** : Protocoles de communication inter-agents (P1)
+- **sub-agents-learning.md** : Apprentissage collaboratif et amélioration continue (P1)
+- **sub-agents-monitoring.md** : Monitoring performances et métriques sub-agents (P1)
+- **sub-agents-modes.md** : Modes d'exécution (séquentiel, parallèle, hybride) (P1)
+- **sub-agents-quick-activation.md** : Activation rapide et optimisée des sub-agents (P1)
+- **sub-agents-usage-patterns.md** : Patterns d'usage courants et best practices (P1)
+- **sub-agents-background-integration.md** : Intégration avec Background Agent de Cursor (P1)
+
+### Optimisations Agent
+**Appliquées pour performances maximales** - Optimisations spécifiques de l'agent
+
+- **agent-performance-optimization.md** : Optimisation performances globales de l'agent (cache, parallélisation, lazy loading) (P1)
+- **autonomous-decision-making.md** : Prise de décision autonome (détection propositions choix, analyse options, décision robuste) (P1 - IMPÉRATIF)
+- **bug-resolution-strategy.md** : Stratégie résolution bugs (analyse cause racine, correction ciblée, prévention) (P1)
+- **root-cause-analysis.md** : Analyse cause racine avancée (débogage profond, patterns d'erreurs) (P1)
+- **transversality-enhancement.md** : Amélioration transversalité (coordination multi-domaines, validation globale) (P1)
 
 ## 📊 Matrice de Responsabilités des Rôles
 

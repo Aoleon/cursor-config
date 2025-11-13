@@ -255,15 +255,24 @@ async function validateCompletely(
 }
 ```
 
-### 4. Gestion des Problèmes Découverts Après Implémentation
+### 4. Gestion des Problèmes Découverts Après Implémentation (RENFORCÉE)
+
+**IMPÉRATIF:** Utiliser stratégie systématique de résolution bugs pour problèmes découverts.
 
 **TOUJOURS:**
 - ✅ Détecter problèmes découverts par tests
-- ✅ Identifier cause racine des problèmes
+- ✅ **Utiliser stratégie systématique résolution bugs** (IMPÉRATIF)
+- ✅ **Rechercher cause racine systématiquement** (IMPÉRATIF - avant correction)
+- ✅ **Prioriser problèmes** selon impact et urgence
+- ✅ **Planifier résolution** avant correction
 - ✅ Corriger automatiquement si possible
+- ✅ **Valider correction systématiquement** (IMPÉRATIF)
 - ✅ Re-tester pour valider correction
-- ✅ Documenter problèmes nécessitant intervention manuelle
+- ✅ **Documenter problèmes et solutions** (IMPÉRATIF)
 - ✅ Itérer jusqu'à résolution complète
+
+**Référence:** `@.cursor/rules/bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF)  
+**Référence:** `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF)
 
 **Pattern:**
 ```typescript
@@ -290,28 +299,63 @@ async function handlePostImplementationIssues(
       };
     }
     
-    // 3. Pour chaque problème détecté
+    // 3. Pour chaque problème détecté, utiliser stratégie systématique
     for (const issue of issues) {
-      // 4. Identifier cause racine
-      const rootCause = await identifyRootCause(issue, fixedCode, context);
+      // 4. Prioriser problème
+      const priority = await prioritizeIssue(issue, context);
       
-      // 5. Corriger automatiquement si possible
-      if (rootCause.canAutoFix) {
-        fixedCode = await autoFix(rootCause, fixedCode);
+      // 5. Rechercher cause racine systématiquement (IMPÉRATIF)
+      const rootCauseAnalysis = await rootCauseAnalysisWorkflow(
+        issue.error || new Error(issue.description),
+        context
+      );
+      
+      if (!rootCauseAnalysis.validated || !rootCauseAnalysis.rootCause) {
+        logger.warn('Cause racine non validée, problème nécessite analyse plus approfondie', {
+          metadata: {
+            issueId: issue.id,
+            confidence: rootCauseAnalysis.confidence
+          }
+        });
+        await documentUnfixableIssue(issue, rootCauseAnalysis);
+        continue;
+      }
+      
+      // 6. Planifier résolution
+      const resolutionPlan = await planBugResolution(
+        { id: issue.id, description: issue.description, error: issue.error },
+        rootCauseAnalysis.rootCause,
+        context
+      );
+      
+      // 7. Exécuter correction selon plan
+      const resolution = await executeBugResolution(resolutionPlan, context);
+      
+      // 8. Valider correction systématiquement
+      const validation = await validateBugResolution(
+        { id: issue.id, description: issue.description, error: issue.error },
+        resolution,
+        context
+      );
+      
+      if (validation.validated) {
+        fixedCode = resolution.finalCode;
         
-        // 6. Re-tester pour valider correction
-        const retest = await runTest(issue.test);
-        if (!retest.success) {
-          // Si correction échoue, documenter
-          await documentUnfixableIssue(issue, rootCause);
-        }
+        // 9. Documenter bug et solution
+        await documentBugResolution(
+          { id: issue.id, description: issue.description, error: issue.error },
+          rootCauseAnalysis.rootCause,
+          resolutionPlan.solution,
+          validation,
+          context
+        );
       } else {
-        // Documenter problème nécessitant intervention
-        await documentManualFixRequired(issue, rootCause);
+        // Si validation échoue, documenter
+        await documentUnfixableIssue(issue, rootCauseAnalysis);
       }
     }
     
-    // 7. Re-exécuter tous les tests
+    // 10. Re-exécuter tous les tests
     testResults = await runAllTests(fixedCode);
     iteration++;
   }
@@ -514,6 +558,8 @@ async function iterateToPerfectionWorkflow(
 
 ## 🔗 Références
 
+- `@.cursor/rules/bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF - si bug détecté)
+- `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF - si bug détecté)
 - `@.cursor/rules/todo-completion.md` - Completion des todos
 - `@.cursor/rules/automated-testing-debugging.md` - Tests E2E et débogage automatisé
 - `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns

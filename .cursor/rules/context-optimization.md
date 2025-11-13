@@ -181,13 +181,21 @@ function calculateRelevanceScore(
 }
 ```
 
-### 4. Réduction Automatique du Contexte si Saturation
+### 4. Détection Proactive de Saturation et Réduction Automatique (RENFORCÉ)
+
+**IMPÉRATIF:** Détecter saturation proactive et agir automatiquement selon seuils.
 
 **TOUJOURS:**
-- ✅ Détecter saturation du contexte
+- ✅ **Détecter saturation proactive** (IMPÉRATIF - surveillance continue)
+- ✅ **Agir automatiquement selon seuils** (IMPÉRATIF):
+  - >60% utilisation → Éviction fichiers non essentiels
+  - >70% utilisation → Compression fichiers volumineux
+  - >80% utilisation → Activation Max Mode automatique
 - ✅ Réduire automatiquement si saturation
 - ✅ Conserver uniquement fichiers essentiels
 - ✅ Éviter fichiers non pertinents
+- ✅ **Compression automatique fichiers volumineux** (NOUVEAU)
+- ✅ **Max Mode automatique si nécessaire** (NOUVEAU)
 
 **Pattern:**
 ```typescript

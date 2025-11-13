@@ -15,17 +15,21 @@
 
 ## 📋 Règles de Récupération Automatique
 
-### 1. Détection Automatique des Erreurs
+### 1. Détection Automatique des Erreurs et Recherche Cause Racine
 
 **TOUJOURS:**
 - ✅ Détecter automatiquement les erreurs
 - ✅ Classifier les types d'erreurs
-- ✅ Analyser la cause des erreurs
-- ✅ Identifier les stratégies de récupération
+- ✅ **Rechercher cause racine systématiquement** (IMPÉRATIF - avant récupération)
+- ✅ Analyser la cause des erreurs en profondeur (minimum 3 niveaux)
+- ✅ Valider cause identifiée avant récupération
+- ✅ Identifier les stratégies de récupération basées sur cause racine
+
+**Référence:** `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF)
 
 **Pattern:**
 ```typescript
-// Détecter erreurs automatiquement
+// Détecter erreurs automatiquement avec recherche cause racine
 async function detectErrors(
   error: Error,
   context: Context
@@ -33,21 +37,34 @@ async function detectErrors(
   // 1. Classifier type d'erreur
   const errorType = classifyError(error);
   
-  // 2. Analyser cause de l'erreur
-  const cause = analyzeErrorCause(error, context);
+  // 2. RECHERCHER CAUSE RACINE SYSTÉMATIQUEMENT (IMPÉRATIF)
+  const rootCauseAnalysis = await rootCauseAnalysisWorkflow(error, context);
   
-  // 3. Identifier stratégies de récupération
-  const recoveryStrategies = identifyRecoveryStrategies(errorType, cause);
+  // 3. Analyser cause de l'erreur (basé sur cause racine)
+  const cause = rootCauseAnalysis.rootCause || analyzeErrorCause(error, context);
   
-  // 4. Prioriser stratégies
-  const prioritized = prioritizeRecoveryStrategies(recoveryStrategies);
+  // 4. Identifier stratégies de récupération basées sur cause racine
+  const recoveryStrategies = identifyRecoveryStrategies(
+    errorType, 
+    cause,
+    rootCauseAnalysis.rootCause
+  );
+  
+  // 5. Prioriser stratégies selon cause racine
+  const prioritized = prioritizeRecoveryStrategies(
+    recoveryStrategies,
+    rootCauseAnalysis.rootCause
+  );
   
   return {
     error: error,
     type: errorType,
     cause: cause,
+    rootCause: rootCauseAnalysis.rootCause, // NOUVEAU
+    rootCauseValidated: rootCauseAnalysis.validated, // NOUVEAU
     strategies: prioritized,
-    recoverable: prioritized.length > 0
+    recoverable: prioritized.length > 0,
+    documentation: rootCauseAnalysis.documentation // NOUVEAU
   };
 }
 ```
@@ -326,6 +343,7 @@ async function handleErrorWithRecovery(
 
 ## 🔗 Références
 
+- `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF)
 - `@.cursor/rules/iterative-perfection.md` - Itération automatique jusqu'à perfection
 - `@.cursor/rules/learning-memory.md` - Mémoire persistante des apprentissages
 - `@.cursor/rules/core.md` - Règles fondamentales

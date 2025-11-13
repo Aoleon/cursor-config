@@ -25,7 +25,11 @@ Dependencies: core.md, quality-principles.md, code-quality.md, senior-architect-
 - ✅ Validation de chaque étape avant la suivante
 - ✅ Gestion automatique des dépendances
 
-**Référence:** `@Docs Cursor Agent Planning` - Documentation officielle Cursor
+**Référence:** `@Docs Cursor Agent Planning` - Documentation officielle Cursor  
+**Référence:** `@.cursor/rules/sub-agents-quick-activation.md` - Activation rapide sub-agents (IMPÉRATIF)  
+**Référence:** `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale
+
+**INTÉGRATION SUB-AGENTS:** Si la tâche est complexe (> 3 todos), activer automatiquement les sub-agents via `@.cursor/rules/sub-agents-quick-activation.md` avant la décomposition.
 
 ## 📋 Critères de Décomposition
 
@@ -630,6 +634,8 @@ async function decomposeComplexTask(
 - `@.cursor/rules/senior-architect-oversight.md` - Supervision architecte sénior (décomposition dans `decomposeRequest()` et `createInitialTodos()`)
 - `@.cursor/rules/autonomous-workflows.md` - Workflows autonomes (décomposition améliorée)
 - `@.cursor/rules/parallel-execution.md` - Exécution parallèle (intégration Background Agent)
+- `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale (intégration décomposition avec sub-agents)
+- `@.cursor/rules/multi-agent-coordination.md` - Coordination multi-agents (intégration décomposition avec identification rôles)
 
 ---
 

@@ -283,6 +283,8 @@ async function detectAndFixPotentialBugs(
 
 ## 🔗 Références
 
+- `@.cursor/rules/bug-resolution-strategy.md` - Stratégie systématique résolution bugs (IMPÉRATIF - si bug détecté)
+- `@.cursor/rules/root-cause-analysis.md` - Recherche systématique cause racine (IMPÉRATIF - si bug détecté)
 - `@.cursor/rules/preventive-validation.md` - Validation préventive
 - `@.cursor/rules/iterative-perfection.md` - Itération automatique jusqu'à perfection
 - `@.cursor/rules/auto-detection.md` - Détection automatique des anti-patterns

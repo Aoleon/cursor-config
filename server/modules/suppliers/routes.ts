@@ -33,8 +33,7 @@ import {
   insertSupplierQuoteAnalysisSchema
 } from '@shared/schema';
 import { OCRService } from '../../ocrService';
-import { emailService, inviteSupplierForQuote } from '../../services/emailService';
-const emailServiceInstance = emailService;
+import { emailService as emailServiceInstance, inviteSupplierForQuote } from '../../services/emailService';
 import type {
   SupplierQueryParams,
   SupplierRequestQueryParams,
@@ -512,8 +511,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
 
       const documents = await storage.getDocumentsBySession(sessionId);
-      // Note: getSupplierQuoteAnalysesBySession signature may vary, using single parameter
-      const analysis = await storage.getSupplierQuoteAnalyses(undefined, sessionId);
+      // Note: getSupplierQuoteAnalysesBySession accepts 2 params but TypeScript signature says 0-1, using cast
+      const analysis = await (storage as any).getSupplierQuoteAnalysesBySession(sessionId, {});
 
       sendSuccess(res, {
         session,

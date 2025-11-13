@@ -520,8 +520,10 @@ function main() {
   }
 }
 
-// ES Module check
-if (import.meta.url === `file://${process.argv[1]}`) {
+// ES Module check - exécuter main si script appelé directement
+const isMainModule = import.meta.url === `file://${process.argv[1]}` || 
+                     process.argv[1]?.endsWith('detect-chat-conflicts.ts');
+if (isMainModule) {
   main();
 }
 

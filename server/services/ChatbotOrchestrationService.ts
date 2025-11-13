@@ -2623,8 +2623,8 @@ export class ChatbotOrchestrationService {
    * @param query La requête en langage naturel
    * @returns Liste des filtres détectés
    */
-  private detectQueryFilters(qu: unknown[]rinunknown[]ny[] {
- : unknown[]t funknown[unknown unknown[] = [];
+  private detectQueryFilters(query: string): unknown[] {
+    const filters: unknown[] = [];
     const queryLower = query.toLowerCase();
     // Détection des filtres de statut
     const statusPatterns: Record<string, string[]> = {

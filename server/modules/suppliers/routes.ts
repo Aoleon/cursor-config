@@ -33,7 +33,10 @@ import {
   insertSupplierQuoteAnalysisSchema
 } from '@shared/schema';
 import { OCRService } from '../../ocrService';
-import emailServiceInstance, { inviteSupplierForQuote } from '../../services/emailService';
+// Import emailService - using default export pattern
+import emailServiceDefault from '../../services/emailService';
+import { inviteSupplierForQuote } from '../../services/emailService';
+const emailService = emailServiceDefault;
 import type {
   SupplierQueryParams,
   SupplierRequestQueryParams,
@@ -229,7 +232,10 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       // Apply client-side filtering for supplierId, status, sortBy
       let filteredRequests = allRequests;
       if (supplierId && typeof supplierId === 'string') {
-        filteredRequests = filteredRequests.filter(r => r.supplierId === supplierId);
+        // SupplierRequest n'a pas supplierId, on filtre par supplierName ou supplierEmail
+        filteredRequests = filteredRequests.filter(r => 
+          r.supplierName === supplierId || r.supplierEmail === supplierId
+        );
       }
       if (status && typeof status === 'string') {
         filteredRequests = filteredRequests.filter(r => r.status === status);
@@ -242,7 +248,10 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
             case 'date':
               return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
             case 'deadline':
-              return new Date(b.deadline || 0).getTime() - new Date(a.deadline || 0).getTime();
+              // SupplierRequest n'a pas deadline, on utilise sentAt ou createdAt
+              const dateA = b.sentAt || b.createdAt || new Date(0);
+              const dateB = a.sentAt || a.createdAt || new Date(0);
+              return new Date(dateA).getTime() - new Date(dateB).getTime();
             case 'status':
               return (a.status || '').localeCompare(b.status || '');
             default:
@@ -276,7 +285,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       eventBus.emit('supplier:request:created', {
         requestId: request.id,
         offerId: request.offerId,
-        supplierId: request.supplierId,
+        supplierName: request.supplierName,
         userId: req.user?.id
       });
 
@@ -437,15 +446,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       const allSuppliers = await storage.getSuppliers();
       const suppliers = allSuppliers.filter(s => supplierIds.has(s.id));
       
+      // Le statut utilise l'enum: "active", "expired", "completed", "cancelled", "suspended"
+      // On adapte les métriques en fonction des statuts disponibles
       const status: SupplierWorkflowStatus = {
         aoId,
         totalSuppliers: suppliers.length,
-        invitedSuppliers: sessions.filter(s => s.status === 'sent').length,
-        respondedSuppliers: sessions.filter(s => s.status === 'received').length,
-        analyzedQuotes: sessions.filter(s => s.status === 'approved' || s.status === 'rejected').length,
-        pendingQuotes: sessions.filter(s => s.status === 'analyzing').length,
+        invitedSuppliers: sessions.filter(s => s.status === 'active' && s.invitedAt).length,
+        respondedSuppliers: sessions.filter(s => s.status === 'active' && s.firstAccessAt).length,
+        analyzedQuotes: sessions.filter(s => s.status === 'completed').length,
+        pendingQuotes: sessions.filter(s => s.status === 'active' && !s.submittedAt).length,
         completionPercentage: suppliers.length > 0 
-          ? Math.round((sessions.filter(s => s.status === 'approved' || s.status === 'rejected').length / suppliers.length) * 100)
+          ? Math.round((sessions.filter(s => s.status === 'completed').length / suppliers.length) * 100)
           : 0
       };
 
@@ -532,18 +543,28 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         throw new NotFoundError('Session invalide ou expirée');
       }
 
+      // Récupérer les données depuis les relations
+      const [ao, supplier, documents] = await Promise.all([
+        session.aoId ? storage.getAo(session.aoId).catch(() => null) : Promise.resolve(null),
+        storage.getSupplier(session.supplierId).catch(() => null),
+        storage.getSupplierDocuments(session.id).catch(() => [])
+      ]);
+
       // Return limited public data
       sendSuccess(res, {
         sessionId: session.id,
-        aoReference: session.aoReference,
-        aoDescription: session.aoDescription,
-        deadline: session.deadline,
-        supplierName: session.supplierName,
-        documents: session.documents?.map(d => ({
-          id: d.id,
-          filename: d.filename,
-          uploadedAt: d.uploadedAt
-        }))
+        aoReference: ao?.reference || null,
+        aoDescription: ao?.description || null,
+        deadline: ao?.limitDate || null,
+        supplierName: supplier?.name || null,
+        documents: documents.map((d: unknown) => {
+          const doc = d as { id: string; filename: string; uploadedAt: Date | null };
+          return {
+            id: doc.id,
+            filename: doc.filename,
+            uploadedAt: doc.uploadedAt
+          };
+        })
       });
     })
   );
@@ -1085,11 +1106,12 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 7); // 7 days expiry
 
       // Update session with token
+      // Note: accessToken est déjà défini à la création, on met juste à jour tokenExpiresAt et invitedAt
       await storage.updateSupplierQuoteSession(sessionId, {
-        inviteToken: token,
         tokenExpiresAt,
-        status: 'sent',
-        invitedAt: new Date()
+        status: 'active', // Le statut doit être dans l'enum: "active", "expired", "completed", "cancelled", "suspended"
+        invitedAt: new Date(),
+        emailSent: true
       });
 
       // Send email

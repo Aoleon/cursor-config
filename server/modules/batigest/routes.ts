@@ -295,9 +295,8 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                                                                                                                                                                                                                                                                                     });
             }
 
-          try {
-            // Calculer les totaux
-            const items = orderData.items || [];
+          // Calculer les totaux
+          const items = orderData.items || [];
           const totalHT = items.reduce((sum: number, item: unknown) => sum + Number((item as { total?: number }).total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;

@@ -1,5 +1,5 @@
 import { AIService } from "./AIService";
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
 import { RBACService } from "./RBACService";
 import { AuditService } from "./AuditService";
 import { EventBus } from "../eventBus";
@@ -207,17 +207,20 @@ export class ActionExecutionService {
             if (match.index === 0) confidence += 0.1; // Début de phrase
 
             // Détecter l'opération spécifique
-            const operation = this.detectSpecificOperation(queryLower, actionType as unknown, entity);
+            const operation = this.detectSpecificOperation(queryLower, actionType as string, entity);
             if (operation) confidence += 0.1;
 
             if (confidence > bestMatch.confidence) {
               bestMatch = {
-                type: actionTas unknown, unknown,
+                type: actionType,
                 entity,
                 confidence,
                 operation
               };
             }
+          }
+        }
+      }
 
       return {
         hasActionIntention: bestMatch.confidence > 0.6,
@@ -226,16 +229,19 @@ export class ActionExecutionService {
         confidence: bestMatch.confidence,
         operation: bestMatch.operation || undefined
       };
-
-    
     },
     {
-      operation: 'constructor',
+      operation: 'detectActionIntention',
       service: 'ActionExecutionService',
       metadata: {}
-    } );
-      return { hasActionIntention: false, confidence: 0 };
-    }
+    }) as {
+      hasActionIntention: boolean;
+      actionType?: 'create' | 'update' | 'delete' | 'business_action';
+      entity?: string;
+      confidence: number;
+      operation?: string;
+    };
+  }
 
   /**
    * Utilise l'IA pour analyser une intention d'action complexe
@@ -273,35 +279,31 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         context: `Analyse d'intention d'action pour ${userRole}`,
         forceModel: 'claude_sonnet_4',
         maxTokens: 500,
-        userRole: userRole as unknown});
+        userRole: userRole as unknown
+      });
 
-      if (aiResponse.success && aiResponse.data?.query) {
+      if (aiResponse.success && aiResponse.data?.sqlGenerated) {
         try {
-          const result = JSON.parse(aiResponse.data.query);
+          const result = JSON.parse(aiResponse.data.sqlGenerated);
           return result?.type ? result : null;
-        
+        } catch (parseError) {
+          logger.error('Erreur parsing JSON AI response', { metadata: {
+            service: 'ActionExecutionService',
+            operation: 'analyzeActionWithAI',
+            error: parseError instanceof Error ? parseError.message : String(parseError)
+          }});
+          return null;
+        }
+      }
+
+      return null;
     },
     {
-      operation: 'constructor',
-service: 'ActionExecutionService',
+      operation: 'analyzeActionWithAI',
+      service: 'ActionExecutionService',
       metadata: {}
-    } );
-          return null;
-              }
-
-      return null;
-
-    } catch (error) {
-      logger.error('Erreur analyzeActionWithAI', { metadata: {
-          service: 'ActionExecutionService',
-          operation: 'analyzeActionWithAI',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined 
-
-                      }
-                                                                                                                                                                                                                                                                                    });
-      return null;
-    }
+    });
+  }
 
   // ========================================
   // PROPOSITION D'ACTIONS
@@ -322,14 +324,15 @@ service: 'ActionExecutionService',
           operation: 'proposeAction',
           actionId,
           userId: request.userId
-            });
+        }});
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: request.uas unknown, as unknown,
+        role: request.userRole,
         tableName: this.getTableNameForEntity(request.entity),
         action: this.mapActionTypeToRBACAction(request.type),
-        contextValues: {});
+        contextValues: {}
+      });
       if (!rbacCheck.allowed) {
         await this.auditService.logEvent({
           userId: request.userId,
@@ -429,9 +432,8 @@ service: 'ActionExecutionService',
         entityType: 'action',
         entityId: actionId,
         payload: { actionDefinition: request },
-        metadata: { executionTime: Date.now() - startTime 
-                }
-              );
+        metadata: { executionTimeMs: Date.now() - startTime }
+      });
       // 8. Publication d'événement temps réel
       this.eventBus.publish({
         id: crypto.randomUUID(),
@@ -465,10 +467,10 @@ service: 'ActionExecutionService',
       };
     },
     {
-      operation: 'constructor',
+      operation: 'proposeAction',
       service: 'ActionExecutionService',
       metadata: {}
-    } );
+    }).catch(async (error: unknown) => {
       await this.auditService.logEvent({
         userId: request.userId,
         userRole: request.userRole,
@@ -478,20 +480,18 @@ service: 'ActionExecutionService',
         severity: 'high',
         resource: `action:${request.entity}:${request.operation}`,
         action: 'propose_action',
-        errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
-        metadata: { executionTime: Date.now() - startTime 
-                }
-              );
+        metadata: { executionTimeMs: Date.now() - startTime }
+      });
       return {
         success: false,
         confirmationRequired: false,
-        riskLevel: 'high',
+        riskLevel: 'high' as const,
         error: {
-          type: 'validation',
-          message: 'Erreur lors de la proposition d\'action'
+          type: 'validation' as const,
+          message: error instanceof Error ? error.message : 'Erreur lors de la proposition d\'action'
         }
       };
-    }
+    });
   // ========================================
   // EXÉCUTION D'ACTIONS
   // ========================================
@@ -573,10 +573,11 @@ service: 'ActionExecutionService',
       // 4. Re-validation RBAC au moment de l'exécution
       const rbacRecheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
-        role: currentActias unknown,Ras unknown unknown,
+        role: currentAction.userRole,
         tableName: this.getTableNameForEntity(currentAction.entity),
         action: this.mapActionTypeToRBACAction(currentAction.type),
-        contextValues: {});
+        contextValues: {}
+      });
       if (!rbacRecheck.allowed) {
         await this.updateActionStatus(request.actionId, 'failed', 'RBAC validation échec');
         return {
@@ -689,9 +690,8 @@ service: 'ActionExecutionService',
         resource: `action:execution:${request.actionId}`,
         action: 'execute_action',
         errorDetails: error instanceof Error ? error.message : 'Erreur inconnue',
-        metadata: { executionTime: Date.now() - startTime 
-                }
-              );
+        metadata: { executionTimeMs: Date.now() - startTime }
+      });
       return {
         success: false,
         actionId: request.actionId,
@@ -848,20 +848,20 @@ service: 'ActionExecutionService',
         }
         
         // 4. Mettre à jour la confirmation
-        const newStatus = request.approved ? 'confirmed' : 'rejected';
+        const newStatus = request.decision ? 'confirmed' : 'rejected';
         await db
           .update(actionConfirmations)
           .set({
             status: newStatus,
-            userDecision: request.approved,
+            userDecision: request.decision,
             userComment: request.comment,
-            rejectionReason: request.approved ? null : (request.rejectionReason || 'Rejeté par l\'utilisateur'),
+            rejectionReason: request.decision ? null : (request.rejectionReason || 'Rejeté par l\'utilisateur'),
             respondedAt: new Date()
           })
           .where(eq(actionConfirmations.id, request.confirmationId));
         
         // 5. Si approuvée, mettre à jour le statut de l'action associée
-        if (request.approved) {
+        if (request.decision) {
           await this.updateActionStatus(confirmation.actionId, 'confirmed', 'Action confirmée par l\'utilisateur');
         } else {
           await this.updateActionStatus(confirmation.actionId, 'rejected', request.rejectionReason || 'Action rejetée par l\'utilisateur');
@@ -871,15 +871,15 @@ service: 'ActionExecutionService',
         await this.auditService.logEvent({
           userId: request.userId,
           userRole: request.userRole,
-          eventType: 'action.confirmation_updated',
-          result: request.approved ? 'success' : 'rejected',
-          severity: 'info',
+          eventType: 'system.performance',
+          result: request.decision ? 'success' : 'error',
+          severity: 'medium',
           resource: `action:confirmation:${request.confirmationId}`,
           action: 'update_confirmation',
           metadata: {
             confirmationId: request.confirmationId,
             actionId: confirmation.actionId,
-            approved: request.approved,
+            decision: request.decision,
             comment: request.comment
           }
         });
@@ -893,7 +893,7 @@ service: 'ActionExecutionService',
           userId: request.userId,
           userRole: request.userRole,
           confirmationId: request.confirmationId,
-          approved: request.approved
+          decision: request.decision
         }
       }
     );
@@ -1013,13 +1013,13 @@ service: 'ActionExecutionService',
     }
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-case 'create_offer':;
+      case 'create_offer':
         return await this.createOffer(action.parameters);
-case 'update_status':;
-        return await this.updateOfferStatus(action.targetEntityId!, (action.parametas unknown).status);
-case 'archive_offer':;
+      case 'update_status':
+        return await this.updateOfferStatus(action.targetEntityId!, (action.parameters as { status: string }).status);
+      case 'archive_offer':
         return await this.archiveOffer(action.targetEntityId!);
-case 'transform_to_project':;
+      case 'transform_to_project':
         return await this.transformOfferToProject(action.targetEntityId!);
       default:
         return {
@@ -1032,10 +1032,11 @@ case 'transform_to_project':;
     }
   private async executeProjectAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
-case 'create_project':;
+      case 'create_project':
         return await this.createProject(action.parameters);
-case 'update_status':;
-        return await this.updateProjectStatus(action.targetEntityId!, (actionas unknown unknown)unknownnown).status);
+      case 'update_status':
+        return await this.updateProjectStatus(action.targetEntityId!, (action.parameters as { status: string }).status);
+      case 'archive_project':
         return await this.archiveProject(action.targetEntityId!);
       default:
         return {
@@ -1091,69 +1092,69 @@ case 'update_task_status':;
   // ========================================
   // OPÉRATIONS SPÉCIFIQUES CRUD
   // ========================================
-  private async createOffer(paraunknownnunknown): Promise<ActionExecutionResult> {
-    async () => {
-      const offerId = crypto.randomUUID();
-      const reference = `OF-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-      const offerData = {
-        id: offerId,
-        reference,
-        client: parameters.client,
-        location: parameters.location || '',
-        menuiserieType: parameters.menuiserieType || 'fenetre',
-        montantEstime: parameters.montantEstime ? parseFloat(parameters.montantEstime) : null,
-    as uas unknown,tus:unknownrunknown,lon' as unknown,
-        responsibleUserId: parameters.responsibleUserId,
-        departement: parameters.departement,
-        source: parameters.source || 'website'
-      };
-      await db.insert(offers).values([offerData]);
-      return {
-        success: true,
-        entityId: offerId,
-        affectedRows: 1,
-        warnings: parameters.montantEstime ? [] : ['Montant estimé non spécifié']
-      };
-    },
-    {
-      operation: 'constructor',
-      service: 'ActionExecutionService',
-      metadata: {}
-    } );
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la création de l\'offre'
-              }
-      };
-    }
+  private async createOffer(parameters: unknown): Promise<ActionExecutionResult> {
+    return withErrorHandling(
+      async () => {
+        const params = parameters as {
+          client: string;
+          location?: string;
+          menuiserieType?: string;
+          montantEstime?: string;
+          responsibleUserId?: string;
+          departement?: string;
+          source?: string;
+        };
+        const offerId = crypto.randomUUID();
+        const reference = `OF-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        const offerData = {
+          id: offerId,
+          reference,
+          client: params.client,
+          location: params.location || '',
+          menuiserieType: params.menuiserieType || 'fenetre',
+          montantEstime: params.montantEstime ? parseFloat(params.montantEstime) : null,
+          responsibleUserId: params.responsibleUserId,
+          departement: params.departement,
+          source: params.source || 'website'
+        };
+        await db.insert(offers).values([offerData]);
+        return {
+          success: true,
+          entityId: offerId,
+          affectedRows: 1,
+          warnings: params.montantEstime ? [] : ['Montant estimé non spécifié']
+        };
+      },
+      {
+        operation: 'createOffer',
+        service: 'ActionExecutionService',
+        metadata: {}
+      }
+    );
+  }
   private async updateOfferStatus(offerId: string, status: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
-    async () => {
-      const result = await db
-        .update(offers)
-  as uas unknown,set(unknowntunknown,: staas unknown, unknown, updatedAt: new Date() })
-        .where(eq(offers.id, offerId));
-      return {
-        success: true,
-        entityId: offerId,
-        affectedRows: 1
-      };
-    },
-    {
-      operation: 'constructor',
-      service: 'ActionExecutionService',
-      metadata: {}
-    } );
-      return {
-        success: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la mise à jour du statut'
-              }
-      };
-    }
+      async () => {
+        await db
+          .update(offers)
+          .set({ status: status, updatedAt: new Date() })
+          .where(eq(offers.id, offerId));
+        return {
+          success: true,
+          entityId: offerId,
+          affectedRows: 1
+        };
+      },
+      {
+        operation: 'updateOfferStatus',
+        service: 'ActionExecutionService',
+        metadata: {
+          offerId,
+          status
+        }
+      }
+    );
+  }
   private async archiveOffer(offerId: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
     async () => {

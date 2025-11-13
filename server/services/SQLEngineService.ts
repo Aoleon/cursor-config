@@ -195,10 +195,10 @@ export class SQLEngineService {
           cleanedLength: cleanedSQL.length,
           modifications: {
             actual_margin_removed: originalSQL.includes('actual_margin'),
-            name_corrected: originalSQL.includes('.name') 
-
-              }
-                              });
+            name_corrected: originalSQL.includes('.name')
+          }
+        }
+      });
     }
     return cleanedSQL;
   }
@@ -221,7 +221,7 @@ export class SQLEngineService {
         operation: 'executeNaturalLanguageQuery',
         queryId,
         userId: request.userId
-            });
+      }});
       // 1. Validation et nettoyage de la requête d'entrée
       const validationResult = this.validateInputQuery(request);
       if (!validationResult.isValid) {
@@ -289,8 +289,9 @@ export class SQLEngineService {
           queryAnalysis: queryAnalysis,
           templateType: queryType,
           adjustedTimeout,
-          adjustedMaxResults       }
-     });
+          adjustedMaxResults
+        }
+      });
       const aiResponse = await this.aiService.generateSQL(aiRequest);
       // Nettoyer le SQL généré pour supprimer les références à actual_margin (colonne qui n'existe pas)
       if (aiResponse.success && aiResponse.data?.sqlGenerated) {
@@ -519,18 +520,16 @@ export class SQLEngineService {
         rbacViolations: rbacResult.rbacViolations || [],
         suggestions: this.generateSuggestions(request.sql, securityCheck, rbacResult)
       };
-
-    
     },
     {
-      operation: 'secondes',
+      operation: 'validateSQL',
       service: 'SQLEngineService',
-      metadata: {}
-    } );
-      
-      // Fallback vers contexte basique
-      return this.buildFallbackContext(request);
+      metadata: {
+        userId: request.userId,
+        userRole: request.userRole
+      }
     }
+    );
   }
 
   /**
@@ -1073,12 +1072,10 @@ INSTRUCTIONS DE BASE:
             service: 'SQLEngineService',
                   operation: 'validateSQL',
             cleanedSQLLength: cleanedSQL.length,
-            cleanedSQLPreview: cleanedSQL.substring(0, 150) + (cleanedSQL.length > 150 ? '...' : '') 
-              
-                }
-                              });
-      metadata: {       }
-     });
+            cleanedSQLPreview: cleanedSQL.substring(0, 150) + (cleanedSQL.length > 150 ? '...' : '')
+          }
+        }
+      });
       
       // 1. PRÉTRAITEMENT pour supporter la syntaxe PostgreSQL INTERVAL
       // Utiliser la méthode commune de prétraitement

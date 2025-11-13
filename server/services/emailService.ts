@@ -762,6 +762,7 @@ export function createEmailService(config?: Partial<EmailServiceConfig>): IEmail
     default:
       return new MockEmailService();
   }
+}
 
 /**
  * Instance singleton du service email

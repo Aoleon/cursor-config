@@ -19,6 +19,8 @@ Ces règles sont fondamentales et doivent toujours être appliquées, quel que s
 - `quality-principles.md` - Philosophie de qualité (robustesse, performance, maintenabilité)
 - `code-quality.md` - Standards stricts de qualité code
 - `request-timeout-prevention.md` - Prévention des abandons de requêtes (IMPÉRATIF - éviter "User aborted request")
+- `response-validation-hook.md` - Hook de validation de réponse avant arrêt (IMPÉRATIF - éliminer arrêts prématurés)
+- `context-management-hierarchical.md` - Gestion contexte hiérarchique (IMPÉRATIF - runs 6+ heures sans saturation)
 
 **Contenu:**
 - Contexte du projet

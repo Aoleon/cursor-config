@@ -2,33 +2,37 @@
 
 **Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)
 
-## ⚠️ RÈGLE CRITIQUE : ANTI-INTERRUPTION - PROCHAINES ÉTAPES
+## ⚠️ RÈGLE CRITIQUE : HOOK DE VALIDATION DE RÉPONSE AVANT ARRÊT
 
 **PROBLÈME IDENTIFIÉ:** L'agent s'arrête encore alors qu'il mentionne des "prochaines étapes" dans sa réponse.
 
-**SOLUTION STRICTE - À APPLIQUER AVANT TOUT ARRÊT:**
+**SOLUTION IMPLÉMENTÉE:** Hook obligatoire de validation exécuté AVANT TOUT arrêt.
 
-### 🔴 Détection Obligatoire Avant Arrêt
+### 🔴 Hook de Validation Obligatoire (CRITIQUE)
 
-**AVANT DE S'ARRÊTER, L'AGENT DOIT:**
+**IMPÉRATIF ABSOLU:** Un hook de validation DOIT être exécuté AVANT TOUT arrêt de l'agent.
 
-1. **Analyser sa propre réponse** pour détecter les phrases suivantes :
-   - "prochaines étapes", "étapes suivantes", "next steps"
-   - "tâches restantes", "il reste", "il faudra", "actions à faire"
-   - "ensuite", "plus tard", "dans un second temps", "then", "later"
+**Fonctionnement du Hook:**
+1. **Analyse automatique** de la réponse avec patterns exhaustifs
+2. **Détection** de toute mention de "prochaines étapes", "tâches restantes", "actions futures"
+3. **Extraction automatique** des étapes mentionnées
+4. **Planification et exécution forcées** si détections positives
+5. **Validation** que toutes les étapes sont complétées
+6. **Autorisation d'arrêt** uniquement si aucune détection
 
-2. **Si des mentions sont détectées:**
-   - ✅ **PLANIFIER automatiquement** toutes les étapes mentionnées
-   - ✅ **CRÉER des todos** pour chaque étape identifiée
-   - ✅ **EXÉCUTER immédiatement** ces todos sans s'arrêter
-   - ✅ **VÉRIFIER** que toutes les étapes sont complétées avant de s'arrêter
+**Patterns de Détection:**
+- Prochaines étapes explicites: "prochaines étapes", "next steps"
+- Tâches restantes: "il reste", "il faudra", "tâches à faire"
+- Actions futures: "ensuite", "plus tard", "then", "later"
+- Intentions conditionnelles: "on pourrait", "je suggère"
+- Listes énumératives: "Actions restantes:\n- ...\n- ..."
 
-3. **RÈGLE ABSOLUE:**
-   - ❌ **NE JAMAIS s'arrêter** si des "prochaines étapes" sont mentionnées
-   - ❌ **NE JAMAIS mentionner** des tâches restantes sans les exécuter immédiatement
-   - ❌ **NE JAMAIS dire** "ensuite" ou "plus tard" sans exécuter immédiatement
+**RÈGLE ABSOLUE:**
+- ❌ **AUCUN arrêt** n'est autorisé tant que des prochaines étapes sont mentionnées
+- ✅ **Planification et exécution AUTOMATIQUES** si détections
+- ✅ **Zéro tolérance** pour les arrêts prématurés
 
-**Cette règle est CRITIQUE et doit être appliquée AVANT TOUT ARRÊT.**
+**Référence:** `@.cursor/rules/response-validation-hook.md` - Hook de validation complet (CRITIQUE P0)
 
 ---
 
@@ -497,51 +501,46 @@ router.post('/api/users',
 
 **IMPÉRATIF:** Continuer l'exécution sans interruption jusqu'à completion complète, même pour des runs très longs (plusieurs heures).
 
-**⚠️ RÈGLE CRITIQUE - DÉTECTION DES PROCHAINES ÉTAPES:**
+**⚠️ RÈGLE CRITIQUE - HOOK DE VALIDATION AVANT ARRÊT:**
 
 **AVANT TOUT ARRÊT, L'AGENT DOIT:**
 
-1. **Analyser sa propre réponse** pour détecter :
-   - "prochaines étapes", "étapes suivantes", "next steps"
-   - "tâches restantes", "il reste", "il faudra", "actions à faire"
-   - "ensuite", "plus tard", "dans un second temps", "then", "later"
+1. **Exécuter le hook de validation de réponse** (OBLIGATOIRE)
+   - Hook analysera automatiquement la réponse avec patterns exhaustifs
+   - Détectera toute mention de "prochaines étapes", "tâches restantes", "actions futures"
+   - Extraira automatiquement les étapes mentionnées
+   - Planifiera et exécutera AUTOMATIQUEMENT si détections
+   - N'autorisera l'arrêt que si aucune détection
 
-2. **Si des mentions sont détectées:**
-   - ✅ **PLANIFIER automatiquement** toutes les étapes mentionnées
-   - ✅ **CRÉER des todos** pour chaque étape identifiée
-   - ✅ **EXÉCUTER immédiatement** ces todos sans s'arrêter
-   - ✅ **VÉRIFIER** que toutes les étapes sont complétées
+2. **Gestion intelligente du contexte** (CRITIQUE)
+   - Système hiérarchique à 3 niveaux (Hot/Warm/Cold)
+   - Optimisation automatique si >75% d'utilisation
+   - Compression et archivage intelligents
+   - Permet runs de 6+ heures sans saturation
 
 **TOUJOURS:**
-- ✅ Vérifier exhaustivement avant TOUT arrêt (todos, erreurs, tests, fonctionnalités, validation)
+- ✅ Exécuter hook de validation AVANT TOUT arrêt (OBLIGATOIRE)
+- ✅ Utiliser gestion contexte hiérarchique pour runs longs
+- ✅ Vérifier exhaustivement avant TOUT arrêt (todos, erreurs, tests, fonctionnalités)
 - ✅ Forcer continuation si vérifications échouent
-- ✅ Détecter signes d'arrêt prématuré (temps court, todos non vérifiés, validation non effectuée)
-- ✅ **Détecter mentions de "prochaines étapes" dans la réponse de l'agent (OBLIGATOIRE)**
-- ✅ **Détecter annonces de tâches restantes sans exécution (OBLIGATOIRE)**
-- ✅ **Détecter mentions d'actions futures ("ensuite", "plus tard") (OBLIGATOIRE)**
-- ✅ **Planifier automatiquement les prochaines étapes identifiées (OBLIGATOIRE)**
-- ✅ **Exécuter immédiatement les prochaines étapes planifiées (OBLIGATOIRE)**
 - ✅ Maintenir keep-alive pendant runs longs (checkpoints réguliers)
-- ✅ Optimiser contexte régulièrement pour éviter saturation
+- ✅ Optimiser contexte régulièrement (<70% d'utilisation)
 - ✅ Sauvegarder état régulièrement (toutes les 5-10 minutes)
 - ✅ Détecter stagnation et forcer progression
 - ✅ Continuer jusqu'à completion complète
 
 **NE JAMAIS:**
-- ❌ S'arrêter sans vérification exhaustive
-- ❌ S'arrêter si vérifications échouent
-- ❌ S'arrêter si temps d'exécution court (< 30 min) avec tâches restantes
-- ❌ S'arrêter si todos non vérifiés
-- ❌ S'arrêter si validation complète non effectuée
-- ❌ S'arrêter si itération non complète
+- ❌ Bypasser le hook de validation
+- ❌ S'arrêter malgré détections du hook
+- ❌ Ignorer les étapes planifiées par le hook
+- ❌ Saturer le contexte (utiliser gestion hiérarchique)
+- ❌ S'arrêter prématurément (< 30 min avec tâches restantes)
 - ❌ Ignorer signes d'arrêt prématuré
-- ❌ S'arrêter prématurément après 30-45 minutes
-- ❌ **S'arrêter en annonçant des "prochaines étapes" sans les exécuter (INTERDIT)**
-- ❌ **Mentionner des tâches restantes sans les planifier et exécuter immédiatement (INTERDIT)**
-- ❌ **Mentionner qu'on va faire quelque chose "ensuite" ou "plus tard" sans l'exécuter immédiatement (INTERDIT)**
-- ❌ **S'arrêter si la réponse contient des phrases comme "prochaines étapes", "il reste", "il faudra" (INTERDIT)**
 
-**Référence:** `@.cursor/rules/persistent-execution.md` - Règles d'exécution persistante
+**Références:** 
+- `@.cursor/rules/response-validation-hook.md` - Hook de validation (CRITIQUE P0)
+- `@.cursor/rules/context-management-hierarchical.md` - Gestion contexte hiérarchique (CRITIQUE P0)
+- `@.cursor/rules/persistent-execution.md` - Règles d'exécution persistante
 
 ### 24. Itérations Avancées et Coordination des Rôles (IMPÉRATIF)
 

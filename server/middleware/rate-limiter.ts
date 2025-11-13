@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import { monitorRateLimit } from '../utils/rate-limit-monitor';
 
 // Type for extended request with user
-interface AuthenticatedRequest extends Request {
+type AuthenticatedRequest = Request & {
   user?: {
     id?: string;
     email?: string;
@@ -22,42 +22,44 @@ interface AuthenticatedRequest extends Request {
       email?: string;
       [key: string]: unknown;
     };
+  };
 }
 
 /**
  * Key generator that returns user ID for authenticated users
  * Returns undefined for non-authenticated users (lets express-rate-limit handle IP normalization)
  */
-const generateKey = (req: AuthenticatedRequest): string | undefined => {
-  const userId = req.user?.id || req.user?.claims?.sub || (req.session as unknown)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (req.sessas unknown)?.user?.email;
+const generateKey = (req: AuthenticatedRequest): string => {
+  const userId = req.user?.id || req.user?.claims?.sub || (req.session as unknown as { user?: { id?: string } })?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as unknown as { user?: { email?: string } })?.user?.email;
+  
+  if (userId) {
     logger.debug('[RateLimiter] Key generated for user', { metadata: {
         userId,
         userEmail,
         path: req.originalUrl,
         ip: req.ip
-            }
-
-            });
+      }
+    });
     return `user:${userId}`;
   }
   
   logger.debug('[RateLimiter] Using IP-based rate limiting', { metadata: {
       ip: req.ip,
       path: req.originalUrl
-          }
-
-            });
-  // Let express-rate-limit handle IP normalization (IPv4/IPv6 compatible)
-  return undefined;
+    }
+  });
+  
+  // Return IP-based key for non-authenticated users
+  return `ip:${req.ip || 'unknown'}`;
 };
 
 /**
  * Custom handler for rate limit exceeded
  */
 const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
-  const userId = req.user?.id || req.user?.claims?.sub || (req.as unknown) as unknown)?.user?.id;
-  const userEmail = req.user?.email || req.user?.claims?.email || (as unknown)sas unknunknown)?.user?.email;
+  const userId = req.user?.id || req.user?.claims?.sub || (req.session as unknown as { user?: { id?: string } })?.user?.id;
+  const userEmail = req.user?.email || req.user?.claims?.email || (req.session as unknown as { user?: { email?: string } })?.user?.email;
   // Monitor the rate limit hit
   monitorRateLimit(req.originalUrl, userId, userEmail);
   
@@ -84,7 +86,8 @@ const rateLimitHandler = (req: AuthenticatedRequest, res: Response): void => {
     rateLimit: {
       remaining: rateLimitRemaining,
       reset: rateLimitReset
-    });
+    }
+  });
 };
 
 /**
@@ -102,9 +105,10 @@ export const rateLimits = {
     handler: rateLimitHandler,
     skip: (req: AuthenticatedRequest) => {
       // Skip rate limiting for admin users
-      const userRole = req.user?.role as unknown).as unknunknown)unknown any)?.user?.role;
+      const userRole = req.user?.role || (req.session as unknown as { user?: { role?: string } })?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
-    }),
+    }
+  }),
 
   // Authentication endpoints: 5 attempts per 15 minutes
   auth: rateLimit({
@@ -139,9 +143,10 @@ export const rateLimits = {
     keyGenerator: generateKey,
     skip: (req: AuthenticatedRequest) => {
       // Skip for admin users
-      const userRole = req.user?.ras unknown)(as unknunknown)unknownn as any)?.user?.role;
+      const userRole = req.user?.role || (req.session as unknown as { user?: { role?: string } })?.user?.role;
       return userRole === 'admin' || userRole === 'super_admin';
-    }),
+    }
+  }),
 
   // Supplier portal: 30 requests per minute
   supplier: rateLimit({
@@ -258,7 +263,7 @@ export function createRateLimiter(options: {
   max: number;
   message?: string;
   skipSuccessfulRequests?: boolean;
-  keyGenerator?: 'ip' | 'user' | 'ipunknowner';
+  keyGenerator?: 'ip' | 'user' | 'ip+user';
 }): any {
   // Configure key generator based on option
   let keyGen: ((req: Request) => string | undefined) | undefined;
@@ -267,9 +272,9 @@ export function createRateLimiter(options: {
     // Don't specify keyGenerator - let express-rate-limit handle IP normalization
     keyGen = undefined;
   } else if (options.keyGenerator === 'user' || options.keyGenerator === 'ip+user') {
-    keyGen = generateKey as unknown; // Cast to any to handle the string | undefined return type
+    keyGen = generateKey as (req: AuthenticatedRequest) => string;
   } else {
-    keyGen = generateKey as unknown;
+    keyGen = generateKey as (req: AuthenticatedRequest) => string;
   }
 
   return rateLimit({
@@ -279,7 +284,7 @@ export function createRateLimiter(options: {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests,
-    keyGenerator: keyGen as unknown,
+    keyGenerator: keyGen as (req: AuthenticatedRequest) => string,
     handler: rateLimitHandler
   });
 }

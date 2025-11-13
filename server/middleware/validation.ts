@@ -75,15 +75,15 @@ export function validate(
       // Appliquer la validation selon les options
       // Express 5: req.query, req.params, req.body sont read-only
       // Solution: stocker les données validées/sanitisées dans req.validated
-      let validatedData;
+      let validatedData: unknown;
       
       if (opts.stripUnknown) {
         validatedData = schema.parse(dataToValidate);
       } else {
         // Pour le mode strict, nous devons nous assurer que le schema est un ZodObject
         // Sinon, nous utilisons parse standard avec passthrough
-        if (opts.strict && z.ZodObject.prototype.isPrototypeOf(schema)) {
-          validatedData = (schema as z.ZodObject<any>).strict().parse(dataToValidate);
+        if (opts.strict && 'strict' in schema && typeof (schema as any).strict === 'function') {
+          validatedData = ((schema as unknown) as z.ZodObject<any>).strict().parse(dataToValidate);
         } else {
           validatedData = schema.parse(dataToValidate);
         }
@@ -93,7 +93,9 @@ export function validate(
       // deepMutate() remplace Object.assign() qui ne fait qu'une copie shallow
       // Préserve TOUTES les transformations Zod (coercions, defaults, stripUnknown)
       // Compatible avec nested objects: req.query.filters.limit transformé correctement
-      deepMutate(req[source] as Record<string, unknown>, validatedData as Record<string, unknown>);
+      if (typeof validatedData === 'object' && validatedData !== null) {
+        deepMutate(req[source] as Record<string, unknown>, validatedData as Record<string, unknown>);
+      }
       
       // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated pour routes existantes
       if (!req.validated) {

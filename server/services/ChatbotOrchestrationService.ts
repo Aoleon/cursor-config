@@ -157,8 +157,10 @@ export class ChatbotOrchestrationService {
     const queryComplexity = this.detectQueryComplexity(request.query);
     const focusAreas = this.detectFocusAreas(request.query);
     
-    // === VÉRIFICATION CACHE LRU AMÉLIORÉ ===
-    const cacheKey = `${request.userId}_${request.userRole}_${request.query.toLowerCase().trim()}`;
+    // === VÉRIFICATION CACHE LRU OPTIMISÉ ===
+    // Normalisation clé cache (hash pour performance)
+    const normalizedQuery = request.query.toLowerCase().trim().replace(/\s+/g, ' ');
+    const cacheKey = this.generateCacheKey(request.userId, request.userRole, normalizedQuery, queryComplexity);
     const cachedResult = this.getCacheLRU(cacheKey);
     
     if (cachedResult) {
@@ -1155,53 +1157,6 @@ export class ChatbotOrchestrationService {
         errorType: 'orchestration_error'
       }
     });
-      // === FINALISER LE TRACING EN ERREUR ===
-      await this.performanceMetrics.endPipelineTrace(
-        traceId, request.userId, request.userRole, request.query, 
-        this.detectQueryComplexity(request.query), false, false, { 
-          error: error instanceof Error ? error.message : String(error),
-          errorType: 'orchestration_error',
-          errorStack: error instanceof Error ? error.stack : undefined
-              }
-      );
-      // Logging d'erreur
-      await this.logConversation({
-        id: conversationId,
-        userId: request.userId,
-        userRole: request.userRole,
-        sessionId,
-        query: request.query,
-        response: { error: "Erreur interne" },
-        sql: null,
-        results: null,
-        executionTimeMs: Date.now() - startTime,
-        confidence: null,
-        modelUsed: null,
-        cacheHit: false,
-        errorOccurred: true,
-        errorType: "unknown",
-        dryRun: request.options?.dryRun || false,
-        createdAt: new Date()
-      });
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "query",
-        Date.now() - startTime,
-        false,
-        0
-      );
-      const errorResponse = this.createErrorResponse(
-        conversationId,
-        request.query,
-        "unknown",
-        error instanceof Error ? error.message : String(error),
-        "Une erreur inattendue s'est produite. Veuillez réessayer."
-      );
-      // Ajouter trace ID pour debug
-      (errorResponse as unknown).trace_id = traceId;
-      return errorResponse;
-    }
   }
   // ========================================
   // MÉTHODES HELPERS SLO ET PERFORMANCE
@@ -1349,15 +1304,13 @@ export class ChatbotOrchestrationService {
         request.userRole
       );
       const rbacPassed = userPermissions && Object.keys(userPermissions.permissions).length > 0;
-      // 2. Validation par le moteur SQL en mode validation
+      // 2. Validation par le moteur SQL en mode validation (sans exécution)
       const sqlValidationRequest = {
-        sql: request.query, // Temporaire - sera remplacé par la génération SQL
-        parameters: [],
+        naturalLanguageQuery: request.query,
         userId: request.userId,
         userRole: request.userRole
       };
-      // TODO: Implémenter une méthode de validation pure dans SQLEngineService
-      // Pour l'instant, on fait une validation basique
+      const sqlValidation = await this.sqlEngineService.validateQuery(sqlValidationRequest);
       const estimatedComplexity = this.detectQueryComplexity(request.query);
       const estimatedTime = this.estimateExecutionTime(request.query, estimatedComplexity);
       await this.logUsageMetrics(
@@ -1371,17 +1324,17 @@ export class ChatbotOrchestrationService {
       return {
         success: true,
         validation_results: {
-          query_valid: true,
-          security_passed: true,
-          rbac_passed: rbacPassed,
-          sql_generatable: true,
+          query_valid: sqlValidation.isValid,
+          security_passed: sqlValidation.isSecure,
+          rbac_passed: sqlValidation.isValid && rbacPassed,
+          sql_generatable: sqlValidation.isValid,
           estimated_complexity: estimatedComplexity,
           estimated_execution_time_ms: estimatedTime,
-          warnings: [],
-          suggestions: []
+          warnings: sqlValidation.securityViolations || [],
+          suggestions: sqlValidation.suggestions || []
         },
-        accessible_tables: Object.keys(userPermissions?.permissions || {}),
-        restricted_columns: []
+        accessible_tables: sqlValidation.allowedTables || Object.keys(userPermissions?.permissions || {}),
+        restricted_columns: sqlValidation.deniedColumns || []
       };
     },
     {
@@ -1652,27 +1605,136 @@ export class ChatbotOrchestrationService {
         ));
       const total = Number(totalQueries[0]?.count || 0);
       const successful = Number(successfulQueries[0]?.count || 0);
+      
+      // Calcul moyenne temps réponse réel
+      const avgResponseTimeResult = await db
+        .select({ avg: sql<number>`avg(${chatbotConversations.executionTimeMs})`.as('avg') })
+        .from(chatbotConversations)
+        .where(and(
+          gte(chatbotConversations.createdAt, periodStart),
+          eq(chatbotConversations.errorOccurred, false)
+        ));
+      const avgResponseTime = Number(avgResponseTimeResult[0]?.avg || 0);
+      
+      // Sommer tokens utilisés depuis chatbotUsageMetrics
+      const tokensResult = await db
+        .select({ total: sql<number>`sum(${chatbotUsageMetrics.totalTokensUsed})`.as('total') })
+        .from(chatbotUsageMetrics)
+        .where(gte(chatbotUsageMetrics.date, periodStart));
+      const totalTokens = Number(tokensResult[0]?.total || 0);
+      
+      // Calculer coût total depuis chatbotUsageMetrics
+      const costResult = await db
+        .select({ total: sql<number>`sum(${chatbotUsageMetrics.estimatedCost})`.as('total') })
+        .from(chatbotUsageMetrics)
+        .where(gte(chatbotUsageMetrics.date, periodStart));
+      const totalCost = Number(costResult[0]?.total || 0);
+      
+      // Compter utilisateurs uniques
+      const uniqueUsersResult = await db
+        .select({ count: sql<number>`count(distinct ${chatbotConversations.userId})`.as('count') })
+        .from(chatbotConversations)
+        .where(gte(chatbotConversations.createdAt, periodStart));
+      const uniqueUsers = Number(uniqueUsersResult[0]?.count || 0);
+      
+      // Calculer moyenne requêtes par utilisateur
+      const avgQueriesPerUser = uniqueUsers > 0 ? total / uniqueUsers : 0;
+      
+      // Breakdown data par rôle
+      const roleBreakdown = await db
+        .select({
+          role: chatbotConversations.userRole,
+          count: sql<number>`count(*)`.as('count'),
+          successCount: sql<number>`sum(case when ${chatbotConversations.errorOccurred} = false then 1 else 0 end)`.as('successCount')
+        })
+        .from(chatbotConversations)
+        .where(gte(chatbotConversations.createdAt, periodStart))
+        .groupBy(chatbotConversations.userRole);
+      
+      const breakdownData = roleBreakdown.map(r => ({
+        category: r.role,
+        total: Number(r.count || 0),
+        success: Number(r.successCount || 0),
+        success_rate: Number(r.count || 0) > 0 ? Number(r.successCount || 0) / Number(r.count || 0) : 0
+      }));
+      
+      // Top queries (requêtes fréquentes)
+      const topQueriesResult = await db
+        .select({
+          query: chatbotConversations.query,
+          count: sql<number>`count(*)`.as('count')
+        })
+        .from(chatbotConversations)
+        .where(gte(chatbotConversations.createdAt, periodStart))
+        .groupBy(chatbotConversations.query)
+        .orderBy(desc(sql`count(*)`))
+        .limit(10);
+      
+      const topQueries = topQueriesResult.map(q => ({
+        query: q.query.substring(0, 200),
+        count: Number(q.count || 0)
+      }));
+      
+      // Distribution par rôle
+      const roleDistribution: Record<string, number> = {};
+      roleBreakdown.forEach(r => {
+        roleDistribution[r.role] = Number(r.count || 0);
+      });
+      
+      // Analyse erreurs
+      const errorAnalysisResult = await db
+        .select({
+          errorType: chatbotConversations.errorType,
+          count: sql<number>`count(*)`.as('count')
+        })
+        .from(chatbotConversations)
+        .where(and(
+          gte(chatbotConversations.createdAt, periodStart),
+          eq(chatbotConversations.errorOccurred, true)
+        ))
+        .groupBy(chatbotConversations.errorType);
+      
+      const errorAnalysis = errorAnalysisResult.map(e => ({
+        error_type: e.errorType || 'unknown',
+        count: Number(e.count || 0),
+        percentage: total > 0 ? (Number(e.count || 0) / total) * 100 : 0
+      }));
+      
+      // Feedback summary
+      const feedbackResult = await db
+        .select({
+          total: sql<number>`count(*)`.as('total'),
+          avgRating: sql<number>`avg(${chatbotFeedback.rating})`.as('avgRating'),
+          positiveCount: sql<number>`sum(case when ${chatbotFeedback.rating} >= 4 then 1 else 0 end)`.as('positiveCount')
+        })
+        .from(chatbotFeedback)
+        .where(gte(chatbotFeedback.createdAt, periodStart));
+      
+      const totalFeedback = Number(feedbackResult[0]?.total || 0);
+      const avgRating = Number(feedbackResult[0]?.avgRating || 0);
+      const satisfactionRate = totalFeedback > 0 ? Number(feedbackResult[0]?.positiveCount || 0) / totalFeedback : 0;
+      
       return {
         success: true,
         period: request.period,
         overall_metrics: {
           total_queries: total,
           success_rate: total > 0 ? successful / total : 0,
-          avg_response_time_ms: 2500, // TODO: calculer la vraie moyenne
-          total_tokens_used: 0, // TODO: sommer les tokens
-          estimated_total_cost: 0, // TODO: calculer le coût
-          unique_users: 0, // TODO: compter les utilisateurs uniques
-          avg_queries_per_user: 0 // TODO: calculer la moyenne
+          avg_response_time_ms: Math.round(avgResponseTime),
+          total_tokens_used: totalTokens,
+          estimated_total_cost: totalCost,
+          unique_users: uniqueUsers,
+          avg_queries_per_user: Math.round(avgQueriesPerUser * 100) / 100
         },
-        breakdown_data: [], // TODO: implémenter les données de breakdown
-        top_queries: [], // TODO: implémenter les top queries
-        role_distribution: {}, // TODO: implémenter la distribution par rôle
-        error_analysis: [], // TODO: implémenter l'analyse d'erreurs
+        breakdown_data: breakdownData,
+        top_queries: topQueries,
+        role_distribution: roleDistribution,
+        error_analysis: errorAnalysis,
         feedback_summary: {
-          total_feedback: 0,
-          avg_rating: 0,
-          satisfaction_rate: 0,
-          top_improvement_areas: []
+          total_feedback: totalFeedback,
+          avg_rating: Math.round(avgRating * 100) / 100,
+          satisfaction_rate: Math.round(satisfactionRate * 100) / 100,
+          top_improvement_areas: errorAnalysis.slice(0, 3).map(e => e.error_type)
         }
       };
     },
@@ -2112,8 +2174,7 @@ export class ChatbotOrchestrationService {
           confirmationId: request.confirmationId,
           userId: request.userId
         } });
-      // TODO: Implémenter la méthode dans ActionExecutionService
-      // const response = await this.actionExecutionService.updateConfirmation(request);
+      const response = await this.actionExecutionService.updateConfirmation(request);
       // Logging pour métriques chatbot
       await this.logUsageMetrics(
         request.userId,
@@ -2123,7 +2184,7 @@ export class ChatbotOrchestrationService {
         true,
         0
       );
-      return { success: true };
+      return response;
     },
     {
       operation: 'constructor',
@@ -2841,7 +2902,17 @@ export class ChatbotOrchestrationService {
   /**
    * Méthodes wrapper pour compatibilité avec le code existant
    */
-  private setCacheLRU(k: unknownnown,unknown,, data:unknowny, quer: unknown)unknown): void {
+  /**
+   * Génère une clé de cache normalisée et hashée pour performance
+   */
+  private generateCacheKey(userId: string, userRole: string, query: string, complexity: string): string {
+    // Hash pour réduire taille clé et améliorer performance
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(`${userId}_${userRole}_${query}_${complexity}`).digest('hex').substring(0, 16);
+    return `chatbot:${hash}`;
+  }
+
+  private setCacheLRU(key: string, data: unknown, queryPattern?: unknown): void {
     this.lruCache.set(key, data, undefined, queryPattern);
   }
   private getCacheLRU(key: string): unknown | null {

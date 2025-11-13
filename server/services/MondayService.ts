@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError, withErrorHandling } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { getCorrelationId } from '../middleware/correlation';
@@ -89,7 +89,8 @@ class MondayService {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
         'API-Version': '2024-01'
-      });
+      }
+    });
   }
 
   private async executeQuery<T = unknown>(query: string, variables?: unknown): Promise<T> {
@@ -99,45 +100,45 @@ class MondayService {
     return executeMonday(
       async () => {
         return withErrorHandling(
-    async () => {
-
-          logger.info('Exécution requête Monday.com GraphQL', {
-      metadata: {
-        module: 'MondayService', {
+          async () => {
+            logger.info('Exécution requête Monday.com GraphQL', {
+              metadata: {
+                module: 'MondayService',
                 operation: 'executeQuery',
-              queryLength: query.length,
-              hasVariables: !!variables
-
-                });
-
-          // Ajouter correlation ID dans headers si disponible
-          const response = await this.client.post('', {
-            query,
-            variables
-          }, {
-            headers: {
-              ...(correlationId && { 'X-Correlation-ID': correlationId })
+                queryLength: query.length,
+                hasVariables: !!variables
+              }
             });
 
-          if (response.data.errors) {
-            logger.error('Erreurs GraphQL Monday.com', {
-      metadata: {
-        module: 'MondayService', {
-                operation: 'executeQuery',
-                errors: response.data.errors
+            // Ajouter correlation ID dans headers si disponible
+            const response = await this.client.post('', {
+              query,
+              variables
+            }, {
+              headers: {
+                ...(correlationId && { 'X-Correlation-ID': correlationId })
+              }
+            });
 
-                  });
-            throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
+            if (response.data.errors) {
+              logger.error('Erreurs GraphQL Monday.com', {
+                metadata: {
+                  module: 'MondayService',
+                  operation: 'executeQuery',
+                  errors: response.data.errors
+                }
+              });
+              throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`, 500);
+            }
+
+            return response.data.data as T;
+          },
+          {
+            operation: 'executeQuery',
+            service: 'MondayService',
+            metadata: {}
           }
-
-          return response.data.data as T;
-        
-    },
-    {
-      operation: 'dropdown',
-      service: 'MondayService',
-      metadata: {       }
-     });
+        );
       },
       'GraphQL Query'
     );
@@ -151,12 +152,12 @@ class MondayService {
     if (cached) {
       logger.debug('Boards récupérés depuis cache', {
       metadata: {
-        module: 'MondayService', {
-          operation: 'getBoards',
-          cacheHit: true,
-          count: cached.length
-
-            });
+        module: 'MondayService',
+        operation: 'getBoards',
+        cacheHit: true,
+        count: cached.length
+      }
+    });
       return cached;
     }
 
@@ -180,12 +181,12 @@ class MondayService {
     
     logger.info('Boards Monday.com récupérés et mis en cache', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
-
-          });
+      }
+    });
 
     return boards;
   }
@@ -211,12 +212,12 @@ class MondayService {
 
     logger.info('Colonnes board récupérées', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
-
-          });
+      }
+    });
 
     return columns;
   }
@@ -260,12 +261,12 @@ class MondayService {
 
     logger.info('Items board récupérés', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
-
-          });
+      }
+    });
 
     return items;
   }
@@ -282,12 +283,12 @@ class MondayService {
 
     logger.info('Démarrage pagination Monday.com', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
-
-          });
+      }
+    });
 
     while (hasMore) {
       const query = `
@@ -338,13 +339,13 @@ class MondayService {
       
       if (!itemsPage) {
         logger.warn('Aucune page items_page trouvée', {
-      metadata: {
-        module: 'MondayService', {
-                operation: 'getBoardItemsPaginated',
+          metadata: {
+            module: 'MondayService',
+            operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
-
-              });
+          }
+        });
         break;
       }
 
@@ -357,41 +358,41 @@ class MondayService {
       hasMore = cursor !== null && cursor !== undefined && cursor !== '';
 
       logger.debug('Page récupérée', {
-      metadata: {
-        module: 'MondayService', {
+        metadata: {
+          module: 'MondayService',
           operation: 'getBoardItemsPaginated',
           pageCount,
           itemsInPage: items.length,
           totalSoFar: allItems.length,
           hasMore,
           nextCursor: cursor ? cursor.substring(0, 20) + '...' : null
-
-            });
+        }
+      });
 
       // Sécurité: éviter boucle infinie
       if (pageCount > 100) {
         logger.error('Trop de pages, arrêt de la pagination', {
-      metadata: {
-        module: 'MondayService', {
-                operation: 'getBoardItemsPaginated',
+          metadata: {
+            module: 'MondayService',
+            operation: 'getBoardItemsPaginated',
             boardId,
             pageCount,
             totalItems: allItems.length
-
-              });
+          }
+        });
         break;
       }
     }
 
     logger.info('Pagination terminée', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoardItemsPaginated',
         boardId,
         totalItems: allItems.length,
         totalPages: pageCount
-
-          });
+      }
+    });
 
     return allItems;
   }
@@ -403,13 +404,13 @@ class MondayService {
     const cached = await cacheService.get<MondayBoardData>(cacheKey);
     if (cached) {
       logger.debug('Board data récupérées depuis cache', {
-      metadata: {
-        module: 'MondayService', {
+        metadata: {
+          module: 'MondayService',
           operation: 'getBoardData',
           boardId,
           cacheHit: true
-
-            });
+        }
+      });
       return cached;
     }
 
@@ -433,7 +434,15 @@ class MondayService {
       }
     `;
 
-    const result = await this.executeQuery<{ boards: unknown[] }>(query, { 
+    const result = await this.executeQuery<{ boards: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      state: string;
+      board_kind: string;
+      workspace_id: string | null;
+      columns?: unknown[];
+    }> }>(query, { 
       boardIds: [parseInt(boardId)]
     });
     const boardData = result.boards?.[0];
@@ -449,12 +458,12 @@ class MondayService {
       board: {
         id: boardData.id,
         name: boardData.name,
-        description: boardData.description,
+        description: boardData.description || '',
         state: boardData.state,
         board_kind: boardData.board_kind,
-        workspace_id: boardData.workspace_id
+        workspace_id: boardData.workspace_id || ''
       },
-      columns: boardData.columns || [],
+      columns: (boardData.columns || []) as MondayColumn[],
       items: items
     };
 
@@ -462,14 +471,14 @@ class MondayService {
 
     logger.info('Données complètes board récupérées et mises en cache', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getBoardData',
         boardId,
         columnCount: response.columns.length,
         itemCount: response.items.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARD_DETAIL
-
-          });
+      }
+    });
 
     return response;
   }
@@ -488,25 +497,25 @@ class MondayService {
         }
       `;
 
-      const result = await this.executeQuery<{ me: unknown}>(query);
+      const result = await this.executeQuery<{ me: { id?: string; name?: string } }>(query);
       
       logger.info('Connexion Monday.com testée avec succès', {
-      metadata: {
-        module: 'MondayService', {
+        metadata: {
+          module: 'MondayService',
           operation: 'testConnection',
           userId: result.me?.id,
           userName: result.me?.name
-
-            });
+        }
+      });
 
       return true;
     
     },
     {
-      operation: 'dropdown',
+      operation: 'testConnection',
       service: 'MondayService',
-      metadata: {       }
-     });
+      metadata: {}
+    });
   }
 
   async getItem(itemId: string): Promise<MondayItem> {
@@ -548,12 +557,12 @@ class MondayService {
 
     logger.info('Item Monday.com récupéré', {
       metadata: {
-        module: 'MondayService', {
+        module: 'MondayService',
         operation: 'getItem',
         itemId,
         itemName: item.name
-
-          });
+      }
+    });
 
     return item;
   }
@@ -566,8 +575,8 @@ class MondayService {
         case 'status':
           // DEBUG: Log ce que Monday retourne
           logger.debug('extractColumnValue status column', {
-      metadata: {
-        module: 'MondayService', {
+            metadata: {
+              module: 'MondayService',
               columnId: columnValue.id,
               type: columnValue.type,
               hasDirectLabel: !!columnValue.label,
@@ -575,8 +584,8 @@ class MondayService {
               text: columnValue.text,
               value: columnValue.value,
               index: columnValue.index
-
-                });
+            }
+          });
           
           // Utiliser label direct du fragment StatusValue si disponible
           if (columnValue.label) return columnValue.label;
@@ -584,13 +593,13 @@ class MondayService {
           if (columnValue.value) {
             const parsed = JSON.parse(columnValue.value);
             logger.debug('extractColumnValue status parsed', {
-      metadata: {
-        module: 'MondayService', {
+              metadata: {
+                module: 'MondayService',
                 parsed,
-                label: parsed.label,
-                index: parsed.index
-
-                  });
+                label: (parsed as { label?: string })?.label,
+                index: (parsed as { index?: number })?.index
+              }
+            });
             return parsed.label || parsed.index || null;
           }
           return null;
@@ -617,11 +626,14 @@ class MondayService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.map((p: unknown) => ({
-                id: p.id,
-                name: p.name,
-                email: p.email
-            })) || [];
+            return parsed.personsAndTeams?.map((p: { id?: string; kind?: string; title?: string }) => {
+              const person = p as { id?: string; name?: string; email?: string };
+              return {
+                id: person.id || '',
+                name: person.name || '',
+                email: person.email || ''
+              };
+            }) || [];
           
           case 'email':
             return parsed.email || parsed.text || null;
@@ -695,5 +707,4 @@ class MondayService {
 }
 
 // Export class and singleton instance
-export { MondayService };
-export const mondayService = mondayintegrationService();
+export const mondayService = new MondayService();

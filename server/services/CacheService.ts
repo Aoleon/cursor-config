@@ -481,11 +481,12 @@ export class CacheService {
       logger.warn('[CacheService] Certaines fonctions warmup ont échoué', { metadata: {
           service: 'CacheService',
           operation: 'warmupCache',
-          errors 
+          errors: errors
         }
       });
     }
   }
+}
 
 // ========================================
 // ADAPTER FACTORY
@@ -505,11 +506,8 @@ export function createCacheAdapter(): ICacheAdapter {
           operation: 'createCacheAdapter',
           adapter: 'Redis',
           redisUrl: redisUrl.replace(/:[^:]*@/, ':***@') // Mask password 
-              
-              }
- 
-              
-            });
+        }
+      });
       return new RedisCacheAdapter(redisUrl);
     } catch (error) {
       logger.error('[CacheService] Erreur lors de la création du RedisCacheAdapter', { metadata: {
@@ -521,6 +519,7 @@ export function createCacheAdapter(): ICacheAdapter {
       });
       // Fall back to memory adapter
     }
+  }
 
   logger.info('[CacheService] Creating MemoryCacheAdapter', { metadata: {
       service: 'CacheService',

@@ -106,7 +106,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
         username,
         requestedRole: role,
         validatedRole,
-        hasSession: !!(req as unknown).session
+        hasSession: !!req.session
       }
     });
 
@@ -274,6 +274,9 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     
     // Récupération de l'utilisateur depuis la DB si OIDC (évite duplications)
     const userId = user.id || user.claims.sub;
+    if (!userId) {
+      throw new Error('User ID not available');
+    }
     const dbUser = await storage.getUser(userId);
     
     // CORRECTION : Gestion du cas où l'utilisateur n'existe pas en DB (première connexion)
@@ -296,6 +299,9 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       });
       
       // Récupérer l'utilisateur nouvellement créé
+      if (!userId) {
+        throw new Error('User ID not available');
+      }
       const newDbUser = await storage.getUser(userId);
       if (!newDbUser) {
         logger.error('[Auth] Échec création utilisateur en DB', { metadata: {

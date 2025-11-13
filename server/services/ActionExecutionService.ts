@@ -795,6 +795,110 @@ service: 'ActionExecutionService',
     await db.insert(actionConfirmations).values([confirmationData]);
     return confirmationId;
   }
+  /**
+   * Met à jour le statut d'une confirmation d'action
+   */
+  async updateConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: unknown }> {
+    return withErrorHandling(
+      async () => {
+        // 1. Récupérer la confirmation
+        const confirmationResults = await db
+          .select()
+          .from(actionConfirmations)
+          .where(eq(actionConfirmations.id, request.confirmationId))
+          .limit(1);
+        
+        if (confirmationResults.length === 0) {
+          return {
+            success: false,
+            error: {
+              type: 'not_found',
+              message: 'Confirmation introuvable'
+            }
+          };
+        }
+        
+        const confirmation = confirmationResults[0];
+        
+        // 2. Vérifier que l'utilisateur est le propriétaire
+        if (confirmation.userId !== request.userId) {
+          return {
+            success: false,
+            error: {
+              type: 'permission',
+              message: 'Confirmation appartient à un autre utilisateur'
+            }
+          };
+        }
+        
+        // 3. Vérifier que la confirmation n'est pas expirée
+        if (confirmation.expiresAt && confirmation.expiresAt < new Date()) {
+          await db
+            .update(actionConfirmations)
+            .set({ status: 'expired' })
+            .where(eq(actionConfirmations.id, request.confirmationId));
+          
+          return {
+            success: false,
+            error: {
+              type: 'expired',
+              message: 'Confirmation expirée'
+            }
+          };
+        }
+        
+        // 4. Mettre à jour la confirmation
+        const newStatus = request.approved ? 'confirmed' : 'rejected';
+        await db
+          .update(actionConfirmations)
+          .set({
+            status: newStatus,
+            userDecision: request.approved,
+            userComment: request.comment,
+            rejectionReason: request.approved ? null : (request.rejectionReason || 'Rejeté par l\'utilisateur'),
+            respondedAt: new Date()
+          })
+          .where(eq(actionConfirmations.id, request.confirmationId));
+        
+        // 5. Si approuvée, mettre à jour le statut de l'action associée
+        if (request.approved) {
+          await this.updateActionStatus(confirmation.actionId, 'confirmed', 'Action confirmée par l\'utilisateur');
+        } else {
+          await this.updateActionStatus(confirmation.actionId, 'rejected', request.rejectionReason || 'Action rejetée par l\'utilisateur');
+        }
+        
+        // 6. Logging audit
+        await this.auditService.logEvent({
+          userId: request.userId,
+          userRole: request.userRole,
+          eventType: 'action.confirmation_updated',
+          result: request.approved ? 'success' : 'rejected',
+          severity: 'info',
+          resource: `action:confirmation:${request.confirmationId}`,
+          action: 'update_confirmation',
+          metadata: {
+            confirmationId: request.confirmationId,
+            actionId: confirmation.actionId,
+            approved: request.approved,
+            comment: request.comment
+          }
+        });
+        
+        return { success: true };
+      },
+      {
+        operation: 'updateConfirmation',
+        service: 'ActionExecutionService',
+        metadata: {
+          userId: request.userId,
+          userRole: request.userRole,
+          confirmationId: request.confirmationId,
+          approved: request.approved
+        }
+      }
+    );
+  }
+
   private generateConfirmationMessage(parameters: unknown, riskLevel: string): string {
     const riskIndicator = riskLevel === 'high' ? '⚠️' : riskLevel === 'medium' ? '⚡' : 'ℹ️';
     return `${riskIndicator} Confirmer l'action avec les paramètres: ${JSON.stringify(parameters, null, 2)}`;

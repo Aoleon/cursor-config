@@ -44,8 +44,8 @@ const CONNECTION_ERROR_CODES = [
  */
 export function isRetryableError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as unknown).code;
-    return RETRYABLE_ERROR_CODES.includes(code);
+    const code = (error as { code?: string }).code;
+    return code ? RETRYABLE_ERROR_CODES.includes(code) : false;
   }
   
   // Check for specific error messages
@@ -67,7 +67,7 @@ export function isRetryableError(error: unknown): boolean {
 export function isConnectionError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = (error as { code?: string }).code;
-    return CONNECTION_ERROR_CODES.includes(code);
+    return code ? CONNECTION_ERROR_CODES.includes(code) : false;
   }
   
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
@@ -108,7 +108,7 @@ export function getDatabaseErrorMessage(error: unknown): string {
       '55P03': 'Ressource verrouillée, veuillez réessayer',
     };
     
-    if (errorMessages[code]) {
+    if (code && errorMessages[code]) {
       return errorMessages[code];
     }
   }
@@ -169,7 +169,7 @@ export async function withTransaction<T>(
   if (typeof dbOrCallback === 'function') {
     // Ancien format : withTransaction(callback, options)
     dbInstance = db;
-    callback = dbOrCallback;
+    callback = dbOrCallback as TransactionCallback<T>;
     opts = (callbackOrOptions as TransactionOptions) || {};
   } else {
     // Nouveau format : withTransaction(db, callback, options)
@@ -203,7 +203,7 @@ export async function withTransaction<T>(
             });
       
       // Execute transaction with timeout and isolation level
-      const result = await dbInstance.transaction(async (tx) => {
+      const result = await (dbInstance as typeof db).transaction(async (tx: DrizzleTransaction) => {
         // Set transaction isolation level - Convert to uppercase for SQL
         const sqlIsolationLevel = isolationLevel.toUpperCase().replace(/ /g, ' ');
         await tx.execute(sql.raw(`SET TRANSACTION ISOLATION LEVEL ${sqlIsolationLevel}`));
@@ -216,9 +216,7 @@ export async function withTransaction<T>(
         // Execute the callback - tx is already a DrizzleTransaction type
         return await callback(tx as DrizzleTransaction);
       }, {
-        isolationLevel, // Drizzle expects lowercase
-        deferrable: false,
-        readOnly: false
+        isolationLevel // Drizzle expects lowercase
       });
       
       // Log success
@@ -233,11 +231,12 @@ export async function withTransaction<T>(
       
       return result;
     } catch (error: unknown) {
-      lastError = error;
+      const err = error as Error & { code?: string; detail?: string; constraint?: string; table?: string; column?: string };
+      lastError = err instanceof Error ? err : (new Error(String(error)) as Error);
       const duration = Date.now() - startTime;
       
       // Check if error is retryable
-      const retryable = error?.code === '40001' || error?.code === '40P01'; // Serialization failure or deadlock
+      const retryable = err.code === '40001' || err.code === '40P01'; // Serialization failure or deadlock
       
       if (retryable && attempt < retries - 1) {
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
@@ -246,7 +245,7 @@ export async function withTransaction<T>(
                   operation: 'withTransaction',
             attempt: attempt + 1,
             maxRetries: retries,
-            errorCode: error?.code,
+            errorCode: err.code,
             delay
                 }
                               });
@@ -264,7 +263,7 @@ export async function withTransaction<T>(
           maxRetries: retries,
           duration,
           retryable,
-          errorCode: (error as { code?: string }).code
+          errorCode: err.code
               }
       });
       
@@ -331,6 +330,7 @@ export async function withSavepoint<T>(
     
     throw error;
   }
+}
 
 /**
  * Batch execute multiple database operations in a single transaction
@@ -343,7 +343,7 @@ export async function withBatchTransaction<T>(
   operations: Array<(tx: DrizzleTransaction) => Promise<T>>,
   options: TransactionOptions = {}
 ): Promise<T[]> {
-  return withTransaction(async (tx) => {
+  return withTransaction(async (tx: DrizzleTransaction) => {
     const results: T[] = [];
     
     for (let i = 0; i < operations.length; i++) {
@@ -370,10 +370,8 @@ export async function withBatchTransaction<T>(
 export async function checkDatabaseHealth(): Promise<boolean> {
   return withErrorHandling(
     async () => {
-
-    await db.execute(sql`SELECT 1`);
-    return true;
-  
+      await db.execute(sql`SELECT 1`);
+      return true;
     },
     {
       operation: 'serialization_failure',

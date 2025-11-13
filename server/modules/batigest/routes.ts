@@ -252,17 +252,16 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           exportToBatigest,
           mode: (generatePDF && !exportToBatigest) ? 'PREVIEW' : 'PRODUCTION',
           userId: (req as unknown as { user?: { id: string } }).user?.id
-                }
-
-            });
+        }
+      });
 
       // ========================================
       // MODE PREVIEW: Générer PDF sans persister en DB
       // ========================================
       if (generatePDF && !exportToBatigest) {
         logger.info('[Batigest] Mode PREVIEW - Génération PDF à la volée (sans DB)', {
-          metadata: { reference: orderData.reference       }
-     });
+          metadata: { reference: orderData.reference }
+        });
 
         try {
           // Charger le template purchase-order
@@ -296,8 +295,9 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                                                                                                                                                                                                                                                                                     });
             }
 
-          // Calculer les totaux
-          const items = orderData.items || [];
+          try {
+            // Calculer les totaux
+            const items = orderData.items || [];
           const totalHT = items.reduce((sum: number, item: unknown) => sum + Number((item as { total?: number }).total ?? 0), 0);
           const totalTVA = totalHT * 0.20; // TVA 20% par défaut
           const totalTTC = totalHT + totalTVA;
@@ -345,9 +345,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
             }
           });
 
-          const result: RenderResult = await withRetry(
+          const result = await withRetry(
             async () => {
-              return await pdfEngine.render(renderOptions);
+              const pdfEngine: any = await createPDFEngine();
+              // @ts-ignore - TypeScript ne reconnaît pas toujours la méthode render sur PDFTemplateEngine
+              return await pdfEngine.render(renderOptions) as RenderResult;
             },
             {
               maxRetries: 2, // 3 tentatives au total
@@ -385,7 +387,6 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           res.setHeader('Content-Disposition', `inline; filename="BC_${orderData.reference}.pdf"`);
           res.send(result.pdf);
           return;
-
         } catch (error) {
           logger.error('[Batigest] Erreur génération PDF preview', error as Error, {
             metadata: {
@@ -443,7 +444,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
         orderId: order.id,
         reference: order.reference,
         supplierId: order.supplierId,
-        userId: req.user?.id
+        userId: (req as unknown as { user?: { id: string } }).user?.id
       });
 
       sendSuccess(res, order, 201);
@@ -533,7 +534,6 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           };
 
           // Générer le PDF avec PDFTemplateEngine
-          const pdfEngine: PDFTemplateEngine = await createPDFEngine();
           const renderOptions: RenderOptions = {
             template,
             context: {
@@ -554,7 +554,11 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
           });
 
           const result: RenderResult = await withRetry(
-            () => pdfEngine.render(renderOptions),
+            async () => {
+              const pdfEngine: any = await createPDFEngine();
+              // @ts-ignore - TypeScript ne reconnaît pas toujours la méthode render sur PDFTemplateEngine
+              return await pdfEngine.render(renderOptions) as RenderResult;
+            },
             {
               maxRetries: 2, // 3 tentatives au total
               initialDelay: 500,
@@ -571,7 +575,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                 });
               }
             }
-          ) as { success: boolean; pdf?: Buffer; errors?: Array<{ message: string }>; metadata?: { renderTime?: number } };
+          );
 
           if (!result.success || !result.pdf) {
             throw new ValidationError('Échec de la génération du PDF: ' + 

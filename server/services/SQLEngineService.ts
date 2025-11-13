@@ -471,23 +471,19 @@ export class SQLEngineService {
           columnsAccessed: securityCheck.allowedColumns,
           securityChecks: securityCheck.securityViolations,
           aiModelUsed: aiResponse.data.modelUsed,
-          cacheHit: aiResponse.data.fromCache       }
-     });
+          cacheHit: aiResponse.data.fromCache
+        }
+      };
     },
     {
-      operation: 'secondes',
+      operation: 'executeNaturalLanguageQuery',
       service: 'SQLEngineService',
-      metadata: {}
-    } );
-      return {
-        success: false,
-        error: {
-          type: "execution",
-          message: "Erreur interne du moteur SQL",
-          details: error instanceof Error ? error.message : String(error)
-              }
-      };
+      metadata: {
+        queryId,
+        userId: request.userId
+      }
     }
+    );
   }
 
   // ========================================
@@ -535,6 +531,77 @@ export class SQLEngineService {
       // Fallback vers contexte basique
       return this.buildFallbackContext(request);
     }
+  }
+
+  /**
+   * Valide une requête en langage naturel sans exécution
+   * Génère le SQL, le valide, mais ne l'exécute pas
+   */
+  async validateQuery(request: SQLQueryRequest): Promise<SQLValidationResult> {
+    return withErrorHandling(
+      async () => {
+        // 1. Validation et nettoyage de la requête d'entrée
+        const validationResult = this.validateInputQuery(request);
+        if (!validationResult.isValid) {
+          return {
+            isValid: false,
+            isSecure: false,
+            allowedTables: [],
+            deniedTables: [],
+            allowedColumns: [],
+            deniedColumns: [],
+            securityViolations: validationResult.errors,
+            rbacViolations: [],
+            suggestions: ['Vérifiez la syntaxe de votre requête']
+          };
+        }
+
+        // 2. Construction du contexte (sans exécution)
+        const enrichedContext = await this.buildIntelligentContext(request);
+        
+        // 3. Génération SQL via IA (sans exécution)
+        const queryComplexity = this.detectQueryComplexity(request.naturalLanguageQuery);
+        const aiResult = await this.aiService.generateSQL({
+          query: request.naturalLanguageQuery,
+          context: enrichedContext,
+          userRole: request.userRole,
+          complexity: queryComplexity
+        });
+
+        if (!aiResult.success || !aiResult.sql) {
+          return {
+            isValid: false,
+            isSecure: false,
+            allowedTables: [],
+            deniedTables: [],
+            allowedColumns: [],
+            deniedColumns: [],
+            securityViolations: ['Impossible de générer le SQL'],
+            rbacViolations: [],
+            suggestions: ['Reformulez votre requête']
+          };
+        }
+
+        // 4. Validation du SQL généré (sans exécution)
+        const sqlValidation = await this.validateSQL({
+          sql: aiResult.sql,
+          userId: request.userId,
+          userRole: request.userRole,
+          parameters: []
+        });
+
+        return sqlValidation;
+      },
+      {
+        operation: 'validateQuery',
+        service: 'SQLEngineService',
+        metadata: {
+          userId: request.userId,
+          userRole: request.userRole,
+          query: request.naturalLanguageQuery.substring(0, 100)
+        }
+      }
+    );
   }
 
   /**
@@ -1455,7 +1522,7 @@ INSTRUCTIONS DE BASE:
   ): Promise<{
     success: boolean;
     filteredSQL?: string;
-    paramet: unknown[]ny[];
+    parameters: unknown[];
     filtersApplied?: string[];
     rbacViolations?: string[];
   }> {
@@ -1465,7 +1532,7 @@ INSTRUCTIONS DE BASE:
       const filtersApplied: string[] = [];
       const violations: string[] = [];
       let filteredSQL = sql;
-      const pa: unknown[]s: unknown[] = [userId]; // Premier paramètre toujours userId
+      const parameters: unknown[] = [userId]; // Premier paramètre toujours userId
       let rbacFiltersRequired = false;
       let rbacFiltersApplied = false;
 
@@ -1608,18 +1675,15 @@ INSTRUCTIONS DE BASE:
       };
     },
     {
-      operation: 'secondes',
+      operation: 'applyRBACFilters',
       service: 'SQLEngineService',
-      metadata: {       }
-     });
-        });
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        executionTime: Date.now() - startTime
-      };
+      metadata: {
+        userId,
+        userRole,
+        allowedTables
+      }
     }
+    );
   }
 
   // ========================================

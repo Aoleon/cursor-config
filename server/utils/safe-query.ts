@@ -88,8 +88,20 @@ export async function safeQuery<T>(
       
       return result;
     } catch (error: unknown) {
-      const err = error as Error & { code?: string; detail?: string; constraint?: string; table?: string; column?: string };
-      lastError = err instanceof Error ? err : new Error(String(error));
+      // Type guard for Postgres error
+      type PostgresError = Error & { 
+        code?: string; 
+        detail?: string; 
+        constraint?: string; 
+        table?: string; 
+        column?: string;
+      };
+      
+      const err: PostgresError = error instanceof Error 
+        ? (error as PostgresError)
+        : new Error(String(error)) as PostgresError;
+      
+      lastError = err;
       
       // Check if error is retryable
       const retryable = err.code === '40001' || err.code === '40P01'; // Serialization failure or deadlock
@@ -128,7 +140,7 @@ export async function safeQuery<T>(
           errorConstraint: err.constraint,
           errorTable: err.table,
           errorColumn: err.column,
-          errorMessage: lastError.message
+          errorMessage: lastError?.message
         }
       });
       

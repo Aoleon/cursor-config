@@ -410,9 +410,10 @@ export class ChatbotOrchestrationService {
           this.detectQueryComplexity(request.query)
         )
       ];
-      // Timeout de protection 10s max (augmenté pour requêtes complexes)
+      // Timeout de protection optimisé selon complexité (8s pour simple, 12s pour complexe)
+      const timeoutMs = queryComplexity === 'simple' ? 8000 : 12000;
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout parallèle 10s dépassé')), 10000)
+        setTimeout(() => reject(new Error(`Timeout parallèle ${timeoutMs}ms dépassé`)), timeoutMs)
       );
       const parallelResults = await Promise.race([
         Promise.allSettled(parallelPromises),

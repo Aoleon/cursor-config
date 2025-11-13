@@ -33,7 +33,7 @@ import {
   insertSupplierQuoteAnalysisSchema
 } from '@shared/schema';
 import { OCRService } from '../../ocrService';
-import { emailService as emailServiceInstance, inviteSupplierForQuote } from '../../services/emailService';
+import emailServiceInstance, { inviteSupplierForQuote } from '../../services/emailService';
 import type {
   SupplierQueryParams,
   SupplierRequestQueryParams,

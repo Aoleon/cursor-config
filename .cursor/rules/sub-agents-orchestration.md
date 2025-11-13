@@ -1,8 +1,8 @@
 <!-- 
-Context: sub-agents, orchestration, coordination, planning, dependencies
+Context: sub-agents, orchestration, coordination, planning, dependencies, meta-cognition, holistic-analysis, strategic-thinking
 Priority: P1
 Auto-load: when task requires sub-agents orchestration or complex multi-role coordination
-Dependencies: core.md, multi-agent-coordination.md, sub-agents-roles.md, sub-agents-communication.md, task-decomposition.md
+Dependencies: core.md, multi-agent-coordination.md, sub-agents-roles.md, sub-agents-communication.md, task-decomposition.md, meta-cognition.md, holistic-analysis.md
 -->
 
 # Système de Sub-Agents - Orchestration - Saxium
@@ -10,12 +10,12 @@ Dependencies: core.md, multi-agent-coordination.md, sub-agents-roles.md, sub-age
 **Objectif:** Définir l'orchestrateur principal qui analyse les tâches, identifie les rôles nécessaires, planifie l'exécution et gère les dépendances pour permettre l'exécution autonome de maxi runs.
 
 **Référence:** [Cursor Rules Documentation](https://docs.cursor.com/context/rules)  
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **Dernière mise à jour:** 2025-01-29
 
 ## 🎯 Principe Fondamental
 
-**IMPÉRATIF:** L'orchestrateur principal DOIT analyser automatiquement les tâches, identifier les rôles nécessaires, planifier l'exécution et gérer les dépendances pour orchestrer l'exécution de manière autonome.
+**IMPÉRATIF:** L'orchestrateur principal DOIT analyser automatiquement les tâches, identifier les rôles nécessaires, planifier l'exécution et gérer les dépendances pour orchestrer l'exécution de manière autonome, avec méta-cognition et vision holistique.
 
 **Bénéfices:**
 - ✅ Analyse automatique des tâches
@@ -24,11 +24,194 @@ Dependencies: core.md, multi-agent-coordination.md, sub-agents-roles.md, sub-age
 - ✅ Gestion automatique des dépendances
 - ✅ Coordination séquentielle/parallèle
 - ✅ Exécution autonome de maxi runs
+- ✅ **NOUVEAU v2.0** Réflexion stratégique approfondie
+- ✅ **NOUVEAU v2.0** Méta-cognition orchestration
+- ✅ **NOUVEAU v2.0** Analyse holistique multi-dimensionnelle
+- ✅ **NOUVEAU v2.0** Anticipation impacts complexes
 
 **Référence:** `@.cursor/rules/multi-agent-coordination.md` - Coordination multi-agents  
 **Référence:** `@.cursor/rules/sub-agents-roles.md` - Rôles des sub-agents  
 **Référence:** `@.cursor/rules/sub-agents-communication.md` - Communication inter-agents  
-**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches
+**Référence:** `@.cursor/rules/task-decomposition.md` - Décomposition des tâches  
+**Référence:** `@.cursor/rules/meta-cognition.md` - Méta-cognition avancée  
+**Référence:** `@.cursor/rules/holistic-analysis.md` - Analyse holistique
+
+## 🧠 Capacités Avancées de l'Orchestrateur (NOUVEAU v2.0)
+
+### Méta-Cognition Orchestrateur
+
+**IMPÉRATIF:** L'orchestrateur DOIT développer une conscience de ses propres processus d'orchestration.
+
+**TOUJOURS:**
+- ✅ **Auto-évaluer qualité orchestration** - Mesurer efficacité coordination
+- ✅ **Réfléchir sur stratégies orchestration** - Analyser approches alternatives
+- ✅ **Apprendre de orchestrations passées** - Identifier patterns efficaces
+- ✅ **Adapter selon contexte** - Optimiser orchestration selon tâche
+- ✅ **Anticiper problèmes coordination** - Prévenir conflits entre rôles
+
+**Pattern:**
+```typescript
+// Méta-cognition orchestrateur
+interface OrchestratorMetaCognition {
+  orchestrationQuality: QualityScore;
+  strategyReflection: StrategyAnalysis;
+  historicalLearning: OrchestrationPattern[];
+  contextualAdaptation: AdaptationStrategy;
+  coordinationRisks: Risk[];
+}
+
+class MetaCognitiveOrchestrator {
+  async evaluateOrchestration(
+    execution: OrchestratorExecution,
+    result: ExecutionResult
+  ): Promise<OrchestratorMetaCognition> {
+    // 1. Auto-évaluer qualité orchestration
+    const orchestrationQuality = await this.evaluateQuality(execution, result);
+    
+    // 2. Réfléchir sur stratégies
+    const strategyReflection = await this.reflectOnStrategy(execution);
+    
+    // 3. Apprendre de orchestrations passées
+    const historicalLearning = await this.learnFromHistory(execution, result);
+    
+    // 4. Adapter selon contexte
+    const contextualAdaptation = await this.adaptToContext(execution);
+    
+    // 5. Anticiper problèmes
+    const coordinationRisks = await this.anticipateRisks(execution);
+    
+    return {
+      orchestrationQuality,
+      strategyReflection,
+      historicalLearning,
+      contextualAdaptation,
+      coordinationRisks
+    };
+  }
+}
+```
+
+### Analyse Holistique Orchestrateur
+
+**IMPÉRATIF:** L'orchestrateur DOIT avoir une vision holistique de la tâche et du système.
+
+**TOUJOURS:**
+- ✅ **Analyser impacts multi-dimensionnels** - Évaluer impacts sur 6 dimensions
+- ✅ **Comprendre interdépendances système** - Cartographier relations complexes
+- ✅ **Anticiper effets en cascade** - Prévoir impacts transversaux
+- ✅ **Aligner avec vision globale projet** - Cohérence objectifs
+- ✅ **Optimiser globalement vs localement** - Éviter optimisations sub-optimales
+
+**Pattern:**
+```typescript
+// Analyse holistique orchestrateur
+interface OrchestratorHolisticAnalysis {
+  multiDimensionalImpacts: DimensionalImpact[];
+  systemInterdependencies: Interdependency[];
+  cascadeEffects: CascadeEffect[];
+  globalAlignment: AlignmentScore;
+  globalOptimization: OptimizationStrategy;
+}
+
+class HolisticOrchestrator {
+  async analyzeHolistically(
+    task: Task,
+    roles: Role[],
+    context: Context
+  ): Promise<OrchestratorHolisticAnalysis> {
+    // 1. Analyser impacts multi-dimensionnels
+    const multiDimensionalImpacts = await this.analyzeMultiDimensional(task);
+    
+    // 2. Comprendre interdépendances
+    const systemInterdependencies = await this.mapInterdependencies(task, roles);
+    
+    // 3. Anticiper effets en cascade
+    const cascadeEffects = await this.anticipateCascade(task, roles);
+    
+    // 4. Aligner avec vision globale
+    const globalAlignment = await this.alignWithGlobalVision(task);
+    
+    // 5. Optimiser globalement
+    const globalOptimization = await this.optimizeGlobally(task, roles);
+    
+    return {
+      multiDimensionalImpacts,
+      systemInterdependencies,
+      cascadeEffects,
+      globalAlignment,
+      globalOptimization
+    };
+  }
+}
+```
+
+### Réflexion Stratégique Orchestrateur
+
+**IMPÉRATIF:** L'orchestrateur DOIT réfléchir stratégiquement avant d'orchestrer.
+
+**TOUJOURS:**
+- ✅ **Analyser alternatives orchestration** - Évaluer différentes approches
+- ✅ **Anticiper conséquences choix** - Prévoir impacts décisions
+- ✅ **Optimiser séquence/parallélisme** - Trade-off vitesse/complexité
+- ✅ **Adapter selon contraintes** - Optimiser ressources disponibles
+- ✅ **Préparer plans contingence** - Anticiper échecs potentiels
+
+**Pattern:**
+```typescript
+// Réflexion stratégique orchestrateur
+interface OrchestratorStrategicThinking {
+  orchestrationAlternatives: OrchestrationStrategy[];
+  consequencesAnalysis: ConsequenceAnalysis[];
+  executionOptimization: ExecutionPlan;
+  contingencyPlans: ContingencyPlan[];
+  riskMitigation: RiskMitigationStrategy[];
+}
+
+class StrategicOrchestrator {
+  async thinkStrategically(
+    task: Task,
+    availableRoles: Role[],
+    constraints: Constraints
+  ): Promise<OrchestratorStrategicThinking> {
+    // 1. Analyser alternatives
+    const orchestrationAlternatives = await this.analyzeAlternatives(
+      task,
+      availableRoles
+    );
+    
+    // 2. Anticiper conséquences
+    const consequencesAnalysis = await this.analyzeConsequences(
+      orchestrationAlternatives
+    );
+    
+    // 3. Optimiser exécution
+    const executionOptimization = await this.optimizeExecution(
+      orchestrationAlternatives,
+      consequencesAnalysis,
+      constraints
+    );
+    
+    // 4. Préparer plans contingence
+    const contingencyPlans = await this.prepareContingency(
+      executionOptimization
+    );
+    
+    // 5. Mitiger risques
+    const riskMitigation = await this.mitigateRisks(
+      executionOptimization,
+      contingencyPlans
+    );
+    
+    return {
+      orchestrationAlternatives,
+      consequencesAnalysis,
+      executionOptimization,
+      contingencyPlans,
+      riskMitigation
+    };
+  }
+}
+```
 
 ## 📋 Fonctionnalités de l'Orchestrateur
 

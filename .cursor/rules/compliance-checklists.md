@@ -214,3 +214,4 @@ async function useComplianceChecklistBeforeStop(
 - `@.cursor/rules/persistent-execution.md` - Exécution persistante
 - `@.cursor/rules/todo-completion.md` - Completion des todos
 
+

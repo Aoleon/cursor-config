@@ -298,3 +298,4 @@ class DynamicRulePrioritizer {
 - `@.cursor/rules/context-detection.md` - Détection automatique du contexte
 - `@.cursor/rules/rule-metrics.md` - Métriques des règles (historique)
 
+

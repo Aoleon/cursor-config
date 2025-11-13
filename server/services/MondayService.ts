@@ -76,9 +76,11 @@ class MondayService {
     
     if (!this.apiKey) {
       logger.warn('MONDAY_API_KEY not configured', {
-      metadata: {
-        module: 'MondayService', { operation: 'constructor'       }
-     });
+        metadata: {
+          module: 'MondayService',
+          operation: 'constructor'
+        }
+      });
     }
 
     this.client = axios.create({
@@ -646,16 +648,17 @@ class MondayService {
           
           case 'board-relation':
             return {
-              linkedItems: parsed.linkedPulseIds?.map((: unknown) => ({
-              linkedItems: parsed.linkedPulseIds?.map((: unknown) => ({
+              linkedItems: parsed.linkedPulseIds?.map((p: unknown) => ({
+                id: (p as { id?: string }).id || String(p)
               })) || []
             };
           
           case 'subtasks':
           case 'subitems':
             return {
-              subitemIds: parsed.linkedPulseIds?.m: unknown) => 
-              subitemIds: parsed.linkedPulseIds?.m: unknown) => 
+              subitemIds: parsed.linkedPulseIds?.map((p: unknown) => ({
+                id: (p as { id?: string }).id || String(p)
+              })) || []
             };
           
           case 'long-text':

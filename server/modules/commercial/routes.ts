@@ -132,9 +132,8 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         limit: actualLimit,
         page
       });
-          }
-        })
-      );
+    })
+  );
 
   // GET /api/aos/etude - AOs en étude technique (MUST BE BEFORE /api/aos/:id)
   router.get('/api/aos/etude',
@@ -153,7 +152,7 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
         ao.status === 'etude' || ao.status === 'en_cours_chiffrage'
       );
       
-      const enrichedAos = aosEtude.map: unknown) => ({
+      const enrichedAos = aosEtude.map((ao: unknown) => ({
         ...ao,
         cctpAnalyzed: Math.random() > 0.3,
         technicalDetailsComplete: Math.random() > 0.4,
@@ -173,9 +172,8 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
     });
       
       res.json(enrichedAos);
-          }
-        })
-      );
+    })
+  );
 
   // GET /api/aos/:id - AO par ID
   router.get('/api/aos/:id',
@@ -333,9 +331,8 @@ export function createCommercialRouter(storage: IStorage, eventBus: EventBus): R
 
       }
     });
-          }
-                                      }
-                                    });
+    })
+  );
 
   // POST /api/aos/:aoId/documents/upload-direct - Upload direct vers OneDrive (multipart)
   router.post('/api/aos/:aoId/documents/upload-direct',

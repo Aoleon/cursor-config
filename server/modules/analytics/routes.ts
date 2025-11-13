@@ -136,9 +136,8 @@ export function createAnalyticsRouter(storage: IStorage, eventBus: EventBus): Ro
       await cacheService.set(cacheKey, dashboard, TTL_CONFIG.ANALYTICS_KPI);
 
       sendSuccess(res, dashboard);
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // METRICS ROUTES

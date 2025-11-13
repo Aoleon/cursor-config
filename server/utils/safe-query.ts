@@ -56,8 +56,8 @@ export async function safeQuery<T>(
             attempt: attempt + 1,
             maxRetries: retries,
             timeout
-                  }
-                );
+          }
+        });
       }
       
       // Create a promise that rejects after timeout
@@ -82,16 +82,17 @@ export async function safeQuery<T>(
             operation,
             duration,
             attempt: attempt + 1
-                  }
-                );
+          }
+        });
       }
       
       return result;
     } catch (error: unknown) {
-      lastError = error;
+      const err = error as Error & { code?: string; detail?: string; constraint?: string; table?: string; column?: string };
+      lastError = err instanceof Error ? err : new Error(String(error));
       
       // Check if error is retryable
-      const retryable = error?.code === '40001' || error?.code === '40P01'; // Serialization failure or deadlock
+      const retryable = err.code === '40001' || err.code === '40P01'; // Serialization failure or deadlock
       
       if (retryable && attempt < retries - 1) {
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
@@ -101,10 +102,10 @@ export async function safeQuery<T>(
             operation,
             attempt: attempt + 1,
             maxRetries: retries,
-            errorCode: error?.code,
+            errorCode: err.code,
             delay
-                  }
-                );
+          }
+        });
         
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -112,7 +113,6 @@ export async function safeQuery<T>(
       }
       
       // Log final failure with Postgres error details
-      const pgError: unknown = lastError;
       const duration = Date.now() - startTime;
       logger.error('Database query failed permanently', lastError, {
         service,
@@ -123,13 +123,14 @@ export async function safeQuery<T>(
           duration,
           retryable,
           // Expose Postgres error details for debugging
-          errorCode: pgError?.code,
-          errorDetail: pgError?.detail,
-          errorConstraint: pgError?.constraint,
-          errorTable: pgError?.table,
-          errorColumn: pgError?.column,
+          errorCode: err.code,
+          errorDetail: err.detail,
+          errorConstraint: err.constraint,
+          errorTable: err.table,
+          errorColumn: err.column,
           errorMessage: lastError.message
-        });
+        }
+      });
       
       break;
     }
@@ -166,8 +167,8 @@ export async function safeBatch<T>(
       metadata: {
         operation,
         queryCount: queries.length
-              }
-            );
+      }
+    });
     
     // Execute all queries in parallel with individual error handling
     const results = await Promise.all(
@@ -187,8 +188,8 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         duration
-              }
-            );
+      }
+    });
     
     return results;
   } catch (error) {
@@ -198,8 +199,8 @@ export async function safeBatch<T>(
         operation,
         queryCount: queries.length,
         error: error instanceof Error ? error.message : String(error)
-              }
-            );
+      }
+    });
     throw error;
   }
 }
@@ -234,8 +235,8 @@ export async function executeWithMetrics<T>(
         operation: context.operation,
         ...context.metadata,
         error: error instanceof Error ? error.message : String(error)
-              }
-            );
+      }
+    });
     throw error;
   }
 }
@@ -265,6 +266,11 @@ export async function safeGetOne<T>(
         error: error instanceof Error ? error.message : String(error)
             }
                                     });
+    return null;
+  }
+}
+
+/**
  * Helper to safely count records
  * Returns 0 on error instead of throwing
  * 
@@ -285,6 +291,11 @@ export async function safeCount(
         error: error instanceof Error ? error.message : String(error)
             }
                                     });
+    return 0;
+  }
+}
+
+/**
  * Helper to safely check if a record exists
  * Returns false on error instead of throwing
  * 
@@ -309,6 +320,11 @@ export async function safeExists(
         error: error instanceof Error ? error.message : String(error)
             }
                                     });
+    return false;
+  }
+}
+
+/**
  * Execute a database health check query
  * Used to verify database connectivity
  */
@@ -329,8 +345,13 @@ export async function healthCheck(): Promise<boolean> {
         service: 'SafeQuery',
         operation: 'healthCheck',
         error: error instanceof Error ? error.message : String(error)
-            }
-                                    });
+      }
+    });
+    return false;
+  }
+}
+
+/**
  * Wrapper for insert operations with conflict handling
  */
 export async function safeInsert<T>(
@@ -350,7 +371,8 @@ export async function safeInsert<T>(
         service: 'SafeInsert',
         operation: `insert_${tableName}`,
         error: error instanceof Error ? error.message : String(error)
-      });
+      }
+    });
     throw error;
   }
 }
@@ -378,7 +400,8 @@ export async function safeDelete<T>(
         operation: options.operation || `delete_${tableName}`,
         expectedCount,
         actualCount: result.length
-      });
+      }
+    });
   }
   
   return result;

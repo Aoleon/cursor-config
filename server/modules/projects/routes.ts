@@ -103,11 +103,10 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
           statuses: ['etude', 'planifie', 'chantier', 'reception', 'sav', 'cloture'],
           priorities: ['low', 'medium', 'high', 'urgent'],
           phases: ['preparation', 'execution', 'finition', 'reception']
-        
+        }
       });
-          }
-        })
-      );
+    })
+  );
 
   // Get project configuration
   router.get('/api/projects/config',
@@ -129,11 +128,10 @@ export function createProjectsRouter(storage: IStorage, eventBus: EventBus): Rou
           defaultBufferPercentage: 10,
           enableWeekendWork: false,
           holidays: [] // Could be loaded from configuration
-        
+        }
       });
-          }
-        })
-      );
+    })
+  );
 
   // Get all projects with filters
   router.get('/api/projects',

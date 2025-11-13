@@ -24,12 +24,12 @@ import { basicLoginSchema } from '../../validation-schemas';
  * Simple auth middleware - checks for session user (basic or Microsoft)
  * Exported to replace old Replit Auth isAuthenticated middleware
  */
-export const isAuthenticated = (req: unknown, res: Response, next: NextFunction) => {
-  const user = req.session?.user || req.user;
+export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).session?.user || (req as any).user;
   if (!user) {
     return res.status(401).json({ success: false, message: 'Non authentifié' });
   }
-  req.user = user;
+  (req as any).user = user;
   next();
 };
 
@@ -131,8 +131,12 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       }
     });
       
-      (as unknown).session.user = adminUser;
-     as unknown) as unknown).session.save(: unknunknown) => {
+      (req as unknown as { session: { user: AuthUser; save: (callback: (err?: Error) => void) => void } }).session.user = adminUser;
+      
+      // Sauvegarder la session avec Promise wrapper
+      await new Promise<void>((resolve, reject) => {
+        (req as unknown as { session: { save: (callback: (err?: Error) => void) => void } }).session.save((err) => {
+          if (err) {
             logger.error('[Auth] Erreur sauvegarde session', { metadata: {
  
                 route: '/api/login/basic',
@@ -152,9 +156,8 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       }
     });
             resolve();
-              })
-
-            );
+          }
+        });
       });
 
       res.json({
@@ -171,9 +174,8 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       }
     });
       throw new AuthenticationError('Identifiants incorrects');
-                        }
-
-                      }));
+    }
+  }));
 
   // Health check PROTÉGÉ admin uniquement 
   router.get('/api/auth/health', isAuthenticated, requireAdminForHealth, asyncHandler(async (req: Request, res: Response) => {
@@ -213,17 +215,9 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
       success: true,
       healthy: sessionExists,
       data: healthStatus
-
-          });
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+    });
+  })
+);
 
   // Get current authenticated user
   router.get('/api/auth/user', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
@@ -318,14 +312,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     } else {
       res.json(dbUser);
     }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Debug auth state (development only)
   router.get('/api/debug-auth-state', asyncHandler(async (req: Request, res: Response) => {
@@ -372,15 +359,7 @@ export function createAuthRouter(storage: IStorage, eventBus: EventBus): Router 
     });
     
     res.json(debugInfo);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   return router;
 }

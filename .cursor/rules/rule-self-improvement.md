@@ -233,3 +233,4 @@ async function generateImprovementSuggestions(
 - `@.cursor/rules/rule-feedback-loop.md` - Feedback loop et apprentissage
 - `@.cursor/rules/metrics-dashboard.md` - Dashboard de monitoring
 
+

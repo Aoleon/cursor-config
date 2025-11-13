@@ -17,7 +17,7 @@ export function setupMondayModule(app: Express): void {
   
   logger.info('[MondayModule] Routes, export automatique et audit sync initialisés', {
       metadata: {
-        module: 'MondayModule', {
+        module: 'MondayModule',
       routes: [
         '/api/monday/test',
         '/api/monday/boards',
@@ -42,4 +42,6 @@ export function setupMondayModule(app: Express): void {
         strategy: 'Monday-priority',
         events: ['monday:sync:conflict', 'monday:sync:success', 'monday:export:success']
       }
-      });
+    }
+  });
+}

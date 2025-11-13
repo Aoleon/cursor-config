@@ -84,6 +84,7 @@ export class KpiRepository {
     if (this.performanceMetrics.length > this.MAX_METRICS) {
       this.performanceMetrics.shift();
     }
+  }
 
   /**
    * Get aggregated performance statistics

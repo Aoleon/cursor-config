@@ -219,6 +219,7 @@ export class WebSocketManager {
         message: 'Authentication failed'
       });
     }
+  }
 
   private async handleMessage(ws: AuthenticatedWebSocket, message: WsMessage) {
     switch (message.type) {
@@ -267,6 +268,7 @@ export class WebSocketManager {
           code: 'UNKNOWN_MESSAGE_TYPE'
         });
     }
+  }
 
   private sendMessage(ws: AuthenticatedWebSocket, message: WsMessage) {
     if (ws.readyState === WebSocket.OPEN) {
@@ -275,6 +277,8 @@ export class WebSocketManager {
       } catch (error) {
         log(`Error sending WebSocket message: ${error}`);
       }
+    }
+  }
 
   private setupHeartbeat() {
     // Heartbeat toutes les 30 secondes
@@ -338,6 +342,7 @@ export class WebSocketManager {
     if (sentCount > 0) {
       log(`Broadcasted event ${event.type} to ${sentCount} clients`);
     }
+  }
 
   private matchesFilter(event: RealtimeEvent, filter: EventFilter): boolean {
     // Filtrer par types d'événements
@@ -388,6 +393,7 @@ export class WebSocketManager {
     } else {
       socket.destroy();
     }
+  }
 
   public getConnectedClientsCount(): number {
     return Array.from(this.clients).filter(ws => 
@@ -406,3 +412,4 @@ export class WebSocketManager {
     
     this.wss.close();
   }
+}

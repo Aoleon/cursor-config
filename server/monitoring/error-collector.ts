@@ -281,6 +281,7 @@ export class ErrorCollector {
     } else {
       this.errorGroups.set(event.fingerprint, { ...event });
     }
+  }
 
   /**
    * Met à jour les fenêtres temporelles
@@ -347,6 +348,7 @@ export class ErrorCollector {
     if (this.events.length > this.maxEventsPerWindow) {
       this.events = this.events.slice(-this.maxEventsPerWindow);
     }
+  }
 
   /**
    * Déclenche les alertes si nécessaire
@@ -362,6 +364,7 @@ export class ErrorCollector {
           service: 'error-collector',
           metadata: {}
         });
+    });
   }
 
   /**
@@ -392,6 +395,7 @@ export class ErrorCollector {
         logger.warn(logMessage, logContext);
         break;
     }
+  }
 
   /**
    * Génère un ID unique pour l'événement
@@ -561,6 +565,7 @@ export class ErrorCollector {
     }
     this.reset();
   }
+}
 
 // Instance singleton
 let errorCollectorInstance: ErrorCollector | null = null;

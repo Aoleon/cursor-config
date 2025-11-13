@@ -18,6 +18,7 @@ declare module 'express-session' {
       isBasicAuth?: boolean;
     };
   }
+}
 
 // Extension du type Express Request pour inclure la propriété user
 // Support pour BOTH basic auth ET OIDC authentication
@@ -44,6 +45,7 @@ declare module 'express-serve-static-core' {
       isOIDC?: boolean;
     };
   }
+}
 
 export interface AuthUser {
   id: string;
@@ -54,7 +56,7 @@ export interface AuthUser {
   role: string;
   isBasicAuth?: boolean;
   isOIDC?: boolean;
-  cla: unknown;unknown;
+  claims?: unknown;
   access_token?: string;
   refresh_token?: string;
   expires_at?: number;

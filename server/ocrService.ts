@@ -1476,7 +1476,8 @@ Réponses publiées au plus tard le 22/03/2025
             designation: pattern.source.replace(/[\\?]/g, ''),
             type: index < 2 ? 'menuiserie' : 'autre',
           });
-        });
+        }
+      });
     }
     
     return lots;
@@ -1820,31 +1821,30 @@ Réponses publiées au plus tard le 22/03/2025
           }
         };
         
-        logger.info('Publication alerte technique', { metadata: {
+        logger.info('Publication alerte technique', {
+          metadata: {
             service: 'OCRService',
-                  operation: 'parseAOFields',
+            operation: 'parseAOFields',
             aoReference: alertData.aoReference,
             score: alertData.score
-                }
-
-            });
+          }
+        });
         eventBus.publishTechnicalAlert(alertData);
         
-        logger.info('Alerte technique publiée via EventBus', { metadata: {
+        logger.info('Alerte technique publiée via EventBus', {
+          metadata: {
             service: 'OCRService',
-                  operation: 'parseAOFields',
+            operation: 'parseAOFields',
             aoReference: fields.reference
-                }
-
-            });
-      
-    },
-    {
-      operation: 'async',
-      service: 'ocrService',
-      metadata: {}
-    } );
+          }
+        });
+      },
+      {
+        operation: 'parseAOFields',
+        service: 'ocrService',
+        metadata: {}
       }
+    );
     }
     
     // Return fields with technicalScoring in the correct format for AOFieldsExtracted
@@ -1864,48 +1864,48 @@ Réponses publiées au plus tard le 22/03/2025
       const rules = await storage.getMaterialColorRules();
       const triggeredRules: string[] = [];
       
-      logger.info('Évaluation règles alerte depuis storage', { metadata: {
+      logger.info('Évaluation règles alerte depuis storage', {
+        metadata: {
           service: 'OCRService',
           operation: 'getTriggeredAlertRules',
           rulesCount: rules.length
-
-            });
+        }
+      });
       
       for (const rule of rules) {
         const isTriggered = await this.evaluateAlertRule(rule, materials, specialCriteria);
         if (isTriggered) {
           triggeredRules.push(rule.id);
-          logger.info('Règle alerte déclenchée', { metadata: {
+          logger.info('Règle alerte déclenchée', {
+            metadata: {
               service: 'OCRService',
-                    operation: 'getTriggeredAlertRules',
+              operation: 'getTriggeredAlertRules',
               ruleId: rule.id,
               severity: rule.severity
-                  }
-
-            });
+            }
+          });
         }
       }
       
-      logger.info('Règles alerte évaluées', { metadata: {
+      logger.info('Règles alerte évaluées', {
+        metadata: {
           service: 'OCRService',
           operation: 'getTriggeredAlertRules',
           triggeredRulesCount: triggeredRules.length,
           triggeredRules: triggeredRules
-              }
-
-            });
+        }
+      });
       return triggeredRules;
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'getTriggeredAlertRules',
       service: 'ocrService',
       metadata: {}
-    } );
+    }
+  ).catch(() => {
       // Fallback vers règles par défaut
       return this.getDefaultTriggeredRules(materials, specialCriteria);
-    }
+    });
   }
 
   // Helper pour évaluer règle individuelle selon conditions

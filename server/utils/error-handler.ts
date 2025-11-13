@@ -277,6 +277,7 @@ export async function retryOperation<T>(
       // Attendre avant retry
       await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
     }
+  }
   
   throw lastError!;
 }
@@ -338,6 +339,7 @@ export function assert(
   if (!condition) {
     throw new ErrorClass(message);
   }
+}
 
 /**
  * Assert qu'une valeur n'est pas null/undefined
@@ -349,3 +351,4 @@ export function assertExists<T>(
   if (value === null || value === undefined) {
     throw new NotFoundError(resourceName);
   }
+}

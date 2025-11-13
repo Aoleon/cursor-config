@@ -134,6 +134,7 @@ class Logger {
         console.error(formatted);
         break;
     }
+    }
 
   /**
    * Méthodes publiques pour chaque niveau
@@ -156,6 +157,7 @@ class Logger {
     } else {
       this.log('error', message, errorOrContext);
     }
+  }
 
   fatal(message: string, errorOrContext?: Error | LogContext, context?: LogContext): void {
     if (errorOrContext instanceof Error) {
@@ -163,6 +165,7 @@ class Logger {
     } else {
       this.log('fatal', message, errorOrContext);
     }
+  }
 
   /**
    * Crée un logger enfant avec un service spécifique
@@ -179,10 +182,11 @@ class Logger {
     return () => {
       const duration = Date.now() - start;
       this.debug(`${label} completed in ${duration}ms`, {
-        metadata: { duration, label       }
-     });
+        metadata: { duration, label }
+      });
     };
   }
+}
 
 // Export logger global par défaut
 export const logger = new Logger('Saxium');

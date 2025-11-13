@@ -107,24 +107,26 @@ export { pool };
  * Log et notifications pour monitoring
  */
 pool.on('error', (err: Error, client: NeonPoolClient | PgPoolClient) => {
-  logger.error('Erreur inattendue sur client pool inactif', { metadata: {
+  logger.error('Erreur inattendue sur client pool inactif', {
+    metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolError',
       provider: dbProvider,
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined
-          }
-
-            });
+    }
+  });
+});
 
 pool.on('connect', (client: NeonPoolClient | PgPoolClient) => {
-  logger.debug('Nouvelle connexion pool établie', { metadata: {
+  logger.debug('Nouvelle connexion pool établie', {
+    metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolConnect',
       provider: dbProvider
-          }
-
-            });
+    }
+  });
+});
 
 pool.on('acquire', (client: NeonPoolClient | PgPoolClient) => {
   // Log optionnel pour debug - peut être commenté en production
@@ -132,13 +134,14 @@ pool.on('acquire', (client: NeonPoolClient | PgPoolClient) => {
 });
 
 pool.on('remove', (client: NeonPoolClient | PgPoolClient) => {
-  logger.debug('Connexion retirée du pool', { metadata: {
+  logger.debug('Connexion retirée du pool', {
+    metadata: {
       module: 'DatabaseConfig',
       operation: 'handlePoolRemove',
       provider: dbProvider
-          }
-
-            });
+    }
+  });
+});
 
 // ========================================
 // INITIALISATION DRIZZLE ORM
@@ -178,6 +181,7 @@ export function getPoolStats() {
       waitingRequests: pgPool.waitingCount,
     };
   }
+}
 
 /**
  * Retourne le provider de base de données actuel
@@ -199,16 +203,14 @@ export async function closePool() {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { action: 'shutdown' }
-            }
-
-                                                                                });
+    }
+  });
   await pool.end();
   logger.info('Pool de connexions fermé proprement', {
     metadata: {
       module: 'DatabaseConfig',
       operation: 'closePool',
       context: { status: 'closed' }
-            }
-
-                                                                                });
+    }
+  });
 }

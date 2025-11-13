@@ -37,6 +37,7 @@ class MemoryStore {
       }
     });
   }
+}
 
 const rateLimitStore = new MemoryStore();
 
@@ -94,6 +95,7 @@ export function rateLimit(options: RateLimitOptions) {
           current.count--;
           rateLimitStore['hits'].set(key, current);
         }
+      }
       
       return originalSend.call(this, body);
     };
@@ -209,6 +211,7 @@ export function validateMimeType(allowedTypes: string[], message?: string) {
           }
         );
       }
+    }
     
     next();
   };
@@ -240,6 +243,8 @@ export function sanitizeQuery() {
             }
           );
         }
+      }
+    }
     
     next();
   };
@@ -267,6 +272,7 @@ export function csrfProtection() {
           }
         );
       }
+    }
     
     next();
   };

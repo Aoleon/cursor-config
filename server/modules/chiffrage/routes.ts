@@ -290,9 +290,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: dpgfDocument
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // VALIDATION MILESTONES ROUTES
@@ -320,9 +319,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         data: milestones,
         count: milestones.length
       });
-          }
-        })
-      );
+    })
+  );
 
   // Initialize validation milestones for an offer
   router.post('/api/validation-milestones/init', 
@@ -369,9 +367,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: createdMilestones
       });
-          }
-        })
-      );
+    })
+  );
 
   // Update validation milestone
   router.patch('/api/validation-milestones/:milestoneId', 
@@ -381,15 +378,15 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
       const { milestoneId } = req.params;
       const updateData: MilestoneUpdate = req.body;
 
-      logger.info('[Milestones] Mise à jour jalon', { metadata: {
-
+      logger.info('[Milestones] Mise à jour jalon', {
+        metadata: {
           route: '/api/validation-milestones/:milestoneId',
           method: 'PATCH',
           milestoneId,
           isCompleted: updateData.isCompleted,
           userId: req.user?.id
-      }
-    });
+        }
+      });
 
       // Add completion metadata if completing
       if (updateData.isCompleted) {
@@ -414,33 +411,34 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
           );
           
           if (bouclageComplete) {
-            logger.info('[Milestones] Bouclage complet - mise à jour statut offre', { metadata: {
-
+            logger.info('[Milestones] Bouclage complet - mise à jour statut offre', {
+              metadata: {
                 route: '/api/validation-milestones/:milestoneId',
                 offerId: updatedMilestone.offerId,
-                      userId: req.user?.id
-      }
-    });
+                userId: req.user?.id
+              }
+            });
             
             await storage.updateOffer(updatedMilestone.offerId, {
-                      status: 'fin_etudes_validee',
+              status: 'fin_etudes_validee',
               lastValidatedAt: new Date(),
               lastValidatedBy: req.user?.id
             });
 
             eventBus.emit('offer:bouclage:complete', {
               offerId: updatedMilestone.offerId,
-                      userId: req.user?.id
+              userId: req.user?.id
             });
           }
+        }
+      }
 
       res.json({
         success: true,
         data: updatedMilestone
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // QUOTATIONS ROUTES
@@ -467,9 +465,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: quotations
       });
-          }
-        })
-      );
+    })
+  );
 
   // Get all quotations with filters
   router.get('/api/quotations', 
@@ -503,9 +500,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
-          }
-        })
-      );
+    })
+  );
 
   // Create quotation
   router.post('/api/quotations', 
@@ -538,12 +534,11 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         success: true,
         data: quotation
       });
-          }
-        })
-      );
+    })
+  );
 
-  logger.info('[ChiffrageModule] Routes initialisées', { metadata: {
-
+  logger.info('[ChiffrageModule] Routes initialisées', {
+    metadata: {
       module: 'ChiffrageModule',
       routes: [
         '/api/offers/:offerId/chiffrage-elements',
@@ -551,8 +546,8 @@ export function createChiffrageRouter(storage: IStorage, eventBus: EventBus): Ro
         '/api/validation-milestones',
         '/api/quotations'
       ]
-      }
-    });
+    }
+  });
 
   return router;
 }

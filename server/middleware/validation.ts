@@ -8,10 +8,12 @@ declare global {
     interface Request {
       validated?: {
         query?: unknown;
-        par: unknown;unknown;
-     : unknown;unknown;unknown;
+        params?: unknown;
+        body?: unknown;
       };
     }
+  }
+}
 
 // Interface pour les options de validation
 interface ValidationOptions {
@@ -37,12 +39,13 @@ type ValidationSource = 'body' | 'params' | 'query';
  * 1. Vider toutes les propriétés existantes du target
  * 2. Copier directement toutes les propriétés du source (inclut nested objects déjà transformés)
  */
-function deepMutate(target: unknown, source: unknown): void {
+function deepMutate(target: Record<string, unknown>, source: Record<string, unknown>): void {
   // 1. Vider toutes les propriétés existantes
   for (const key in target) {
     if (Object.prototype.hasOwnProperty.call(target, key)) {
       delete target[key];
     }
+  }
   
   // 2. Copier toutes les propriétés de source vers target
   // Note: source contient déjà les nested objects/arrays transformés par Zod
@@ -50,6 +53,7 @@ function deepMutate(target: unknown, source: unknown): void {
   for (const [key, value] of Object.entries(source)) {
     target[key] = value;
   }
+}
 
 // Middleware de validation générique
 export function validate(
@@ -78,17 +82,18 @@ export function validate(
       } else {
         // Pour le mode strict, nous devons nous assurer que le schema est un ZodObject
         // Sinon, nous utilisons parse standard avec passthrough
-        if ('strict' in schema && typeof schema.strict === 'function') {
-          validatedData = (schema as unknown).strict().parse(dataToValidate);
+        if (opts.strict && z.ZodObject.prototype.isPrototypeOf(schema)) {
+          validatedData = (schema as z.ZodObject<any>).strict().parse(dataToValidate);
         } else {
           validatedData = schema.parse(dataToValidate);
         }
+      }
 
       // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects/arrays
       // deepMutate() remplace Object.assign() qui ne fait qu'une copie shallow
       // Préserve TOUTES les transformations Zod (coercions, defaults, stripUnknown)
       // Compatible avec nested objects: req.query.filters.limit transformé correctement
-      deepMutate(req[source], validatedData);
+      deepMutate(req[source] as Record<string, unknown>, validatedData as Record<string, unknown>);
       
       // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated pour routes existantes
       if (!req.validated) {
@@ -107,13 +112,14 @@ export function validate(
           details: {
             source,
             message: validationError.message,
-            issues: error.issues.map(issue  => ({
+            issues: error.issues.map((issue) => ({
               field: issue.path.join('.'),
               message: issue.message,
               code: issue.code,
               received: 'received' in issue ? (issue as any).received : 'undefined'
             }))
-          });
+          }
+        });
       }
       next(error);
     }
@@ -202,7 +208,7 @@ export function validateRequest(validations: {
       try {
         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
         const validatedBody = validations.body.parse(req.body);
-        deepMutate(req.body, validatedBody);
+        deepMutate(req.body as Record<string, unknown>, validatedBody as Record<string, unknown>);
         
         // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
         req.validated.body = validatedBody;
@@ -213,13 +219,15 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
+      }
+    }
 
     // Valider les params si fourni
     if (validations.params) {
       try {
         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
         const validatedParams = validations.params.parse(req.params);
-        deepMutate(req.params, validatedParams);
+        deepMutate(req.params as Record<string, unknown>, validatedParams as Record<string, unknown>);
         
         // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
         req.validated.params = validatedParams;
@@ -230,13 +238,15 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
+      }
+    }
 
     // Valider la query si fournie
     if (validations.query) {
       try {
         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects
         const validatedQuery = validations.query.parse(req.query);
-        deepMutate(req.query, validatedQuery);
+        deepMutate(req.query as Record<string, unknown>, validatedQuery as Record<string, unknown>);
         
         // BACKWARD COMPATIBILITY: Stocker aussi dans req.validated
         req.validated.query = validatedQuery;
@@ -247,18 +257,23 @@ export function validateRequest(validations: {
             issues: error.issues
           });
         }
+      }
+    }
 
     // S'il y a des erreurs, les retourner
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
         error: 'Erreurs de validation',
-        details: errors.map(err  => ({
+        details: errors.map((err: any) => ({
           source: err.source,
-          issues: err.issues.map((i: unknown) => ({
+          issues: (err.issues as ZodError['issues']).map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
             code: issue.code,
-            received: 'received' in issue ? (isas unknunknown)any).received : 'undefined'
+            received: 'received' in issue ? (issue as any).received : 'undefined'
           }))
+        }))
       });
     }
 
@@ -294,7 +309,8 @@ export function validateFileUpload(
         details: {
           field: fieldName,
           message: `Le fichier ${fieldName} est requis`
-        });
+        }
+      });
     }
 
     // Si pas de fichier et pas requis, continuer
@@ -307,8 +323,8 @@ export function validateFileUpload(
 
     for (const f of filesToValidate) {
       // Vérifier la taille
-      if (f.size > opts.maxSize) {}
-returnres.status(400).json({
+      if (f.size > opts.maxSize) {
+        return res.status(400).json({
           success: false,
           error: 'Fichier trop volumineux',
           details: {
@@ -316,7 +332,8 @@ returnres.status(400).json({
             maxSize: opts.maxSize,
             actualSize: f.size,
             message: `Le fichier ${f.originalname} dépasse la taille limite de ${opts.maxSize} bytes`
-          });
+          }
+        });
       }
 
       // Vérifier le type MIME
@@ -329,8 +346,10 @@ returnres.status(400).json({
             allowedTypes: opts.allowedMimeTypes,
             actualType: f.mimetype,
             message: `Le type ${f.mimetype} n'est pas autorisé pour ${f.originalname}`
-          });
+          }
+        });
       }
+    }
 
     next();
   };

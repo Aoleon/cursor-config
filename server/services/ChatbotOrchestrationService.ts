@@ -705,7 +705,15 @@ export class ChatbotOrchestrationService {
     {
       operation: 'constructor',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        traceId,
+        query: request.query.substring(0, 100),
+        userId: request.userId,
+        userRole: request.userRole,
+        errorType: 'parallel_pipeline_error',
+        fallback: 'sequential_after_error'
+      }
+    });
       // Enregistrer échec parallélisme
       this.performanceMetrics.recordParallelismFailure();
       // Finaliser le tracing en erreur
@@ -773,7 +781,7 @@ export class ChatbotOrchestrationService {
     const conversationId = crypto.randomUUID();
     const sessionId = request.sessionId || crypto.randomUUID();
     const finalTraceId = traceId || crypto.randomUUID();
-    let debug: unknown =ny = {};
+    let debug: unknown = {};
     let rbacFiltersApplied: string[] = [];
     let businessContextLoaded = false;
     let aiRoutingDecision = "";
@@ -824,18 +832,19 @@ export class ChatbotOrchestrationService {
         if (actionDefinition) {
           const proposeActionRequest: ProposeActionRequest = {
             type: actionDefinition.type,
-            entity: actionDefinition.entas unknown, unknown,
-                  operation: actionDefinition.operation,
+            entity: actionDefinition.entity,
+            operation: actionDefinition.operation,
             parameters: actionDefinition.parameters,
             targetEntityId: actionDefinition.targetEntityId,
             riskLevel: actionDefinition.risk_level,
             confirmationRequired: actionDefinition.confirmation_required,
             expirationMinutes: 30, // Valeur par défaut appropriée pour actions détectées via chatbot
-                  userId: request.userId,
+            userId: request.userId,
             userRole: request.userRole,
-                  sessionId: request.sessionId,
+            sessionId: request.sessionId,
             conversationId,
-            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence  
+            metadata: { detectedViaQuery: true, confidence: actionIntention.confidence }
+          };  
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
           // Finaliser le tracing pour action
           await this.performanceMetrics.endPipelineTrace(
@@ -1095,10 +1104,8 @@ export class ChatbotOrchestrationService {
           executionTime: totalExecutionTime,
           confidence: sqlResult.confidence,
           resultCount: sqlResult.results?.length || 0
-                }
-                        }
-                                  }
-                                }));
+        }
+      }));
       // ========================================
       // 8. CONSTRUCTION RÉPONSE FINALE ENRICHIE
       // ========================================
@@ -1138,9 +1145,16 @@ export class ChatbotOrchestrationService {
       return response;
     },
     {
-      operation: 'constructor',
+      operation: 'processChatbotQueryOriginal',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        traceId,
+        userId: request.userId,
+        userRole: request.userRole,
+        query: request.query.substring(0, 100),
+        errorType: 'orchestration_error'
+      }
+    });
       // === FINALISER LE TRACING EN ERREUR ===
       await this.performanceMetrics.endPipelineTrace(
         traceId, request.userId, request.userRole, request.query, 
@@ -1289,9 +1303,15 @@ export class ChatbotOrchestrationService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'getChatbotSuggestions',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId: request.userId,
+        userRole: request.userRole,
+        limit: request.limit || 10,
+        personalized: dbSuggestions.length > 0
+      }
+    });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1365,9 +1385,16 @@ export class ChatbotOrchestrationService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'validateChatbotQuery',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId: request.userId,
+        userRole: request.userRole,
+        query: request.query.substring(0, 100),
+        estimatedComplexity: estimatedComplexity,
+        estimatedTime: estimatedTime
+      }
+    });
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1489,9 +1516,15 @@ export class ChatbotOrchestrationService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'getChatbotHistory',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId: request.userId,
+        limit: request.limit || DEFAULT_HISTORY_LIMIT,
+        offset: request.offset || 0,
+        includeErrors: request.includeErrors || false
+      }
+    });
       await this.logUsageMetrics(
         request.userId,
         "system",
@@ -1574,9 +1607,16 @@ export class ChatbotOrchestrationService {
       };
     },
     {
-      operation: 'constructor',
+      operation: 'submitChatbotFeedback',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId: request.userId,
+        userRole: request.userRole,
+        feedbackType: request.feedbackType,
+        rating: request.rating,
+        conversationId: request.conversationId
+      }
+    });
       return {
         success: false,
         feedback_id: "",
@@ -1706,9 +1746,17 @@ export class ChatbotOrchestrationService {
       });
     },
     {
-      operation: 'constructor',
+      operation: 'logUsageMetrics',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId,
+        userRole,
+        endpoint,
+        responseTime,
+        success,
+        tokensUsed
+      }
+    });
     }
   }
   private createErrorResponse(
@@ -1839,9 +1887,14 @@ export class ChatbotOrchestrationService {
       return patterns;
     },
     {
-      operation: 'constructor',
+      operation: 'analyzeRecentPatterns',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId,
+        userRole,
+        patternsFound: patterns.length
+      }
+    });
       return [];
     }
   }
@@ -2026,9 +2079,15 @@ export class ChatbotOrchestrationService {
       return response;
     },
     {
-      operation: 'constructor',
+      operation: 'proposeAction',
       service: 'ChatbotOrchestrationService',
-      metadata: { } });
+      metadata: {
+        userId: request.userId,
+        userRole: request.userRole,
+        operation: request.operation,
+        entity: request.entity
+      }
+    });
       return {
         success: false,
         actions: [],
@@ -3423,11 +3482,14 @@ case 'detail':;
    * @param sql SQL généré
    * @param executionTime Temps d'exécution
    * @returns Métadonnées contextuelles
- unknown/
-  private generaunknownon: unknown: unknown,dataunknownunknown[]sultsu: unknown,unknown]unknown,  queryPattern: any,
-    sql: string,unknown  executionTime: number
+   */
+  private generateContextualMetadata(
+    results: unknown[],
+    queryPattern: any,
+    sql: string,
+    executionTime: number
   ): any {
-    const : unknown =a: unknown = {
+    const metadata: any = {
       recordCount: results.length,
       executionTimeMs: executionTime,
       queryComplexity: this.detectQueryComplexity(queryPattern.query || ''),

@@ -328,3 +328,4 @@ async function generateOptimizationRecommendations(
 - `@.cursor/rules/rule-feedback-loop.md` - Feedback loop et auto-amélioration
 - `@.cursor/rules/rule-self-improvement.md` - Auto-amélioration des règles
 
+

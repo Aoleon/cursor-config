@@ -317,3 +317,4 @@ class RuleBundleManager {
 - `@.cursor/rules/load-strategy.md` - Stratégie de chargement optimisée
 - `@.cursor/rules/context-detection.md` - Détection automatique du contexte
 
+

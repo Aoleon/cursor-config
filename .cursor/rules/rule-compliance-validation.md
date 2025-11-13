@@ -348,3 +348,4 @@ async function validateComplianceBeforeStop(
 - `@.cursor/rules/todo-completion.md` - Completion des todos
 - `@.cursor/rules/compliance-checklists.md` - Checklists de conformité par type de tâche
 
+

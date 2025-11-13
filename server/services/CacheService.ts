@@ -115,6 +115,7 @@ export class MemoryCacheAdapter implements ICacheAdapter {
         this.cache.delete(key);
         cleanedCount++;
       }
+    }
 
     if (cleanedCount > 0) {
       logger.debug('[MemoryCacheAdapter] Nettoyage cache', { metadata: {
@@ -122,17 +123,16 @@ export class MemoryCacheAdapter implements ICacheAdapter {
           operation: 'cleanup',
           cleanedCount,
           remainingSize: this.cache.size 
-
-              }
- 
-              
-                                                            });
+        }
+      });
     }
+  }
 
   destroy(): void {
     clearInterval(this.cleanupInterval);
     this.cache.clear();
   }
+}
 
 // ========================================
 // CACHE STATS
@@ -182,7 +182,7 @@ export class CacheService {
     // Sort params for consistent key generation
     const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=$) {JSON.stringify(params[key])}`)
+      .map(key => `${key}=${JSON.stringify(params[key])}`)
       .join('&');
 
     return `${baseKey}:${sortedParams}`;
@@ -228,14 +228,12 @@ export class CacheService {
           operation: 'get',
           key,
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       this.misses++;
       return null;
     }
+  }
 
   /**
    * Set value in cache with TTL
@@ -249,24 +247,19 @@ export class CacheService {
           operation: 'set',
           key,
           ttlSeconds 
-              
-              }
- 
-              
-            });
+        }
+      });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de la mise en cache', { metadata: {
           service: 'CacheService',
           operation: 'set',
           key,
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw error;
     }
+  }
 
   /**
    * Invalidate specific cache key
@@ -279,24 +272,19 @@ export class CacheService {
           service: 'CacheService',
           operation: 'invalidate',
           key 
-              
-              }
- 
-              
-            });
+        }
+      });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de l\'invalidation', { metadata: {
           service: 'CacheService',
           operation: 'invalidate',
           key,
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw error;
     }
+  }
 
   /**
    * Invalidate all keys matching pattern
@@ -317,24 +305,19 @@ export class CacheService {
           operation: 'invalidatePattern',
           pattern,
           invalidatedCount: matchingKeys.length 
-
-              }
- 
-              
-                                                            });
+        }
+      });
     } catch (error) {
       logger.error('[CacheService] Erreur lors de l\'invalidation du pattern', { metadata: {
           service: 'CacheService',
           operation: 'invalidatePattern',
           pattern,
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw error;
     }
+  }
 
   /**
    * Flush all cache
@@ -348,23 +331,18 @@ export class CacheService {
       logger.info('[CacheService] Cache complètement vidé', { metadata: {
           service: 'CacheService',
           operation: 'flush' 
-
-              }
- 
-              
-                                                            });
+        }
+      });
     } catch (error) {
       logger.error('[CacheService] Erreur lors du vidage du cache', { metadata: {
           service: 'CacheService',
           operation: 'flush',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw error;
     }
+  }
 
   /**
    * Get cache statistics
@@ -388,11 +366,8 @@ export class CacheService {
           service: 'CacheService',
           operation: 'getStats',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       // Return empty stats on error
       return {
         hits: this.hits,
@@ -402,6 +377,7 @@ export class CacheService {
         keys: []
       };
     }
+  }
 
   /**
    * Setup EventBus integration for automatic cache invalidation
@@ -411,9 +387,11 @@ export class CacheService {
 
     // Monday.com board updates
     eventBus.on('monday:board:updated', async (data: unknown) => {
-      const { boardId } = data;
-      await this.invalidatePattern(`monday:board:${boardId}:*`);
-      await this.invalidatePattern('monday:boards:*');
+      const { boardId } = data as { boardId?: string };
+      if (boardId) {
+        await this.invalidatePattern(`monday:board:${boardId}:*`);
+        await this.invalidatePattern('monday:boards:*');
+      }
     });
 
     // AO creation/update invalidates analytics
@@ -461,12 +439,10 @@ export class CacheService {
           'project:updated',
           'analytics:calculated'
         ] 
-              
-              }
- 
-              
-            });
+      }
+    });
   }
+
   /**
    * Warmup cache with frequently accessed data
    */
@@ -506,12 +482,10 @@ export class CacheService {
           service: 'CacheService',
           operation: 'warmupCache',
           errors 
-              
-              }
- 
-              
-            });
+        }
+      });
     }
+  }
 
 // ========================================
 // ADAPTER FACTORY
@@ -543,11 +517,8 @@ export function createCacheAdapter(): ICacheAdapter {
           operation: 'createCacheAdapter',
           adapter: 'Redis',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       // Fall back to memory adapter
     }
 
@@ -556,13 +527,11 @@ export function createCacheAdapter(): ICacheAdapter {
       operation: 'createCacheAdapter',
       adapter: 'Memory',
       reason: redisUrl ? 'Redis connection failed' : 'No REDIS_URL configured' 
-
-          }
- 
-              
-                                                            });
+    }
+  });
   return new MemoryCacheAdapter();
 }
+
 // ========================================
 // SINGLETON INSTANCE
 // ========================================

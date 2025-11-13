@@ -116,13 +116,17 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       // Get all suppliers (storage.getSuppliers returns Supplier[])
-      const allSuppliers = await storage.getSuppliers(search, status);
+      const searchStr = typeof search === 'string' ? search : undefined;
+      const statusStr = typeof status === 'string' ? status : undefined;
+      const allSuppliers = await storage.getSuppliers(searchStr, statusStr);
       
       // Apply manual pagination
       const total = allSuppliers.length;
+      const offsetNum = typeof offset === 'string' ? parseInt(offset, 10) : 0;
+      const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : 20;
       const paginatedSuppliers = allSuppliers.slice(
-        parseInt(offset), 
-        parseInt(offset) + parseInt(limit)
+        offsetNum, 
+        offsetNum + limitNum
       );
 
       sendPaginatedSuccess(res, paginatedSuppliers, total);
@@ -192,9 +196,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
 
       await storage.deleteSupplier(id);
       res.status(204).send();
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // SUPPLIER REQUESTS ROUTES
@@ -218,12 +221,36 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
-      const requests = await storage.getSupplierRequests({
-        offerId,
-        supplierId,
-        status,
-        sortBy
-      });
+      // getSupplierRequests accepts only offerId?: string
+      const offerIdStr = typeof offerId === 'string' ? offerId : undefined;
+      const allRequests = await storage.getSupplierRequests(offerIdStr);
+      
+      // Apply client-side filtering for supplierId, status, sortBy
+      let filteredRequests = allRequests;
+      if (supplierId && typeof supplierId === 'string') {
+        filteredRequests = filteredRequests.filter(r => r.supplierId === supplierId);
+      }
+      if (status && typeof status === 'string') {
+        filteredRequests = filteredRequests.filter(r => r.status === status);
+      }
+      
+      // Apply sorting
+      if (sortBy && typeof sortBy === 'string') {
+        filteredRequests.sort((a, b) => {
+          switch (sortBy) {
+            case 'date':
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            case 'deadline':
+              return new Date(b.deadline || 0).getTime() - new Date(a.deadline || 0).getTime();
+            case 'status':
+              return (a.status || '').localeCompare(b.status || '');
+            default:
+              return 0;
+          }
+        });
+      }
+      
+      const requests = filteredRequests;
 
       sendSuccess(res, requests);
               })
@@ -403,8 +430,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
-      const sessions = await storage.getQuoteSessionsByAo(aoId);
-      const suppliers = await storage.getSuppliersByAo(aoId);
+      const sessions = await storage.getSupplierQuoteSessions(aoId);
+      const suppliers = await storage.getSuppliersByLot(aoId);
       
       const status: SupplierWorkflowStatus = {
         aoId,
@@ -436,7 +463,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
-      const session = await storage.createQuoteSession({
+      const session = await storage.createSupplierQuoteSession({
         ...req.body,
         createdBy: req.user?.id
       });
@@ -466,22 +493,21 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
-      const session = await storage.getQuoteSession(sessionId);
+      const session = await storage.getSupplierQuoteSession(sessionId);
       if (!session) {
         throw new NotFoundError('Session devis', sessionId);
       }
 
       const documents = await storage.getDocumentsBySession(sessionId);
-      const analysis = await storage.getQuoteAnalysisBySession(sessionId);
+      const analysis = await storage.getSupplierQuoteAnalysesBySession(sessionId, {});
 
       sendSuccess(res, {
         session,
         documents,
         analysis
       });
-          }
-        })
-      );
+    })
+  );
 
   // Public session access (for suppliers via token)
   router.get('/api/supplier-workflow/sessions/public/:token',
@@ -496,7 +522,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       }
     });
 
-      const session = await storage.getQuoteSessionByToken(token);
+      const session = await storage.getSupplierQuoteSessionByToken(token);
       if (!session || new Date() > session.tokenExpiresAt) {
         throw new NotFoundError('Session invalide ou expirée');
       }
@@ -508,15 +534,14 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         aoDescription: session.aoDescription,
         deadline: session.deadline,
         supplierName: session.supplierName,
-        documents: session.documents?.map(d  => ({
+        documents: session.documents?.map(d => ({
           id: d.id,
           filename: d.filename,
           uploadedAt: d.uploadedAt
         }))
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // SUPPLIER DOCUMENTS ROUTES
@@ -552,8 +577,10 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         supplierId,
         documentType: documentType || 'quote',
         filename: req.file.originalname,
+        originalName: req.file.originalname,
         mimeType: req.file.mimetype,
-        size: req.file.size,
+        fileSize: req.file.size,
+        objectStoragePath: '', // Will be set by storage
         content: req.file.buffer,
         uploadedBy: req.user?.id
       });
@@ -567,9 +594,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, document, 201);
-          }
-        })
-      );
+    })
+  );
 
   // Analyze supplier document with OCR
   router.post('/api/supplier-documents/:id/analyze',
@@ -632,9 +658,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, ocrResult);
-          }
-        })
-      );
+    })
+  );
 
   // Get document analysis
   router.get('/api/supplier-documents/:id/analysis',
@@ -663,9 +688,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         ocrProcessedAt: document.ocrProcessedAt,
         status: document.status
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // QUOTE ANALYSIS ROUTES
@@ -739,11 +763,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           strengths: s.analysis.strengths || [],
           weaknesses: s.analysis.weaknesses || []
         }
-
-                            }
-
-
-                          }));
+      }));
 
       // Sort and rank by combined score
       comparisons.sort((a, b) => {
@@ -757,9 +777,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       });
 
       sendSuccess(res, comparisons);
-          }
-        })
-      );
+    })
+  );
 
   // Get quote session analysis
   router.get('/api/supplier-quote-sessions/:id/analysis',
@@ -836,20 +855,21 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
             
             // Document info
             document: documentsMap.has(analysis.documentId) ? {
-              filename: (documentsMap.get(analysis.documentId) as unknown)?.filename,
-              uploadedAt: (documentsMap.get(analysis.documentas unknunknown)?.uploadedAt
+              filename: (documentsMap.get(analysis.documentId) as any)?.filename,
+              uploadedAt: (documentsMap.get(analysis.documentId) as any)?.uploadedAt
+            } : undefined
           })),
           
           // Global statistics
           statistics: {
-            completed: analyses.f: unknunknown)unknown any) => a.status === 'completed').length,
-            failed: analys: unknunknown)unknown((a: any) => a.status === 'failed').length,
-            inProgress: an: unknunknown)unknownlter((a: any) => a.status === 'in_progress').length,
-            requiresReview: unknunknown)unknowns.filter((a: any) => a.requiresManualReview).length,
+            completed: analyses.filter((a: any) => a.status === 'completed').length,
+            failed: analyses.filter((a: any) => a.status === 'failed').length,
+            inProgress: analyses.filter((a: any) => a.status === 'in_progress').length,
+            requiresReview: analyses.filter((a: any) => a.requiresManualReview).length,
             averageQuality: analyses.length > 0 ? 
-              Math.round(analyse: unknunknown)unknown(sum: number, a: any) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
+              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.qualityScore || 0), 0) / analyses.length) : 0,
             averageConfidence: analyses.length > 0 ?
-              Math.round(ana: unknunknown)unknownuce((sum: number, a: any) => sum + (a.confidence || 0), 0) / analyses.length) : 0
+              Math.round(analyses.reduce((sum: number, a: any) => sum + (a.confidence || 0), 0) / analyses.length) : 0
           }
         };
         
@@ -1075,9 +1095,8 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         token,
         expiresAt: tokenExpiresAt
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // SUPPLIER WORKFLOW ROUTES
@@ -1115,51 +1134,13 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
           operation: 'addLotSuppliers',
           service: 'SuppliersRoutes',
           metadata: {
- aoLotId: aoLotId, supplierCount: supplierIds.length
-                        }
-                      });
-          });
-          
-          // Ajouter les fournisseurs
-          await Promise.all(
-            supplierIds.map(supplierId => 
-              storage.createAoLotSupplier({
-                aoLotId,
-                supplierId,
-                invitedAt: new Date(),
-                quoteSessionId: session.id
-              })
-            )
-          );
-          
-          // Envoyer les invitations par email
-          const suppliers = await storage.getSuppliers();
-          const invitedSuppliers = suppliers.filter(s => supplierIds.includes(s.id));
-          
-          await Promise.all(
-            invitedSuppliers.map(supplier => 
-              emailService.sendEmail({
-                to: supplier.email || '',
-                subject: 'Invitation à soumettre un devis',
-                html: `<p>Vous êtes invité à soumettre un devis pour le lot ${aoLotId}.</p><p>Date limite: $) {dueDate}</p>`
-              })
-            )
-          );
-          
-          sendSuccess(res, { 
-            session, 
-            invitedCount: supplierIds.length 
-          }, 'Session créée et invitations envoyées avec succès');
-        },
-        {
-          operation: 'createSessionAndInvite',
-          service: 'SuppliersRoutes',
-          metadata: {
- aoLotId: aoLotId, supplierCount: supplierIds.length
-      }
-    });
+            aoLotId,
+            supplierCount: supplierIds.length
           }
-                                    });
+        }
+      );
+    })
+  );
 
   logger.info('[SuppliersModule] Routes initialisées', { metadata: {
 

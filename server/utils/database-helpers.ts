@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { logger } from './logger';
-import { DatabaseError } from './error-handler';
+import { DatabaseError, withErrorHandling } from './error-handler';
 import { sql } from 'drizzle-orm';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { NeonTransaction, NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
@@ -111,6 +111,7 @@ export function getDatabaseErrorMessage(error: unknown): string {
     if (errorMessages[code]) {
       return errorMessages[code];
     }
+  }
   
   // Generic message
   if (error instanceof Error) {
@@ -233,6 +234,7 @@ export async function withTransaction<T>(
       return result;
     } catch (error: unknown) {
       lastError = error;
+      const duration = Date.now() - startTime;
       
       // Check if error is retryable
       const retryable = error?.code === '40001' || error?.code === '40P01'; // Serialization failure or deadlock
@@ -268,6 +270,7 @@ export async function withTransaction<T>(
       
       break;
     }
+  }
   
   // Throw a proper DatabaseError with context
   const message = getDatabaseErrorMessage(lastError);
@@ -345,17 +348,16 @@ export async function withBatchTransaction<T>(
     
     for (let i = 0; i < operations.length; i++) {
       await withErrorHandling(
-    async () => {
-
-        const result = await operations[i](tx);
-        results.push(result);
-      
-    },
-    {
-      operation: 'serialization_failure',
-      service: 'database-helpers',
-      metadata: {
-      });
+        async () => {
+          const result = await operations[i](tx);
+          results.push(result);
+        },
+        {
+          operation: 'serialization_failure',
+          service: 'database-helpers',
+          metadata: {}
+        }
+      );
     }
     
     return results;
@@ -376,8 +378,8 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     {
       operation: 'serialization_failure',
       service: 'database-helpers',
-      metadata: {
-      });
+      metadata: {}
+    });
 }
 
 /**
@@ -395,5 +397,13 @@ export async function waitForDatabase(
           module: 'DatabaseHelpers',
           operation: 'waitForDatabase',
           waitTime: Date.now() - startTime
-                    }
-                  });
+        }
+      });
+      return;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+  }
+  
+  throw new Error('Database connection timeout');
+}

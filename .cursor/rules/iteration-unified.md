@@ -621,3 +621,4 @@ class IterationSelfImprovement {
 
 **Note:** Cette règle unifie `iterative-perfection.md` et `advanced-iteration-and-role-coordination.md` pour combiner détection de problèmes, itération intelligente avec apprentissage, coordination des rôles, validation complète et auto-amélioration continue.
 
+

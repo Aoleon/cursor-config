@@ -467,13 +467,13 @@ export class DateAlertDetectionService {
     return withErrorHandling(
     async () => {
 
-      logger.info('Démarrage détection globale', { metadata: {
+      logger.info('Démarrage détection globale', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
-          context: { detectionType: 'periodic' 
-              }
- 
-            });
+          context: { detectionType: 'periodic' }
+        }
+      });
       // 1. Détection retards
       const delayAlerts = await this.detectDelayRisks();
       // 2. Détection conflits (sur 30 jours)
@@ -509,24 +509,23 @@ export class DateAlertDetectionService {
       summary.detectionRunTime = Date.now() - startTime;
       // Génération recommandations
       summary.recommendations = this.generateRecommendations(summary);
-      logger.info('Détection globale terminée', { metadata: {
+      logger.info('Détection globale terminée', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'runPeriodicDetection',
           totalAlertsGenerated: summary.totalAlertsGenerated,
-          detectionRunTimeMs: summary.detectionRunTime   
-
-              }
-                              });
+          detectionRunTimeMs: summary.detectionRunTime
+        }
+      });
+      summary.detectionRunTime = Date.now() - startTime;
       return summary;
     },
     {
-      operation: 'constructor',
+      operation: 'runPeriodicDetection',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      summary.detectionRunTime = Date.now() - startTime;
-      return summary;
-    });
+      metadata: {}
+    }
+  );
   }
   // ========================================
   // GESTION WORKFLOW ALERTES
@@ -554,25 +553,24 @@ export class DateAlertDetectionService {
           acknowledgedBy: userId,
           acknowledgedAt: new Date().toISOString(),
           note
-                });
-      logger.info('Alerte accusée réception', { metadata: {
+        }
+      });
+      logger.info('Alerte accusée réception', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'acknowledgeAlert',
           alertId,
-          userId   
-              }
-                   }
-
-                 });
+          userId
+        }
+      });
       return updatedAlert;
     },
     {
-      operation: 'constructor',
+      operation: 'acknowledgeAlert',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      throw error;
-    });
+      metadata: {}
+    }
+  );
   }
   
   async resolveAlert(alertId: string, userId: string, resolution: string): Promise<DateAlert> {
@@ -599,25 +597,24 @@ export class DateAlertDetectionService {
           resolvedBy: userId,
           resolvedAt: new Date().toISOString(),
           resolution
-                });
-      logger.info('Alerte résolue', { metadata: {
+        }
+      });
+      logger.info('Alerte résolue', {
+        metadata: {
           service: 'DateAlertDetectionService',
           operation: 'resolveAlert',
           alertId,
-          userId   
-              }
-                   }
-
-                 });
+          userId
+        }
+      });
       return updatedAlert;
     },
     {
-      operation: 'constructor',
+      operation: 'resolveAlert',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      throw error;
-    });
+      metadata: {}
+    }
+  );
   }
 
   // ========================================
@@ -1131,7 +1128,8 @@ export class DateAlertDetectionService {
           targetDate: alert.targetDate?.toISOString(),
           affectedUsers,
           actionRequired: !!(alert.suggestedActions && Array.isArray(alert.suggestedActions) && alert.suggestedActions.length > 0)
-                });
+        }
+      });
       // Escalade automatique si critique
       if (alert.severity === 'critical') {
         this.eventBus.publishSystemAlert({
@@ -1144,17 +1142,16 @@ export class DateAlertDetectionService {
             originalAlert: alert.id,
             escalationLevel: 'manager',
             immediateAction: true
-                          });
+          }
+        });
       }
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'notifyAlert',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
+      metadata: {}
     }
+  );
   }
 
   private async getAffectedUsers(alert: DateAlert): Promise<string[]> {
@@ -1179,16 +1176,13 @@ export class DateAlertDetectionService {
       }
       
       return [...new Set(users)]; // Déduplication
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'getAffectedUsers',
       service: 'DateAlertDetectionService',
-      metadata: {  
-      });
-      return [];
+      metadata: {}
     }
+  );
   }
 
   // ========================================
@@ -1251,18 +1245,16 @@ export class DateAlertDetectionService {
         phase: 'chantier',
         delayDays: weatherRisk.estimatedDelay,
         impactLevel: weatherRisk.estimatedDelay > 5 ? 'elevee' : 'normale',
-        suggestedActions: weatherRisk.mitigation.map(m  => ({ action: m, priority: 'medium' as const, estimatedTime: 1, responsible: 'chef_equipe' })),
+        suggestedActions: weatherRisk.mitigation.map(m => ({ action: m, priority: 'medium' as const, estimatedTime: 1, responsible: 'chef_equipe' })),
         status: 'pending'
       };
-    
     },
     {
-      operation: 'constructor',
+      operation: 'createWeatherDelayAlert',
       service: 'DateAlertDetectionService',
-      metadata: {       }
-     });
-      return null;
+      metadata: {}
     }
+  );
   }
 
   private async createResourceConflictAlert(conflict: ResourceConflict): Promise<InsertDateAlert | null> {

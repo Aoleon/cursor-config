@@ -204,6 +204,7 @@ export class MetricsAggregator {
     if (this.responseTimes.length > 10000) {
       this.responseTimes = this.responseTimes.slice(-5000);
     }
+  }
 
   /**
    * Enregistre une requête
@@ -243,6 +244,7 @@ export class MetricsAggregator {
         this.businessData.documentsProcessed++;
         break;
     }
+  }
 
   /**
    * Calcule les percentiles des temps de réponse
@@ -610,6 +612,7 @@ export class MetricsAggregator {
         issues.push(`${metrics.alerts.length} alerte(s) active(s)`);
         score -= 10;
       }
+    }
     
     // Déterminer le statut global
     const status = score >= 80 ? 'healthy' :
@@ -649,6 +652,7 @@ export class MetricsAggregator {
     }
     this.reset();
   }
+}
 
 // Instance singleton
 let metricsAggregatorInstance: MetricsAggregator | null = null;

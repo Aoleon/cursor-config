@@ -292,7 +292,7 @@ export interface PDFTemplateEngineConfig {
   performanceTracking?: boolean;
   errorRecovery?: boolean;
   maxRenderTime?: number;
-  puppeteerOpti: unknown;unknown;
+  puppeteerOptions?: unknown;
 }
 
 // Error types
@@ -300,34 +300,40 @@ export class TemplateError extends Error {
   constructor(
     message: string,
     public code: string,
-    public deta: unknown)
+    public details: unknown
   ) {
     super(message);
     this.name = 'TemplateError';
   }
+}
 
 export class PlaceholderError extends TemplateError {
-  constructor(message: string, det: unknown) unknown) {
+  constructor(message: string, details: unknown) {
     super(message, 'PLACEHOLDER_ERROR', details);
     this.name = 'PlaceholderError';
   }
+}
 
 export class ImageError extends TemplateError {
-  constructor(message: string,: unknown)lunknown) {
+  constructor(message: string, details: unknown) {
+    super(message, 'IMAGE_ERROR', details);
     this.name = 'ImageError';
   }
+}
 
 export class LayoutError extends TemplateError {
-  constructor(message: str: unknown)eunknown)unknown any) {
+  constructor(message: string, details: unknown) {
     super(message, 'LAYOUT_ERROR', details);
     this.name = 'LayoutError';
   }
+}
 
 export class ValidationError extends TemplateError {
-  constructor(message:: unknown)gunknown)unknownls?: any) {
+  constructor(message: string, details?: unknown) {
     super(message, 'VALIDATION_ERROR', details);
     this.name = 'ValidationError';
   }
+}
 
 // LDM specific types
 export interface LDMTemplateData {
@@ -379,5 +385,5 @@ export interface LDMItem {
   category?: string;
   supplier?: string;
   image?: string;
-  specifications?: Record<st, unknownnunknown>any>;
+  specifications?: Record<string, unknown>;
 }

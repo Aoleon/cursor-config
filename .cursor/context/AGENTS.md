@@ -37,6 +37,8 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - `@.cursor/rules/core.md` - Règles fondamentales du projet
 - `@.cursor/rules/quality-principles.md` - Philosophie de qualité
 - `@.cursor/rules/code-quality.md` - Standards stricts de qualité code
+- `@.cursor/rules/response-validation-hook.md` - Hook de validation avant arrêt (CRITIQUE - 100% anti-interruption)
+- `@.cursor/rules/context-management-hierarchical.md` - Gestion contexte hiérarchique (CRITIQUE - runs 6+ heures)
 
 **Référence:** `@.cursor/rules/priority.md` - Priorités détaillées
 

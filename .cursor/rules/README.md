@@ -35,6 +35,7 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── todo-completion.md    # Completion des todos (P1 - IMPÉRATIF)
 ├── iterative-perfection.md # Itération automatique jusqu'à perfection (P1 - IMPÉRATIF)
 ├── persistent-execution.md # Exécution persistante (P1 - IMPÉRATIF)
+├── auto-continuation-next-steps.md # Auto-continuation prochaines étapes (P0 - IMPÉRATIF)
 ├── advanced-iteration-and-role-coordination.md # Itérations avancées et coordination des rôles (P1 - IMPÉRATIF)
 ├── task-decomposition.md # Décomposition des tâches conforme documentation Cursor (P1 - IMPÉRATIF)
 ├── similar-code-detection.md # Détection proactive de code similaire (P1)

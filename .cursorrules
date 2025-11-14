@@ -328,6 +328,7 @@ if (hasNextSteps || hasContextualNextSteps) {
 - `@.cursor/rules/todo-completion.md` - Completion des todos (IMPÉRATIF - éviter interruptions)
 - `@.cursor/rules/iterative-perfection.md` - Itération automatique jusqu'à perfection (IMPÉRATIF - éviter arrêt prématuré)
 - `@.cursor/rules/persistent-execution.md` - Exécution persistante (IMPÉRATIF - éviter arrêts prématurés, runs longs)
+- `@.cursor/rules/auto-continuation-next-steps.md` - Auto-continuation prochaines étapes (P0 - IMPÉRATIF - détection automatique "prochaines étapes" dans réponse, extraction, création todos, exécution immédiate)
 - `@.cursor/rules/autonomous-decision-making.md` - Prise de décision autonome continue (P0 - IMPÉRATIF - détection propositions choix/questions/confirmations, analyse options, décision robuste, exécution autonome continue)
 - `@.cursor/rules/advanced-iteration-and-role-coordination.md` - Itérations avancées et coordination des rôles (IMPÉRATIF - maximiser autonomie, durée, qualité)
 - `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF - critères de taille optimale, pensée séquentielle, Background Agent, listes structurées)

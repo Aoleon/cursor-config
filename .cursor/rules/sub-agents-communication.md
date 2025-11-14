@@ -735,6 +735,7 @@ const TIMEOUT_CONFIG: Record<MessageType, number> = {
 - `@.cursor/rules/multi-agent-coordination.md` - Coordination multi-agents
 - `@.cursor/rules/sub-agents-roles.md` - Rôles des sub-agents
 - `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale
+- `@.cursor/rules/agent-collaboration-protocols.md` - Protocoles collaboration avancés (consensus, escalation, validation croisée)
 
 ### Fichiers de Communication
 

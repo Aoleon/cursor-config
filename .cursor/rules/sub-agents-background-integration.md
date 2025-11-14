@@ -414,6 +414,7 @@ async function executeWithBackgroundAgent(
 - `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale
 - `@.cursor/rules/persistent-execution.md` - Exécution persistante
 - `@.cursor/rules/task-decomposition.md` - Décomposition des tâches
+- `@.cursor/rules/cursor-modes-optimization.md` - Optimisation utilisation modes Cursor (Agent Mode, Composer Mode, Cmd+K, Background Agent)
 
 ### Documentation Cursor
 

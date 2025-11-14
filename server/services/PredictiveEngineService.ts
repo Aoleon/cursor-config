@@ -1,4 +1,5 @@
-import type { IStorage, DateRange, MetricFilters } from "../storage-poc";
+import type { DateRange, MetricFilters } from "../storage-poc";
+import type { StorageFacade } from "../storage/facade/StorageFacade";
 import { withErrorHandling } from './utils/error-handler';
 import { getSafetyGuardsService } from "./SafetyGuardsService";
 import type { 
@@ -6,6 +7,10 @@ import type {
 } from "@shared/schema";
 import { addMonths, subMonths, format } from "date-fns";
 import { logger } from '../utils/logger';
+// Import des services extraits
+import { ForecastService } from './predictive/ForecastService';
+import { RiskAnalyzerService } from './predictive/RiskAnalyzerService';
+import { RecommendationService } from './predictive/RecommendationService';
 
 // ========================================
 // TYPES ET INTERFACES PRÉDICTIFS
@@ -273,8 +278,8 @@ export interface CacheEntry<T> {
 // SERVICE PRINCIPAL
 // ========================================
 
-export class PredictiveEngineService {
-  private storage: IStorage;
+export class PredictiveService {
+  private storage: StorageFacade;
   private cache: Map<string, CacheEntry<unknown>>;
   private readonly CACHE_TTL_MINUTES = 30;
   private readonly CACHE_MAX_SIZE = 1000;
@@ -301,7 +306,7 @@ export class PredictiveEngineService {
   private currentPreloadingLoad = 0;
   private lastPatternUpdate = 0;
 
-  constructor(storage: IStorage) {
+  constructor(storage: StorageFacade) {
     this.storage = storage;
     this.cache = new Map();
     
@@ -327,7 +332,7 @@ export class PredictiveEngineService {
     
     logger.info('Service initialisé avec preloading prédictif', {
       metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'constructor'
       }
     });
@@ -338,13 +343,18 @@ export class PredictiveEngineService {
   /**
    * Prévisions de revenus avec algorithmes statistiques
    */
+  // forecastRevenue délégué à ForecastService
   async forecastRevenue(params: PredictiveRangeQuery): Promise<PredictiveRevenueForecast[]> {
+    return await this.forecastService.forecastRevenue(params);
+  }
+  
+  async forecastRevenueOriginal(params: PredictiveRangeQuery): Promise<PredictiveRevenueForecast[]> {
     const cacheKey = this.getCacheKey('forecast_revenue', params);
     const cached = this.getCachedEntry<PredictiveRevenueForecast[]>(cacheKey);
     if (cached) {
       logger.info('Cache hit', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'forecastRevenue',
           cacheHit: true
                 }
@@ -355,7 +365,7 @@ export class PredictiveEngineService {
       async () => {
         logger.info('Calcul forecast revenue', {
           metadata: {
-            service: 'PredictiveEngineService',
+            service: 'PredictiveService',
                     operation: 'forecastRevenue',
             params
           }
@@ -368,7 +378,7 @@ export class PredictiveEngineService {
         if (historicalData.length === 0) {
           logger.info('Aucune donnée historique trouvée', {
             metadata: {
-              service: 'PredictiveEngineService',
+              service: 'PredictiveService',
                       operation: 'forecastRevenue'
             }
           });
@@ -410,7 +420,7 @@ export class PredictiveEngineService {
       
       logger.info('Forecast calculé', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'forecastRevenue',
           forecastCount: results.length
         }
@@ -419,7 +429,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'forecastRevenue',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   );
@@ -428,13 +438,18 @@ export class PredictiveEngineService {
   /**
    * Détection de risques projets avec scoring algorithmique
    */
+  // detectProjectRisks délégué à RiskAnalyzerService
   async detectProjectRisks(params: RiskQueryParams): Promise<ProjectRiskAssessment[]> {
+    return await this.riskAnalyzerService.detectProjectRisks(params);
+  }
+  
+  async detectProjectRisksOriginal(params: RiskQueryParams): Promise<ProjectRiskAssessment[]> {
     const cacheKey = this.getCacheKey('project_risks', params);
     const cached = this.getCachedEntry<ProjectRiskAssessment[]>(cacheKey);
     if (cached) {
       logger.info('Cache hit', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'detectProjectRisks',
           cacheHit: true
         }
@@ -445,7 +460,7 @@ export class PredictiveEngineService {
     async () => {
       logger.info('Détection risques projets', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'detectProjectRisks',
           params
         }
@@ -500,7 +515,7 @@ export class PredictiveEngineService {
       
       logger.info('Risques détectés', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'detectProjectRisks',
           risksCount: results.length
         }
@@ -509,7 +524,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'detectProjectRisks',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   );
@@ -524,7 +539,7 @@ export class PredictiveEngineService {
     if (cached) {
       logger.info('Cache hit', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateBusinessRecommendations',
           cacheHit: true
         }
@@ -535,7 +550,7 @@ export class PredictiveEngineService {
     async () => {
       logger.info('Génération recommandations business', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateBusinessRecommendations',
           context
         }
@@ -580,7 +595,7 @@ export class PredictiveEngineService {
       
       logger.info('Recommandations générées', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateBusinessRecommendations',
           recommendationsCount: filteredRecs.length
         }
@@ -589,7 +604,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'generateBusinessRecommendations',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   );
@@ -955,7 +970,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'getBenchmarks',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   ).catch(() => {
@@ -978,7 +993,7 @@ export class PredictiveEngineService {
       },
       {
         operation: 'getSectorBenchmarks',
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         metadata: {}
       }
     );
@@ -1082,7 +1097,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'generateCostOptimizationRecommendations',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   );
@@ -1266,7 +1281,7 @@ export class PredictiveEngineService {
     entry.hit_count++;
     logger.info('Cache hit', {
       metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'getCachedEntry',
         cacheKey: key,
         hitCount: entry.hit_count
@@ -1292,7 +1307,7 @@ export class PredictiveEngineService {
     
     logger.info('Cache set', {
       metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'setCacheEntry',
         cacheKey: key,
         ttlMinutes
@@ -1323,11 +1338,12 @@ export class PredictiveEngineService {
         this.cache.delete(entries[i][0]);
         deletedCount++;
       }
+    }
     
     if (deletedCount > 0) {
       logger.info('Cache cleanup', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'cleanupCache',
           deletedCount
         }
@@ -1367,7 +1383,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'getMonthlyRevenueHistory',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   ).catch(() => {
@@ -1384,12 +1400,14 @@ export class PredictiveEngineService {
     },
     {
       operation: 'getProjectDelayHistory',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   ).catch(() => {
     return [];
   });
+  }
+  
   // ========================================
   // ÉTAPE 3 PHASE 3 PERFORMANCE : PRELOADING PRÉDICTIF
   // ========================================
@@ -1400,7 +1418,7 @@ export class PredictiveEngineService {
     this.contextCacheService = contextCacheService;
     logger.info('Intégration ContextCacheService activée', {
       metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'integrateWithContextCache'
       }
     });
@@ -1417,7 +1435,7 @@ export class PredictiveEngineService {
     if (cached) {
       logger.info('Cache hit pour entity heatmap', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateEntityHeatMap',
           cacheHit: true
         }
@@ -1428,7 +1446,7 @@ export class PredictiveEngineService {
     async () => {
       logger.info('Génération heat-map entités', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateEntityHeatMap'
         }
       });
@@ -1452,6 +1470,8 @@ export class PredictiveEngineService {
           // Entité froide à éviter en cache
           coldEntities.push(entityKey);
         }
+      }
+      
       // 2. IDENTIFICATION HEURES DE POINTE
       const peakHours = this.identifyPeakHours(hotEntities);
       
@@ -1480,7 +1500,7 @@ export class PredictiveEngineService {
 
       logger.info('Heat-map générée', {
         metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'generateEntityHeatMap',
           hotEntitiesCount: hotEntities.length,
           coldEntitiesCount: coldEntities.length
@@ -1490,7 +1510,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'generateEntityHeatMap',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}
     }
   );
@@ -1506,12 +1526,11 @@ export class PredictiveEngineService {
     return withErrorHandling(
     async () => {
       logger.info('Prédiction accès entités', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'predictNextEntityAccess',
         userId
-          }       }
-     });
-      const predictio;AccessPrediction[] = [];
+      }});
+      const predictions: AccessPrediction[] = [];
       const now = Date.now();
       // 1. RÉCUPÉRATION PATTERNS UTILISATEUR
       const userPattern = userId ? this.userAccessPatterns.get(userId) : null;
@@ -1539,7 +1558,7 @@ export class PredictiveEngineService {
         .slice(0, 20); // Top 20 prédictions
 
       logger.info('Prédictions générées', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'predictNextEntityAccess',
         predictionsCount: filteredPredictions.length,
         confidenceThreshold: this.PRELOADING_CONFIDENCE_THRESHOLD
@@ -1549,7 +1568,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'get',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
       return [];
@@ -1561,7 +1580,7 @@ export class PredictiveEngineService {
   async schedulePreloadTasks(predictions: AccessPrediction[]): Promise<void> {
     if (!this.preloadingEnabled || !this.contextCacheService) {
       logger.info('Preloading désactivé ou ContextCache non disponible', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'schedulePreloadTasks'
           }       }
      });
@@ -1571,7 +1590,7 @@ export class PredictiveEngineService {
     async () => {
 
       logger.info('Programmation tâches preloading', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'schedulePreloadTasks',
         predictionsCount: predictions.length
           }       }
@@ -1623,7 +1642,7 @@ export class PredictiveEngineService {
       this.scheduleDelayedTasks();
       
       logger.info('Nouvelles tâches programmées', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'schedulePreloadTasks',
         newTasksCount: newTasks.length
           }       }
@@ -1631,7 +1650,7 @@ export class PredictiveEngineService {
     },
     {
       operati;'schedulePreloadTasks',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
   }
@@ -2472,7 +2491,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'predictFromTrends',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
     }
@@ -2532,7 +2551,7 @@ export class PredictiveEngineService {
     for (const task of highPriorityTasks) {
       this.executePreloadTask(task).catch(error => {
         logger.error('Erreur tâche preloading', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'executeHighPriorityTasks',
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error),
@@ -2556,7 +2575,7 @@ export class PredictiveEngineService {
       this.preloadingSchedule.scheduledTasks = this.preloadingSchedule.scheduledTasks
         .filter(t => t.id !== task.id);
       logger.info('Exécution preloading', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'executePreloadTask',
         entityType: task.entityType,
         entityId: task.entityId
@@ -2576,7 +2595,7 @@ export class PredictiveEngineService {
         .filter(t => t.id !== task.id);
       
       logger.info('Preloading complété', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'executePreloadTask',
         entityType: task.entityType,
         entityId: task.entityId
@@ -2585,7 +2604,7 @@ export class PredictiveEngineService {
     },
     {
       operation: 'executePreloadTask',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
       // Marquer comme échouée
@@ -2609,7 +2628,7 @@ export class PredictiveEngineService {
       setTimeout(() => {
         this.executePreloadTask(task).catch(error => {
           logger.error('Erreur tâche différée', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'scheduleDelayedTasks',
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error),
@@ -2633,7 +2652,7 @@ export class PredictiveEngineService {
       }
     if (deletedCount > 0) {
       logger.info('Cleanup accès entités', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'cleanupStaleEntityAccess',
         deletedCount
          }
@@ -2654,7 +2673,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     async () => {
 
       logger.info('Mise à jour patterns BTP', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'updateBTPPatterns'
          }
        );
@@ -2662,14 +2681,14 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
       // (Implémentation simplifiée pour POC)
       this.lastPatternUpdate = now;
       logger.info('Patterns BTP mis à jour', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'updateBTPPatterns'
          }
        );
     },
     {
       operation: 'updateBTPPatterns',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
   }
@@ -2679,7 +2698,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
   public setPreloadingEnabled(enabled: boolean): void {
     this.preloadingEnabled = enabled;
     logger.info('État preloading', { metadata: {
-        service: 'PredictiveEngineService',
+        service: 'PredictiveService',
         operation: 'togglePredictivePreloading',
         enabled: enabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'
         });
@@ -2725,7 +2744,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     },
     {
       operation: 'analyzeRisks',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
   }
@@ -2746,7 +2765,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
         version: '1.0'
       };
       logger.info('Snapshot sauvegardé', { metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'saveSnapshot',
           snapshotId: snapshot.id,
           type: snapshot.type
@@ -2756,7 +2775,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     },
     {
       operation: 'saveSnapshot',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
   }
@@ -2770,7 +2789,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
       // Pour l'instant, retourner un tableau vide
       // À implémenter avec storage si nécessaire
       logger.info('Récupération snapshots', { metadata: {
-          service: 'PredictiveEngineService',
+          service: 'PredictiveService',
           operation: 'getSnapshots',
           params
          }
@@ -2779,7 +2798,7 @@ if (now - this.lastPatternUpdate < (60 * 60 * 1000)) { // 1 heure minimum;
     },
     {
       operation: 'getSnapshots',
-      service: 'PredictiveEngineService',
+      service: 'PredictiveService',
       metadata: {}       }
      });
   };

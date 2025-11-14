@@ -136,7 +136,7 @@ app.use((req, res, next) => {
   const { DateIntelligenceService } = await import('./services/DateIntelligenceService');
   const { MenuiserieDetectionRules } = await import('./services/DateAlertDetectionService');
   const { getBusinessAnalyticsService } = await import('./services/consolidated/BusinessAnalyticsService');
-  const { PredictiveEngineService } = await import('./services/PredictiveEngineService');
+  const { PredictiveService } = await import('./services/PredictiveEngineService');
   
   // Créer les instances des services
   logger.info('Initialisation système détection alertes', { metadata: {
@@ -213,7 +213,7 @@ app.use((req, res, next) => {
   const dateIntelligenceService = new DateIntelligenceService(storageInterface);
   const menuiserieRules = new MenuiserieDetectionRules(storageInterface);
   const analyticsService = getBusinessAnalyticsService(storageInterface, eventBus);
-  const predictiveEngineService = new PredictiveEngineService(storageInterface);
+  const predictiveEngineService = new PredictiveService(storageInterface);
   
   // ========================================
   // CORRECTION CRITIQUE : INTÉGRATION EVENTBUS → PREDICTIVEENGINESERVICE
@@ -360,12 +360,22 @@ app.use((req, res, next) => {
   
   await withErrorHandling(
     async () => {
-      // À ce point, routes-poc.ts a été exécuté et PredictiveEngineService créé
-      // Récupérer l'instance depuis l'app ou importer directement
-      const routesPoc = await import('./routes-poc');
-      const predictiveEngineService = (routesPoc as unknown).predictiveEngineService;
+      // À ce point, routes.ts a été exécuté et PredictiveEngineService créé via initializeServices
+      // Récupérer l'instance depuis l'app
+      const predictiveEngineService = app.get('predictiveEngineService');
       
-      logger.info('Instance PredictiveEngine récupérée', {
+      if (!predictiveEngineService) {
+        logger.warn('PredictiveEngineService non trouvé dans app.get - intégration déjà effectuée dans initializeServices', {
+          metadata: {
+            module: 'ExpressApp',
+            operation: 'integratePredictiveEngineFinal',
+            context: { serviceAvailable: false }
+          }
+        });
+        return;
+      }
+      
+      logger.info('Instance PredictiveEngine récupérée depuis app.get', {
         metadata: {
           module: 'ExpressApp',
           operation: 'integratePredictiveEngineFinal',
@@ -374,7 +384,10 @@ app.use((req, res, next) => {
       });
       
       // INTÉGRATION CRITIQUE pour activation preloading background
-      eventBus.integratePredictiveEngine(predictiveEngineService);
+      // Note: L'intégration est déjà effectuée dans initializeServices, mais on vérifie ici
+      if (typeof eventBus.integratePredictiveEngine === 'function') {
+        eventBus.integratePredictiveEngine(predictiveEngineService);
+      }
       
       logger.info('Intégration finale PredictiveEngine réussie', {
         metadata: {

@@ -9,8 +9,8 @@
  * Each provider has tuned configuration for optimal resilience.
  */
 
-import { retryService, type RetryOptions } from '../utils/retry-service.js';
-import { withErrorHandling } from './utils/error-handler';
+import { retryService, type RetryOptions } from '../utils/retry-service';
+import { withErrorHandling } from '../utils/error-handler';
 import { circuitBreakerManager, type CircuitBreakerOptions } from '../utils/circuit-breaker.js';
 import { logger } from '../utils/logger.js';
 
@@ -173,15 +173,14 @@ export async function executeMonday<T>(
     return await breaker.execute(async () => {
       return await retryService.execute(operation, MONDAY_RETRY_CONFIG);
     });
-  
     },
     {
-      operation: 'OpenAI',
+      operation: 'Monday',
       service: 'resilience',
       metadata: {}
-    } );
-    throw error;
-  }
+    }
+  );
+}
 
 /**
  * Execute OpenAI API call with retry + circuit breaker
@@ -198,19 +197,17 @@ export async function executeOpenAI<T>(
   
   return withErrorHandling(
     async () => {
-
-    return await breaker.execute(async () => {
-      return await retryService.execute(operation, OPENAI_RETRY_CONFIG);
-    });
-  
+      return await breaker.execute(async () => {
+        return await retryService.execute(operation, OPENAI_RETRY_CONFIG);
+      });
     },
     {
       operation: 'OpenAI',
       service: 'resilience',
       metadata: {}
-    } );
-    throw error;
-  }
+    }
+  );
+}
 
 /**
  * Execute SendGrid email dispatch with retry + circuit breaker
@@ -223,19 +220,17 @@ export async function executeSendGrid<T>(
   
   return withErrorHandling(
     async () => {
-
-    return await breaker.execute(async () => {
-      return await retryService.execute(operation, SENDGRID_RETRY_CONFIG);
-    });
-  
+      return await breaker.execute(async () => {
+        return await retryService.execute(operation, SENDGRID_RETRY_CONFIG);
+      });
     },
     {
-      operation: 'OpenAI',
+      operation: 'SendGrid',
       service: 'resilience',
       metadata: {}
-    } );
-    throw error;
-  }
+    }
+  );
+}
 
 /**
  * PERF-4: Execute Microsoft OneDrive/Graph API call with retry + circuit breaker
@@ -248,19 +243,17 @@ export async function executeOneDrive<T>(
   
   return withErrorHandling(
     async () => {
-
-    return await breaker.execute(async () => {
-      return await retryService.execute(operation, ONEDRIVE_RETRY_CONFIG);
-    });
-  
+      return await breaker.execute(async () => {
+        return await retryService.execute(operation, ONEDRIVE_RETRY_CONFIG);
+      });
     },
     {
-      operation: 'OpenAI',
+      operation: 'OneDrive',
       service: 'resilience',
       metadata: {}
-    } );
-    throw error;
-  }
+    }
+  );
+}
 
 // ========================================
 // MONITORING HELPERS

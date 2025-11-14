@@ -8,9 +8,11 @@
  */
 
 import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
+import { mondayService } from './MondayService';
 import { withErrorHandling } from './utils/error-handler';
 import { getCacheService, TTL_CONFIG } from './CacheService';
 import { logger } from '../utils/logger';
+import type { MondayService } from './MondayService';
 
 export interface BoardColumnMetadata {
   id: string;
@@ -41,7 +43,7 @@ export class MondaySchemaAnalyzer {
   private readonly CACHE_TTL = TTL_CONFIG.MONDAY_BOARDS_LIST; // 10 minutes
 
   constructor() {
-    this.mondayService = mondayintegrationService();
+    this.mondayService = mondayService;
   }
 
   /**
@@ -405,7 +407,7 @@ let schemaAnalyzer: MondaySchemaAnalyzer | null = null;
 
 export function getMondaySchemaAnalyzer(): MondaySchemaAnalyzer {
   if (!schemaAnalyzer) {
-    schemaAnalyzer = mondayintegrationService();
+    schemaAnalyzer = new MondaySchemaAnalyzer();
   }
   return schemaAnalyzer;
 }

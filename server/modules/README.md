@@ -47,9 +47,10 @@ server/modules/
 ## Migration Strategy
 
 ### Current State
-- **Monolithic File**: `server/routes-poc.ts` (11,647 lines)
-- **Entry Point**: `server/routes.ts` exports from `routes-poc.ts`
-- **Registration**: `server/index.ts` calls `registerRoutes(app)`
+- **Monolithic File**: `server/routes-poc.ts` ✅ **SUPPRIMÉ** (migration complète)
+- **Entry Point**: `server/routes.ts` utilise les modules directement
+- **Registration**: `server/index.ts` appelle `registerRoutes(app)` qui monte tous les modules
+- **Services**: Initialisation centralisée dans `server/services/initialization.ts`
 
 ### Migration Phases
 
@@ -59,8 +60,9 @@ server/modules/
 - [x] Create auth/routes.ts with all auth endpoints
 - [x] Create auth/types.ts with TypeScript definitions
 - [x] Create auth/index.ts for exports
-- [ ] Test auth module functionality
-- [ ] Remove auth routes from routes-poc.ts
+- [x] Test auth module functionality
+- [x] Remove auth routes from routes-poc.ts
+- [x] **routes-poc.ts supprimé** ✅
 
 #### Phase 2: Chiffrage Module (NEXT)
 Routes to migrate:
@@ -266,8 +268,9 @@ logger.debug('[ModuleName] Debug info', { metadata: {...} });
 - [ ] Extract projects module
 - [ ] Extract analytics module
 - [ ] Extract documents module
-- [ ] Remove migrated routes from routes-poc.ts
-- [ ] Update server/routes.ts to use modules
+- [x] Remove migrated routes from routes-poc.ts ✅
+- [x] Update server/routes.ts to use modules ✅
+- [x] **routes-poc.ts supprimé** ✅
 - [ ] Full regression testing
 - [ ] Update deployment scripts
 

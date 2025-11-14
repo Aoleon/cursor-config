@@ -90,7 +90,7 @@ async function testEndpoint(endpoint: string): Promise<TestResult> {
       status: 0,
       success: false,
       responseTime: Date.now() - startTime,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 

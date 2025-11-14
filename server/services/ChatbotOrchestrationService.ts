@@ -11,6 +11,9 @@ import type { IStorage } from "../storage-poc";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, lte, asc } from "drizzle-orm";
 import crypto from "crypto";
+import { ResponseBuilder } from "./chatbot/ResponseBuilder";
+import { MessageHandler } from "./chatbot/MessageHandler";
+import { ActionOrchestrator } from "./chatbot/ActionOrchestrator";
 import type {
   ChatbotQueryRequest,
   ChatbotQueryResponse,
@@ -101,6 +104,9 @@ export class ChatbotOrchestrationService {
   private eventBus: EventBus;
   private storage: IStorage;
   private performanceMetrics: unknown;
+  private responseBuilder: ResponseBuilder;
+  private messageHandler: MessageHandler;
+  private actionOrchestrator: ActionOrchestrator;
 
   constructor(
     aiService: AIService,
@@ -119,6 +125,9 @@ export class ChatbotOrchestrationService {
     this.eventBus = eventBus;
     this.storage = storage;
     this.performanceMetrics = getTechnicalMetricsService(storage);
+    this.responseBuilder = new ResponseBuilder();
+    this.messageHandler = new MessageHandler();
+    this.actionOrchestrator = new ActionOrchestrator(actionExecutionService, storage);
   }
 
   // ========================================
@@ -153,14 +162,14 @@ export class ChatbotOrchestrationService {
     let securityChecksPassed: string[] = [];
 
     // === NOUVELLE ANALYSE DE PATTERN AVANCÉE ===
-    const queryPattern = this.analyzeQueryPattern(request.query);
-    const queryComplexity = this.detectQueryComplexity(request.query);
-    const focusAreas = this.detectFocusAreas(request.query);
+    const queryPattern = this.messageHandler.analyzeQueryPattern(request.query);
+    const queryComplexity = this.messageHandler.detectQueryComplexity(request.query);
+    const focusAreas = this.messageHandler.detectFocusAreas(request.query);
     
     // === VÉRIFICATION CACHE LRU OPTIMISÉ ===
     // Normalisation clé cache (hash pour performance)
     const normalizedQuery = request.query.toLowerCase().trim().replace(/\s+/g, ' ');
-    const cacheKey = this.generateCacheKey(request.userId, request.userRole, normalizedQuery, queryComplexity);
+    const cacheKey = this.messageHandler.generateCacheKey(request.userId, request.userRole, normalizedQuery, queryComplexity);
     const cachedResult = this.getCacheLRU(cacheKey);
     
     if (cachedResult) {
@@ -278,7 +287,7 @@ export class ChatbotOrchestrationService {
           const actionProposal = await this.actionExecutionService.proposeAction(proposeActionRequest);
           await this.performanceMetrics.endPipelineTrace(
             traceId, request.userId, request.userRole, request.query, 
-            this.detectQueryComplexity(request.query), true, false, { 
+            this.messageHandler.detectQueryComplexity(request.query), true, false, { 
               actionFlow: true, 
               actionType: actionIntention.actionType,
               parallelMode: true
@@ -316,7 +325,7 @@ export class ChatbotOrchestrationService {
         });
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
-          this.detectQueryComplexity(request.query), false, false, { 
+          this.messageHandler.detectQueryComplexity(request.query), false, false, { 
             rbacError: true,
             parallelMode: true
           }
@@ -543,7 +552,7 @@ export class ChatbotOrchestrationService {
         });
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
-          this.detectQueryComplexity(request.query), false, false, { 
+          this.messageHandler.detectQueryComplexity(request.query), false, false, { 
             sqlError: true, 
             errorType: sqlResult.error?.type,
             parallelMode: true
@@ -685,7 +694,7 @@ export class ChatbotOrchestrationService {
         query: request.query,
         explanation: enrichedExplanation,
         suggestions: enhancedSuggestions,
-        sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
+        sql: this.messageHandler.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
         results: sqlResult.results || [],
         confidence: sqlResult.confidence || 0,
         execution_time_ms: totalExecutionTime,
@@ -717,27 +726,6 @@ export class ChatbotOrchestrationService {
         fallback: 'sequential_after_error'
       }
     });
-      // Enregistrer échec parallélisme
-      this.performanceMetrics.recordParallelismFailure();
-      // Finaliser le tracing en erreur
-      await this.performanceMetrics.endPipelineTrace(
-        traceId, request.userId, request.userRole, request.query, 
-        this.detectQueryComplexity(request.query), false, false, { 
-          error: error instanceof Error ? error.message : String(error),
-          errorType: 'parallel_pipeline_error',
-          parallelMode: true
-              }
-      );
-      // Fallback vers méthode séquentielle en cas d'erreur critique
-      logger.info('Fallback séquentiel après erreur parallèle', {
-        metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'handleParallelQuery',
-          context: { fallback: 'sequential_after_error' }
-        }
-      });
-      return await this.processChatbotQuerySequential(request, traceId, "parallel_exception");
-    }
   }
   // ========================================
   // MÉTHODE SÉQUENTIELLE POUR FALLBACK
@@ -852,7 +840,7 @@ export class ChatbotOrchestrationService {
           // Finaliser le tracing pour action
           await this.performanceMetrics.endPipelineTrace(
             traceId, request.userId, request.userRole, request.query, 
-            this.detectQueryComplexity(request.query), true, false, { 
+            this.messageHandler.detectQueryComplexity(request.query), true, false, { 
               actionFlow: true, 
               actionType: actionIntention.actionType 
             }
@@ -890,7 +878,7 @@ export class ChatbotOrchestrationService {
         });
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
-          this.detectQueryComplexity(request.query), false, false, { 
+          this.messageHandler.detectQueryComplexity(request.query), false, false, { 
             rbacError: true 
           }
         );
@@ -920,8 +908,8 @@ export class ChatbotOrchestrationService {
         userId: request.userId,
         user_role: request.userRole,
         query_hint: request.query,
-        complexity_preference: this.detectQueryComplexity(request.query),
-        focus_areas: this.detectFocusAreas(request.query),
+        complexity_preference: this.messageHandler.detectQueryComplexity(request.query),
+        focus_areas: this.messageHandler.detectFocusAreas(request.query),
         include_temporal: true,
         cache_duration_minutes: 60,
         personalization_level: "advanced" as const,
@@ -934,10 +922,10 @@ export class ChatbotOrchestrationService {
       if (!businessContextResponse.success || !businessContextResponse.context) {
         logger.warn('Échec génération contexte métier, continuation avec contexte minimal', { metadata: {
             service: 'ChatbotOrchestrationService',
-                  operation: 'handleQuery',
-            context: { fallback: 'minimal_business_context'   
-            }
-          });
+            operation: 'handleQuery',
+            context: { fallback: 'minimal_business_context' }
+          }
+        });
         this.performanceMetrics.endStep(traceId, 'context_generation', false, { 
           step: 'business_context_failed', 
           contextTime,
@@ -983,7 +971,7 @@ export class ChatbotOrchestrationService {
         // Finaliser le tracing en erreur
         await this.performanceMetrics.endPipelineTrace(
           traceId, request.userId, request.userRole, request.query, 
-          this.detectQueryComplexity(request.query), false, false, { 
+          this.messageHandler.detectQueryComplexity(request.query), false, false, { 
             sqlError: true, 
             errorType: sqlResult.error?.type 
           }
@@ -1027,12 +1015,12 @@ export class ChatbotOrchestrationService {
         resultCount: sqlResult.results?.length || 0
       });
       const responseFormattingStartTime = Date.now();
-      const explanation = this.generateExplanation(
+      const explanation = this.responseBuilder.generateExplanation(
         request.query,
         sqlResult.results || [],
         request.userRole
       );
-      const suggestions = await this.generateContextualSuggestions(
+      const suggestions = await this.messageHandler.generateContextualSuggestions(
         request.userId,
         request.userRole,
         request.query,
@@ -1117,7 +1105,7 @@ export class ChatbotOrchestrationService {
         conversation_id: conversationId,
         query: request.query,
         explanation: explanation,
-        sql: this.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
+        sql: this.messageHandler.shouldIncludeSQL(request.userRole) ? sqlResult.sql : undefined,
         results: sqlResult.results || [],
         suggestions: suggestions,
         confidence: sqlResult.confidence || 0,
@@ -1222,7 +1210,7 @@ export class ChatbotOrchestrationService {
           category: s.category,
           priority: s.priority,
           success_rate: s.successRate !== null && s.successRate !== undefined ? parseFloat(s.successRate.toString()) : 0.0,
-          estimated_complexity: this.estimateComplexity(s.suggestionText),
+          estimated_complexity: this.messageHandler.estimateComplexity(s.suggestionText),
           context_dependent: !!s.contextConditions
         })),
         ...roleSuggestions.slice(0, Math.max(0, (request.limit || 10) - dbSuggestions.length)).map((text, index) => ({
@@ -1231,13 +1219,13 @@ export class ChatbotOrchestrationService {
           category: "general",
           priority: 0,
           success_rate: 0.8,
-          estimated_complexity: this.estimateComplexity(text) as "simple" | "complex" | "expert",
+          estimated_complexity: this.messageHandler.estimateComplexity(text) as "simple" | "complex" | "expert",
           context_dependent: false
         }))
       ];
       // 4. Contexte temporel et patterns récents
-      const temporalContext = this.getTemporalContext();
-      const recentPatterns = await this.analyzeRecentPatterns(request.userId, request.userRole);
+      const temporalContext = this.messageHandler.getTemporalContext();
+      const recentPatterns = await this.messageHandler.analyzeRecentPatterns(request.userId, request.userRole);
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1312,8 +1300,8 @@ export class ChatbotOrchestrationService {
         userRole: request.userRole
       };
       const sqlValidation = await this.sqlEngineService.validateQuery(sqlValidationRequest);
-      const estimatedComplexity = this.detectQueryComplexity(request.query);
-      const estimatedTime = this.estimateExecutionTime(request.query, estimatedComplexity);
+      const estimatedComplexity = this.messageHandler.detectQueryComplexity(request.query);
+      const estimatedTime = this.messageHandler.estimateExecutionTime(request.query, estimatedComplexity);
       await this.logUsageMetrics(
         request.userId,
         request.userRole,
@@ -1349,35 +1337,6 @@ export class ChatbotOrchestrationService {
         estimatedTime: estimatedTime
       }
     });
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "validate",
-        0,
-        false,
-        0
-      );
-      return {
-        success: false,
-        validation_results: {
-          query_valid: false,
-          security_passed: false,
-          rbac_passed: false,
-          sql_generatable: false,
-          estimated_complexity: "simple",
-          estimated_execution_time_ms: 0,
-          warnings: ["Erreur lors de la validation"],
-          suggestions: ["Veuillez vérifier votre requête"]
-        },
-        accessible_tables: [],
-        restricted_columns: [],
-        error: {
-          type: "validation",
-          message: error instanceof Error ? error.message : String(error),
-          details: error
-        }
-      };
-    }
   }
   // ========================================
   // HISTORIQUE DES CONVERSATIONS
@@ -1431,14 +1390,14 @@ export class ChatbotOrchestrationService {
       const feedbacks = conversationIds.length > 0 ? await db
         .select({ conversationId: chatbotFeedback.conversationId })
         .from(chatbotFeedback)
-        .where(sql`conversation_id IN (${sql.join(conversationIds.map(id => sql`$) {id}`), sql`, `)})`) : [];
+        .where(sql`conversation_id IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})`) : [];
       const feedbackMap = new Set(feedbacks.map(f => f.conversationId));
-      const formattedConversations = conversations.map(c  => ({
+      const formattedConversations = conversations.map(c => ({
         id: c.id,
         query: c.query,
         summary: this.generateConversationSummary(
           c.query || '', 
-          c.response || ) {}, 
+          c.response || {}, 
           c.errorOccurred || false
         ),
         success: !c.errorOccurred,
@@ -1446,10 +1405,7 @@ export class ChatbotOrchestrationService {
         confidence: c.confidence ? parseFloat(c.confidence) : undefined,
         created_at: c.createdAt,
         has_feedback: feedbackMap.has(c.id)
-            }
-                      }
-                                }
-                              }));
+      }));
       await this.logUsageMetrics(
         request.userId,
         "system", // Les requêtes d'historique ne sont pas liées à un rôle spécifique
@@ -1545,19 +1501,21 @@ export class ChatbotOrchestrationService {
             feedbackType: request.feedbackType,
             executionTime: conv.executionTimeMs,
             modelUsed: conv.modelUsed
-                  }
-                          }
-                                    }
-                                  }));
+          }
+        }));
       }
       // 4. Générer des améliorations suggérées basées sur le feedback
-      const improvements = this.generateImprovementSuggestions(request);
+      const improvements = this.responseBuilder.generateImprovementSuggestions(
+        request.feedbackType,
+        request.rating,
+        request.categories
+      );
       return {
         success: true,
         feedback_id: feedbackId,
         learning_applied: true,
         improvements_suggested: improvements,
-        thank_you_message: this.generateThankYouMessage(request.feedbackType, request.rating)
+        thank_you_message: this.responseBuilder.generateThankYouMessage(request.feedbackType, request.rating)
       };
     },
     {
@@ -1571,14 +1529,6 @@ export class ChatbotOrchestrationService {
         conversationId: request.conversationId
       }
     });
-      return {
-        success: false,
-        feedback_id: "",
-        learning_applied: false,
-        improvements_suggested: [],
-        thank_you_message: "Erreur lors de l'enregistrement du feedback"
-      };
-    }
   }
   // ========================================
   // STATISTIQUES D'USAGE (ADMIN UNIQUEMENT)
@@ -1822,6 +1772,7 @@ export class ChatbotOrchestrationService {
     });
     }
   }
+  // createErrorResponse déplacé vers ResponseBuilder
   private createErrorResponse(
     conversationId: string,
     query: string,
@@ -1829,179 +1780,9 @@ export class ChatbotOrchestrationService {
     message: string,
     userFriendlyMessage: string
   ): ChatbotQueryResponse {
-    return {
-      success: false,
-      conversation_id: conversationId,
-      query,
-      explanation: "Désolé, je n'ai pas pu traiter votre demande.",
-      results: [],
-      suggestions: [
-        "Essayez de reformuler votre question",
-        "Vérifiez que vous avez les permissions nécessaires",
-        "Contactez l'administrateur si le problème persiste"
-      ],
-      confidence: 0,
-      execution_time_ms: 0,
-      cache_hit: false,
-      error: {
-        type: eras unknown, as unknown,
-        message,
-        user_friendly_message: userFriendlyMessage
-      }
-    };
+    return this.responseBuilder.createErrorResponse(conversationId, query, errorType, message, userFriendlyMessage);
   }
-  private detectQueryComplexity(query: string): "simple" | "complex" | "expert" {
-    const queryLower = query.toLowerCase();
-    // Mots-clés complexes
-    const complexKeywords = ['jointure', 'join', 'agrégation', 'group by', 'having', 'sous-requête', 'corrélation'];
-    const expertKeywords = ['window function', 'cte', 'récursif', 'pivot', 'analyse temporelle'];
-    if (expertKeywords.some(keyword => queryLower.includes(keyword))) {
-      return "expert";
-    }
-    if (complexKeywords.some(keyword => queryLower.includes(keyword)) || query.length > 200) {
-      return "complex";
-    }
-    return "simple";
-  }
-  private shouldIncludeSQL(userRole: string): boolean {
-    // Seuls les administrateurs et BE managers peuvent voir le SQL généré
-    return userRole === "admin" || userRole === "be_manager";
-  }
-  private generateExplanation(query: string, results: unknown[], userRole: string): string {
-    const resultCount = results.length;
-    if (resultCount === 0) {
-      return "Aucun résultat trouvé pour votre recherche. Vous pouvez essayer de reformuler votre question ou d'élargir vos critères.";
-    }
-    if (resultCount === 1) {
-      return `J'ai trouvé 1 résultat correspondant à votre demande "${query}".`;
-    }
-    return `J'ai trouvé ${resultCount} résultats correspondant à votre demande "${query}". Les données sont triées par pertinence.`;
-  }
-  private async generateContextualSuggestions(
-    userId: string,
-    userRole: string,
-    query: string,
-    res: unknown[]ny[]
-  ): Promise<string[]> {
-    // Suggestions de base selon le contexte de la réponse
-    if (results.length === 0) {
-      return [
-        "Essayez avec des critères plus larges",
-        "Vérifiez l'orthographe de votre requête",
-        "Consultez les données disponibles dans votre périmètre"
-      ];
-    }
-    // Suggestions contextuelles selon le rôle
-    const roleSuggestions = DEFAULT_SUGGESTIONS_BY_ROLE[userRole as keyof typeof DEFAULT_SUGGESTIONS_BY_ROLE] || [];
-    return roleSuggestions.slice(0, 3);
-  }
-  private estimateComplexity(text: string): "simple" | "complex" | "expert" {
-    return this.detectQueryComplexity(text);
-  }
-  private estimateExecutionTime(query: string, complexity: "simple" | "complex" | "expert"): number {
-    switch (complexity) {
-      case "simple": return 500;
-      case "complex": return 2000;
-      case "expert": return 5000;
-      default: return 1000;
-    }
-  }
-  private getTemporalContext(): string[] {
-    const now = new Date();
-    const context: string[] = [];
-    // Contexte saisonnier BTP
-    const month = now.getMonth() + 1;
-    if (month >= 7 && month <= 8) {
-      context.push("Période de congés BTP");
-    }
-    if (month >= 3 && month <= 5) {
-      context.push("Haute saison travaux");
-    }
-    if (month >= 11 || month <= 2) {
-      context.push("Contraintes météorologiques");
-    }
-    return context;
-  }
-  private async analyzeRecentPatterns(userId: string, userRole: string): Promise<string[]> {
-    return withErrorHandling(
-    async () => {
-      // Analyser les requêtes récentes de l'utilisateur
-      const recentQueries = await db
-        .select({ query: chatbotConversations.query })
-        .from(chatbotConversations)
-        .where(and(
-          eq(chatbotConversations.userId, userId),
-          gte(chatbotConversations.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // 7 jours
-        ))
-        .orderBy(desc(chatbotConversations.createdAt))
-        .limit(10);
-      // Extraction de patterns simples
-      const patterns: string[] = [];
-      const queries = recentQueries.map(q => q.query.toLowerCase());
-      if (queries.some(q => q.includes('projet'))) {
-        patterns.push("Questions fréquentes sur les projets");
-      }
-      if (queries.some(q => q.includes('retard'))) {
-        patterns.push("Préoccupation pour les retards");
-      }
-      if (queries.some(q => q.includes('équipe'))) {
-        patterns.push("Gestion d'équipe");
-      }
-      return patterns;
-    },
-    {
-      operation: 'analyzeRecentPatterns',
-      service: 'ChatbotOrchestrationService',
-      metadata: {
-        userId,
-        userRole,
-        patternsFound: patterns.length
-      }
-    });
-      return [];
-    }
-  }
-  private generateConversationSummary(query: string, response: unknown, errorOccurred: boolean): string {
-    if (errorOccurred) {
-      return `Erreur lors du traitement de: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`;
-    }
-    return `Question: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`;
-  }
-  private generateImprovementSuggestions(request: ChatbotFeedbackRequest): string[] {
-    const suggestions: string[] = [];
-    if (request.rating <= 2) {
-      suggestions.push("Améliorer la précision des réponses");
-      suggestions.push("Réduire le temps de réponse");
-    }
-    if (request.feedbackType === "thumbs_down") {
-      suggestions.push("Revoir la pertinence des suggestions");
-      suggestions.push("Améliorer la compréhension du contexte");
-    }
-    if (request.categories?.includes("accuracy")) {
-      suggestions.push("Enrichir la base de connaissances métier");
-    }
-    return suggestions;
-  }
-  private generateThankYouMessage(feedbackType: string, rating: number): string {
-    if (rating >= 4) {
-      return "Merci pour votre retour positif ! Nous continuons à améliorer le chatbot pour mieux vous servir.";
-    }
-    return "Merci pour votre retour. Nous prenons en compte vos suggestions pour améliorer l'expérience.";
-  }
-  private generateUserFriendlyErrorMessage(errorType: string): string {
-    switch (errorType) {
-      case "rbac":
-        return "Vous n'avez pas les permissions nécessaires pour accéder à ces données.";
-      case "security":
-        return "Votre requête contient des éléments non autorisés pour des raisons de sécurité.";
-      case "timeout":
-        return "Votre requête a pris trop de temps à s'exécuter. Essayez de la simplifier.";
-      case "validation":
-        return "Votre requête n'est pas dans un format valide. Pouvez-vous la reformuler ?";
-      default:
-        return "Une erreur inattendue s'est produite. Veuillez réessayer ou contacter l'support.";
-    }
-  }
+  // Méthodes déplacées vers MessageHandler et ResponseBuilder
   private getPeriodStart(period: string): Date {
     const now = new Date();
     switch (period) {
@@ -2028,182 +1809,61 @@ export class ChatbotOrchestrationService {
    * Propose une action sécurisée basée sur une intention détectée
    */
   async proposeAction(request: ProposeActionRequest): Promise<ProposeActionResponse> {
-    return withErrorHandling(
-    async () => {
-      logger.info('Proposition d\'action', { metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'proposeAction',
-          actionOperation: request.operation,
-          entity: request.entity,
-          userId: request.userId
-        } });
-      const response = await this.actionExecutionService.proposeAction(request);
-      // Logging pour métriques chatbot
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "propose-action",
-        0, // Le timing sera géré par ActionExecutionService
-        response.success,
-        0
-      );
-      return response;
-    },
-    {
-      operation: 'constructor',
-      service: 'ChatbotOrchestrationService',
-      metadata: { } });
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "propose-action",
-        0,
-        false,
-        0
-      );
-      return {
-        success: false,
-        confirmationRequired: false,
-        riskLevel: 'high',
-        error: {
-          type: 'business_rule',
-          message: error instanceof Error ? error.message : 'Erreur inconnue'
-        });
-      };
-    }
+    const response = await this.actionOrchestrator.proposeAction(request);
+    await this.logUsageMetrics(
+      request.userId,
+      request.userRole,
+      "propose-action",
+      0,
+      response.success,
+      0
+    );
+    return response;
   }
   /**
    * Exécute une action après confirmation utilisateur
    */
   async executeAction(request: ExecuteActionRequest): Promise<ExecuteActionResponse> {
-    return withErrorHandling(
-    async () => {
-      logger.info('Exécution d\'action', { metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'executeAction',
-          actionId: request.actionId,
-          userId: request.userId
-        } });
-      const response = await this.actionExecutionService.executeAction(request);
-      // Logging pour métriques chatbot
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "execute-action",
-        response.executionTime || 0,
-        response.success,
-        0
-      );
-      return response;
-    },
-    {
-      operation: 'constructor',
-      service: 'ChatbotOrchestrationService',
-      metadata: { } });
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "execute-action",
-        0,
-        false,
-        0
-      );
-      return {
-        success: false,
-        actionId: request.actionId,
-        error: {
-          type: 'execution',
-          message: error instanceof Error ? error.message : 'Erreur inconnue'
-        });
-      };
-    }
+    const response = await this.actionOrchestrator.executeAction(request);
+    await this.logUsageMetrics(
+      request.userId,
+      request.userRole,
+      "execute-action",
+      response.executionTime || 0,
+      response.success,
+      0
+    );
+    return response;
   }
   /**
    * Récupère l'historique des actions d'un utilisateur
    */
   async getActionHistory(request: ActionHistoryRequest): Promise<ActionHistoryResponse> {
-    return withErrorHandling(
-    async () => {
-      logger.info('Récupération historique actions', { metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'getActionHistory',
-          userId: request.userId || 'all'
-        } });
-      const response = await this.actionExecutionService.getActionHistory(request);
-      // Logging pour métriques chatbot
-      await this.logUsageMetrics(
-        request.userId || "system",
-        "system",
-        "action-history",
-        0,
-        response.success,
-        0
-      );
-      return response;
-    },
-    {
-      operation: 'proposeAction',
-      service: 'ChatbotOrchestrationService',
-      metadata: {
-        userId: request.userId,
-        userRole: request.userRole,
-        operation: request.operation,
-        entity: request.entity
-      }
-    });
-      return {
-        success: false,
-        actions: [],
-        total: 0,
-        hasMore: false,
-        error: {
-          type: 'query',
-          message: error instanceof Error ? error.message : 'Erreur inconnue'
-        });
-      };
-    }
+    const response = await this.actionOrchestrator.getActionHistory(request);
+    await this.logUsageMetrics(
+      request.userId || "system",
+      "system",
+      "action-history",
+      0,
+      response.success,
+      0
+    );
+    return response;
   }
   /**
    * Met à jour une confirmation d'action
    */
   async updateActionConfirmation(request: UpdateConfirmationRequest & { userId: string; userRole: string }): Promise<{ success: boolean; error?: unknown}> {
-    return withErrorHandling(
-    async () => {
-      logger.info('Mise à jour confirmation', { metadata: {
-          service: 'ChatbotOrchestrationService',
-          operation: 'updateConfirmation',
-          confirmationId: request.confirmationId,
-          userId: request.userId
-        } });
-      const response = await this.actionExecutionService.updateConfirmation(request);
-      // Logging pour métriques chatbot
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "update-confirmation",
-        0,
-        true,
-        0
-      );
-      return response;
-    },
-    {
-      operation: 'constructor',
-      service: 'ChatbotOrchestrationService',
-      metadata: { } });
-      await this.logUsageMetrics(
-        request.userId,
-        request.userRole,
-        "update-confirmation",
-        0,
-        false,
-        0
-      );
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erreur inconnue'
-      };
-    });
+    const response = await this.actionOrchestrator.updateActionConfirmation(request);
+    await this.logUsageMetrics(
+      request.userId,
+      request.userRole,
+      "update-confirmation",
+      0,
+      true,
+      0
+    );
+    return response;
   }
   // ========================================
   // MÉTHODES UTILITAIRES POUR ACTIONS
@@ -2219,26 +1879,22 @@ export class ChatbotOrchestrationService {
     userRole: string
   ): ChatbotQueryResponse {
     if (!actionProposal.success) {
-      return this.createErrorResponse(
+        return this.responseBuilder.createErrorResponse(
+          conversationId,
+          originalQuery,
+          actionProposal.error?.type || "action_error",
+          actionProposal.error?.message || "Erreur lors de la proposition d'action",
+          this.responseBuilder.generateUserFriendlyErrorMessage(actionProposal.error?.type || "unknown")
+        );
+      }
+      
+      return this.responseBuilder.createActionProposalResponse(
         conversationId,
         originalQuery,
-        actionProposal.error?.type || "action_error",
-        actionProposal.error?.message || "Erreur lors de la proposition d'action",
-        this.generateActionErrorMessage(actionProposal.error?.type || "unknown")
+        actionProposal,
+        actionIntention,
+        userRole
       );
-    }
-    // Générer une explication conversationnelle pour l'action proposée
-    const explanation = this.generateActionExplanation(
-      actionIntention,
-      actionProposal,
-      userRole
-    );
-    // Générer des suggestions liées aux actions
-    const suggestions = this.generateActionSuggestions(
-      actionIntention.actionType,
-      actionIntention.entity,
-      userRole
-    );
     return {
       success: true,
       conversation_id: conversationId,
@@ -2390,33 +2046,7 @@ export class ChatbotOrchestrationService {
     };
     return displays[riskLevel] || riskLevel;
   }
-  /**
-   * Détecte les zones de focus dans une requête
-   * @param query La requête en langage naturel
-   * @returns Les zones de focus identifiées
-   */
-  private detectFocusAreas(query: string): ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] {
-    const focusAreas: ("planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes")[] = [];
-    const queryLower = query.toLowerCase();
-    // Mapping des patterns vers les focus areas
-    const focusPatterns: Record<"planning" | "finances" | "ressources" | "qualite" | "performance" | "alertes", RegExp[]> = {
-      'finances': [
-        /montant|prix|coût|budget|factur|chiffr|rentab|marge|ca\b/,
-        /recette|dépense|bénéfice|profit/
-      ],
-      'planning': [
-        /date|période|temps|délai|retard|planning|échéance/,
-        /aujourd|hier|demain|semaine|mois|année|trimestre/
-      ],
-      'performance': [
-        /kpi|indicateur|performance|métrique|taux|ratio/,
-        /conversion|productivité|efficacité|rendement/,
-        /compar|vs\b|versus|évolution|progression|tendance/,
-        /différence|écart|variation/,
-        /total|somme|moyenne|compte|nombre|statistique/,
-        /groupé|par\s+\w+|répartition|distribution/
-      ],
-      'ressources': [
+  // detectFocusAreas déplacé vers MessageHandler
         /équipe|ressource|personne|be\b|bureau\s+d'étude/,
         /charge|capacité|disponibilité|occupation/
       ],

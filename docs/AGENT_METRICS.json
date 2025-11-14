@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-29T00:00:00Z",
+  "metrics": {
+    "byRole": {
+      "architect": {
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "failedTasks": 0,
+        "averageLatency": 0,
+        "averageEfficiency": 0,
+        "successRate": 0
+      },
+      "developer": {
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "failedTasks": 0,
+        "averageLatency": 0,
+        "averageEfficiency": 0,
+        "successRate": 0
+      },
+      "tester": {
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "failedTasks": 0,
+        "averageLatency": 0,
+        "averageEfficiency": 0,
+        "successRate": 0
+      },
+      "analyst": {
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "failedTasks": 0,
+        "averageLatency": 0,
+        "averageEfficiency": 0,
+        "successRate": 0
+      },
+      "coordinator": {
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "failedTasks": 0,
+        "averageLatency": 0,
+        "averageEfficiency": 0,
+        "successRate": 0
+      }
+    },
+    "orchestration": {
+      "totalOrchestrations": 0,
+      "successfulOrchestrations": 0,
+      "failedOrchestrations": 0,
+      "averageCoordinationTime": 0,
+      "averageParallelizationRate": 0
+    },
+    "communication": {
+      "totalMessages": 0,
+      "averageLatency": 0,
+      "timeoutRate": 0,
+      "errorRate": 0
+    }
+  },
+  "metadata": {
+    "collectionStartTime": null,
+    "lastCollectionTime": null,
+    "collectionInterval": 60000
+  }
+}
+

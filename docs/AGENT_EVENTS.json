@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-29T00:00:00Z",
+  "events": [],
+  "patterns": {},
+  "metadata": {
+    "totalEvents": 0,
+    "eventsByType": {},
+    "eventsByRole": {},
+    "eventsBySeverity": {},
+    "lastEventId": null,
+    "lastEventTimestamp": null
+  }
+}
+

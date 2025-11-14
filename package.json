@@ -48,6 +48,8 @@
     "cleanup:root": "tsx scripts/cleanup-root.ts",
     "validate:cursor-rules": "tsx scripts/validate-cursor-rules.ts",
     "test:e2e:new-workflows": "tsx scripts/run-new-workflows-e2e.ts",
+    "sync:cursor-conversations": "tsx scripts/sync-cursor-conversations.ts",
+    "migrate:cursor-conversations": "tsx scripts/apply-cursor-conversations-migration.ts",
     "test:e2e:all": "playwright test --project=new-workflows",
     "check:updates": "tsx scripts/check-updates.ts"
   },
@@ -179,10 +181,12 @@
     "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.1",
     "@replit/vite-plugin-cartographer": "^0.4.3",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.17",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5.0.5",
     "@types/express-session": "^1.18.2",
@@ -194,6 +198,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.22",
+    "better-sqlite3": "^11.8.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.6",
     "esbuild": "^0.27.0",

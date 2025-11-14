@@ -1,204 +1,101 @@
 /**
  * HR Module Routes
- * 
- * This module handles all HR-related routes including:
- * - Employee label assignments management
+ *
+ * Gestion des labels employés (lecture, création, suppression).
  */
 
 import { Router } from 'express';
-import { withErrorHandling } from './utils/error-handler';
 import type { Request, Response } from 'express';
-import { isAuthenticated } from '../../replitAuth';
+import { z } from 'zod';
 import { asyncHandler, sendSuccess, createError } from '../../middleware/errorHandler';
-import { validateBody, validateParams, commonParamSchemas } from '../../middleware/validation';
+import { isAuthenticated } from '../../replitAuth';
+import { validateBody, validateParams } from '../../middleware/validation';
 import { rateLimits } from '../../middleware/rate-limiter';
 import { logger } from '../../utils/logger';
 import type { IStorage } from '../../storage-poc';
 import type { EventBus } from '../../eventBus';
-import { z } from 'zod';
 
-// ========================================
-// VALIDATION SCHEMAS
-// ========================================
-
-const employeeLabelAssignmentSchema = z.object({
-  labelId: z.string().uuid(),
-  assignedBy: z.string().uuid().optional()
-});
-
-const employeeLabelParamsSchema = z.object({
-  userId: z.string().uuid(),
-  labelId: z.string().uuid()
-});
-
-// ========================================
-// HR ROUTER FACTORY
-// ========================================
+const employeeIdParams = z.object({ id: z.string().uuid() });
+const employeeLabelParams = z.object({ userId: z.string().uuid(), labelId: z.string().uuid() });
+const assignLabelBody = z.object({ labelId: z.string().uuid(), assignedBy: z.string().uuid().optional() });
 
 export function createHrRouter(storage: IStorage, eventBus: EventBus): Router {
   const router = Router();
 
-  // ========================================
-  // EMPLOYEE LABELS ROUTES
-  // ========================================
-
-  /**
-   * GET /api/employees/:id/labels
-   * Get all label assignments for an employee
-   */
-  router.get('/api/employees/:id/labels',
+  router.get(
+    '/api/employees/:id/labels',
     isAuthenticated,
     rateLimits.general,
-    validateParams(commonParamSchemas.id),
+    validateParams(employeeIdParams),
     asyncHandler(async (req: Request, res: Response) => {
       const { id: userId } = req.params;
-      
-      logger.info('[HR] Récupération labels employé', { metadata: {
 
-          route: '/api/employees/:id/labels',
-          method: 'GET',
-          employeeId: userId,
-          userId: req.user?.id
-      }
-    });
+      logger.info('[HR] Récupération labels employé', {
+        metadata: { route: '/api/employees/:id/labels', method: 'GET', employeeId: userId, userId: (req as any).user?.id },
+      });
 
-      return withErrorHandling(
-    async () => {
+      const assignments = await storage.getEmployeeLabelAssignments(userId);
+      sendSuccess(res, assignments);
+    })
+  );
 
-        const labelAssignments = await storage.getEmployeeLabelAssignments(userId);
-        sendSuccess(res, labelAssignments);
-      
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la récupération des labels employé');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
-
-  /**
-   * POST /api/employees/:id/labels
-   * Assign a label to an employee
-   */
-  router.post('/api/employees/:id/labels',
+  router.post(
+    '/api/employees/:id/labels',
     isAuthenticated,
     rateLimits.creation,
-    validateParams(commonParamSchemas.id),
-    validateBody(employeeLabelAssignmentSchema),
+    validateParams(employeeIdParams),
+    validateBody(assignLabelBody),
     asyncHandler(async (req: Request, res: Response) => {
       const { id: userId } = req.params;
       const { labelId, assignedBy } = req.body;
-      
-      logger.info('[HR] Assignation label employé', { metadata: {
 
-          route: '/api/employees/:id/labels',
-          method: 'POST',
-          employeeId: userId,
-          labelId,
-          userId: req.user?.id
-      }
-    });
+      logger.info('[HR] Assignation label employé', {
+        metadata: { route: '/api/employees/:id/labels', method: 'POST', employeeId: userId, labelId, userId: (req as any).user?.id },
+      });
 
-      return withErrorHandling(
-    async () => {
-
-        const assignment = await storage.createEmployeeLabelAssignment({
-          userId,
-          labelId,
-          assignedBy
-        });
-        
+      try {
+        const assignment = await storage.createEmployeeLabelAssignment({ userId, labelId, assignedBy });
         eventBus.emit('employee:label-assigned', {
           userId,
           labelId,
-          assignedBy: req.user?.id
+          assignedBy: (req as any).user?.id,
         });
-        
-        sendSuccess(res, assignment, 'Label employé assigné avec succès');
-      
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de l\'assignation du label employé');
-            }
+        sendSuccess(res, assignment, "Label employé assigné avec succès");
+      } catch (error) {
+        logger.error('[HR] Erreur lors de l\'assignation du label', { metadata: { employeeId: userId, labelId, error } });
+        throw createError.database("Erreur lors de l'assignation du label employé");
+      }
+    })
+  );
 
-                      }
-
-
-                                }
-
-
-                              }));
-
-  /**
-   * DELETE /api/employees/:userId/labels/:labelId
-   * Remove a label assignment from an employee
-   */
-  router.delete('/api/employees/:userId/labels/:labelId',
+  router.delete(
+    '/api/employees/:userId/labels/:labelId',
     isAuthenticated,
     rateLimits.general,
-    validateParams(employeeLabelParamsSchema),
+    validateParams(employeeLabelParams),
     asyncHandler(async (req: Request, res: Response) => {
       const { userId, labelId } = req.params;
-      
-      logger.info('[HR] Suppression label employé', { metadata: {
 
-          route: '/api/employees/:userId/labels/:labelId',
-          method: 'DELETE',
-          targetUserId: userId,
-          labelId,
-          userId: req.user?.id
-      }
-    });
+      logger.info('[HR] Suppression label employé', {
+        metadata: { route: '/api/employees/:userId/labels/:labelId', method: 'DELETE', employeeId: userId, labelId, userId: (req as any).user?.id },
+      });
 
-      return withErrorHandling(
-    async () => {
-
+      try {
         await storage.deleteEmployeeLabelAssignment(labelId);
-        
         eventBus.emit('employee:label-removed', {
           userId,
           labelId,
-          removedBy: req.user?.id
+          removedBy: (req as any).user?.id,
         });
-        
-        sendSuccess(res, null, 'Label employé supprimé avec succès');
-      
-    },
-    {
-      operation: 'object',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la suppression du label employé');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
-
-  logger.info('[HR] Routes HR montées avec succès', { metadata: {
-
-      module: 'HR',
-      routes: 3
+        sendSuccess(res, null, "Label employé supprimé avec succès");
+      } catch (error) {
+        logger.error('[HR] Erreur lors de la suppression du label', { metadata: { employeeId: userId, labelId, error } });
+        throw createError.database("Erreur lors de la suppression du label employé");
       }
-    });
+    })
+  );
+
+  logger.info('[HR] Routes HR montées avec succès', { metadata: { module: 'HR', routes: 3 } });
 
   return router;
 }

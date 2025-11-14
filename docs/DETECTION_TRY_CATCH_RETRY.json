@@ -1,0 +1,1240 @@
+[
+  {
+    "file": "server/middleware/db-error-handler.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 308,
+        "code": "try {       await handler(req, res, next);     } catch (error) {       // Check if it's a database-related error       const errorInfo = extractErrorInfo(error);              if (errorInfo.code || err...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/middleware/validation.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 65,
+        "code": "try {       const dataToValidate = req[source];              // Configuration par défaut       const opts = {         strict: false,         stripUnknown: true,         ...options       };        // A...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 210,
+        "code": "try {         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects         const validatedBody = validations.body.parse(req.body);         deepMutate(req.body as Record<string, unknown>...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 229,
+        "code": "try {         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects         const validatedParams = validations.params.parse(req.params);         deepMutate(req.params as Record<string, ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 248,
+        "code": "try {         // Express 5 SOLUTION DÉFINITIVE: Deep mutation pour nested objects         const validatedQuery = validations.query.parse(req.query);         deepMutate(req.query as Record<string, unkn...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/modules/documents/coreRoutes.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 193,
+        "code": "try {         const regex = new RegExp(pattern, 'i');         ocrService.addCustomPattern(field, regex);                  eventBus.emit('ocr:pattern:added', {           field,           userId: req.us...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/modules/system/routes.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 41,
+        "code": "try {     const start = Date.now();     await db.execute(sql`SELECT 1`);     return {       status: 'healthy',       responseTime: Date.now() - start     };   } catch (error) {     return {       stat...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 70,
+        "code": "try {     const start = Date.now();     const mondayBreaker = circuitBreakerManager.getOrCreate('monday');          await mondayBreaker.execute(async () => {       return true;     });          return...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 97,
+        "code": "try {     const start = Date.now();     const openaiBreaker = circuitBreakerManager.getOrCreate('openai');          await openaiBreaker.execute(async () => {       return true;     });          return...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 124,
+        "code": "try {     const start = Date.now();     const sendgridBreaker = circuitBreakerManager.getOrCreate('sendgrid');          await sendgridBreaker.execute(async () => {       return true;     });          ...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/scripts/test-kpi-optimization.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 26,
+        "code": "try {     logger.info('📊 Fetching consolidated KPIs...');     logger.info(`   Period: ${fromDate.toISOString().split('T')[0]} to ${toDate.toISOString().split('T')[0]}`);     logger.info(`   Granulari...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/seeders/mondaySeed.ts",
+    "tryCatchBlocks": [],
+    "retryBlocks": [
+      {
+        "line": 348,
+        "code": "for (let i = 0; i < 5; i++) {         const company = this.generator.selectFromArray(CLIENT_COMPANIES, `company-${i}`);         const city = this.generator.selectFromArray(NORD_CITIES, `city-${i}`);  ...",
+        "canReplace": false
+      }
+    ]
+  },
+  {
+    "file": "server/services/CacheService.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 195,
+        "code": "try {       const value = await this.adapter.get<T>(key);              if (value !== null) {         this.hits++;         logger.debug('[CacheService] Cache hit', { metadata: {             service: 'C...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 242,
+        "code": "try {       await this.adapter.set(key, value, ttlSeconds);              logger.debug('[CacheService] Valeur mise en cache', { metadata: {           service: 'CacheService',           operation: 'set'...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 268,
+        "code": "try {       await this.adapter.del(key);              logger.info('[CacheService] Clé invalidée', { metadata: {           service: 'CacheService',           operation: 'invalidate',           key     ...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 293,
+        "code": "try {       const keys = await this.adapter.keys();       const regex = new RegExp(pattern.replace(/\\*/g, '.*'));              const matchingKeys = keys.filter(key => regex.test(key));              fo...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 326,
+        "code": "try {       await this.adapter.flush();       this.hits = 0;       this.misses = 0;              logger.info('[CacheService] Cache complètement vidé', { metadata: {           service: 'CacheService', ...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 351,
+        "code": "try {       const size = await this.adapter.size();       const keys = await this.adapter.keys();       const total = this.hits + this.misses;       const hitRate = total > 0 ? (this.hits / total) * 1...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 503,
+        "code": "try {       logger.info('[CacheService] Creating RedisCacheAdapter', { metadata: {           service: 'CacheService',           operation: 'createCacheAdapter',           adapter: 'Redis',           r...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/services/MondayProductionMigrationService.ts",
+    "tryCatchBlocks": [],
+    "retryBlocks": [
+      {
+        "line": 287,
+        "code": "for (let i = 0; i < count; i++) {       // Distribution clients selon patterns analysés       const clientName = this.weightedRandomChoice(JLM_PRODUCTION_CLIENTS, [0.3, 0.25, 0.2, 0.1, 0.08, 0.04, 0.0...",
+        "canReplace": false
+      }
+    ]
+  },
+  {
+    "file": "server/services/agent/AgentMetricsService.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 82,
+        "code": "try {       if (!existsSync(this.metricsDir)) {         await mkdir(this.metricsDir, { recursive: true });       }        // Initialiser fichiers si n'existent pas       if (!existsSync(this.metricsFi...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 113,
+        "code": "try {       await this.initialize();        const existing = await this.loadMetrics();       existing.push(metrics);        await writeFile(this.metricsFile, JSON.stringify(existing, null, 2));     } ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 129,
+        "code": "try {       if (!existsSync(this.metricsFile)) {         return [];       }        const content = await readFile(this.metricsFile, 'utf-8');       return JSON.parse(content) as TaskMetrics[];     } c...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 150,
+        "code": "try {       await this.initialize();        const usage = await this.loadRuleUsage();        if (!usage.rules[ruleName]) {         usage.rules[ruleName] = {           priority,           totalLoads: 0...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 197,
+        "code": "try {       if (!existsSync(this.ruleUsageFile)) {         return {           rules: {},           summary: {             totalRules: 0,             rulesWithHighUsage: 0,             rulesWithLowUsag...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/services/monday/extractors/AOBaseExtractor.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 29,
+        "code": "try {         let value: unknown;         const fieldName = mapping.saxiumField as keyof InsertAo;                  // Cas spécial : 'name' est un champ direct de l'item, pas dans column_values       ...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/services/pdfGeneratorService.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 48,
+        "code": "try {       // Démarrage de Puppeteer avec configuration optimisée       if (!this.browser) {         this.browser = await puppeteer.launch({           headless: true,           args: [             '-...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 123,
+        "code": "try {       // Création d'une nouvelle page       page = await this.browser.newPage();              // Configuration de la page       await page.setViewport({         width: 1200,         height: 1600...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 203,
+        "code": "try {           await page.close();         } catch (error) {           logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {               service: 'PDFGeneratorSe...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 227,
+        "code": "try {       const html = this.template(data);       logger.info('DPGF preview HTML generated successfully', { metadata: {           service: 'PDFGeneratorService',           operation: 'generateDpgfPr...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 256,
+        "code": "try {         await this.browser.close();         this.browser = null;         logger.info('Puppeteer browser closed', { metadata: {             service: 'PDFGeneratorService',                   opera...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 434,
+        "code": "try {       const engine = this.getTemplateEngine();        // Load template if path provided       let template: PDFTemplate;       if (typeof templateOrPath === 'string') {         const content = a...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 497,
+        "code": "try {       // Select template path       const templatePath =          templateType === 'basic' ? TEMPLATES.LDM.BASIC :         templateType === 'complex' ? TEMPLATES.LDM.COMPLEX :         TEMPLATES....",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 533,
+        "code": "try {       const engine = this.getTemplateEngine();        let template: PDFTemplate;       if (typeof templateOrPath === 'string') {         const content = await loadTemplate(templateOrPath);      ...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 604,
+        "code": "try {       page = await this.browser.newPage();        await page.setViewport({         width: 1200,         height: 1600,         deviceScaleFactor: options?.scale || 1,       });        await page....",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 665,
+        "code": "try {           await page.close();         } catch (closeError) {           logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {               service: 'PDFGenera...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/storage/analytics/KpiRepository.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 169,
+        "code": "try {       // Single optimized query with CTEs       // Note: Using literal SQL for INTERVAL to avoid type inference issues       const intervalValue = granularity === 'week' ? \"'1 week'\" : \"'1 day'\"...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/storage/facade/StorageFacade.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 176,
+        "code": "try {       const users = await this.userRepository.getUsers();       this.facadeLogger.info('Utilisateurs récupérés via UserRepository', {               metadata: {           count: users.length,    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 203,
+        "code": "try {       const user = await this.userRepository.getUser(id);       if (user) {         this.facadeLogger.info('Utilisateur récupéré via UserRepository', {                 metadata: {           id, ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 235,
+        "code": "try {       const resources = await this.userRepository.getTeamResources(projectId);       this.facadeLogger.info('Ressources d\\'équipe récupérées via UserRepository', {         metadata: {           ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 264,
+        "code": "try {       const created = await this.userRepository.createTeamResource(resource);       this.facadeLogger.info('Ressource d\\'équipe créée via UserRepository', {               metadata: {           i...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 292,
+        "code": "try {       const updated = await this.userRepository.updateTeamResource(id, resource);       this.facadeLogger.info('Ressource d\\'équipe mise à jour via UserRepository', {               metadata: {  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 322,
+        "code": "try {       const workload = await this.userRepository.getBeWorkload(weekNumber, year);       this.facadeLogger.info('Charge BE récupérée via UserRepository', {               metadata: {           cou...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 353,
+        "code": "try {       const result = await this.userRepository.createOrUpdateBeWorkload(workload);       this.facadeLogger.info('Charge BE créée/mise à jour via UserRepository', {               metadata: {     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 385,
+        "code": "try {       const labels = await this.userRepository.getEmployeeLabels(category);       this.facadeLogger.info('Labels employés récupérés via UserRepository', {               metadata: {           cou...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 414,
+        "code": "try {       const created = await this.userRepository.createEmployeeLabel(label);       this.facadeLogger.info('Label employé créé via UserRepository', {               metadata: {           id: create...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 443,
+        "code": "try {       const updated = await this.userRepository.updateEmployeeLabel(id, label);       this.facadeLogger.info('Label employé mis à jour via UserRepository', {               metadata: {           ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 471,
+        "code": "try {       await this.userRepository.deleteEmployeeLabel(id);       this.facadeLogger.info('Label employé supprimé via UserRepository', {               metadata: {           id,           module: 'St...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 500,
+        "code": "try {       const assignments = await this.userRepository.getEmployeeLabelAssignments(userId);       this.facadeLogger.info('Assignations de labels employés récupérées via UserRepository', {          ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 529,
+        "code": "try {       const created = await this.userRepository.createEmployeeLabelAssignment(assignment);       this.facadeLogger.info('Assignation de label employé créée via UserRepository', {               m...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 558,
+        "code": "try {       await this.userRepository.deleteEmployeeLabelAssignment(id);       this.facadeLogger.info('Assignation de label employé supprimée via UserRepository', {               metadata: {          ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 586,
+        "code": "try {       const user = await this.userRepository.getUserByEmail(email);       if (user) {         this.facadeLogger.info('Utilisateur récupéré via UserRepository', {                 metadata: {     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 616,
+        "code": "try {       const user = await this.userRepository.getUserByUsername(username);       if (user) {         this.facadeLogger.info('Utilisateur récupéré via UserRepository', {                 metadata: ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 646,
+        "code": "try {       const user = await this.userRepository.getUserByMicrosoftId(microsoftId);       if (user) {         this.facadeLogger.info('Utilisateur récupéré via UserRepository', {                 meta...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 676,
+        "code": "try {       const user = await this.userRepository.createUser(userData);       this.facadeLogger.info('Utilisateur créé via UserRepository', {               metadata: {           id: user.id,         ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 703,
+        "code": "try {       const user = await this.userRepository.upsertUser(userData);       this.facadeLogger.info('Utilisateur upserté via UserRepository', {               metadata: {           id: user.id,      ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 736,
+        "code": "try {       const batteries = await this.configurationRepository.getEquipmentBatteries(projectId);       this.facadeLogger.info('Batteries d\\'équipement récupérées via ConfigurationRepository', {     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 765,
+        "code": "try {       const battery = await this.configurationRepository.getEquipmentBattery(id);       if (battery) {         this.facadeLogger.info('Batterie d\\'équipement récupérée via ConfigurationRepositor...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 795,
+        "code": "try {       const created = await this.configurationRepository.createEquipmentBattery(battery);       this.facadeLogger.info('Batterie d\\'équipement créée via ConfigurationRepository', {              ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 823,
+        "code": "try {       const updated = await this.configurationRepository.updateEquipmentBattery(id, battery);       this.facadeLogger.info('Batterie d\\'équipement mise à jour via ConfigurationRepository', {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 851,
+        "code": "try {       await this.configurationRepository.deleteEquipmentBattery(id);       this.facadeLogger.info('Batterie d\\'équipement supprimée via ConfigurationRepository', {               metadata: {     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 880,
+        "code": "try {       const targets = await this.configurationRepository.getMarginTargets(projectId);       this.facadeLogger.info('Objectifs de marge récupérés via ConfigurationRepository', {               met...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 909,
+        "code": "try {       const target = await this.configurationRepository.getMarginTarget(id);       if (target) {         this.facadeLogger.info('Objectif de marge récupéré via ConfigurationRepository', {       ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 939,
+        "code": "try {       const created = await this.configurationRepository.createMarginTarget(target);       this.facadeLogger.info('Objectif de marge créé via ConfigurationRepository', {               metadata: ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 967,
+        "code": "try {       const updated = await this.configurationRepository.updateMarginTarget(id, target);       this.facadeLogger.info('Objectif de marge mis à jour via ConfigurationRepository', {               ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 995,
+        "code": "try {       await this.configurationRepository.deleteMarginTarget(id);       this.facadeLogger.info('Objectif de marge supprimé via ConfigurationRepository', {               metadata: {           id, ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1028,
+        "code": "try {       const contacts = await this.contactsRepository.getAoContacts(aoId, tx);       this.facadeLogger.info('Contacts AO récupérés via ContactsRepository', {               metadata: {           c...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1057,
+        "code": "try {       const created = await this.contactsRepository.createAoContact(contact, tx);       this.facadeLogger.info('Contact AO créé via ContactsRepository', {               metadata: {           id:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1085,
+        "code": "try {       await this.contactsRepository.deleteAoContact(id);       this.facadeLogger.info('Contact AO supprimé via ContactsRepository', {               metadata: {           id,           module: 'S...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1114,
+        "code": "try {       const contacts = await this.contactsRepository.getProjectContacts(projectId);       this.facadeLogger.info('Contacts projet récupérés via ContactsRepository', {               metadata: {  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1143,
+        "code": "try {       const created = await this.contactsRepository.createProjectContact(contact);       this.facadeLogger.info('Contact projet créé via ContactsRepository', {               metadata: {         ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1171,
+        "code": "try {       await this.contactsRepository.deleteProjectContact(id);       this.facadeLogger.info('Contact projet supprimé via ContactsRepository', {               metadata: {           id,           m...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1204,
+        "code": "try {       const interventions = await this.savRepository.getSavInterventions(projectId);       this.facadeLogger.info('Interventions SAV récupérées via SavRepository', {               metadata: {   ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1233,
+        "code": "try {       const intervention = await this.savRepository.getSavIntervention(id);       if (intervention) {         this.facadeLogger.info('Intervention SAV récupérée via SavRepository', {            ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1263,
+        "code": "try {       const created = await this.savRepository.createSavIntervention(intervention);       this.facadeLogger.info('Intervention SAV créée via SavRepository', {               metadata: {          ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1291,
+        "code": "try {       const updated = await this.savRepository.updateSavIntervention(id, intervention);       this.facadeLogger.info('Intervention SAV mise à jour via SavRepository', {               metadata: {...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1319,
+        "code": "try {       await this.savRepository.deleteSavIntervention(id);       this.facadeLogger.info('Intervention SAV supprimée via SavRepository', {               metadata: {           id,           module:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1350,
+        "code": "try {       const aos = await this.aoRepository.findAll();       this.facadeLogger.info('AOs récupérés via AoRepository', {               metadata: {           count: aos.length,           module: 'St...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1382,
+        "code": "try {       const filters: AoFilters = {};       if (search) filters.search = search;       if (status) filters.status = status;        const result = await this.aoRepository.findPaginated(         fi...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1417,
+        "code": "try {       const ao = await this.aoRepository.findById(id, tx);       if (ao) {         this.facadeLogger.info('AO récupéré via AoRepository', {                 metadata: {           aoId: id,       ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1447,
+        "code": "try {       const ao = await this.aoRepository.findByMondayId(mondayItemId, tx);       if (ao) {         this.facadeLogger.info('AO récupéré par Monday ID via AoRepository', {                 metadata...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1478,
+        "code": "try {       const created = await this.aoRepository.create(ao, tx);       this.facadeLogger.info('AO créé via AoRepository', {               metadata: {           aoId: created.id,           module: '...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1505,
+        "code": "try {       const updated = await this.aoRepository.update(id, ao, tx);       this.facadeLogger.info('AO mis à jour via AoRepository', {               metadata: {           aoId: id,           module:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1533,
+        "code": "try {       await this.aoRepository.delete(id, tx);       this.facadeLogger.info('AO supprimé via AoRepository', {               metadata: {           aoId: id,           module: 'StorageFacade',     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1564,
+        "code": "try {       const filters: OfferFilters = {};       if (search) filters.search = search;       if (status) filters.status = status;        const offers = await this.offerRepository.findAll(filters);  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1603,
+        "code": "try {       const filters: OfferFilters = {};       if (search) filters.search = search;       if (status) filters.status = status;        const result = await this.offerRepository.findPaginated(     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1662,
+        "code": "try {       const offer = await this.offerRepository.findById(id);              this.facadeLogger.info('[StorageFacade] getOffer - Using OfferRepository', { metadata: {           module: 'StorageFacad...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1699,
+        "code": "try {       const created = await this.offerRepository.create(offer);       this.facadeLogger.info('Offre créée via OfferRepository', {               metadata: {           offerId: created.id,        ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1726,
+        "code": "try {       const updated = await this.offerRepository.update(id, offer);       this.facadeLogger.info('Offre mise à jour via OfferRepository', {               metadata: {           offerId: id,      ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1754,
+        "code": "try {       await this.offerRepository.delete(id);       this.facadeLogger.info('Offre supprimée via OfferRepository', {               metadata: {           offerId: id,           module: 'StorageFaca...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1785,
+        "code": "try {       const filters: Record<string, unknown> = {};       if (search) filters.search = search;       if (status) filters.status = status;              const projects = await this.productionReposi...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1818,
+        "code": "try {       const filters: Record<string, unknown> = {};       if (search) filters.search = search;       if (status) filters.status = status;              const result = await this.productionReposito...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1857,
+        "code": "try {       const project = await this.productionRepository.findById(id);              this.facadeLogger.info('[StorageFacade] getProject - Using ProductionRepository', {               metadata: {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1888,
+        "code": "try {       const project = await this.productionRepository.findByMondayId(mondayItemId, tx);       if (project) {         this.facadeLogger.info('Projet récupéré par Monday ID via ProductionRepositor...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1921,
+        "code": "try {       const created = await this.productionRepository.create(project);              this.facadeLogger.info('[StorageFacade] createProject - Using ProductionRepository', {               metadata:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1950,
+        "code": "try {       const updated = await this.productionRepository.update(id, project);              this.facadeLogger.info('[StorageFacade] updateProject - Using ProductionRepository', {               metad...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 1980,
+        "code": "try {       await this.productionRepository.updateMondayId(projectId, mondayId);       this.facadeLogger.info('Monday ID projet mis à jour via ProductionRepository', {               metadata: {       ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2009,
+        "code": "try {       await this.aoRepository.updateMondayId(aoId, mondayId);       this.facadeLogger.info('Monday ID AO mis à jour via AoRepository', {               metadata: {           aoId,           monda...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2051,
+        "code": "try {       const filters: Record<string, unknown> = {};       if (search) filters.search = search;       if (status) filters.status = status;              const suppliers = await this.suppliersReposi...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2084,
+        "code": "try {       const supplier = await this.suppliersRepository.findById(id);              this.facadeLogger.info('[StorageFacade] getSupplier - Using SuppliersRepository', {               metadata: {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2115,
+        "code": "try {       const supplier = await this.suppliersRepository.findByMondayId(mondayItemId, tx);       if (supplier) {         this.facadeLogger.info('Fournisseur récupéré par Monday ID via SuppliersRepo...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2146,
+        "code": "try {       const created = await this.suppliersRepository.create(supplier);              this.facadeLogger.info('[StorageFacade] createSupplier - Using SuppliersRepository', {               metadata:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2175,
+        "code": "try {       const updated = await this.suppliersRepository.update(id, supplier);              this.facadeLogger.info('[StorageFacade] updateSupplier - Using SuppliersRepository', {               metad...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2205,
+        "code": "try {       await this.suppliersRepository.delete(id);              this.facadeLogger.info('[StorageFacade] deleteSupplier - Using SuppliersRepository', {               metadata: {           module: '...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2249,
+        "code": "try {       const elements = await this.chiffrageRepository.getChiffrageElementsByOffer(offerId);       this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {               m...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2278,
+        "code": "try {       const elements = await this.chiffrageRepository.getChiffrageElementsByLot(lotId);       this.facadeLogger.info('Chiffrage elements récupérés via ChiffrageRepository', {               metad...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2307,
+        "code": "try {       const created = await this.chiffrageRepository.createChiffrageElement(element);       this.facadeLogger.info('Chiffrage element créé via ChiffrageRepository', {               metadata: {  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2335,
+        "code": "try {       const updated = await this.chiffrageRepository.updateChiffrageElement(id, element);       this.facadeLogger.info('Chiffrage element mis à jour via ChiffrageRepository', {               met...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2363,
+        "code": "try {       await this.chiffrageRepository.deleteChiffrageElement(id);       this.facadeLogger.info('Chiffrage element supprimé via ChiffrageRepository', {               metadata: {           id,     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2390,
+        "code": "try {       const dpgf = await this.chiffrageRepository.getDpgfDocumentByOffer(offerId);       this.facadeLogger.info('DPGF document récupéré via ChiffrageRepository', {               metadata: {     ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2419,
+        "code": "try {       const created = await this.chiffrageRepository.createDpgfDocument(dpgf);       this.facadeLogger.info('DPGF document créé via ChiffrageRepository', {               metadata: {           id...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2447,
+        "code": "try {       const updated = await this.chiffrageRepository.updateDpgfDocument(id, dpgf);       this.facadeLogger.info('DPGF document mis à jour via ChiffrageRepository', {               metadata: {   ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2475,
+        "code": "try {       await this.chiffrageRepository.deleteDpgfDocument(id);       this.facadeLogger.info('DPGF document supprimé via ChiffrageRepository', {               metadata: {           id,           mo...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2537,
+        "code": "try {       const milestones = await this.chiffrageRepository.getValidationMilestones(offerId);       this.facadeLogger.info('Validation milestones récupérés via ChiffrageRepository', {               ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2566,
+        "code": "try {       const created = await this.chiffrageRepository.createValidationMilestone(milestone);       this.facadeLogger.info('Validation milestone créé via ChiffrageRepository', {               metad...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2594,
+        "code": "try {       const updated = await this.chiffrageRepository.updateValidationMilestone(id, milestone);       this.facadeLogger.info('Validation milestone mis à jour via ChiffrageRepository', {          ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2622,
+        "code": "try {       await this.chiffrageRepository.deleteValidationMilestone(id);       this.facadeLogger.info('Validation milestone supprimé via ChiffrageRepository', {               metadata: {           id...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2686,
+        "code": "try {       const rules = await this.dateIntelligenceRepository.getActiveRules(filters);       this.facadeLogger.info('Rules actives récupérées via DateIntelligenceRepository', {               metadat...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2715,
+        "code": "try {       const rules = await this.dateIntelligenceRepository.getAllRules();       this.facadeLogger.info('Toutes les règles récupérées via DateIntelligenceRepository', {               metadata: {  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2742,
+        "code": "try {       const rule = await this.dateIntelligenceRepository.getRule(id);       if (rule) {         this.facadeLogger.info('Règle récupérée via DateIntelligenceRepository', {                 metadat...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2772,
+        "code": "try {       const created = await this.dateIntelligenceRepository.createRule(data);       this.facadeLogger.info('Règle créée via DateIntelligenceRepository', {               metadata: {           id:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2800,
+        "code": "try {       const updated = await this.dateIntelligenceRepository.updateRule(id, data);       this.facadeLogger.info('Règle mise à jour via DateIntelligenceRepository', {               metadata: {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2828,
+        "code": "try {       await this.dateIntelligenceRepository.deleteRule(id);       this.facadeLogger.info('Règle supprimée via DateIntelligenceRepository', {               metadata: {           id,           mod...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2855,
+        "code": "try {       const alerts = await this.dateIntelligenceRepository.getDateAlerts(filters);       this.facadeLogger.info('Alertes de dates récupérées via DateIntelligenceRepository', {               meta...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2884,
+        "code": "try {       const alert = await this.dateIntelligenceRepository.getDateAlert(id);       if (alert) {         this.facadeLogger.info('Alerte de date récupérée via DateIntelligenceRepository', {        ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2914,
+        "code": "try {       const created = await this.dateIntelligenceRepository.createDateAlert(data);       this.facadeLogger.info('Alerte de date créée via DateIntelligenceRepository', {               metadata: {...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2942,
+        "code": "try {       const updated = await this.dateIntelligenceRepository.updateDateAlert(id, data);       this.facadeLogger.info('Alerte de date mise à jour via DateIntelligenceRepository', {               m...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2970,
+        "code": "try {       await this.dateIntelligenceRepository.deleteDateAlert(id);       this.facadeLogger.info('Alerte de date supprimée via DateIntelligenceRepository', {               metadata: {           id,...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 2997,
+        "code": "try {       const result = await this.dateIntelligenceRepository.acknowledgeAlert(id, userId);       this.facadeLogger.info('Alerte acquittée via DateIntelligenceRepository', {               metadata:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3027,
+        "code": "try {       const result = await this.dateIntelligenceRepository.resolveAlert(id, userId, actionTaken);       this.facadeLogger.info('Alerte résolue via DateIntelligenceRepository', {               me...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3065,
+        "code": "try {       const documents = await this.documentsRepository.getSupplierDocuments(sessionId, supplierId);       this.facadeLogger.info('Documents fournisseurs récupérés via DocumentsRepository', {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3096,
+        "code": "try {       const document = await this.documentsRepository.getSupplierDocument(id);       if (document) {         this.facadeLogger.info('Document fournisseur récupéré via DocumentsRepository', {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3126,
+        "code": "try {       const created = await this.documentsRepository.createSupplierDocument(document);       this.facadeLogger.info('Document fournisseur créé via DocumentsRepository', {               metadata:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3154,
+        "code": "try {       const updated = await this.documentsRepository.updateSupplierDocument(id, document);       this.facadeLogger.info('Document fournisseur mis à jour via DocumentsRepository', {              ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3182,
+        "code": "try {       await this.documentsRepository.deleteSupplierDocument(id);       this.facadeLogger.info('Document fournisseur supprimé via DocumentsRepository', {               metadata: {           id,  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3209,
+        "code": "try {       const documents = await this.documentsRepository.getSupplierDocuments(sessionId);       this.facadeLogger.info('Documents de session récupérés via DocumentsRepository', {               met...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3240,
+        "code": "try {       const sessions = await this.documentsRepository.getSupplierQuoteSessions(aoId, aoLotId);       this.facadeLogger.info('Sessions de devis fournisseurs récupérées via DocumentsRepository', {...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3271,
+        "code": "try {       const session = await this.documentsRepository.getSupplierQuoteSession(id);       if (session) {         this.facadeLogger.info('Session de devis fournisseur récupérée via DocumentsReposit...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3301,
+        "code": "try {       const created = await this.documentsRepository.createSupplierQuoteSession(session);       this.facadeLogger.info('Session de devis fournisseur créée via DocumentsRepository', {            ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3329,
+        "code": "try {       const updated = await this.documentsRepository.updateSupplierQuoteSession(id, session);       this.facadeLogger.info('Session de devis fournisseur mise à jour via DocumentsRepository', {  ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3357,
+        "code": "try {       await this.documentsRepository.deleteSupplierQuoteSession(id);       this.facadeLogger.info('Session de devis fournisseur supprimée via DocumentsRepository', {               metadata: {   ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3386,
+        "code": "try {       const analysis = await this.documentsRepository.getSupplierQuoteAnalysis(id);       if (analysis) {         this.facadeLogger.info('Analyse OCR de devis fournisseur récupérée via Documents...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3416,
+        "code": "try {       const created = await this.documentsRepository.createSupplierQuoteAnalysis(analysis);       this.facadeLogger.info('Analyse OCR de devis fournisseur créée via DocumentsRepository', {      ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3444,
+        "code": "try {       const updated = await this.documentsRepository.updateSupplierQuoteAnalysis(id, analysis);       this.facadeLogger.info('Analyse OCR de devis fournisseur mise à jour via DocumentsRepository...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3474,
+        "code": "try {       const orders = await this.documentsRepository.getPurchaseOrders(filters);       this.facadeLogger.info('Bons de commande récupérés via DocumentsRepository', {               metadata: {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3503,
+        "code": "try {       const order = await this.documentsRepository.getPurchaseOrder(id);       if (order) {         this.facadeLogger.info('Bon de commande récupéré via DocumentsRepository', {                 m...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3533,
+        "code": "try {       const created = await this.documentsRepository.createPurchaseOrder(order);       this.facadeLogger.info('Bon de commande créé via DocumentsRepository', {               metadata: {         ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3561,
+        "code": "try {       const updated = await this.documentsRepository.updatePurchaseOrder(id, order);       this.facadeLogger.info('Bon de commande mis à jour via DocumentsRepository', {               metadata: ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3591,
+        "code": "try {       const quotes = await this.documentsRepository.getClientQuotes(filters);       this.facadeLogger.info('Devis clients récupérés via DocumentsRepository', {               metadata: {         ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3620,
+        "code": "try {       const quote = await this.documentsRepository.getClientQuote(id);       if (quote) {         this.facadeLogger.info('Devis client récupéré via DocumentsRepository', {                 metada...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3650,
+        "code": "try {       const created = await this.documentsRepository.createClientQuote(quote);       this.facadeLogger.info('Devis client créé via DocumentsRepository', {               metadata: {           id:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3678,
+        "code": "try {       const updated = await this.documentsRepository.updateClientQuote(id, quote);       this.facadeLogger.info('Devis client mis à jour via DocumentsRepository', {               metadata: {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3709,
+        "code": "try {       return await analyticsStorage.getProjectStats(filters);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getProjectStats failed, falling back to legacy', {             ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3730,
+        "code": "try {       return await analyticsStorage.getOfferStats(filters);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getOfferStats failed, falling back to legacy', {               me...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3749,
+        "code": "try {       return await analyticsStorage.getAOStats(filters);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getAOStats failed, falling back to legacy', {               metadata...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3770,
+        "code": "try {       return await analyticsStorage.getConversionStats(period, filters);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getConversionStats failed, falling back to legacy', ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3788,
+        "code": "try {       return await analyticsStorage.getProjectDelayStats(period);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getProjectDelayStats failed, falling back to legacy', {    ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 3806,
+        "code": "try {       return await analyticsStorage.getTeamPerformanceStats(period);     } catch (error) {       this.facadeLogger.warn('AnalyticsStorage.getTeamPerformanceStats failed, falling back to legacy',...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/storage-poc.ts",
+    "tryCatchBlocks": [],
+    "retryBlocks": [
+      {
+        "line": 2783,
+        "code": "for (let i = 0; i < 32; i++) {       token += chars.charAt(Math.floor(Math.random() * chars.length));     }     return token;   }    // ========================================   // AO LOT SUPPLIERS O...",
+        "canReplace": true
+      }
+    ]
+  },
+  {
+    "file": "server/test-analytics-authenticated.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 13,
+        "code": "try {     logger.info('🔐 Connexion avec auth basique...');          const response = await fetch(`${BASE_URL}/api/login/basic`, {       method: 'POST',       headers: {         'Content-Type': 'appli...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 49,
+        "code": "try {     const controller = new AbortController();     setTimeout(() => controller.abort(), 5000);          const response = await fetch(`${BASE_URL}${endpoint}`, {       headers: {         'Cookie':...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/test-analytics-runtime.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 36,
+        "code": "try {     logger.info(`Testing ${endpoint}...`);          // Test basic auth pour simplicité     const controller = new AbortController();     setTimeout(() => controller.abort(), 10000);          con...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 192,
+        "code": "try {     logger.info('Attente démarrage serveur...');     await new Promise(resolve => setTimeout(resolve, 2000));          const results = await runAllTests();     await generateReport(results);    ...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/test-ocr-ao.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 26,
+        "code": "try {       // Lire le fichier PDF       const pdfBuffer = fs.readFileSync(pdfFile);              // Analyser avec OCR       logger.info('⏳ Extraction OCR en cours...');       const extractedData = aw...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/utils/database-helpers.ts",
+    "tryCatchBlocks": [],
+    "retryBlocks": [
+      {
+        "line": 191,
+        "code": "for (let attempt = 0; attempt < retries; attempt++) {     try {       // Log transaction start       logger.debug('Starting database transaction', { metadata: {           module: 'DatabaseHelpers',   ...",
+        "canReplace": false
+      }
+    ]
+  },
+  {
+    "file": "server/utils/error-handler.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 93,
+        "code": "try {       return await fn(...args);     } catch (error) {       throw normalizeError(error);     }",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/utils/mondayValidator.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 415,
+        "code": "try {     // ÉTAPE 1: Normalisation des enums case-insensitive     const preprocessedData = normalizeEnums(data);          // ÉTAPE 2: Validation schema de base     let validatedData = mondayAoSchema....",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 446,
+        "code": "try {     // ÉTAPE 1: Normalisation des enums case-insensitive     const preprocessedData = normalizeEnums(data);          // ÉTAPE 2: Validation schema de base     let validatedData = mondayProjectSc...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 686,
+        "code": "try {       const validatedData = validateMondayAoData(aoData);       results.valid.push(validatedData);       results.summary.valid++;     } catch (error) {       results.invalid.push({         data:...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 728,
+        "code": "try {       const validatedData = validateMondayProjectData(projectData);       results.valid.push(validatedData);       results.summary.valid++;     } catch (error) {       results.invalid.push({    ...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/utils/safe-query.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 49,
+        "code": "try {       // Log query start if requested       if (logQuery) {         logger.debug('Executing database query', {           service,           metadata: {             operation,             attempt...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 176,
+        "code": "try {     logger.debug('Executing batch queries', {       service,       metadata: {         operation,         queryCount: queries.length       }     });          // Execute all queries in parallel w...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 237,
+        "code": "try {     return await safeQuery(queryFn, {       service: context.service,       operation: context.operation,       logQuery: true     });   } catch (error) {     logger.error('Query execution faile...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 270,
+        "code": "try {     const result = await safeQuery(queryFn, options);     return result ?? null;   } catch (error) {     logger.error(`Error getting ${entityName}",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 297,
+        "code": "try {     return await safeQuery(queryFn, options);   } catch (error) {     logger.error('Error counting records', { metadata: {         service: 'SafeQuery',         operation: 'safeCount',         e...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 322,
+        "code": "try {     const result = await safeQuery(queryFn, options);     if (typeof result === 'boolean') {       return result;     }     return result?.exists ?? false;   } catch (error) {     logger.error('...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 344,
+        "code": "try {     await safeQuery(       () => db.execute(sql`SELECT 1 as health`),       {         retries: 1,         timeout: 5000,         service: 'HealthCheck',         operation: 'ping'       }     ); ...",
+        "hasLogger": true,
+        "canReplace": true
+      },
+      {
+        "line": 374,
+        "code": "try {     return await safeQuery(insertFn, {       ...options,       service: options.service || 'SafeInsert',       operation: options.operation || `insert_${tableName}`     });   } catch (error) {  ...",
+        "hasLogger": true,
+        "canReplace": true
+      }
+    ],
+    "retryBlocks": [
+      {
+        "line": 48,
+        "code": "for (let attempt = 0; attempt < retries; attempt++) {     try {       // Log query start if requested       if (logQuery) {         logger.debug('Executing database query', {           service,       ...",
+        "canReplace": false
+      }
+    ]
+  },
+  {
+    "file": "server/vite.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 24,
+        "code": "try {       const clientPath = path.resolve(import.meta.dirname, \"..\", \"client\");         const template = fs.readFileSync(           path.resolve(clientPath, \"index.html\"),           \"utf-8\"  // ✅ Le...",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  },
+  {
+    "file": "server/websocket.ts",
+    "tryCatchBlocks": [
+      {
+        "line": 86,
+        "code": "try {           const data = JSON.parse(rawData.toString());           const message = wsMessageSchema.parse(data);           await this.handleMessage(ws, message);         } catch (error) {          ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 120,
+        "code": "try {       const cookies = request.headers.cookie;       if (!cookies) {         log('WebSocket: No cookies found in request');         this.sendMessage(ws, {           type: 'auth_error',           ...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 242,
+        "code": "try {           ws.eventFilter = message.filter ? eventFilterSchema.parse(message.filter) : undefined;           log(`Client subscribed with filter: ${JSON.stringify(ws.eventFilter)}`);         } catc...",
+        "hasLogger": false,
+        "canReplace": false
+      },
+      {
+        "line": 275,
+        "code": "try {         ws.send(JSON.stringify(message));       } catch (error) {         log(`Error sending WebSocket message: ${error}",
+        "hasLogger": false,
+        "canReplace": false
+      }
+    ],
+    "retryBlocks": []
+  }
+]

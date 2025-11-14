@@ -44,13 +44,16 @@ async function collectServerInfo(): Promise<{
       
       const logData = await execPromise('tail -n 100 /dev/null 2>/dev/null || echo "Logs serveur non disponibles"');
       serverLogs = logData.stdout || 'Logs serveur non disponibles';
-    
+    } catch (error) {
+      logger.warn('Erreur lors de la collecte des logs serveur', { metadata: { error: error instanceof Error ? error.message : String(error) } });
+    }
     },
     {
       operation: 'collectServerInfo',
-service: 'routes',;
-      metadata: {
-      });
+      service: 'routes',
+      metadata: {}
+    }
+    );
     return {
       serverLogs: 'Erreur lors de la collecte',
       version: process.version,

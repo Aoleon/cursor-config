@@ -1,5 +1,5 @@
 import puppeteer, { Browser, Page, PDFOptions } from "puppeteer";
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError, withErrorHandling } from '../utils/error-handler';
 import { readFileSync } from "fs";
 import { join } from "path";
 import * as Handlebars from "handlebars";
@@ -65,14 +65,12 @@ export class PdfGeneratorService {
           ]
         });
 
-        logger.info('Puppeteer browser started successfully', { metadata: {
+        logger.info('Puppeteer browser started successfully', { 
+          metadata: {
             service: 'PDFGeneratorService',
-                  operation: 'initialize'
-
-                }
- 
-              
-                                                            });
+            operation: 'initialize'
+          }
+        });
       }
       // Compilation du template Handlebars
       if (!this.template) {
@@ -83,27 +81,24 @@ export class PdfGeneratorService {
         this.registerHandlebarsHelpers();
         
         this.template = Handlebars.compile(templateContent);
-        logger.info('DPGF template compiled successfully', { metadata: {
+        logger.info('DPGF template compiled successfully', { 
+          metadata: {
             service: 'PDFGeneratorService',
-                  operation: 'initialize'
-
-                }
- 
-              
-                                                            });
+            operation: 'initialize'
+          }
+        });
       }
     } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de l\'initialisation', { metadata: {
+      logger.error('[PDFGeneratorService] Erreur lors de l\'initialisation', { 
+        metadata: {
           service: 'PDFGeneratorService',
           operation: 'initialize',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw new AppError(`Failed to initialize PDF generator: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
+  }
 
   /**
    * Génère un PDF DPGF depuis les données calculées
@@ -157,28 +152,20 @@ export class PdfGeneratorService {
 
       // Génération du PDF
       logger.info('Generating DPGF PDF', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateDpgfPdf',
-          offerReference: data.metadata.offerReference 
-
-              }
- 
-              
-                                                            });
+        service: 'PDFGeneratorService',
+        operation: 'generateDpgfPdf',
+        offerReference: data.metadata.offerReference
+      }});
       const pdfBuffer = Buffer.from(await page.pdf(pdfOptions));
       // Generation du nom de fichier
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `DPGF-${data.metadata.offerReference || 'Document'}-${timestamp}.pdf`;
       logger.info('PDF generated successfully', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateDpgfPdf',
-          filename,
-          size: pdfBuffer.length 
-
-              }
- 
-              
-                                                            });
+        service: 'PDFGeneratorService',
+        operation: 'generateDpgfPdf',
+        filename,
+        size: pdfBuffer.length
+      }});
       
       return {
         buffer: pdfBuffer,
@@ -188,14 +175,10 @@ export class PdfGeneratorService {
       };
     } catch (error) {
       logger.error('[PDFGeneratorService] Erreur lors de la génération du PDF', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateDpgfPdf',
-          error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        service: 'PDFGeneratorService',
+        operation: 'generateDpgfPdf',
+        error: error instanceof Error ? error.message : String(error)
+      }});
       throw new AppError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     } finally {
       // Nettoyage de la page
@@ -204,15 +187,14 @@ export class PdfGeneratorService {
           await page.close();
         } catch (error) {
           logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {
-              service: 'PDFGeneratorService',
-                    operation: 'generateDpgfPdf',
-                    error: error instanceof Error ? error.message : String(error)
-
-                  }
- 
-              
-                                                            });
+            service: 'PDFGeneratorService',
+            operation: 'generateDpgfPdf',
+            error: error instanceof Error ? error.message : String(error)
+          }});
         }
+      }
+    }
+  }
 
   /**
    * Génère le HTML de prévisualisation (sans PDF)
@@ -224,29 +206,24 @@ export class PdfGeneratorService {
       throw new AppError("Template not initialized", 500);
     }
 
-    try {
-      const html = this.template(data);
-      logger.info('DPGF preview HTML generated successfully', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateDpgfPreview' 
-
-              }
- 
-              
-                                                            });
-      return html;
-    } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de la génération de la prévisualisation', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateDpgfPreview',
-          error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+    return withErrorHandling(
+      async () => {
+        const html = this.template!(data);
+        logger.info('DPGF preview HTML generated successfully', { metadata: {
+            service: 'PDFGeneratorService',
+            operation: 'generateDpgfPreview' 
+          }
+        });
+        return html;
+      },
+      {
+        operation: 'generateDpgfPreview',
+        service: 'PDFGeneratorService'
+      }
+    ).catch((error) => {
       throw new AppError(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
-    }
+    });
+  }
 
   /**
    * Ferme le browser Puppeteer (nettoyage des ressources)
@@ -256,27 +233,25 @@ export class PdfGeneratorService {
       try {
         await this.browser.close();
         this.browser = null;
-        logger.info('Puppeteer browser closed', { metadata: {
+        logger.info('Puppeteer browser closed', { 
+          metadata: {
             service: 'PDFGeneratorService',
-                  operation: 'cleanup'
-
-                }
- 
-              
-                                                            });
+            operation: 'cleanup'
+          }
+        });
       } catch (error) {
-        logger.error('[PDFGeneratorService] Erreur lors de la fermeture du browser', { metadata: {
+        logger.error('[PDFGeneratorService] Erreur lors de la fermeture du browser', { 
+          metadata: {
             service: 'PDFGeneratorService',
-                  operation: 'cleanup',
-                  error: error instanceof Error ? error.message : String(error)
-
-                }
- 
-              
-                                                            });
+            operation: 'cleanup',
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
         // Reset browser even on error
         this.browser = null;
       }
+    }
+  }
 
   /**
    * Enregistre les helpers Handlebars personnalisés
@@ -331,14 +306,14 @@ export class PdfGeneratorService {
     });
 
     // Helper pour conditions (if equal)
-    Handlebars.registerHelper("ifEquals", function(this: unknown, arg1: unknown, arg2: unknown, options: unknown) {
+    Handlebars.registerHelper("ifEquals", function(this: unknown, arg1: unknown, arg2: unknown, options: Handlebars.HelperOptions) {
       return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
     });
 
     // Helper pour conditions (if greater than)
-    Handlebars.registerHelper("ifGreaterThan", function(this: unknown, arg1: unknown, arg2: unknown, options: unknown) {
-      const num1 = typeof arg1 === "string" ? parseFloat(arg1) : arg1;
-      const num2 = typeof arg2 === "string" ? parseFloat(arg2) : arg2;
+    Handlebars.registerHelper("ifGreaterThan", function(this: unknown, arg1: unknown, arg2: unknown, options: Handlebars.HelperOptions) {
+      const num1 = typeof arg1 === "string" ? parseFloat(arg1) : (typeof arg1 === "number" ? arg1 : 0);
+      const num2 = typeof arg2 === "string" ? parseFloat(arg2) : (typeof arg2 === "number" ? arg2 : 0);
       return (num1 > num2) ? options.fn(this) : options.inverse(this);
     });
 
@@ -355,14 +330,12 @@ export class PdfGeneratorService {
       return str.substring(0, length) + "...";
     });
 
-    logger.info('Handlebars helpers registered', { metadata: {
+    logger.info('Handlebars helpers registered', { 
+      metadata: {
         service: 'PDFGeneratorService',
         operation: 'registerHandlebarsHelpers' 
-
-            }
- 
-              
-                                                            });
+      }
+    });
   }
   /**
    * Vérifie si le service est initialisé
@@ -375,25 +348,21 @@ export class PdfGeneratorService {
    * Redémarre le service (utile en cas de problème)
    */
   static async restart(): Promise<void> {
-    logger.info('Restarting PDF generator service', { metadata: {
+    logger.info('Restarting PDF generator service', { 
+      metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
-
-            }
- 
-              
-                                                            });
+      }
+    });
     await this.cleanup();
     this.template = null;
     await this.initialize();
-    logger.info('PDF generator service restarted', { metadata: {
+    logger.info('PDF generator service restarted', { 
+      metadata: {
         service: 'PDFGeneratorService',
         operation: 'restart' 
-
-            }
- 
-              
-                                                            });
+      }
+    });
   }
 
   // ========================================
@@ -431,60 +400,65 @@ export class PdfGeneratorService {
   ): Promise<PdfGenerationResult> {
     await this.initialize();
 
-    try {
-      const engine = this.getTemplateEngine();
+    return withErrorHandling(
+      async () => {
+        const engine = this.getTemplateEngine();
 
-      // Load template if path provided
-      let template: PDFTemplate;
-      if (typeof templateOrPath === 'string') {
-        const content = await loadTemplate(templateOrPath);
-        template = {
-          id: templateOrPath,
-          name: templateOrPath,
-          type: 'handlebars',
-          content
-        };
-      } else {
-        template = templateOrPath;
-      }
+        // Load template if path provided
+        let template: PDFTemplate;
+        if (typeof templateOrPath === 'string') {
+          const content = await loadTemplate(templateOrPath);
+          template = {
+            id: templateOrPath,
+            name: templateOrPath,
+            type: 'handlebars',
+            content
+          };
+        } else {
+          template = templateOrPath;
+        }
 
-      // Render template
-      const renderResult = await engine.render({
-        template,
-        context: {
-          data,
-          locale: 'fr-FR',
-          timezone: 'Europe/Paris'
-        },
-        layout: {
-          pageSize: options?.format || 'A4',
-          orientation: options?.orientation || 'portrait',
-          margins: options?.margins
+        // Render template
+        const renderResult = await (engine as unknown as { render: (options: RenderOptions) => Promise<RenderResult> }).render({
+          template,
+          context: {
+            data,
+            locale: 'fr-FR',
+            timezone: 'Europe/Paris'
+          },
+          layout: {
+            pageSize: options?.format || 'A4',
+            orientation: options?.orientation || 'portrait',
+            margins: options?.margins ? {
+              top: options.margins.top || '2cm',
+              right: options.margins.right || '1.5cm',
+              bottom: options.margins.bottom || '2cm',
+              left: options.margins.left || '1.5cm'
+            } : undefined
+          }
         });
 
-      if (!renderResult.success || !renderResult.html) {
-        throw new AppError('Template rendering failed', 500);
+        if (!renderResult.success || !renderResult.html) {
+          throw new AppError('Template rendering failed', 500);
+        }
+
+        // Generate PDF from HTML
+        const pdfResult = await this.generatePdfFromHtml(
+          renderResult.html,
+          options
+        );
+
+        return pdfResult;
+      },
+      {
+        operation: 'generateFromTemplate',
+        service: 'PDFGeneratorService',
+        metadata: {
+          templateType: typeof templateOrPath === 'string' ? templateOrPath : templateOrPath.id
+        }
       }
-
-      // Generate PDF from HTML
-      const pdfResult = await this.generatePdfFromHtml(
-        renderResult.html,
-        options
-      );
-
-      return pdfResult;
-    } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de la génération depuis le template', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateFromTemplate',
-          error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
-      throw error;
-    }
+    );
+  }
 
   /**
    * Generate LDM PDF with template engine
@@ -494,42 +468,40 @@ export class PdfGeneratorService {
     templateType: 'basic' | 'complex' | 'visual' = 'basic',
     options?: PdfGenerationOptions
   ): Promise<PdfGenerationResult> {
-    try {
-      // Select template path
-      const templatePath = 
-        templateType === 'basic' ? TEMPLATES.LDM.BASIC :
-        templateType === 'complex' ? TEMPLATES.LDM.COMPLEX :
-        TEMPLATES.LDM.VISUAL;
+    return withErrorHandling(
+      async () => {
+        // Select template path
+        const templatePath = 
+          templateType === 'basic' ? TEMPLATES.LDM.BASIC :
+          templateType === 'complex' ? TEMPLATES.LDM.COMPLEX :
+          TEMPLATES.LDM.VISUAL;
 
-      // Prepare LDM data
-      const ldmData = createLDMData(data);
+        // Prepare LDM data
+        const ldmData = createLDMData(data);
 
-      // Generate PDF
-      return await this.generateFromTemplate(
-        templatePath,
-        ldmData,
-        options
-      );
-    } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de la génération du PDF LDM', { metadata: {
-          service: 'PDFGeneratorService',
-          operation: 'generateLDMPdf',
-          templateType,
-          error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
-      throw error;
-    }
+        // Generate PDF - convert LDMTemplateData to Record<string, unknown>
+        return await this.generateFromTemplate(
+          templatePath,
+          ldmData as unknown as Record<string, unknown>,
+          options
+        );
+      },
+      {
+        operation: 'generateLDMPdf',
+        service: 'PDFGeneratorService',
+        metadata: {
+          templateType
+        }
+      }
+    );
+  }
 
   /**
    * Validate template before use
    */
   static async validateTemplate(
     templateOrPath: PDFTemplate | string
-  ): Promise<{ valid: boolean; errors?: unknown[]; warni: unknown[]ny[] }> {
+  ): Promise<{ valid: boolean; errors?: unknown[]; warnings?: unknown[] }> {
     try {
       const engine = this.getTemplateEngine();
 
@@ -546,7 +518,7 @@ export class PdfGeneratorService {
         template = templateOrPath;
       }
 
-      const validation = await engine.validateTemplate(template);
+      const validation = await (engine as unknown as { validateTemplate: (template: PDFTemplate) => Promise<{ isValid: boolean; errors?: unknown[]; warnings?: unknown[] }> }).validateTemplate(template);
       
       return {
         valid: validation.isValid,
@@ -554,36 +526,41 @@ export class PdfGeneratorService {
         warnings: validation.warnings
       };
     } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de la validation du template', { metadata: {
+      logger.error('[PDFGeneratorService] Erreur lors de la validation du template', { 
+        metadata: {
           service: 'PDFGeneratorService',
           operation: 'validateTemplate',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       return {
         valid: false,
         errors: [error instanceof Error ? error.message : String(error)]
       };
     }
+  }
 
   /**
    * Clear template cache
    */
   static clearTemplateCache(templateId?: string): void {
     const engine = this.getTemplateEngine();
-    engine.clearCache(templateId);
-    logger.info('Template cache cleared', { templateId });
+    (engine as unknown as { clearCache: (templateId?: string) => void }).clearCache(templateId);
+    logger.info('Template cache cleared', { 
+      metadata: {
+        service: 'PDFGeneratorService',
+        operation: 'clearTemplateCache',
+        templateId: templateId || undefined
+      }
+    });
   }
 
   /**
    * Get template cache statistics
    */
-  static getTemplateCacheStatsunknown unknown {
+  static getTemplateCacheStats(): unknown {
     const engine = this.getTemplateEngine();
-    return engine.getCacheStats();
+    return (engine as unknown as { getCacheStats: () => unknown }).getCacheStats();
   }
 
   /**
@@ -633,61 +610,65 @@ export class PdfGeneratorService {
 
       const filename = `document_${Date.now()}.pdf`;
 
-      logger.info('PDF generated from HTML successfully', { metadata: {
+      logger.info('PDF generated from HTML successfully', { 
+        metadata: {
           service: 'PDFGeneratorService',
           operation: 'generatePdfFromHtml',
           filename,
           size: pdfBuffer.length 
-
-              }
- 
-              
-                                                            });
+        }
+      });
+      
       return {
-        buffer: pdfBuffer,
+        buffer: Buffer.from(pdfBuffer),
         filename,
         mimeType: 'application/pdf',
         size: pdfBuffer.length
       };
     } catch (error) {
-      logger.error('[PDFGeneratorService] Erreur lors de la génération du PDF depuis HTML', { metadata: {
+      logger.error('[PDFGeneratorService] Erreur lors de la génération du PDF depuis HTML', { 
+        metadata: {
           service: 'PDFGeneratorService',
           operation: 'generatePdfFromHtml',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       throw error;
     } finally {
       if (page) {
         try {
           await page.close();
         } catch (closeError) {
-          logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { metadata: {
+          logger.warn('[PDFGeneratorService] Erreur lors de la fermeture de la page', { 
+            metadata: {
               service: 'PDFGeneratorService',
-                    operation: 'generatePdfFromHtml',
-                    error: closeError instanceof Error ? closeError.message : String(closeError)
-
-                  }
- 
-              
-                                                            });
+              operation: 'generatePdfFromHtml',
+              error: closeError instanceof Error ? closeError.message : String(closeError)
+            }
+          });
         }
+      }
+    }
+  }
+}
 
 // Gestion de l'arrêt propre du processus
 process.on("SIGTERM", async () => {
-  logger.info('Received SIGTERM, cleaning up PDF generator', { metadata: {
+  logger.info('Received SIGTERM, cleaning up PDF generator', { 
+    metadata: {
       service: 'PDFGeneratorService',
       operation: 'SIGTERM handler'
-          });
+    }
+  });
   await PdfGeneratorService.cleanup();
 });
+
 process.on("SIGINT", async () => {
-  logger.info('Received SIGINT, cleaning up PDF generator', { metadata: {
+  logger.info('Received SIGINT, cleaning up PDF generator', { 
+    metadata: {
       service: 'PDFGeneratorService',
       operation: 'SIGINT handler'
-          });
+    }
+  });
   await PdfGeneratorService.cleanup();
 });

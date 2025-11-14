@@ -6,6 +6,7 @@
 import { db } from '../db';
 import { logger } from './logger';
 import { DatabaseError, withErrorHandling } from './error-handler';
+import { withRetry } from './retry-helper';
 import { sql } from 'drizzle-orm';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { NeonTransaction, NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
@@ -185,17 +186,14 @@ export async function withTransaction<T>(
     isolationLevel = 'read committed'
   } = opts;
   
-  let lastError: Error | undefined;
   const startTime = Date.now();
   
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
+  return withRetry(
+    async () => {
       // Log transaction start
       logger.debug('Starting database transaction', { metadata: {
           module: 'DatabaseHelpers',
           operation: 'withTransaction',
-          attempt: attempt + 1,
-          maxRetries: retries,
           timeout,
           isolationLevel,
           usingCustomDb: dbInstance !== db
@@ -224,56 +222,52 @@ export async function withTransaction<T>(
       logger.info('Database transaction completed successfully', { metadata: {
           module: 'DatabaseHelpers',
           operation: 'withTransaction',
-          duration,
-          attempt: attempt + 1
+          duration
               }
             });
       
       return result;
-    } catch (error: unknown) {
-      const err = error as Error & { code?: string; detail?: string; constraint?: string; table?: string; column?: string };
-      lastError = err instanceof Error ? err : (new Error(String(error)) as Error);
-      const duration = Date.now() - startTime;
-      
-      // Check if error is retryable
-      const retryable = err.code === '40001' || err.code === '40P01'; // Serialization failure or deadlock
-      
-      if (retryable && attempt < retries - 1) {
-        const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
+    },
+    {
+      maxRetries: retries,
+      initialDelay: retryDelay,
+      backoffMultiplier: 2,
+      retryCondition: (error: unknown) => {
+        const err = error as Error & { code?: string };
+        // Retry on serialization failure or deadlock
+        return err.code === '40001' || err.code === '40P01' || isRetryableError(error);
+      },
+      onRetry: (attempt: number, delay: number, error: unknown) => {
+        const err = error as Error & { code?: string };
         logger.warn('Database transaction failed, retrying', { metadata: {
                   module: 'DatabaseHelpers',
                   operation: 'withTransaction',
             attempt: attempt + 1,
             maxRetries: retries,
-            errorCode: err.code,
-            delay
+            delay,
+            errorCode: err.code
                 }
                               });
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
       }
-      
-      // Log final failure
-      logger.error('Database transaction failed permanently', lastError, { metadata: {
-          module: 'DatabaseHelpers',
-          operation: 'withTransaction',
-          attempt: attempt + 1,
-          maxRetries: retries,
-          duration,
-          retryable,
-          errorCode: err.code
-              }
-      });
-      
-      break;
     }
-  }
-  
-  // Throw a proper DatabaseError with context
-  const message = getDatabaseErrorMessage(lastError);
-  throw new DatabaseError(message, lastError);
+  ).catch((error: unknown) => {
+    const duration = Date.now() - startTime;
+    const lastError = error instanceof Error ? error : new Error(String(error));
+    const err = lastError as Error & { code?: string };
+    
+    // Log final failure
+    logger.error('Database transaction failed permanently', lastError, { metadata: {
+        module: 'DatabaseHelpers',
+        operation: 'withTransaction',
+        duration,
+        errorCode: err.code
+            }
+    });
+    
+    // Throw a proper DatabaseError with context
+    const message = getDatabaseErrorMessage(lastError);
+    throw new DatabaseError(message, lastError);
+  });
 }
 
 /**

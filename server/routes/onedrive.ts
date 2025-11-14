@@ -3,7 +3,7 @@
  * Gestion des documents via Microsoft OneDrive
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { oneDriveService } from '../services/OneDriveService';
 import { logger } from '../utils/logger';
@@ -16,14 +16,15 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 100 * 1024 * 1024 // 100MB max
-  });
+  }
+});
 
 // ========================================
 // MIDDLEWARE D'AUTHENTIFICATION
 // ========================================
 
-const requireAuth = (req: Request, res: Response, next: unknown) => {
-  const user = (req as unknown).user || (as unknown.session?.user;
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user || (req as any).session?.user;
   
   if (!user) {
     return res.status(401).json({
@@ -49,14 +50,8 @@ router.get('/info', requireAuth, asyncHandler(async (req: Request, res: Response
   res.json({
     success: true,
     data: driveInfo
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 // ========================================
 // LISTE DES FICHIERS ET DOSSIERS
@@ -77,14 +72,9 @@ router.get('/list', requireAuth, asyncHandler(async (req: Request, res: Response
       path,
       items,
       count: items.length
-
-        });
-            }
-
-                      }
-
-
-                    }));
+    }
+  });
+}));
 
 /**
  * Récupère un fichier/dossier par ID
@@ -98,14 +88,8 @@ router.get('/item/:itemId', requireAuth, asyncHandler(async (req: Request, res: 
   res.json({
     success: true,
     data: item
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 /**
  * Récupère un fichier/dossier par chemin
@@ -126,14 +110,8 @@ router.get('/item-by-path', requireAuth, asyncHandler(async (req: Request, res: 
   res.json({
     success: true,
     data: item
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 // ========================================
 // UPLOAD
@@ -156,14 +134,14 @@ router.post('/upload', requireAuth, upload.single('file'), asyncHandler(async (r
   const path = (req.body.path as string) || '';
   const conflictBehavior = (req.body.conflictBehavior as 'rename' | 'replace' | 'fail') || 'rename';
   
-  logger.info('Uploading file to OneDrive', { metadata: {
-
+  logger.info('Uploading file to OneDrive', { 
+    metadata: {
       fileName: file.originalname,
       size: file.size,
       path,
       conflictBehavior
-      }
-    });
+    }
+  });
   
   // Choisir la méthode d'upload selon la taille
   const uploadedFile = file.size < 4 * 1024 * 1024
@@ -182,14 +160,8 @@ router.post('/upload', requireAuth, upload.single('file'), asyncHandler(async (r
     success: true,
     data: uploadedFile,
     message: 'Fichier uploadé avec succès'
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 // ========================================
 // DOWNLOAD
@@ -205,7 +177,7 @@ router.get('/download/:itemId', requireAuth, asyncHandler(async (req: Request, r
   // Récupérer les informations du fichier
   const item = await oneDriveService.getItem(itemId);
   
-  ifas unknown) as unknown).isFolder) {
+  if ((item as any).isFolder) {
     return res.status(400).json({
       success: false,
       error: 'Impossible de télécharger un dossier'
@@ -216,19 +188,14 @@ router.get('/download/:itemId', requireAuth, asyncHandler(async (req: Request, r
   const fileBuffer = await oneDriveService.downloadFile(itemId);
   
   // Déterminer le type MIME
-  const mimeTas unknown)ias unknunknown)unknown).mimeType || 'application/octet-stream';
+  const mimeType = (item as any).mimeType || 'application/octet-stream';
   
   res.setHeader('Content-Type', mimeType);
-  res.setHeader('Content-Disposition', `attachment; filename="${item.name}"`);
-  res.setHeader('Content-Length', fileBuffer.length);
+  res.setHeader('Content-Disposition', `attachment; filename="${(item as any).name}"`);
+  res.setHeader('Content-Length', fileBuffer.length.toString());
   
   res.send(fileBuffer);
-            }
-
-                      }
-
-
-                    }));
+}));
 
 // ========================================
 // DOSSIERS
@@ -255,14 +222,8 @@ router.post('/folder', requireAuth, asyncHandler(async (req: Request, res: Respo
     success: true,
     data: folder,
     message: 'Dossier créé avec succès'
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 // ========================================
 // RECHERCHE
@@ -290,14 +251,9 @@ router.get('/search', requireAuth, asyncHandler(async (req: Request, res: Respon
       query,
       files,
       count: files.length
-
-        });
-            }
-
-                      }
-
-
-                    }));
+    }
+  });
+}));
 
 // ========================================
 // PARTAGE
@@ -335,12 +291,7 @@ router.post('/share/:itemId', requireAuth, asyncHandler(async (req: Request, res
     },
     message: 'Lien de partage créé avec succès'
   });
-            }
-
-                      }
-
-
-                    }));
+}));
 
 // ========================================
 // GESTION DES FICHIERS
@@ -358,14 +309,8 @@ router.delete('/item/:itemId', requireAuth, asyncHandler(async (req: Request, re
   res.json({
     success: true,
     message: 'Élément supprimé avec succès'
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 /**
  * Copie un fichier ou dossier
@@ -388,14 +333,8 @@ router.post('/copy/:itemId', requireAuth, asyncHandler(async (req: Request, res:
   res.json({
     success: true,
     message: 'Copie en cours (opération asynchrone)'
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 /**
  * Déplace ou renomme un fichier ou dossier
@@ -419,13 +358,7 @@ router.patch('/item/:itemId', requireAuth, asyncHandler(async (req: Request, res
     success: true,
     data: updatedItem,
     message: 'Élément mis à jour avec succès'
-
-        });
-            }
-
-                      }
-
-
-                    }));
+  });
+}));
 
 export default router;

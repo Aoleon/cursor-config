@@ -16,7 +16,7 @@
 
 import express from 'express';
 import { z } from 'zod';
-import { MondayMigrationService } from './consolidated/MondayMigrationService';
+import { mondayMigrationService } from './services/consolidated/MondayMigrationService';
 import { storage, type IStorage } from './storage-poc';
 import { validateBody } from './middleware/validation';
 import { asyncHandler } from './utils/error-handler';
@@ -26,7 +26,7 @@ import { logger } from './utils/logger';
 // INITIALISATION SERVICE MIGRATION
 // ========================================
 
-const mondayMigrationService = mondaymigrationService(storage as IStorage);
+// mondayMigrationService is already a singleton instance exported from the consolidated service
 
 export const migrationRoutes = express.Router();
 

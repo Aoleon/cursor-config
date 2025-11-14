@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import mondayRoutes from './routes';
 import { logger } from '../../utils/logger';
-import { mondayExportService } from '../../services/MondayExportService';
+import { mondayDataService } from '../../services/consolidated/MondayDataService';
 import { setupMondayExport } from './export-integration';
 import { eventBus } from '../../eventBus';
 import { syncAuditService } from '../../services/SyncAuditService';
@@ -10,7 +10,7 @@ export function setupMondayModule(app: Express): void {
   app.use(mondayRoutes);
   
   // Configure auto-export via EventBus
-  setupMondayExport(eventBus, mondayExportService);
+  setupMondayExport(eventBus, mondayDataService);
   
   // Initialize SyncAuditService (automatically listens to EventBus)
   // Service is already instantiated and listening to events

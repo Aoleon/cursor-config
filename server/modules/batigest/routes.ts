@@ -294,6 +294,7 @@ export function createBatigestRouter(storage: IStorage, eventBus: EventBus): Rou
                                 }
                                                                                                                                                                                                                                                                                     });
             }
+          }
 
           // Calculer les totaux
           const items = orderData.items || [];

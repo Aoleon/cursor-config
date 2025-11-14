@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import OpenAI from "openai";
 import type { IStorage } from "../storage-poc";
 import { db } from "../db";
@@ -15,6 +15,9 @@ import { CircuitBreaker, CircuitBreakerManager } from '../utils/circuit-breaker'
 import { API_LIMITS, getModelConfig } from '../config/api-limits';
 import { getCorrelationId } from '../middleware/correlation';
 import { executeOpenAI } from './resilience.js';
+import { ClaudeProvider } from './ai/ClaudeProvider';
+import { GPTProvider } from './ai/GPTProvider';
+import { AIOrchestrator } from './ai/AIOrchestrator';
 
 // Référence blueprints: javascript_anthropic et javascript_openai intégrés
 /*
@@ -78,14 +81,26 @@ export class AIService {
   private openai: OpenAI | null;
   private storage: IStorage;
   private contextBuilder: unknown;
-  private contextC: unknown;unknown;
-  private performanc: unknown;unknown;unknown;
+  private contextCache: unknown;
+  private performanceMetrics: {
+    totalRequests: number;
+    totalTokens: number;
+    averageLatency: number;
+  } = {
+    totalRequests: 0,
+    totalTokens: 0,
+    averageLatency: 0
+  };
   // Circuit breakers pour chaque provider
   private circuitBreakerManager: CircuitBreakerManager;
   private claudeBreaker: CircuitBreaker;
   private gptBreaker: CircuitBreaker;
+  // Providers et orchestrator
+  private claudeProvider: ClaudeProvider;
+  private gptProvider: GPTProvider | null;
+  private aiOrchestrator: AIOrchestrator;
   // Cache in-memory en fallback si DB échoue
-  private memoryCache: Map<string: unknown;unknown;unknown unknown;
+  private memoryCache: Map<string, {
     expiresAt: Date;
     tokensUsed: number;
   }> = new Map();
@@ -129,26 +144,19 @@ export class AIService {
       timeout: claudeConfig.circuitBreaker?.timeout || 60000,
       onOpen: (name) => {
         logger.warn('Circuit breaker ouvert pour Claude', { metadata: {
-            service: 'AIService',
-                  operation: 'circuit_breaker',
-            provider: name 
-
-                }
- 
-              
-                                                });
+          service: 'AIService',
+          operation: 'circuit_breaker',
+          provider: name
+        }});
       },
       onClose: (name) => {
         logger.info('Circuit breaker fermé pour Claude', { metadata: {
-            service: 'AIService',
-                  operation: 'circuit_breaker',
-            provider: name 
-
-                }
- 
-              
-                                                });
-      });
+          service: 'AIService',
+          operation: 'circuit_breaker',
+          provider: name
+        }});
+      }
+    });
     
     // Circuit breaker pour GPT
     const gptConfig = API_LIMITS.ai.openai;
@@ -157,26 +165,29 @@ export class AIService {
       timeout: gptConfig.circuitBreaker?.timeout || 60000,
       onOpen: (name) => {
         logger.warn('Circuit breaker ouvert pour GPT', { metadata: {
-            service: 'AIService',
-                  operation: 'circuit_breaker',
-            provider: name 
-
-                }
- 
-              
-                                                });
+          service: 'AIService',
+          operation: 'circuit_breaker',
+          provider: name
+        }});
       },
       onClose: (name) => {
         logger.info('Circuit breaker fermé pour GPT', { metadata: {
-            service: 'AIService',
-                  operation: 'circuit_breaker',
-            provider: name 
+          service: 'AIService',
+          operation: 'circuit_breaker',
+          provider: name
+        }});
+      }
+    });
 
-                }
- 
-              
-                                                });
-      });
+    // Initialisation des providers
+    this.claudeProvider = new ClaudeProvider(this.anthropic, this.claudeBreaker);
+    this.gptProvider = this.openai ? new GPTProvider(this.openai, this.gptBreaker) : null;
+    this.aiOrchestrator = new AIOrchestrator(
+      this.claudeProvider,
+      this.gptProvider,
+      this.claudeBreaker,
+      this.gptBreaker
+    );
   }
 
   // ========================================
@@ -408,7 +419,8 @@ export class AIService {
     metierKeywords.forEach(keyword => {
       if (queryLower.includes(keyword)) {
         metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
-      });
+      }
+    });
     
     // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
     const frenchBusinessPatterns = [
@@ -531,7 +543,15 @@ export class AIService {
       });
       
       const sqlGenerationStartTime = Date.now();
-      const sqlResult = await this.executeModelQuery(request, modelSelection, requestId);
+      const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
+      const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
+      const sqlResult = await this.aiOrchestrator.executeModelQuery(
+        request,
+        modelSelection,
+        systemPrompt,
+        userPrompt,
+        requestId
+      );
       const sqlGenerationTime = Date.now() - sqlGenerationStartTime;
       
       this.performanceMetrics.endStep(traceId, 'sql_generation', sqlResult.success, { 
@@ -612,37 +632,13 @@ export class AIService {
           ...responseData
         }
       };
-
-    
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    } );
-      
-      // Finaliser le tracing en erreur
-      await this.performanceMetrics.endPipelineTrace(
-        traceId, 'system', request.userRole, request.query, 
-        request.complexity || 'simple', false, false, { 
-          error: error instanceof Error ? error.message : String(error),
-          errorType: 'unknown'
-              }
-      );
-      
-      // Logging de l'erreur (préservé)
-      await this.logMetrics(request, "unknown", startTime, 0, false, "miss");
-      
-      return {
-        success: false,
-        error: {
-          type: "unknown",
-          message: "Erreur interne du service IA",
-          details: error instanceof Error ? error.message : String(error),
-          fallbackAttempted: false
-        }
-      };
     }
+    );
   }
 
   // ========================================
@@ -760,7 +756,8 @@ export class AIService {
     metierKeywords.forEach(keyword => {
       if (queryLower.includes(keyword) || contextLower.includes(keyword)) {
         metierScore += keyword.length > 5 ? 2 : 1; // Bonus pour mots techniques longs
-      });
+      }
+    });
     
     // === PATTERNS MÉTIER FRANÇAIS (bonus) ===
     const frenchBusinessPatterns = [
@@ -838,269 +835,8 @@ export class AIService {
   // ========================================
   // EXÉCUTION DES REQUÊTES MODÈLES IA
   // ========================================
+  // NOTE: executeModelQuery est maintenant dans AIOrchestrator
 
-  /**
-   * Exécute la requête avec le modèle sélectionné + retry logic robuste
-   * NOUVEAU : Retry avec backoff exponentiel et circuit breaker
-   */
-  private async executeModelQuery(
-    request: AiQueryRequest, 
-    modelSelection: ModelSelectionResult,
-    requestId: string
-  ): Promise<AiQueryResponse> {
-    const startTime = Date.now();
-    
-    // Logs enrichis pour debugging
-    logger.info('Début requête IA avec retry robuste', { metadata: {
-        service: 'AIService',
-        operation: 'executeModelQuery',
-        model: modelSelection.selectedModel,
-        queryLength: request.query.length,
-        complexity: request.complexity || 'simple',
-        hasContext: !!request.context,
-        contextLength: request.context?.length || 0,
-        requestId,
-        userRole: request.userRole 
-
-                                                                      }
- 
-              
-                                                });
-    // Vérifier d'abord le cache de réponses dégradées
-    const degradedResponse = this.getDegradedResponse(request.query);
-    if (degradedResponse) {
-      return {
-        success: true,
-        data: {
-          query: request.query,
-          sqlGenerated: degradedResponse,
-          explanation: "Réponse optimisée basée sur l'historique (cache dégradé)",
-          modelUsed: "degraded_cache",
-          tokensUsed: 0,
-          responseTimeMs: Date.now() - startTime,
-          fromCache: true,
-          confidence: 0.6,
-          warnings: ["Réponse simplifiée pour performance optimale"]
-        }
-      };
-    }
-    
-    let lastError: unknown = null;
-    let fallbackAttempted = false;
-    let retryS: unknown =ny = null;
-
-    // Obtenir la configuration selon le modèle
-    const providerName = modelSelection.selectedModel === "claude_sonnet_4" ? 'claude' : 'openai';
-    const modelConfig = getModelConfig(providerName, 
-      modelSelection.selectedModel === "claude_sonnet_4" ? DEFAULT_CLAUDE_MODEL : DEFAULT_GPT_MODEL
-    );
-    
-    // Sélectionner le circuit breaker approprié
-    const circuitBreaker = modelSelection.selectedModel === "claude_sonnet_4" 
-      ? this.claudeBreaker 
-      : this.gptBreaker;
-
-    // Tentative avec le modèle principal avec retry et circuit breaker
-    return withErrorHandling(
-    async () => {
-
-      logger.info('Tentative avec modèle principal et retry robuste', { metadata: {
-          service: 'AIService',
-          operation: 'executeModelQuery',
-          model: modelSelection.selectedModel,
-          maxRetries: modelConfig.maxRetries,
-          timeout: modelConfig.timeout,
-          backoffMultiplier: modelConfig.backoffMultiplier
-            });
-      // Exécuter avec circuit breaker et retry
-      const result = await circuitBreaker.execute(async () => {
-        return await withRetry(
-          async () => {
-            if (modelSelection.selectedModel === "claude_sonnet_4") {
-              return await this.executeClaude(request, requestId);
-            } else if (modelSelection.selectedModel === "gpt_5") {
-              return await this.executeGPT(request, requestId);
-            }
-            throw new AppError(`Modèle non supporté: ${modelSelection.selectedModel}`, 500);
-          },
-          {
-            maxRetries: modelConfig.maxRetries,
-            timeout: modelConfig.timeout,
-            initialDelay: modelConfig.initialDelay || 1000,
-            maxDelay: modelConfig.maxDelay || 10000,
-            backoffMultiplier: modelConfig.backoffMultiplier,
-            retryCondition: (error) => {
-              // Ne pas retry si circuit breaker ouvert
-              if ((error as unknown)?.circuitBreakerOpen) {
-                return false;
-              }
-              // Utiliser la fonction isRetryableError importée
-              return isRetryableError(error);
-            },
-            onRetry: (attempt, delay, error) => {
-              logger.warn('Retry IA en cours', { metadata: {
-                  service: 'AIService',
-                        operation: 'executeModelQuery',
-                  model: modelSelection.selectedModel,
-                  attempt,
-                  delay,
-                        error: error instanceof Error ? error.message : String(error)
-
-                      }
- 
-              
-                                                });
-            });
-      });
-      logger.info('Modèle principal réussi avec retry', { metadata: {
-          service: 'AIService',
-          operation: 'executeModelQuery',
-          model: modelSelection.selectedModel,
-          responseTime: result.data?.responseTimeMs,
-          totalTime: Date.now() - startTime 
-
-              }
- 
-              
-                                                });
-      return result;
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {}
-    } );
-      lastError = error;
-    }
-    // Tentative fallback avec retry si disponible
-    if (modelSelection.fallbackAvailable && !fallbackAttempted) {
-      const fallbackModel = modelSelection.selectedModel === "claude_sonnet_4" ? "gpt_5" : "claude_sonnet_4";
-      const fallbackProviderName = fallbackModel === "claude_sonnet_4" ? 'claude' : 'openai';
-      const fallbackConfig = getModelConfig(fallbackProviderName,
-        fallbackModel === "claude_sonnet_4" ? DEFAULT_CLAUDE_MODEL : DEFAULT_GPT_MODEL
-      );
-      const fallbackCircuitBreaker = fallbackModel === "claude_sonnet_4"
-        ? this.claudeBreaker
-        : this.gptBreaker;
-      logger.info('Tentative fallback avec retry robuste', { metadata: {
-          service: 'AIService',
-          operation: 'executeModelQuery',
-          fallbackModel,
-          originalModel: modelSelection.selectedModel,
-          maxRetries: fallbackConfig.maxRetries,
-          timeout: fallbackConfig.timeout 
-
-              }
- 
-              
-                                                });
-      
-      fallbackAttempted = true;
-      
-      return withErrorHandling(
-    async () => {
-
-        const result = await fallbackCircuitBreaker.execute(async () => {
-          return await withRetry(
-            async () => {
-              if (fallbackModel === "claude_sonnet_4") {
-                return await this.executeClaude(request, requestId);
-              } else if (fallbackModel === "gpt_5" && this.openai) {
-                return await this.executeGPT(request, requestId);
-              }
-              throw new AppError(`Modèle fallback non disponible: ${fallbackModel}`, 500);
-            },
-            {
-              maxRetries: fallbackConfig.maxRetries,
-              timeout: fallbackConfig.timeout,
-              initialDelay: fallbackConfig.initialDelay || 1000,
-              maxDelay: fallbackConfig.maxDelay || 10000,
-              backoffMultiplier: fallbackConfig.backoffMultiplier,
-              retryCondition: (error) => {
-                if ((eras unknown)?.circuitBreakerOpen) {
-                  return false;
-                }
-                return isRetryableError(error);
-              },
-              onRetry: (attempt, delay, error) => {
-                logger.warn('Retry fallback IA en cours', { metadata: {
-                    service: 'AIService',
-                          operation: 'executeModelQuery',
-                    model: fallbackModel,
-                    attempt,
-                    delay,
-                          error: error instanceof Error ? error.message : String(error)
-
-                        }
- 
-              
-                                                });
-              });
-        });
-        
-        logger.info('Fallback réussi avec retry', { metadata: {
-            service: 'AIService',
-                  operation: 'executeModelQuery',
-            fallbackModel,
-            responseTime: result.data?.responseTimeMs,
-            totalTime: Date.now() - startTime 
-
-                }
- 
-              
-                                                });
-        return result;
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {}
-    } );
-        lastError = fallbackError;
-      }
-    }
-
-    // Retourner une réponse dégradée mais utile
-    logger.info('Retour réponse dégradée après tous les retries', { metadata: {
-        service: 'AIService',
-        operation: 'executeModelQuery',
-        fallbackAttempted,
-        complexity: request.complexity || 'high',
-        totalTime: Date.now() - startTime,
-        retryStats: retryStats 
-
-            }
- 
-              
-                                                });
-    // Générer une réponse SQL simplifiée basique
-    const simplifiedSQL = this.generateSimplifiedSQL(request);
-    // Sauvegarder dans le cache dégradé pour futures requêtes similaires
-    this.saveDegradedResponse(
-      request.query, 
-      simplifiedSQL, 
-      request.complexity || 'high'
-    );
-    return {
-      success: true,
-      data: {
-        query: request.query,
-        sqlGenerated: simplifiedSQL,
-        explanation: "Les services IA sont temporairement surchargés. Voici une réponse simplifiée basée sur votre requête. Les capacités complètes reviendront bientôt.",
-        modelUsed: "degraded",
-        tokensUsed: 0,
-        responseTimeMs: Date.now() - startTime,
-        fromCache: false,
-        confidence: 0.5,
-        warnings: [
-          "Réponse dégradée après plusieurs tentatives",
-          "Les services IA se rétabliront automatiquement",
-          "Réessayez dans quelques instants pour une réponse complète"
-        ]
-      }
-    };
-  }
-  
   /**
    * Génère une réponse SQL simplifiée pour les cas de timeout
    */
@@ -1124,109 +860,8 @@ export class AIService {
     }
   }
 
-  /**
-   * Exécution avec Claude Sonnet 4
-   * SIMPLIFIÉ : Le timeout est maintenant géré par withRetry
-   */
-  private async executeClaude(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
-    const startTime = Date.now();
-    // Récupérer correlation ID pour propagation
-    const correlationId = getCorrelationId();
-
-    const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
-    const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
-
-    // Appel avec resilience wrapper pour retry + circuit breaker
-    const response = await executeOpenAI(
-      async () => this.anthropic.messages.create({
-        model: DEFAULT_CLAUDE_MODEL,
-        max_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-        messages: [{ role: 'user', content: userPrompt }],
-        system: systemPrompt,
-      }, {
-        headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
-      }),
-      'Claude Text Generation',
-      DEFAULT_CLAUDE_MODEL
-    );
-
-    const responseTime = Date.now() - startTime;
-    const responseText = response.content[0]?.type === 'text' ? response.content[0].text : "";
-    const tokensUsed = this.estimateTokens(userPrompt + systemPrompt, responseText);
-
-    // Parse la réponse JSON structurée
-    const parsedResult = this.parseAIResponse(responseText);
-
-    return {
-      success: true,
-      data: {
-        query: request.query,
-        sqlGenerated: parsedResult.sql,
-        explanation: parsedResult.explanation,
-        modelUsed: "claude_sonnet_4",
-        tokensUsed,
-        responseTimeMs: responseTime,
-        fromCache: false,
-        confidence: parsedResult.confidence,
-        warnings: parsedResult.warnings
-      }
-    };
-  }
-
-  /**
-   * Exécution avec GPT-5
-   * SIMPLIFIÉ : Le timeout est maintenant géré par withRetry
-   */
-  private async executeGPT(request: AiQueryRequest, requestId: string): Promise<AiQueryResponse> {
-    if (!this.openai) {
-      throw new AppError("OpenAI client non initialisé - clé API manquante", 500);
-    }
-
-    const startTime = Date.now();
-    // Récupérer correlation ID pour propagation
-    const correlationId = getCorrelationId();
-
-    const systemPrompt = this.buildSystemPrompt(request.queryType || "text_to_sql", undefined, request.complexity);
-    const userPrompt = this.buildUserPrompt(request.query, request.context, request.userRole, undefined, request.complexity);
-
-    // Appel avec resilience wrapper pour retry + circuit breaker
-    const response = await executeOpenAI(
-      async () => this.openai!.chat.completions.create({
-        model: DEFAULT_GPT_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        response_format: { type: "json_object" },
-        max_completion_tokens: request.maxTokens || 8192, // Augmenté pour requêtes SQL complexes
-      }, {
-        headers: correlationId ? { 'X-Correlation-ID': correlationId } : undefined
-      }),
-      'GPT Text Generation',
-      DEFAULT_GPT_MODEL
-    );
-
-    const responseTime = Date.now() - startTime;
-    const tokensUsed = response.usage?.total_tokens || this.estimateTokens(userPrompt, response.choices[0].message.content || "");
-
-    // Parse la réponse JSON
-    const parsedResult = this.parseAIResponse(response.choices[0].message.content || "");
-
-    return {
-      success: true,
-      data: {
-        query: request.query,
-        sqlGenerated: parsedResult.sql,
-        explanation: parsedResult.explanation,
-        modelUsed: "gpt_5",
-        tokensUsed,
-        responseTimeMs: responseTime,
-        fromCache: false,
-        confidence: parsedResult.confidence,
-        warnings: parsedResult.warnings
-      }
-    };
-  }
+  // NOTE: executeClaude est maintenant dans ClaudeProvider
+  // NOTE: executeGPT est maintenant dans GPTProvider
 
   // ========================================
   // SYSTÈME DE CACHE INTELLIGENT
@@ -1241,15 +876,13 @@ export class AIService {
     // Fallback 1: Essayer le cache in-memory d'abord (plus rapide)
     const memoryEntry = this.memoryCache.get(queryHash);
     if (memoryEntry && memoryEntry.expiresAt > new Date()) {
-      logger.info('Cache hit in-memory', { metadata: {
+      logger.info('Cache hit in-memory', { 
+        metadata: {
           service: 'AIService',
           operation: 'getCachedResponse',
-          queryHash: queryHash.substring(0, 8) 
-              
-              }
- 
-              
-            });
+          queryHash: queryHash.substring(0, 8)
+        }
+      });
       return memoryEntry.data;
     }
     // Fallback 2: Essayer la base de données
@@ -1284,15 +917,13 @@ export class AIService {
           tokensUsed: cached[0].tokensUsed || 0
         });
         
-        logger.info('Cache hit DB', { metadata: {
+        logger.info('Cache hit DB', { 
+          metadata: {
             service: 'AIService',
-                  operation: 'getCachedResponse',
-            queryHash: queryHash.substring(0, 8) 
-              
-                }
- 
-              
-            });
+            operation: 'getCachedResponse',
+            queryHash: queryHash.substring(0, 8)
+          }
+        });
         return data;
       }
       return null;
@@ -1302,22 +933,20 @@ export class AIService {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    } );
-      
+    }
+    ).catch(() => {
       // Fallback 3: Si DB échoue, vérifier encore le cache in-memory même expiré comme derniere chance
       if (memoryEntry) {
-        logger.info('Utilisation cache in-memory expiré comme fallback final', { metadata: {
+        logger.info('Utilisation cache in-memory expiré comme fallback final', { 
+          metadata: {
             service: 'AIService',
-                  operation: 'getCachedResponse'
-
-                }
- 
-              
-                                                });
+            operation: 'getCachedResponse'
+          }
+        });
         return memoryEntry.data;
       }
       return null;
-    }
+    });
   }
 
   /**
@@ -1328,10 +957,11 @@ export class AIService {
     const expiresAt = new Date(Date.now() + CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
     
     // Cache in-memory d'abord (toujours disponible)
+    const responseDataTyped = responseData as { tokensUsed?: number };
     this.memoryCache.set(queryHash, {
       data: responseData,
       expiresAt,
-      tokensUsed: responseData.tokensUsed
+      tokensUsed: responseDataTyped.tokensUsed || 0
     });
     
     // Nettoyage périodique du cache in-memory (éviter la fuite mémoire)
@@ -1343,15 +973,20 @@ export class AIService {
     return withErrorHandling(
     async () => {
 
+      const responseDataTyped = responseData as { 
+        modelUsed?: string; 
+        tokensUsed?: number; 
+        responseTimeMs?: number;
+      };
       const cacheEntry: InsertAiQueryCache = {
         queryHash,
         query: request.query,
         context: request.context || "",
         userRole: request.userRole,
-        modelUsed: responseData.modelUsed,
+        modelUsed: responseDataTyped.modelUsed || "unknown",
         response: JSON.stringify(responseData),
-        tokensUsed: responseData.tokensUsed,
-        responseTimeMs: responseData.responseTimeMs,
+        tokensUsed: responseDataTyped.tokensUsed || 0,
+        responseTimeMs: responseDataTyped.responseTimeMs || 0,
         expiresAt
       };
 
@@ -1363,25 +998,24 @@ export class AIService {
           responseTimeMs: cacheEntry.responseTimeMs,
           expiresAt: cacheEntry.expiresAt,
           lastAccessedAt: new Date()
-        });
+        }
+      });
       
-      logger.info('Cache sauvé DB+memory', { metadata: {
+      logger.info('Cache sauvé DB+memory', { 
+        metadata: {
           service: 'AIService',
           operation: 'cacheResponse',
-          queryHash: queryHash.substring(0, 8) 
-              
-              }
- 
-              
-            });
+          queryHash: queryHash.substring(0, 8)
+        }
+      });
     },
     {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    } );
-      // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
     }
+    );
+    // Le cache in-memory est déjà sauvé, donc pas d'impact sur l'utilisateur
   }
   
   /**
@@ -1398,15 +1032,13 @@ export class AIService {
       }
     }
     
-    logger.info('Cache in-memory nettoyé', { metadata: {
+    logger.info('Cache in-memory nettoyé', { 
+      metadata: {
         service: 'AIService',
         operation: 'cleanMemoryCache',
-        entriesRemoved: cleaned 
-
-            }
- 
-              
-                                                });
+        entriesRemoved: cleaned
+      }
+    });
   }
   /**
    * Génère un hash unique pour la requête + contexte
@@ -1439,7 +1071,7 @@ export class AIService {
     errorType?: string
   ): Promise<void> {
     return withErrorHandling(
-    async () => {
+      async () => {
 
       const responseTime = Date.now() - startTime;
       const costEstimate = this.calculateCostEstimate(modelUsed as unknown, tokensUsed);
@@ -1482,8 +1114,7 @@ export class AIService {
       operation: 'token',
       service: 'AIService',
       metadata: {}
-    } );
-    }
+    });
   }
 
   /**
@@ -1985,19 +1616,19 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     
     // Codes projets JLM (#2503, #21600, etc.)
     const projectCodes = queryUpper.match(/#\d{4,5}/g);
-    if (projectCodes) codes.push(...projectCodes.map(c => `Projet $) {c}`));
+    if (projectCodes) codes.push(...projectCodes.map(c => `Projet ${c}`));
     
     // Codes AO
     const aoCodes = queryUpper.match(/AO[-\s]?\d{4}/g);
-    if (aoCodes) codes.push(...aoCodes.map(c => `AO $) {c.replace(/AO[-\s]?/, '')}`));
+    if (aoCodes) codes.push(...aoCodes.map(c => `AO ${c.replace(/AO[-\s]?/, '')}`));
     
     // Références matériaux/couleurs
     const ralCodes = queryUpper.match(/RAL\s?\d{4}/g);
-    if (ralCodes) codes.push(...ralCodes.map(c => `Couleur $) {c}`));
+    if (ralCodes) codes.push(...ralCodes.map(c => `Couleur ${c}`));
     
     // Normes françaises
     const dtuCodes = queryUpper.match(/DTU\s?[\d.]+/g);
-    if (dtuCodes) codes.push(...dtuCodes.map(c => `Norme $) {c}`));
+    if (dtuCodes) codes.push(...dtuCodes.map(c => `Norme ${c}`));
     
     // Codes spéciaux JLM
     if (queryUpper.includes('MEXT')) codes.push('Menuiseries Extérieures');
@@ -2101,9 +1732,8 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     requestType: 'full' | 'summary' | 'specific' = 'summary'
   ): Promise<AIContextualData | null> {
     return withErrorHandling(
-    async () => {
-
-      // Configuration par défaut pour la génération de contexte
+      async () => {
+        // Configuration par défaut pour la génération de contexte
       const config: ContextGenerationConfig = {
         entityType,
         entityId,
@@ -2186,129 +1816,14 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
       }
     },
     {
-      operation: 'token',
+      operation: 'buildEnrichedContext',
       service: 'AIService',
       metadata: {}
-    } );
-      return null;
-    }
+    });
   }
 
-  /**
-   * Parse et valide la réponse IA structurée
-   */
-  /**
-   * Décode les entités HTML dans une chaîne
-   */
-  private decodeHTMLEntities(text: string): string {
-    return text
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&#x27;/g, "'")
-      .replace(/&#x2F;/g, '/')
-      .replace(/&nbsp;/g, ' ');
-  }
-
-  private parseAIResponse(responseText: string): {
-    sql: string;
-    explanation: string;
-    confidence: number;
-    warnings: string[];
-  } {
-    // Nettoyer la réponse (retirer les markdown blocks)
-    let cleanedResponse = responseText
-      .replace(/```sql\n?|\n?```/g, '')
-      .replace(/```json\n?|\n?```/g, '')
-      .replace(/```\n?|\n?```/g, '')
-      .trim();
-    
-    // STRATÉGIE 1: Détecter SQL pur (mode sql_minimal)
-    // Si la réponse commence par SELECT/INSERT/UPDATE/DELETE, c'est du SQL pur
-    const sqlKeywords = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)/i;
-    if (sqlKeywords.test(cleanedResponse)) {
-      logger.info('Réponse SQL pure détectée (mode optimisé)', { metadata: {
-          service: 'AIService',
-          operation: 'parseAIResponse' 
-
-              }
- 
-              
-                                                });
-      // Extraire le SQL (avec ou sans point-virgule)
-      const sqlMatch = cleanedResponse.match(/^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*/i);
-      let sql = sqlMatch ? sqlMatch[0].trim() : cleanedResponse.trim();
-      // Décoder les entités HTML qui pourraient être présentes
-      sql = this.decodeHTMLEntities(sql);
-      return {
-        sql,
-        explanation: "Requête SQL générée en mode optimisé",
-        confidence: 0.9,
-        warnings: []
-      };
-    }
-    // STRATÉGIE 2: Tenter parsing JSON (mode standard)
-    return withErrorHandling(
-    async () => {
-
-      // Chercher le premier { et dernier } valides
-      const firstBrace = cleanedResponse.indexOf('{');
-      const lastBrace = cleanedResponse.lastIndexOf('}');
-      
-      if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
-        cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
-      }
-      
-      const parsed = JSON.parse(cleanedResponse);
-      
-      // Décoder les entités HTML dans le SQL
-      const decodedSql = this.decodeHTMLEntities(parsed.sql || "");
-
-      return {
-        sql: decodedSql,
-        explanation: parsed.explanation || "Pas d'explication fournie",
-        confidence: Math.max(0, Math.min(1, parsed.confidence || 0.5)),
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
-      };
-    
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {}
-    } );
-      
-      // STRATÉGIE 3: Fallback - chercher du SQL n'importe où dans la réponse
-      const sqlMatch = responseText.match(/SELECT[\s\S]*?(?:;|$)/i) ||
-                      responseText.match(/INSERT[\s\S]*?(?:;|$)/i) ||
-                      responseText.match(/UPDATE[\s\S]*?(?:;|$)/i) ||
-                      responseText.match(/DELETE[\s\S]*?(?:;|$)/i);
-      
-      // Décoder les entités HTML même dans le fallback
-      const fallbackSql = sqlMatch ? 
-        this.decodeHTMLEntities(sqlMatch[0].trim()) : 
-        "SELECT 1 as status;";
-      
-      return {
-        sql: fallbackSql,
-        explanation: "Réponse IA mal formatée - utilisation du fallback SQL",
-        confidence: 0.2,
-        warnings: ["Réponse IA mal formatée, fallback utilisé"]
-      };
-    }
-  }
-
-  /**
-   * Estimation approximative du nombre de tokens
-   */
-  private estimateTokens(input: string, output: string): number {
-    // Approximation: 1 token ≈ 4 caractères pour le français
-    const inputTokens = Math.ceil(input.length / 4);
-    const outputTokens = Math.ceil(output.length / 4);
-    return inputTokens + outputTokens;
-  }
+  // NOTE: parseAIResponse et decodeHTMLEntities sont maintenant dans AIOrchestrator
+  // NOTE: estimateTokens est maintenant dans les providers (ClaudeProvider, GPTProvider)
 
   /**
    * Validation et sanitisation des requêtes entrantes
@@ -2349,8 +1864,8 @@ ${context || "Schéma base de données Saxium avec enrichissements IA"}`;
     ];
 
     for (const pattern of suspiciousPatterns) {
-      if (pattern.test(request.query)) {}
-return{
+      if (pattern.test(request.query)) {
+        return {
           success: false,
           error: {
             type: "validation_error",
@@ -2381,11 +1896,10 @@ return{
    */
   async getUsageStats(timeRangeDays: number = 30): Promise<AiUsageStats> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const since = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
 
-      const since = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
-
-      const stats = await db
+        const stats = await db
         .select({
           totalRequests: sql<number>`COUNT(*)`,
           successRate: sql<number>`AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END)`,
@@ -2402,10 +1916,10 @@ return{
         .from(aiModelMetrics)
         .where(sql`timestamp >= ${since}`);
 
-      const result = stats[0];
-      const total = result.totalRequests || 1; // Éviter division par 0
+        const result = stats[0];
+        const total = result.totalRequests || 1; // Éviter division par 0
 
-      return {
+        return {
         totalRequests: result.totalRequests || 0,
         successRate: Math.round((result.successRate || 0) * 100) / 100,
         avgResponseTime: Math.round(result.avgResponseTime || 0),
@@ -2422,16 +1936,12 @@ return{
           expert: Math.round(((result.expertQueries || 0) / total) * 100) / 100
         }
       };
-
-    
-    },
+      },
     {
-      operation: 'token',
+      operation: 'getUsageStats',
       service: 'AIService',
       metadata: {}
-    } );
-      throw new AppError("Impossible de récupérer les statistiques d'usage", 500);
-    }
+    });
   }
 
   /**
@@ -2439,26 +1949,25 @@ return{
    */
   async cleanExpiredCache(): Promise<number> {
     return withErrorHandling(
-    async () => {
-
-      const result = await db
+      async () => {
+        const result = await db
         .delete(aiQueryCache)
         .where(sql`expires_at < NOW()`);
       
-      logger.info('Cache nettoyé', { metadata: {
+        logger.info('Cache nettoyé', { 
+        metadata: {
           service: 'AIService',
           operation: 'cleanExpiredCache',
           entriesRemoved: result.rowCount || 0
-            });
+        }
+      });
       return result.rowCount || 0;
     },
     {
-      operation: 'token',
+      operation: 'cleanExpiredCache',
       service: 'AIService',
       metadata: {}
-    } );
-      return 0;
-    }
+    });
   }
 
   /**
@@ -2478,73 +1987,47 @@ return{
     };
 
     // Test Claude
-    return withErrorHandling(
-    async () => {
-
-      await this.anthropic.messages.create({
-        model: DEFAULT_CLAUDE_MODEL,
-        max_tokens: 10,
-        messages: [{ role: 'user', content: 'Test' }]
-      });
-      health.claude = true;
-    
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {}
-    } );
+    if (this.anthropic) {
+      try {
+        await this.anthropic.messages.create({
+          model: DEFAULT_CLAUDE_MODEL,
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'Test' }]
+        });
+        health.claude = true;
+      } catch (error) {
+        // Ignore errors for health check
+      }
     }
 
     // Test GPT
     if (this.openai) {
-      return withErrorHandling(
-    async () => {
-
+      try {
         await this.openai.chat.completions.create({
           model: DEFAULT_GPT_MODEL,
           messages: [{ role: 'user', content: 'Test' }],
           max_completion_tokens: 10
         });
         health.gpt = true;
-      
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {}
-    } );
+      } catch (error) {
+        // Ignore errors for health check
       }
     }
 
     // Test base de données
-    return withErrorHandling(
-    async () => {
-
+    try {
       await db.select().from(sql`information_schema.tables`).limit(1);
       health.database = true;
-    
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {
-      });
+    } catch (error) {
+      // Ignore errors for health check
     }
 
     // Test cache (utiliser une requête basique pour éviter les erreurs de schéma)
-    return withErrorHandling(
-    async () => {
-
+    try {
       await db.select().from(sql`information_schema.tables WHERE table_name LIKE 'ai_%'`).limit(1);
       health.cache = true;
-    
-    },
-    {
-      operation: 'token',
-      service: 'AIService',
-      metadata: {
-      });
+    } catch (error) {
+      // Ignore errors for health check
     }
 
     return health;

@@ -1,5 +1,5 @@
-import type { IStorage } from "../storage-poc";
-import { withErrorHandling } from './utils/error-handler';
+import type { StorageFacade } from "../storage/facade/StorageFacade";
+import { withErrorHandling } from '../utils/error-handler';
 import { eventBus } from "../eventBus";
 import { logger } from "../utils/logger";
 import { NotFoundError, DatabaseError } from "../utils/error-handler";
@@ -7,8 +7,11 @@ import type {
   ProjectTimeline, InsertProjectTimeline,
   DateIntelligenceRule, InsertDateIntelligenceRule,
   DateAlert, InsertDateAlert,
-  Project, ProjectStatus
+  Project
 } from "@shared/schema";
+import { projectStatusEnum } from "@shared/schema";
+
+type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 
 // ========================================
 // TYPES ET INTERFACES POUR LE SYSTÈME INTELLIGENT
@@ -122,7 +125,7 @@ export interface CalculationContext {
 
 class CalculationEngine {
   
-  constructor(private storage: IStorage) {}
+  constructor(private storage: StorageFacade) {}
 
   // Calcul durée avec règles métier appliquées
   async calculateDuration(
@@ -402,16 +405,20 @@ class CalculationEngine {
       const existingTimeline = timelines.find(t => t.phase === phase);
       
       if (existingTimeline) {
+        const oldStartDate = existingTimeline.plannedStartDate || existingTimeline.actualStartDate || new Date();
+        const oldEndDate = existingTimeline.plannedEndDate || existingTimeline.actualEndDate || new Date();
+        const duration = existingTimeline.durationEstimate || 0;
+        
         const newStartDate = this.addWorkingDays(currentDate, 1);
-        const newEndDate = this.addWorkingDays(newStartDate, existingTimeline.duration - 1);
+        const newEndDate = this.addWorkingDays(newStartDate, duration - 1);
         
         cascadeEffects.push({
           phase,
-          oldStartDate: existingTimeline.startDate,
-          oldEndDate: existingTimeline.endDate,
+          oldStartDate,
+          oldEndDate,
           newStartDate,
           newEndDate,
-          impactDays: this.calculateDaysDifference(existingTimeline.endDate, newEndDate),
+          impactDays: this.calculateDaysDifference(oldEndDate, newEndDate),
           reason: `Dépendance de ${changedPhase}`,
           confidence: 0.9
         });
@@ -473,8 +480,8 @@ export class DateIntelligenceService {
     
     // Vérifier le cache
     if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey);
-      if (Date.now() - cached.timestamp < this.CACHE_TTL) {
+      const cached = this.cache.get(cacheKey) as { result: PhaseDurationResult; timestamp: number } | undefined;
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
         return cached.result;
       }
     }
@@ -555,13 +562,11 @@ export class DateIntelligenceService {
         const timeline: InsertProjectTimeline = {
           projectId,
           phase,
-          startDate,
-          endDate,
-          duration: durationResult.calculatedDuration,
+          plannedStartDate: startDate,
+          plannedEndDate: endDate,
+          durationEstimate: durationResult.calculatedDuration,
           calculationMethod: 'automatic',
-          appliedRules: [durationResult.appliedRule],
-          confidence: durationResult.confidence,
-          constraints: constraints.filter(c => c.phase === phase).map(c => c.type),
+          confidence: durationResult.confidence.toString(),
           createdBy: 'system'
         };
 
@@ -577,23 +582,23 @@ export class DateIntelligenceService {
         projectId,
         timelineId: `timeline_${projectId}_${Date.now()}`,
         phasesCount: timelines.length,
-        totalDuration: timelines.reduce((total, timeline) => total + (timeline.duration || 0), 0),
+        totalDuration: timelines.reduce((total, timeline) => total + (timeline.durationEstimate || 0), 0),
         constraintsApplied: constraints?.length || 0,
         calculationMethod: 'intelligent_rules_based',
         userId: 'system'
       });
 
       return timelines;
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'generateProjectTimeline',
       service: 'DateIntelligenceService',
-      metadata: {}
-    } );
-      throw new DatabaseError(`Impossible de générer la timeline du projet ${projectId}`, error as Error);
+      metadata: {
+        projectId,
+        constraintsCount: constraints.length
+      }
     }
+    );
   }
 
   // ========================================
@@ -623,10 +628,10 @@ export class DateIntelligenceService {
         
         if (timeline) {
           const updatedTimeline = await this.storage.updateProjectTimeline(timeline.id, {
-            startDate: effect.newStartDate,
-            endDate: effect.newEndDate,
+            plannedStartDate: effect.newStartDate,
+            plannedEndDate: effect.newEndDate,
             calculationMethod: 'automatic',
-            lastCalculatedAt: new Date()
+            autoCalculated: true
           });
           updatedTimelines.push(updatedTimeline);
         }
@@ -681,16 +686,17 @@ export class DateIntelligenceService {
         recommendedActions,
         alertsGenerated
       };
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'recalculateFromPhase',
       service: 'DateIntelligenceService',
-      metadata: {}
-    } );
-      throw new DatabaseError(`Impossible de recalculer depuis la phase ${fromPhase}`, error as Error);
+      metadata: {
+        projectId,
+        fromPhase,
+        newDate: newDate.toISOString()
+      }
     }
+    );
   }
 
   // ========================================
@@ -722,7 +728,8 @@ export class DateIntelligenceService {
             durationImpact,
             conditions: typeof rule.baseConditions === 'string' 
               ? JSON.parse(rule.baseConditions || '{}') 
-              : rule.baseConditions || {});
+              : (rule.baseConditions || {})
+          });
 
           // CORRECTION BLOCKER 5: Publier événement pour chaque règle appliquée
           eventBus.publishDateIntelligenceRuleApplied({
@@ -738,16 +745,16 @@ export class DateIntelligenceService {
       }
 
       return appliedRules.sort((a, b) => Math.abs(b.durationImpact) - Math.abs(a.durationImpact));
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'applyIntelligenceRules',
       service: 'DateIntelligenceService',
-      metadata: {}
-    } );
-      throw new DatabaseError(`Impossible d'appliquer les règles d'intelligence`, error as Error);
+      metadata: {
+        projectId: context.projectId,
+        currentPhase: context.currentPhase
+      }
     }
+    );
   }
 
   // ========================================
@@ -767,79 +774,96 @@ export class DateIntelligenceService {
         const current = timeline[i];
         const next = timeline[i + 1];
         
-        if (current.endDate >= next.startDate) {
+        const currentEndDate = current.plannedEndDate || current.actualEndDate || new Date();
+        const nextStartDate = next.plannedStartDate || next.actualStartDate || new Date();
+        
+        if (currentEndDate >= nextStartDate) {
           issues.push({
-                id: `overlap_${current.phase}_${next.phase}`,
+            id: `overlap_${current.phase}_${next.phase}`,
             type: 'dependency_violation',
             severity: 'critical',
-                title: 'Chevauchement de phases détecté',
+            title: 'Chevauchement de phases détecté',
             description: `Les phases ${current.phase} et ${next.phase} se chevauchent`,
             affectedPhases: [current.phase, next.phase],
-            affectedDates: [current.endDate, next.startDate],
+            affectedDates: [currentEndDate, nextStartDate],
             suggestedActions: [
               'Réviser la durée de la phase ' + current.phase,
               'Reporter le début de la phase ' + next.phase,
               'Vérifier les dépendances entre phases'
             ],
             estimatedImpact: {
-              delayDays: Math.ceil((current.endDate.getTime() - next.startDate.getTime()) / (1000 * 60 * 60 * 24))
-            });
+              delayDays: Math.ceil((currentEndDate.getTime() - nextStartDate.getTime()) / (1000 * 60 * 60 * 24))
+            }
+          });
         }
       }
 
       // 2. Détecter les phases trop longues
       timeline.forEach(phase => {
-        if (phase.duration > 60) { // Plus de 2 mois
+        const duration = phase.durationEstimate || 0;
+        if (duration > 60) { // Plus de 2 mois
+          const startDate = phase.plannedStartDate || phase.actualStartDate || new Date();
+          const endDate = phase.plannedEndDate || phase.actualEndDate || new Date();
           issues.push({
-                id: `long_phase_${phase.phase}`,
+            id: `long_phase_${phase.phase}`,
             type: 'optimization_opportunity',
             severity: 'warning',
-                title: 'Phase exceptionnellement longue',
-            description: `La phase ${phase.phase} dure ${phase.duration} jours`,
+            title: 'Phase exceptionnellement longue',
+            description: `La phase ${phase.phase} dure ${duration} jours`,
             affectedPhases: [phase.phase],
-            affectedDates: [phase.startDate, phase.endDate],
+            affectedDates: [startDate, endDate],
             suggestedActions: [
               'Diviser la phase en sous-étapes',
               'Réviser les ressources allouées',
               'Vérifier la complexité estimée'
             ],
             estimatedImpact: {
-              delayDays: Math.floor(phase.duration * 0.2) // Optimisation possible de 20%
-            });
-        });
+              delayDays: Math.floor(duration * 0.2) // Optimisation possible de 20%
+            }
+          });
+        }
+      });
 
       // 3. Détecter les risques de retard (faible confiance)
       timeline.forEach(phase => {
-        if (phase.confidence && phase.confidence < 0.6) {
+        const confidence = phase.confidence ? parseFloat(phase.confidence.toString()) : 0.8;
+        if (confidence < 0.6) {
+          const endDate = phase.plannedEndDate || phase.actualEndDate || new Date();
+          const duration = phase.durationEstimate || 0;
           issues.push({
-                id: `low_confidence_${phase.phase}`,
+            id: `low_confidence_${phase.phase}`,
             type: 'deadline_risk',
             severity: 'warning',
-                title: 'Risque de retard détecté',
-            description: `Faible confiance (${Math.round(phase.confidence * 100)}%) pour la phase ${phase.phase}`,
+            title: 'Risque de retard détecté',
+            description: `Faible confiance (${Math.round(confidence * 100)}%) pour la phase ${phase.phase}`,
             affectedPhases: [phase.phase],
-            affectedDates: [phase.endDate],
+            affectedDates: [endDate],
             suggestedActions: [
               'Affiner l\'estimation de durée',
               'Prévoir un buffer supplémentaire',
               'Planifier une révision à mi-parcours'
             ],
             estimatedImpact: {
-              delayDays: Math.ceil(phase.duration * 0.3)
-            });
-        });
+              delayDays: Math.ceil(duration * 0.3)
+            }
+          });
+        }
+      });
 
       // 4. Opportunités d'optimisation (phases très courtes)
       timeline.forEach(phase => {
-        if (phase.duration < 2 && ['etude', 'planification'].includes(phase.phase)) {
+        const duration = phase.durationEstimate || 0;
+        if (duration < 2 && ['etude', 'planification'].includes(phase.phase)) {
+          const startDate = phase.plannedStartDate || phase.actualStartDate || new Date();
+          const endDate = phase.plannedEndDate || phase.actualEndDate || new Date();
           issues.push({
-                id: `short_phase_${phase.phase}`,
+            id: `short_phase_${phase.phase}`,
             type: 'optimization_opportunity',
             severity: 'info',
-                title: 'Opportunité de parallélisation',
-            description: `La phase ${phase.phase} est très courte (${phase.duration} jours)`,
+            title: 'Opportunité de parallélisation',
+            description: `La phase ${phase.phase} est très courte (${duration} jours)`,
             affectedPhases: [phase.phase],
-            affectedDates: [phase.startDate, phase.endDate],
+            affectedDates: [startDate, endDate],
             suggestedActions: [
               'Envisager de paralléliser avec d\'autres phases',
               'Regrouper avec des activités connexes',
@@ -847,23 +871,24 @@ export class DateIntelligenceService {
             ],
             estimatedImpact: {
               delayDays: -2 // Gain possible
-            });
-        });
+            }
+          });
+        }
+      });
 
       return issues.sort((a, b) => {
-        const severityOrder = { 'critical': 3, 'warning': 2, 'info': 1 };
+        const severityOrder: Record<string, number> = { 'critical': 3, 'warning': 2, 'info': 1 };
         return (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
       });
-      
-    
     },
     {
-      operation: 'constructor',
+      operation: 'detectPlanningIssues',
       service: 'DateIntelligenceService',
-      metadata: {}
-    } );
-      throw new DatabaseError(`Impossible de détecter les problèmes de planification`, error as Error);
+      metadata: {
+        timelineLength: timeline.length
+      }
     }
+    );
   }
 
   // ========================================

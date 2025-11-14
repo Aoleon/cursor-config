@@ -1,8 +1,9 @@
 import { type Express } from "express";
+import { createServer, type Server } from "http";
 import { withErrorHandling } from './utils/error-handler';
-import { registerRoutes as registerPocRoutes } from "./routes-poc";
 import { storage, type IStorage } from "./storage-poc";
-import { setupAuth } from "./replitAuth";
+import { storageFacade } from "./storage/facade/StorageFacade";
+import { initializeServices } from "./services/initialization";
 
 // Import modular route factory functions
 import { createChiffrageRouter } from "./modules/chiffrage/routes";
@@ -29,7 +30,7 @@ import { createAfterSalesRoutes } from "./modules/aftersales";
 
 // Import cache service
 import { getCacheService } from "./services/CacheService";
-import { mondayService } from "./services/MondayService";
+import { mondayIntegrationService } from "./services/consolidated/MondayIntegrationService";
 import { logger } from "./utils/logger";
 
 export async function registerRoutes(app: Express) {
@@ -41,10 +42,10 @@ export async function registerRoutes(app: Express) {
   // 2. Get eventBus from app (set in server/index.ts)
   const eventBus = app.get('eventBus');
   
-  // 3. Cast storage to IStorage interface
-  // Double cast nécessaire : DatabaseStorage n'implémente pas encore toutes les méthodes de IStorage
-  // durant la migration progressive. Pattern standard pour migration progressive.
-  const storageInterface = storage as unknown as IStorage;
+  // 3. Use StorageFacade instead of direct storage
+  // StorageFacade provides a unified interface and delegates to repositories
+  // It implements IStorage interface through delegation
+  const storageInterface = storageFacade as unknown as IStorage;
   
   // 4. Initialize DocumentSyncService singleton BEFORE routes
   const { initializeDocumentSyncService, getDocumentSyncService } = await import('./services/DocumentSyncService');
@@ -186,7 +187,7 @@ export async function registerRoutes(app: Express) {
     async () => {
       await withErrorHandling(
         async () => {
-          await mondayService.getBoards(50);
+          await mondayIntegrationService.getBoards(50);
           logger.info('[CacheService] Monday boards préchargés', {
             metadata: {
                       module: 'Routes',
@@ -212,8 +213,17 @@ export async function registerRoutes(app: Express) {
 
             });
   
-  // 7. Register legacy POC routes and create HTTP server (must be last)
-  const server = await registerPocRoutes(app);
+  // 7. Initialize core services
+  await initializeServices(app, storageInterface);
   
-  return server;
+  logger.info('✅ Tous les services et routes initialisés', { metadata: {
+      module: 'Routes',
+      operation: 'registerRoutes'
+          }
+
+            });
+  
+  // 8. Create HTTP server
+  const httpServer = createServer(app);
+  return httpServer;
 }

@@ -15,6 +15,8 @@ export interface RetryOptions {
   backoffMultiplier?: number;
   /** Timeout pour chaque tentative en ms */
   timeout?: number;
+  /** Activer le jitter (variation aléatoire) sur les délais (défaut: true) */
+  jitter?: boolean;
   /** Condition pour déterminer si une erreur est retriable */
   retryCondition?: (error: unknown) => boolean;
   /** Fonction de callback appelée avant chaque retry */
@@ -42,38 +44,40 @@ export function isRetryableError(error: unknown): boolean {
     return false;
   }
   
+  const err = error as { status?: number; code?: string; message?: string };
+  
   // Ne pas retry sur les erreurs de ressource non trouvée
-  if (error.status === 404) {
+  if (err.status === 404) {
     return false;
   }
   
   // Ne pas retry sur les erreurs de validation (bad request)
-  if (error.status === 400) {
+  if (err.status === 400) {
     return false;
   }
   
   // Retry sur les erreurs serveur (5xx)
-  if (error.status >= 500 && error.status < 600) {
+  if (err.status !== undefined && err.status >= 500 && err.status < 600) {
     return true;
   }
   
   // Retry sur les erreurs de rate limiting (429)
-  if (error.status === 429) {
+  if (err.status === 429) {
     return true;
   }
   
   // Retry sur les timeouts
-  if (error.message?.toLowerCase().includes('timeout')) {
+  if (err.message?.toLowerCase().includes('timeout')) {
     return true;
   }
   
   // Retry sur les erreurs réseau
-  if (error.code === 'ECONNRESET' || 
-      error.code === 'ETIMEDOUT' || 
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ENOTFOUND' ||
-      error.code === 'ENETUNREACH' ||
-      error.message?.toLowerCase().includes('network')) {
+  if (err.code === 'ECONNRESET' || 
+      err.code === 'ETIMEDOUT' || 
+      err.code === 'ECONNREFUSED' ||
+      err.code === 'ENOTFOUND' ||
+      err.code === 'ENETUNREACH' ||
+      err.message?.toLowerCase().includes('network')) {
     return true;
   }
   
@@ -221,8 +225,10 @@ export async function withRetry<T>(
           operation: 'withRetry',
           attempt: attempt + 1,
           error: error instanceof Error ? error.message : String(error),
-          errorCode: (error as unknown)?.code,
-          errorStatus: (eras unknown)any)?.status
+          errorCode: (error as unknown as { code?: string })?.code,
+          errorStatus: (error as unknown as { status?: number })?.status
+        }
+      });
       
       // Vérifier si c'est la dernière tentative
       if (attempt >= (opts.maxRetries ?? 3)) {
@@ -240,7 +246,7 @@ export async function withRetry<T>(
         
         // Enrichir l'erreur avec les statistiques de retry
         if (error instanceof Error) {
-         as unknown) as unknown).retryStats = stats;
+          (error as unknown as { retryStats?: RetryStats }).retryStats = stats;
         }
         
         throw error;
@@ -250,17 +256,17 @@ export async function withRetry<T>(
       if (!(opts.retryCondition ?? isRetryableError)(error)) {
         logger.warn('Error not retriable, stopping retry', { metadata: {
             service: 'RetryHelper',
-                  operation: 'withRetry',
+            operation: 'withRetry',
             attempt: attempt + 1,
-                  error: error instanceof Error ? error.message : String(error)
-                }
-
-                                    });
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
         
         stats.totalDuration = Date.now() - startTime;
         
         if (error instanceof Error) {
-     as unknown)unknownnown any).retryStats = stats;
+          (error as unknown as { retryStats?: RetryStats }).retryStats = stats;
+        }
         throw error;
       }
       
@@ -283,9 +289,13 @@ export async function withRetry<T>(
       // Attendre avant le prochain retry
       await sleep(delay);
     }
+  }
   
-  // Ne devrait jamais arriver, mais au cas où
-  throw lastError || new Error('Retry failed without error');
+  // Ne devrait jamais arriver, mais au cas où (TypeScript safety)
+  if (!lastError) {
+    throw new Error('Retry failed without error');
+  }
+  throw lastError;
 }
 
 /**

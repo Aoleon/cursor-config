@@ -1,559 +1,119 @@
-import * as fs from 'fs';
-import { logger } from './utils/logger';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { logger } from '../utils/logger';
 
-interface MondayItem {
-  [key: string]: string | number | undefined;
-}
-
-interface ColumnInfo {
-  name: string;
-  type: string;
-  uniqueValues: Set<string>;
-  sampleValues: string[];
-}
-
-interface SubitemInfo {
-  parentItem: string;
-  columns: string[];
-  items: MondayItem[];
-}
-
-interface BoardAnalysis {
-  boardName: string;
-  fileName: string;
-  itemCount: number;
-  groups: string[];
-  columns: Map<string, ColumnInfo>;
-  subitems: SubitemInfo[];
-  sampleItems: MondayItem[];
-  statuses: Set<string>;
-  dates: string[];
-  people: Set<string>;
-  numbers: number[];
-}
-
-interface CompleteAnalysis {
+interface MondaySummary {
   totalBoards: number;
   totalItems: number;
-  boards: Map<string, BoardAnalysis>;
-  globalStatuses: Set<string>;
-  globalColumns: Map<string, Set<string>>;
-  cities: Set<string>;
-  clients: Set<string>;
+  boards: Array<{
+    name: string;
+    fileName: string;
+    itemCount: number;
+  }>;
 }
 
-// Regex patterns pour identifier les types de colonnes
-const PATTERNS = {
-  date: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
-  number: /^\d+$/,
-  city: /^[A-Z][A-Z\s-]+\d+/,
-  client: /(NEXITY|MARIGNAN|TISSERIN|HABITAT|COGEDIM|KAUFMAN|RAMERY|VINCI|NOVEBAT|PIRON|NACARAT)/i,
-  status: /(Working on it|Done|Stuck|En cours|Terminé|A Faire|Approuvée|Rejetée|Facturé)/i,
-  person: /^[A-Z][a-z]+\s+[A-Z][A-Z]+$/,
-};
+function readMondayExport(exportPath: string): unknown {
+  if (!fs.existsSync(exportPath)) {
+    logger.warn(`Aucun fichier d'export trouvé à l'emplacement ${exportPath}`);
+    return {};
+  }
 
-function analyzeColumnType(value: unknown): string {
-  if (value === null || value === undefined || value === '') return 'empty';
-  
-  const strValue = String(value);
-  
-  if (PATTERNS.date.test(strValue)) return 'date';
-  if (PATTERNS.number.test(strValue)) return 'number';
-  if (PATTERNS.status.test(strValue)) return 'status';
-  if (PATTERNS.person.test(strValue)) return 'person';
-  if (PATTERNS.city.test(strValue)) return 'city';
-  if (PATTERNS.client.test(strValue)) return 'client';
-  
-  return 'text';
+  const raw = fs.readFileSync(exportPath, 'utf-8');
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    logger.error('Impossible de parser le fichier export-monday.json', {
+      metadata: {
+        service: 'analyze-monday-complete',
+        error,
+      },
+    });
+    return {};
+  }
 }
 
-function extractCityFromItemName(name: string): string | null {
-  const match = name.match(/^([A-Z][A-Z\s-]+)(\d+)?/);
-  return match ? match[1].trim() : null;
-}
+function buildSummary(data: unknown): MondaySummary {
+  if (typeof data !== 'object' || data === null) {
+    return { totalBoards: 0, totalItems: 0, boards: [] };
+  }
 
-function extractClientFromItemName(name: string): string | null {
-  const match = name.match(PATTERNS.client);
-  return match ? match[0] : null;
-}
+  const boards: MondaySummary['boards'] = [];
+  let totalItems = 0;
 
-function analyzeMonday(): CompleteAnalysis {
-  const exportPath = path.join(process.cwd(), 'attached_assets', 'export-monday.json');
-  const rawData = fs.readFileSync(exportPath, 'utf-8');
-  const mondayData = JSON.parse(rawData);
+  for (const [fileName, fileContent] of Object.entries(data)) {
+    if (typeof fileContent !== 'object' || fileContent === null) {
+      continue;
+    }
 
-  const analysis: CompleteAnalysis = {
-    totalBoards: 0,
-    totalItems: 0,
-    boards: new Map(),
-    globalStatuses: new Set(),
-    globalColumns: new Map(),
-    cities: new Set(),
-    clients: new Set(),
-  };
-
-  // Parser chaque fichier Excel exporté
-  for (const [fileName, fileData] of Object.entries(mondayData)) {
-    // Chaque fichier contient un ou plusieurs boards
-    for (const [boardKey, boardItems] of Object.entries(fileData as unknown)) {
-      const boardName = boardKey;
-      const items = boardItems as MondayItem[];
-
-      const boardAnalysis: BoardAnalysis = {
-        boardName,
+    for (const [boardName, items] of Object.entries(fileContent as Record<string, unknown>)) {
+      if (!Array.isArray(items)) {
+        continue;
+      }
+      boards.push({
+        name: boardName,
         fileName,
-        itemCount: 0,
-        groups: [],
-        columns: new Map(),
-        subitems: [],
-        sampleItems: [],
-        statuses: new Set(),
-        dates: [],
-        people: new Set(),
-        numbers: [],
-      };
-
-      let currentGroup = '';
-      let currentHeaders: string[] = [];
-      let isInSubitems = false;
-      let currentSubitem: SubitemInfo | null = null;
-      let lastParentItem = '';
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const keys = Object.keys(item);
-        const firstKey = keys[0];
-        const firstValue = item[firstKey];
-
-        // Détecter les groupes (une seule clé avec une valeur string)
-        if (keys.length === 1 && typeof firstValue === 'string' && firstValue !== '') {
-          currentGroup = firstValue;
-          if (!boardAnalysis.groups.includes(currentGroup)) {
-            boardAnalysis.groups.push(currentGroup);
-          }
-          continue;
-        }
-
-        // Détecter les headers de colonnes (ligne avec "Name" ou "Nom")
-        if (firstValue === 'Name' || firstValue === 'Nom' || firstValue === 'Started By') {
-          currentHeaders = [];
-          for (const key of keys) {
-            const headerName = item[key];
-            if (headerName && typeof headerName === 'string') {
-              currentHeaders.push(headerName);
-              
-              // Initialiser les infos de colonne
-              if (!boardAnalysis.columns.has(headerName)) {
-                boardAnalysis.columns.set(headerName, {
-                name: headerName,
-                  type: 'unknown',
-                  uniqueValues: new Set(),
-                  sampleValues: [],
-                });
-              }
-          continue;
-        }
-
-        // Détecter le début des subitems
-        if (firstValue === 'Subitems') {
-          isInSubitems = true;
-          const subitemColumns = keys.slice(1).map(k => String(item[k])).filter(v => v);
-          currentSubitem = {
-            parentItem: lastParentItem,
-            columns: subitemColumns,
-            items: [],
-          };
-          continue;
-        }
-
-        // Si on est dans les subitems
-        if (isInSubitems) {
-          // Ligne vide après "Subitems" - la prochaine sera des données
-          if (firstValue === '' && Object.values(item).every(v => v === '' || v === undefined)) {
-            continue;
-          }
-          
-          // Ajouter le subitem
-          if (currentSubitem && firstValue && firstValue !== '') {
-            currentSubitem.items.push(item);
-            boardAnalysis.itemCount++;
-          }
-
-          // Fin des subitems (ligne vide ou nouvelle section)
-          if (firstValue === '' || (i + 1 < items.length && Object.keys(items[i + 1]).length === 1)) {
-            if (currentSubitem && currentSubitem.items.length > 0) {
-              boardAnalysis.subitems.push(currentSubitem);
-            }
-            isInSubitems = false;
-            currentSubitem = null;
-          }
-          continue;
-        }
-
-        // Item normal
-        if (firstValue && typeof firstValue === 'string' && firstValue !== '') {
-          lastParentItem = firstValue;
-          boardAnalysis.itemCount++;
-          
-          // Sauvegarder les 5 premiers items comme exemples
-          if (boardAnalysis.sampleItems.length < 5) {
-            boardAnalysis.sampleItems.push(item);
-          }
-
-          // Analyser les valeurs de chaque colonne
-          let colIndex = 0;
-          for (const key of keys) {
-            const value = item[key];
-            const headerName = currentHeaders[colIndex] || key;
-            
-            if (value && value !== '') {
-              const strValue = String(value);
-              const columnType = analyzeColumnType(value);
-
-              // Mettre à jour les infos de colonne
-              let columnInfo = boardAnalysis.columns.get(headerName);
-              if (!columnInfo) {
-                columnInfo = {
-                name: headerName,
-                  type: columnType,
-                  uniqueValues: new Set(),
-                  sampleValues: [],
-                };
-                boardAnalysis.columns.set(headerName, columnInfo);
-              }
-
-              // Mettre à jour le type si on a trouvé un type plus spécifique
-              if (columnInfo.type === 'unknown' || columnInfo.type === 'text') {
-                columnInfo.type = columnType;
-              }
-
-              // Ajouter aux valeurs uniques (limiter à 100 pour la mémoire)
-              if (columnInfo.uniqueValues.size < 100) {
-                columnInfo.uniqueValues.add(strValue);
-              }
-
-              // Ajouter aux samples (limiter à 10)
-              if (columnInfo.sampleValues.length < 10 && !columnInfo.sampleValues.includes(strValue)) {
-                columnInfo.sampleValues.push(strValue);
-              }
-
-              // Collecter les données spécifiques
-              switch (columnType) {
-                case 'status':
-                  boardAnalysis.statuses.add(strValue);
-                  analysis.globalStatuses.add(strValue);
-                  break;
-                case 'date':
-                  if (boardAnalysis.dates.length < 20) {
-                    boardAnalysis.dates.push(strValue);
-                  }
-                  break;
-                case 'person':
-                  boardAnalysis.people.add(strValue);
-                  break;
-                case 'number':
-                  const num = parseFloat(strValue);
-                  if (!isNaN(num) && boardAnalysis.numbers.length < 20) {
-                    boardAnalysis.numbers.push(num);
-                  }
-                  break;
-              }
-
-              // Extraire villes et clients du nom de l'item
-              if (headerName === 'Name' || headerName === boardName) {
-                const city = extractCityFromItemName(strValue);
-                if (city) analysis.cities.add(city);
-                
-                const client = extractClientFromItemName(strValue);
-                if (client) analysis.clients.add(client);
-              }
-
-            colIndex++;
-          }
-
-          // Collecter les colonnes globales
-          for (const [colName, colInfo] of boardAnalysis.columns.entries()) {
-            if (!analysis.globalColumns.has(colName)) {
-              analysis.globalColumns.set(colName, new Set());
-            }
-            analysis.globalColumns.get(colName)!.add(colInfo.type);
-          }
-
-      // Sauvegarder l'analyse du board
-      analysis.boards.set(boardName, boardAnalysis);
-      analysis.totalBoards++;
-      analysis.totalItems += boardAnalysis.itemCount;
+        itemCount: items.length,
+      });
+      totalItems += items.length;
     }
+  }
 
-  return analysis;
+  return {
+    totalBoards: boards.length,
+    totalItems,
+    boards: boards.sort((a, b) => a.name.localeCompare(b.name)),
+  };
 }
 
-function generateAnalysisReport(analysis: CompleteAnalysis): unknown {
-  const report: unknown = {
-    metadata: {
-      analyzedAt: new Date().toISOString(),
-      totalBoards: analysis.totalBoards,
-      totalItems: analysis.totalItems,
-      totalStatuses: analysis.globalStatuses.size,
-      totalCities: analysis.cities.size,
-      totalClients: analysis.clients.size,
-    },
-    globalStatuses: Array.from(analysis.globalStatuses).sort(),
-    globalColumns: {} as unknown,
-    cities: Array.from(analysis.cities).sort().slice(0, 100),
-    clients: Array.from(analysis.clients).sort(),
-    boards:as unknown, unknown,
-  };
+function writeOutputs(summary: MondaySummary, outputDir: string): void {
+  fs.mkdirSync(outputDir, { recursive: true });
 
-  // Colonnes globales avec leurs types
-  for (const [colName, types] of analysis.globalColumns.entries()) {
-    report.globalColumns[colName] = {
-      types: Array.from(types),
-      boardsUsing: 0,
-    };
-  }
+  const analysisPath = path.join(outputDir, 'monday-analysis.json');
+  fs.writeFileSync(analysisPath, JSON.stringify(summary, null, 2));
 
-  // Détails de chaque board
-  for (const [boardName, boardData] of analysis.boards.entries()) {
-    const col: unknown =ny = {};
-    
-    for (const [colName, colInfo] of boardData.columns.entries()) {
-      columns[colName] = {
-        type: colInfo.type,
-        uniqueValuesCount: colInfo.uniqueValues.size,
-        sampleValues: colInfo.sampleValues.slice(0, 5),
-      };
-
-      // Mettre à jour le compteur global
-      if (report.globalColumns[colName]) {
-        report.globalColumns[colName].boardsUsing++;
-      }
-
-    report.boards[boardName] = {
-      fileName: boardData.fileName,
-      itemCount: boardData.itemCount,
-      groups: boardData.groups,
-      columns,
-      columnNames: Array.from(boardData.columns.keys()),
-      statusesFound: Array.from(boardData.statuses),
-      datesFound: boardData.dates.slice(0, 10),
-      peopleFound: Array.from(boardData.people).slice(0, 10),
-      numbersFound: boardData.numbers.slice(0, 10),
-      subitemsCount: boardData.subitems.length,
-      subitemsDetails: boardData.subitems.slice(0, 3).map(si  => ({
-        parentItem: si.parentItem,
-        columns: si.columns,
-        itemCount: si.items.length,
-        sampleItems: si.items.slice(0, 2),
-      })),
-      sampleItems: boardData.sampleItems.slice(0, 3),
-    };
-  }
-
-  return report;
-}
-
-function generateMarkdownReport(analysis: CompleteAnalysis): string {
-  let md = `# Analyse Complète Monday.com Export\n\n`;
-  md += `**Date d'analyse**: ${new Date().toISOString()}\n\n`;
-  md += `## 📊 Vue d'ensemble COMPLÈTE\n\n`;
-  md += `- **Nombre total de boards**: ${analysis.totalBoards}\n`;
-  md += `- **Nombre total d'items**: ${analysis.totalItems}\n`;
-  md += `- **Statuts globaux détectés**: ${analysis.globalStatuses.size}\n`;
-  md += `- **Villes identifiées**: ${analysis.cities.size}\n`;
-  md += `- **Clients identifiés**: ${analysis.clients.size}\n`;
-  md += `- **Colonnes globales**: ${analysis.globalColumns.size}\n\n`;
-
-  md += `## 🎯 Statuts Détectés\n\n`;
-  md += Array.from(analysis.globalStatuses).map(s => `- $) {s}`).join('\n') + '\n\n';
-
-  md += `## 🏙️ Principales Villes\n\n`;
-  md += Array.from(analysis.cities).slice(0, 30).map(c => `- $) {c}`).join('\n') + '\n\n';
-
-  md += `## 🏢 Clients Identifiés\n\n`;
-  md += Array.from(analysis.clients).map(c => `- $) {c}`).join('\n') + '\n\n';
-
-  md += `## 📋 Colonnes Globales\n\n`;
-  md += `| Colonne | Types Détectés | Boards |\n`;
-  md += `|---------|---------------|--------|\n`;
-  for (const [colName, types] of analysis.globalColumns.entries()) {
-    const boardCount = Array.from(analysis.boards.values())
-      .filter(b => b.columns.has(colName)).length;
-    md += `| ${colName} | ${Array.from(types).join(', ')} | ${boardCount} |\n`;
-  }
-  md += '\n';
-
-  md += `## 📂 Détails par Board\n\n`;
-  
-  for (const [boardName, boardData] of analysis.boards.entries()) {
-    md += `### ${boardName.toUpperCase()}\n\n`;
-    md += `- **Fichier**: ${boardData.fileName}\n`;
-    md += `- **Items**: ${boardData.itemCount}\n`;
-    md += `- **Groupes** (${boardData.groups.length}): ${boardData.groups.join(', ')}\n`;
-    md += `- **Colonnes** (${boardData.columns.size}): ${Array.from(boardData.columns.keys()).join(', ')}\n`;
-    md += `- **Statuts**: ${Array.from(boardData.statuses).join(', ') || 'Aucun'}\n`;
-    md += `- **Dates trouvées**: ${boardData.dates.length}\n`;
-    md += `- **Personnes trouvées**: ${boardData.people.size}\n`;
-    md += `- **Subitems**: ${boardData.subitems.length}\n\n`;
-
-    if (boardData.columns.size > 0) {
-      md += `**Détail des colonnes**:\n\n`;
-      md += `| Colonne | Type | Valeurs Uniques | Exemples |\n`;
-      md += `|---------|------|-----------------|----------|\n`;
-      for (const [colName, colInfo] of boardData.columns.entries()) {
-        const samples = colInfo.sampleValues.slice(0, 3).map(v => 
-          v.length > 30 ? v.substring(0, 30) + '...' : v
-        ).join(', ');
-        md += `| ${colName} | ${colInfo.type} | ${colInfo.uniqueValues.size} | ${samples} |\n`;
-      }
-      md += '\n';
-    }
-
-    if (boardData.subitems.length > 0) {
-      md += `**Subitems** (${boardData.subitems.length} trouvés):\n\n`;
-      for (const subitem of boardData.subitems.slice(0, 3)) {
-        md += `- Parent: "${subitem.parentItem}"\n`;
-        md += `  - Colonnes: ${subitem.columns.join(', ')}\n`;
-        md += `  - Items: ${subitem.items.length}\n`;
-      }
-      md += '\n';
-    }
-
-    md += `---\n\n`;
-  }
-
-  return md;
-}
-
-function generateMondayToSaxiumMapping(analysis: CompleteAnalysiunknown any {
-  const: unknown =g: unknown = {
-    boardMappias unknown, as unknown,
-    columnMas unknown,:as unknown unknown,
-    staas unknown,ias unknown}unknownnown,any,
-    recommendations: [] as string[],
-  };
-
-  // Mapping des boards Monday vers tables Saxium
-  const boardToTable: { [key: string]: string } = {
-    'ao planning  🖥️': 'appels_offres',
-    'chantiers 🏗️': 'projets (type=chantier)',
-    'chantiers administratif': 'projets (type=administratif)',
-    'capso': 'demandes_projet',
-    'contacts': 'contacts',
-    'direction': 'taches_direction',
-    'formation ouvriers': 'formations (type=ouvrier)',
-    'formation bureaux': 'formations (type=bureau)',
-    'sous-traitants': 'fournisseurs',
-  };
-
-  for (const [mondayBoard, saxiumTable] of Object.entries(boardToTable)) {
-    const boardData = Array.from(analysis.boards.entries())
-      .find(([name]) => name.toLowerCase().includes(mondayBoard.toLowerCase()));
-    
-    if (boardData) {
-      const [boardName, data] = boardData;
-      mapping.boardMappings[boardName] = {
-        saxiumTable,
-        itemCount: data.itemCount,
-        columns: Array.from(data.columns.keys()),
-      };
-    }
-
-  // Mapping des colonnes
-  const columnMapping: { [key: string]: string } = {
-    'Name': 'nom',
-    'Nom': 'nom',
-    'Status': 'statut',
-    'Statut': 'statut',
-    'Date': 'date',
-    'Person': 'responsable_id',
-    'Personne': 'responsable_id',
-    'Client': 'client_id',
-    'Montant': 'montant',
-    'Duree J Eq': 'duree_jours',
-    'Started By': 'cree_par',
-    'Duration': 'duree',
-  };
-
-  for (const [mondayCol, saxiumCol] of Object.entries(columnMapping)) {
-    if (analysis.globalColumns.has(mondayCol)) {
-      const types = analysis.globalColumns.get(mondayCol)!;
-      mapping.columnMappings[mondayCol] = {
-        saxiumColumn: saxiumCol,
-        types: Array.from(types),
-        boardsUsing: Array.from(analysis.boards.values())
-          .filter(b => b.columns.has(mondayCol))
-          .map(b => b.boardName),
-      };
-    }
-
-  // Mapping des statuts
-  const statusMapping: { [key: string]: string } = {
-    'Working on it': 'en_cours',
-    'Done': 'termine',
-    'Stuck': 'bloque',
-    'En cours': 'en_cours',
-    'Terminé': 'termine',
-    'A Faire': 'a_faire',
-    'Approuvée': 'approuve',
-    'Rejetée': 'rejete',
-    'Facturé': 'facture',
-  };
-
-  for (const [mondayStatus, saxiumStatus] of Object.entries(statusMapping)) {
-    if (analysis.globalStatuses.has(mondayStatus)) {
-      mapping.statusMappings[mondayStatus] = saxiumStatus;
-    }
-
-  // Recommandations
-  mapping.recommendations = [
-    `${analysis.totalBoards} boards Monday.com à migrer vers Saxium`,
-    `${analysis.totalItems} items au total à importer`,
-    `${analysis.globalStatuses.size} statuts différents à mapper`,
-    `${analysis.cities.size} villes identifiées pour la géolocalisation`,
-    `${analysis.clients.size} clients à créer dans la table contacts`,
-    'Créer une table subitems pour gérer les sous-tâches',
-    'Implémenter un système de groupes pour organiser les items',
-    'Ajouter des champs personnalisés pour les colonnes Monday spécifiques',
+  const reportLines: string[] = [
+    '# Synthèse export Monday.com',
+    '',
+    `- Date: ${new Date().toISOString()}`,
+    `- Nombre total de boards: ${summary.totalBoards}`,
+    `- Nombre total d'items: ${summary.totalItems}`,
+    '',
+    '## Détail par board',
+    '',
   ];
 
-  return mapping;
+  summary.boards.forEach((board) => {
+    reportLines.push(`- ${board.name} (${board.fileName}) – ${board.itemCount} items`);
+  });
+
+  const markdownPath = path.join(outputDir, 'monday-report.md');
+  fs.writeFileSync(markdownPath, reportLines.join('\n'));
+
+  const mappingPath = path.join(outputDir, 'monday-to-saxium-mapping.json');
+  const mapping = {
+    generatedAt: new Date().toISOString(),
+    totalBoards: summary.totalBoards,
+    totalItems: summary.totalItems,
+    boards: summary.boards,
+  };
+  fs.writeFileSync(mappingPath, JSON.stringify(mapping, null, 2));
 }
 
-// Exécution
-logger.info('🔍 Analyse complète Monday.com en cours...\n');
+function main(): void {
+  logger.info('🔍 Analyse synthétique Monday.com en cours...');
 
-const analysis = analyzeMonday();
-const report = generateAnalysisReport(analysis);
-const markdown = generateMarkdownReport(analysis);
-const mapping = generateMondayToSaxiumMapping(analysis);
+  const exportPath = path.join(process.cwd(), 'attached_assets', 'export-monday.json');
+  const mondayData = readMondayExport(exportPath);
+  const summary = buildSummary(mondayData);
 
-// Sauvegarder les résultats
-const outputPath = path.join(process.cwd(), 'server', 'migration');
+  const outputDir = path.join(process.cwd(), 'server', 'migration');
+  writeOutputs(summary, outputDir);
 
-fs.writeFileSync(
-  path.join(outputPath, 'monday-analysis.json'),
-  JSON.stringify(report, null, 2)
-);
+  logger.info('✅ Analyse synthétique terminée');
+  logger.info(`📊 Boards trouvés: ${summary.totalBoards}`);
+  logger.info(`📝 Items trouvés: ${summary.totalItems}`);
+}
 
-fs.writeFileSync(
-  path.join(outputPath, 'monday-report.md'),
-  markdown
-);
+main();
 
-fs.writeFileSync(
-  path.join(outputPath, 'monday-to-saxium-mapping.json'),
-  JSON.stringify(mapping, null, 2)
-);
-
-logger.info('✅ Analyse terminée!\n');
-logger.info(`📊 ${analysis.totalBoards} boards analysés`);
-logger.info(`📝 ${analysis.totalItems} items trouvés`);
-logger.info(`🎯 ${analysis.globalStatuses.size} statuts détectés`);
-logger.info(`📍 ${analysis.cities.size} villes identifiées`);
-logger.info(`🏢 ${analysis.clients.size} clients trouvés`);
-logger.info(`\n📁 Fichiers générés:`);
-logger.info(`   - server/migration/monday-analysis.json`);
-logger.info(`   - server/migration/monday-report.md`);
-logger.info(`   - server/migration/monday-to-saxium-mapping.json`);
+export {};

@@ -1,4 +1,4 @@
-import type { IStorage } from "../storage-poc";
+import type { StorageFacade } from "../storage/facade/StorageFacade";
 import { withErrorHandling } from './utils/error-handler';
 import { EventBus } from "../eventBus";
 import { DateAlertDetectionService, MenuiserieDetectionRules } from "./DateAlertDetectionService";
@@ -62,7 +62,7 @@ export class PeriodicDetectionScheduler {
   private isRunning = false;
   
   constructor(
-    private storage: IStorage,
+    private storage: StorageFacade,
     private eventBus: EventBus,
     private dateAlertDetectionService: DateAlertDetectionService,
     private dateIntelligenceService: DateIntelligenceService

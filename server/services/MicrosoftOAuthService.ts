@@ -1,6 +1,6 @@
 import passport from 'passport';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import type { IStorage } from '../storage-poc';
 
@@ -53,7 +53,8 @@ export class MicrosoftOAuthService {
     const callbackURL = process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:5000/auth/microsoft/callback';
 
     if (!clientID || !clientSecret || !tenantID) {
-      logger.warn('[MicrosoftOAuth] Azure AD credentials not configured - Microsoft login will be unavailable', { metadata: { service: 'MicrosoftOAuthService' 
+      logger.warn('[MicrosoftOAuth] Azure AD credentials not configured - Microsoft login will be unavailable', { metadata: { service: 'MicrosoftOAuthService' }
+      });
       return;
     }
 
@@ -82,25 +83,19 @@ export class MicrosoftOAuthService {
         done: VerifyCallback
       ) => {
         return withErrorHandling(
-    async () => {
-
-          logger.info('[MicrosoftOAuth] User authenticated via Microsoft', { metadata: {
+          async () => {
+            logger.info('[MicrosoftOAuth] User authenticated via Microsoft', { metadata: {
               service: 'MicrosoftOAuthService',
               microsoftId: profile.oid,
-                    email: profile._json.email || profile.upn
-                });
+              email: profile._json.email || profile.upn
+            }});
           const microsoftId = profile.oid;
           const email = profile._json.email || profile.upn || `${profile.oid}@unknown.com`;
           const firstName = profile.name?.givenName || profile.displayName?.split(' ')[0] || 'Utilisateur';
           const lastName = profile.name?.familyName || profile.displayName?.split(' ').slice(1).join(' ') || 'Microsoft';
           let user = await this.storage.getUserByMicrosoftId(microsoftId);
           if (!user) {
-            logger.info('[MicrosoftOAuth] Creating new user from Microsoft profile', { metadata: { microsoftId, email  
-              
-                    }
-  
-              
-            });
+            logger.info('[MicrosoftOAuth] Creating new user from Microsoft profile', { metadata: { microsoftId, email }});
             user = await this.storage.createUser({
               email,
               microsoftId,
@@ -111,12 +106,7 @@ export class MicrosoftOAuthService {
               isActive: true,
             });
           } else {
-            logger.info('[MicrosoftOAuth] Existing user found', { metadata: { userId: user.id, email: user.email  
-              
-                    }
-  
-              
-            });
+            logger.info('[MicrosoftOAuth] Existing user found', { metadata: { userId: user.id, email: user.email }});
           }
           // SECURITY: Store OAuth tokens securely in session
           // Calculate token expiration (Microsoft tokens typically expire in 1 hour)
@@ -129,33 +119,28 @@ export class MicrosoftOAuthService {
             isMicrosoftAuth: true,
           };
           logger.info('[MicrosoftOAuth] Tokens stored securely in session', { metadata: {
-                    userId: user.id,
-              expiresAt: new Date(expiresAt * 1000).toISOString(),
-              hasAccessToken: !!accessToken,
-              hasRefreshToken: !!refreshToken 
-
-                          }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+            userId: user.id,
+            expiresAt: new Date(expiresAt * 1000).toISOString(),
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken
+          }});
           return done(null, authenticatedUser);
-    },
-    {
-      operation: 'ad',
-      service: 'MicrosoftOAuthService',
-      metadata: {}
-    } );
-          return done(error as Error);
-              }
+        },
+        {
+          operation: 'microsoftOAuthCallback',
+          service: 'MicrosoftOAuthService',
+          metadata: {
+            microsoftId: profile.oid,
+            email: profile._json.email || profile.upn || 'unknown'
+          }
+        }
+      );
+      }
+    ));
 
-
-                                  }
-
-
-                                }));
-
-    logger.info('[MicrosoftOAuth] Microsoft OAuth strategy initialized', { metadata: { service: 'MicrosoftOAuthService', tenantID 
+    logger.info('[MicrosoftOAuth] Microsoft OAuth strategy initialized', { metadata: { service: 'MicrosoftOAuthService', tenantID }});
   }
+}
 
 /**
  * Refresh Microsoft OAuth access token using refresh token
@@ -202,23 +187,24 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
 
     const data = await response.json();
 
-    logger.info('[MicrosoftOAuth] Token refreshed successfully', { metadata: {
+    logger.info('[MicrosoftOAuth] Token refreshed successfully', { 
+      metadata: {
         hasAccessToken: !!data.access_token,
         hasRefreshToken: !!data.refresh_token 
-
-                    }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+      }
+    });
+    
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
     };
     },
     {
-      operation: 'ad',
+      operation: 'refreshMicrosoftToken',
       service: 'MicrosoftOAuthService',
-      metadata: {}
-    } );
-    throw error;
-  }
+      metadata: {
+        tenantID: tenantID || 'unknown'
+      }
+    }
+  );
+}

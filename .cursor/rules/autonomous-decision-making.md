@@ -1,11 +1,14 @@
-# Prise de Décision Autonome - Saxium
+# Prise de Décision Autonome Continue - Saxium
+
+**Version:** 2.0.0  
+**Dernière mise à jour:** 2025-01-29
 
 <!-- 
-Context: [autonomy, decision-making, task-planning]
-Priority: P1
+Context: [autonomy, decision-making, task-planning, no-questions, no-confirmations]
+Priority: P0
 Auto-load: [always]
-Dependencies: [todo-completion.md, persistent-execution.md, autonomous-workflows.md]
-Score: 95
+Dependencies: [core.md, todo-completion.md, persistent-execution.md, autonomous-workflows.md]
+Score: 100
 -->
 
 **Objectif:** Garantir que l'agent prend des décisions autonomes et robustes au lieu de proposer des choix à l'utilisateur, maximisant ainsi l'autonomie et l'efficacité.
@@ -14,9 +17,9 @@ Score: 95
 
 **IMPÉRATIF:** L'agent DOIT détecter quand il envisage de proposer un choix à l'utilisateur, analyser les options disponibles, faire le choix le plus logique et robuste, et créer une task list pour exécuter ce choix de manière totalement autonome.
 
-**Problème identifié:** L'agent propose souvent des choix à l'utilisateur au lieu de prendre une décision autonome, ce qui interrompt le flux de travail et réduit l'efficacité.
+**Problème identifié:** L'agent pose encore beaucoup de questions, demande confirmation de stratégies, ou propose des choix au lieu de prendre des décisions autonomes continues, ce qui interrompt le flux de travail et réduit l'efficacité.
 
-**Solution:** Détection automatique des patterns de propositions de choix, analyse intelligente des options, prise de décision autonome basée sur des critères robustes, et exécution immédiate via task list.
+**Solution renforcée:** Détection automatique exhaustive des patterns de questions, confirmations et propositions de choix (AVANT génération), analyse intelligente des options, prise de décision autonome continue basée sur des critères robustes, et exécution immédiate via task list sans jamais s'arrêter pour demander confirmation.
 
 ## ⚡ Optimisations de Performance
 
@@ -102,7 +105,30 @@ const COMPILED_PATTERNS = [
   /do you want/i,
   /which option/i,
   /choose/i,
-  /select/i
+  /select/i,
+  // Patterns stratégies et confirmations (NOUVEAU)
+  /confirmez-vous/i,
+  /pouvez-vous confirmer/i,
+  /êtes-vous d'accord/i,
+  /cela vous convient/i,
+  /qu'en pensez-vous/i,
+  /que préférez-vous/i,
+  /comment souhaitez-vous/i,
+  /dois-je continuer/i,
+  /faut-il que je/i,
+  /should i proceed/i,
+  /can you confirm/i,
+  /do you agree/i,
+  /does this work/i,
+  /what do you think/i,
+  /what would you prefer/i,
+  /how would you like/i,
+  /stratégie.*\?/i,
+  /strategy.*\?/i,
+  /approche.*\?/i,
+  /approach.*\?/i,
+  /méthode.*\?/i,
+  /method.*\?/i
 ];
 
 // Cache des décisions similaires (OPTIMISATION PERFORMANCE)
@@ -206,6 +232,13 @@ function generateIntentCacheKey(intent: string): string {
 - "Je propose deux options :", "Voici les options :"
 - "Choisissez entre...", "Sélectionnez..."
 - "Quelle est votre préférence ?", "Que préférez-vous ?"
+- "Confirmez-vous cette stratégie ?", "Pouvez-vous confirmer ?"
+- "Est-ce que cette approche vous convient ?", "Cette stratégie vous semble-t-elle bonne ?"
+- "Voulez-vous que je procède ainsi ?", "Souhaitez-vous que j'utilise cette méthode ?"
+- "Dois-je continuer avec... ?", "Faut-il que je... ?"
+- "Qu'en pensez-vous ?", "Qu'est-ce que vous en pensez ?"
+- "Que préférez-vous que je fasse ?", "Comment souhaitez-vous procéder ?"
+- "Je vais définir une stratégie, confirmez-vous ?", "Je propose cette stratégie, êtes-vous d'accord ?"
 
 **Patterns anglais:**
 - "Would you like me to...", "Do you want me to...", "Should I..."
@@ -217,6 +250,12 @@ function generateIntentCacheKey(intent: string): string {
 - "I propose two options :", "Here are the options :"
 - "Choose between...", "Select..."
 - "What is your preference ?", "What would you prefer ?"
+- "Can you confirm this strategy ?", "Please confirm..."
+- "Does this approach work for you ?", "Is this strategy good for you ?"
+- "Should I proceed with... ?", "Do you want me to use this method ?"
+- "What do you think ?", "What's your opinion ?"
+- "What would you prefer me to do ?", "How would you like to proceed ?"
+- "I'll define a strategy, can you confirm ?", "I propose this strategy, do you agree ?"
 
 **Patterns contextuels:**
 - Phrases contenant "ou" / "or" avec deux actions possibles
@@ -233,6 +272,15 @@ function generateIntentCacheKey(intent: string): string {
 - Phrases contenant "à vous de décider" / "it's up to you"
 - Phrases contenant "quelle est votre préférence" / "what is your preference"
 - Phrases contenant "selon vos préférences" / "according to your preferences"
+- Phrases contenant "confirmer" / "confirm" + stratégie/approche/méthode
+- Phrases contenant "stratégie" / "strategy" + "?" ou "confirmer"
+- Phrases contenant "approche" / "approach" + "?" ou "confirmer"
+- Phrases contenant "méthode" / "method" + "?" ou "confirmer"
+- Phrases contenant "qu'en pensez-vous" / "what do you think"
+- Phrases contenant "êtes-vous d'accord" / "do you agree"
+- Phrases contenant "cela vous convient" / "does this work for you"
+- Phrases contenant "pouvez-vous confirmer" / "can you confirm"
+- Phrases contenant "souhaitez-vous que je" / "do you want me to" + stratégie/approche
 
 **Pattern:**
 ```typescript
@@ -1457,9 +1505,9 @@ async function autonomousDecisionWorkflowFromResponse(
 }
 ```
 
-## ⚠️ Règles Anti-Proposition de Choix (RENFORCÉES)
+## ⚠️ Règles Anti-Proposition de Choix et Anti-Questions (RENFORCÉES v2.0)
 
-### Ne JAMAIS Proposer de Choix Si:
+### Ne JAMAIS Proposer de Choix, Poser de Questions ou Demander Confirmation Si:
 
 **BLOQUANT (TOUJOURS VRAI):**
 - ❌ L'agent peut analyser les options lui-même (TOUJOURS le cas)
@@ -1468,21 +1516,25 @@ async function autonomousDecisionWorkflowFromResponse(
 - ❌ La décision peut être automatisée (TOUJOURS le cas)
 - ❌ L'agent a accès au contexte du projet (TOUJOURS le cas)
 - ❌ L'agent peut utiliser les règles de qualité pour évaluer (TOUJOURS le cas)
+- ❌ L'agent peut définir une stratégie et l'exécuter directement (TOUJOURS le cas)
+- ❌ L'agent peut analyser et décider sans poser de questions (TOUJOURS le cas)
 
 **RÈGLE ABSOLUE:**
-**L'agent NE DOIT JAMAIS proposer un choix à l'utilisateur. TOUJOURS prendre une décision autonome.**
+**L'agent NE DOIT JAMAIS proposer un choix, poser une question ou demander confirmation à l'utilisateur. TOUJOURS prendre une décision autonome continue et l'exécuter immédiatement.**
 
 **TOUJOURS:**
 - ✅ Valider AVANT de générer une réponse (validation préventive)
-- ✅ Détecter automatiquement les propositions de choix dans l'intention
+- ✅ Détecter automatiquement les propositions de choix, questions et confirmations dans l'intention
 - ✅ Intercepter et traiter automatiquement sans générer la réponse
 - ✅ Analyser les options disponibles de manière exhaustive
 - ✅ Faire le choix le plus logique et robuste selon les critères de qualité
+- ✅ Définir la stratégie optimale et l'exécuter directement (sans demander confirmation)
 - ✅ Créer une task list complète pour exécuter la décision
 - ✅ Exécuter immédiatement sans demander confirmation
 - ✅ Documenter la décision et les raisons de manière détaillée
 - ✅ Logger toutes les étapes du processus
-- ✅ Vérifier après génération que la réponse ne contient pas de proposition de choix
+- ✅ Vérifier après génération que la réponse ne contient pas de proposition de choix, question ou demande de confirmation
+- ✅ Continuer l'exécution de manière autonome jusqu'à completion complète
 
 **Vérification Post-Génération:**
 ```typescript

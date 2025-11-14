@@ -113,16 +113,16 @@ export class BatigestExportService {
       date: order.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
       fournisseurNom: order.supplierName,
       fournisseurAdresse: order.deliveryAddress || undefined,
-      lignes: (order.itas unknown[]ny[]).map((item, index) => ({
+      lignes: (order.items as unknown[]).map((item, index) => ({
         numero: index + 1,
         designation: item.description,
         quantite: item.quantity,
         prixUnitaire: item.unitPrice,
         montantHT: item.total
       })),
-      totalHT: parseFloat(oras unknown)aas unknown),
-      totalTVA: parseFloatas unknown)tas unknown)unknown unknown),
-      totalTTC: parseFas unknown)das unknown)unknownC as unknown),
+      totalHT: parseFloat(order.totalHT as unknown as string),
+      totalTVA: parseFloat(order.totalTVA as unknown as string),
+      totalTTC: parseFloat(order.totalTTC as unknown as string),
       dateEchue: order.expectedDeliveryDate?.toISOString().split('T')[0] || undefined,
       modePaiement: order.paymentTerms || undefined
     };
@@ -214,7 +214,7 @@ export class BatigestExportService {
     const headers = ['Type', 'Reference', 'Date', 'ClientNom', 'Designation', 'Quantite', 'PrixUnitaire', 'MontantHT', 'TotalHT', 'TotalTVA', 'TotalTTC'];
     const date = quote.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0];
     
-    const rows = (as unknown unknown[]as unknown[]).map((item, index) => [
+    const rows = (quote.items as unknown[]).map((item, index) => [
       'DEVIS',
       quote.reference,
       date,
@@ -223,9 +223,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      index === 0 ? pas unknoas unknownqunknown)unknowntaas unknunknown)unknown).toFixed(2) : '',
-      index === 0 as unknoas unknownaunknown)unknown.tas unknown) as unknown).toFixed(2) : '',
-      index ==as unknoas unknowneunknown)unknownuoas unknown)las unknown)unknown any).toFixed(2) : ''
+      index === 0 ? parseFloat(quote.totalHT as unknown as string).toFixed(2) : '',
+      index === 0 ? parseFloat(quote.totalTVA as unknown as string).toFixed(2) : '',
+      index === 0 ? parseFloat(quote.totalTTC as unknown as string).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');
@@ -238,7 +238,7 @@ export class BatigestExportService {
     const headers = ['Type', 'Reference', 'Date', 'FournisseurNom', 'Designation', 'Quantite', 'PrixUnitaire', 'MontantHT', 'TotalHT', 'TotalTVA', 'TotalTTC'];
     const date = order.createdAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0];
     
-  as unknownt rows = (as unknown[]emsunknown[]ny[]).map((item, index) => [
+    const rows = (order.items as unknown[]).map((item, index) => [
       'BON_COMMANDE',
       order.reference,
       date,
@@ -247,9 +247,9 @@ export class BatigestExportService {
       item.quantity,
       item.unitPrice.toFixed(2),
       item.total.toFixed(2),
-      indas uas unknown)0 ? unknown)unknownoaas unknown).as unknown)unknownT as any).toFixed(2) : '',
-      as uas unknown)== 0unknown)unknowneFas unknown)das unknown)unknownalTVA as any).toFixed(2) : '',
-  as uas unknown)ex =unknown)unknownpaas unknown)tas unknown)unknown.totalTTC as any).toFixed(2) : ''
+      index === 0 ? parseFloat(order.totalHT as unknown as string).toFixed(2) : '',
+      index === 0 ? parseFloat(order.totalTVA as unknown as string).toFixed(2) : '',
+      index === 0 ? parseFloat(order.totalTTC as unknown as string).toFixed(2) : ''
     ].join(';'));
 
     return [headers.join(';'), ...rows].join('\n');
@@ -279,8 +279,9 @@ export class BatigestExportService {
           documentType: 'devis_client',
           documentReference: quote.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both'       }
-     });
+          format: 'both'
+        }
+      };
     } catch (error) {
       logger.error('[BatigestExport] Erreur lors de l\'export du devis client', { metadata: {
           service: 'BatigestExportService',
@@ -313,10 +314,10 @@ export class BatigestExportService {
     async () => {
 
       logger.info('[BatigestExport] Export bon de commande', { metadata: {
-          service: 'BatigestExportService',
-          operation: 'exportPurchaseOrder',
-          reference: order.reference
-            });
+        service: 'BatigestExportService',
+        operation: 'exportPurchaseOrder',
+        reference: order.reference
+      }});
       const xml = this.convertPurchaseOrderToXML(order);
       const csv = this.convertPurchaseOrderToCSV(order);
       return {
@@ -327,25 +328,16 @@ export class BatigestExportService {
           documentType: 'bon_commande',
           documentReference: order.reference,
           exportedAt: new Date().toISOString(),
-          format: 'both'       }
-     });
+          format: 'both'
+        }
+      };
     },
     {
       operation: 'Saxium',
       service: 'BatigestExportService',
       metadata: {}
-    } );
-      return {
-        success: false,
-        metadata: {
-          documentType: 'bon_commande',
-          documentReference: order.reference,
-          exportedAt: new Date().toISOString(),
-          format: 'both'
-        },
-        error: error instanceof Error ? error.message : 'Erreur inconnue'
-      };
     }
+  );
   }
 
   /**

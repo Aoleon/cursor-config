@@ -12,6 +12,16 @@ import { createRealtimeEvent, EventType as EventTypeEnum } from '../shared/event
 import { log } from './vite';
 import type { ContextCacheService } from './services/ContextCacheService';
 import { logger } from './utils/logger';
+import { AlertEventPublisher } from './events/publishers/AlertEventPublisher';
+import { ProjectEventPublisher } from './events/publishers/ProjectEventPublisher';
+import { OfferEventPublisher } from './events/publishers/OfferEventPublisher';
+import { SystemEventPublisher } from './events/publishers/SystemEventPublisher';
+import { DateIntelligenceEventPublisher } from './events/publishers/DateIntelligenceEventPublisher';
+import { AnalyticsEventPublisher } from './events/publishers/AnalyticsEventPublisher';
+import { ValidationEventPublisher } from './events/publishers/ValidationEventPublisher';
+import { SupplierEventPublisher } from './events/publishers/SupplierEventPublisher';
+import { RiskEventPublisher } from './events/publishers/RiskEventPublisher';
+import { BusinessAlertEventPublisher } from './events/publishers/BusinessAlertEventPublisher';
 
 type EventHandler = (event: RealtimeEvent) => void;
 
@@ -33,10 +43,40 @@ export class EventBus extends EventEmitter {
   private cacheInvalidationEnabled = true;
   private autoInvalidationHooks = new Map<string, (event: RealtimeEvent) => void>();
 
+  // Event Publishers par domaine
+  private alertEventPublisher: AlertEventPublisher;
+  private projectEventPublisher: ProjectEventPublisher;
+  private offerEventPublisher: OfferEventPublisher;
+  private systemEventPublisher: SystemEventPublisher;
+  private dateIntelligenceEventPublisher: DateIntelligenceEventPublisher;
+  private analyticsEventPublisher: AnalyticsEventPublisher;
+  private validationEventPublisher: ValidationEventPublisher;
+  private supplierEventPublisher: SupplierEventPublisher;
+  private riskEventPublisher: RiskEventPublisher;
+  private businessAlertEventPublisher: BusinessAlertEventPublisher;
+
   constructor() {
     super();
     this.setMaxListeners(50); // Augmenter la limite pour éviter les warnings
     this.setupAutomaticCacheInvalidation();
+    
+    // Initialiser les Event Publishers
+    this.alertEventPublisher = new AlertEventPublisher((event) => this.publish(event));
+    this.projectEventPublisher = new ProjectEventPublisher(
+      (event) => this.publish(event),
+      (status) => this.getStatusChangeSeverity(status)
+    );
+    this.offerEventPublisher = new OfferEventPublisher(
+      (event) => this.publish(event),
+      (status) => this.getStatusChangeSeverity(status)
+    );
+    this.systemEventPublisher = new SystemEventPublisher((event) => this.publish(event));
+    this.dateIntelligenceEventPublisher = new DateIntelligenceEventPublisher((event) => this.publish(event));
+    this.analyticsEventPublisher = new AnalyticsEventPublisher((event) => this.publish(event));
+    this.validationEventPublisher = new ValidationEventPublisher((event) => this.publish(event));
+    this.supplierEventPublisher = new SupplierEventPublisher((event) => this.publish(event));
+    this.riskEventPublisher = new RiskEventPublisher((event) => this.publish(event));
+    this.businessAlertEventPublisher = new BusinessAlertEventPublisher((event) => this.publish(event));
   }
 
   /**
@@ -373,24 +413,7 @@ export class EventBus extends EventEmitter {
     userId?: string;
     metadata?: Record<string, unknown>;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.TECHNICAL_ALERT,
-      entity: 'technical',
-      entityId: params.alertId,
-      severity: params.action === 'bypassed' ? 'warning' : 'success',
-      affectedQueryKeys: [
-        ['/api/technical-alerts'],
-        ['/api/technical-alerts', params.alertId],
-        ['/api/technical-alerts', params.alertId, 'history'],
-      ],
-      userId: params.userId,
-      metadata: {
-        action: params.action,
-        ...params.metadata,
-      },
-    });
-
-    this.publish(event);
+    this.alertEventPublisher.publishTechnicalAlertActionPerformed(params);
   }
 
   public publishTechnicalAlertCreated(params: {
@@ -401,26 +424,7 @@ export class EventBus extends EventEmitter {
     triggeredCriteria: string[];
     assignedToUserId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.TECHNICAL_ALERT,
-      entity: 'technical',
-      entityId: params.alertId,
-      severity: 'warning',
-      affectedQueryKeys: [
-        ['/api/technical-alerts'],
-        ['/api/technical-alerts', params.alertId],
-      ],
-      userId: params.assignedToUserId,
-      metadata: {
-        aoId: params.aoId,
-        aoReference: params.aoReference,
-        score: params.score,
-        triggeredCriteria: params.triggeredCriteria,
-        action: 'created',
-      },
-    });
-
-    this.publish(event);
+    this.alertEventPublisher.publishTechnicalAlertCreated(params);
   }
 
   // Événements Offres
@@ -432,28 +436,7 @@ export class EventBus extends EventEmitter {
     userId?: string;
     projectId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.OFFER_STATUS_CHANGED,
-      entity: 'offer',
-      entityId: params.offerId,
-      prevStatus: params.prevStatus,
-      newStatus: params.newStatus,
-      severity: this.getStatusChangeSeverity(params.newStatus),
-      affectedQueryKeys: [
-        ['/api/offers'],
-        ['/api/offers', params.offerId],
-        ['/api/dashboard/kpis'],
-        ['/api/dashboard/stats'],
-      ],
-      offerId: params.offerId,
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        reference: params.reference,
-      },
-    });
-
-    this.publish(event);
+    this.offerEventPublisher.publishOfferStatusChanged(params);
   }
 
   public publishOfferSigned(params: {
@@ -462,27 +445,7 @@ export class EventBus extends EventEmitter {
     userId?: string;
     projectId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.OFFER_SIGNED,
-      entity: 'offer',
-      entityId: params.offerId,
-      severity: 'success',
-      affectedQueryKeys: [
-        ['/api/offers'],
-        ['/api/offers', params.offerId],
-        ['/api/projects'],
-        ['/api/dashboard/kpis'],
-        ['/api/dashboard/stats'],
-      ],
-      offerId: params.offerId,
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        reference: params.reference,
-      },
-    });
-
-    this.publish(event);
+    this.offerEventPublisher.publishOfferSigned(params);
   }
 
   public publishOfferValidated(params: {
@@ -491,46 +454,12 @@ export class EventBus extends EventEmitter {
     userId?: string;
     validationType?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.OFFER_VALIDATED,
-      entity: 'offer',
-      entityId: params.offerId,
-      severity: 'success',
-      affectedQueryKeys: [
-        ['/api/offers'],
-        ['/api/offers', params.offerId],
-        ['/api/validation-milestones', 'offer', params.offerId],
-        ['/api/dashboard/kpis'],
-      ],
-      offerId: params.offerId,
-      userId: params.userId,
-      metadata: {
-        reference: params.reference,
-        validationType: params.validationType,
-      },
-    });
-
-    this.publish(event);
+    this.offerEventPublisher.publishOfferValidated(params);
   }
 
   // Événements Analytics
   public publishAnalyticsCalculated(metadata: unknown): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.ANALYTICS_CALCULATED, // Type strict 
-      entity: "analytics",
-      entityId: "analytics-system", 
-      severity: 'info',
-      message: "Analytics KPIs calculés et mis à jour",
-      affectedQueryKeys: [
-        ['/api/analytics/kpis'],
-        ['/api/analytics/metrics'], 
-        ['/api/analytics/snapshots'],
-        ['/api/dashboard/kpis']
-      ], // QueryKeys cohérents avec frontend TanStack Query
-      metadata,
-    });
-
-    this.publish(event);
+    this.analyticsEventPublisher.publishAnalyticsCalculated(metadata);
   }
 
   // Événements Projets
@@ -540,27 +469,7 @@ export class EventBus extends EventEmitter {
     offerId?: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.PROJECT_CREATED,
-      entity: 'project',
-      entityId: params.projectId,
-      severity: 'success',
-      affectedQueryKeys: [
-        ['/api/projects'],
-        ['/api/projects', params.projectId],
-        ['/api/offers', params.offerId || ''],
-        ['/api/dashboard/kpis'],
-        ['/api/be-workload'],
-      ],
-      projectId: params.projectId,
-      offerId: params.offerId,
-      userId: params.userId,
-      metadata: {
-        name: params.name,
-      },
-    });
-
-    this.publish(event);
+    this.projectEventPublisher.publishProjectCreated(params);
   }
 
   public publishProjectStatusChanged(params: {
@@ -570,27 +479,7 @@ export class EventBus extends EventEmitter {
     newStatus: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.PROJECT_STATUS_CHANGED,
-      entity: 'project',
-      entityId: params.projectId,
-      prevStatus: params.prevStatus,
-      newStatus: params.newStatus,
-      severity: this.getStatusChangeSeverity(params.newStatus),
-      affectedQueryKeys: [
-        ['/api/projects'],
-        ['/api/projects', params.projectId],
-        ['/api/dashboard/kpis'],
-        ['/api/be-workload'],
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        name: params.name,
-      },
-    });
-
-    this.publish(event);
+    this.projectEventPublisher.publishProjectStatusChanged(params);
   }
 
   // Événements Tâches
@@ -601,27 +490,7 @@ export class EventBus extends EventEmitter {
     delayDays?: number;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.TASK_OVERDUE,
-      entity: 'task',
-      entityId: params.taskId,
-      severity: 'warning',
-      affectedQueryKeys: [
-        ['/api/tasks'],
-        ['/api/tasks', params.taskId],
-        ['/api/projects', params.projectId || ''],
-        ['/api/dashboard/kpis'],
-      ],
-      taskId: params.taskId,
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        name: params.name,
-        delayDays: params.delayDays,
-      },
-    });
-
-    this.publish(event);
+    this.projectEventPublisher.publishTaskOverdue(params);
   }
 
   public publishTaskStatusChanged(params: {
@@ -632,28 +501,7 @@ export class EventBus extends EventEmitter {
     newStatus: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.TASK_STATUS_CHANGED,
-      entity: 'task',
-      entityId: params.taskId,
-      prevStatus: params.prevStatus,
-      newStatus: params.newStatus,
-      severity: params.newStatus === 'termine' ? 'success' : 'info',
-      affectedQueryKeys: [
-        ['/api/tasks'],
-        ['/api/tasks', params.taskId],
-        ['/api/projects', params.projectId || ''],
-        ['/api/dashboard/kpis'],
-      ],
-      taskId: params.taskId,
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        name: params.name,
-      },
-    });
-
-    this.publish(event);
+    this.projectEventPublisher.publishTaskStatusChanged(params);
   }
 
   // Événements Validations
@@ -665,42 +513,12 @@ export class EventBus extends EventEmitter {
     validatorName?: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.VALIDATION_MILESTONE_VALIDATED,
-      entity: 'validation',
-      entityId: params.milestoneId,
-      severity: 'success',
-      affectedQueryKeys: [
-        ['/api/validation-milestones'],
-        ['/api/validation-milestones', params.entityType, params.entityId],
-        [`/api/${params.entityType}s`],
-        [`/api/${params.entityType}s`, params.entityId],
-        ['/api/dashboard/kpis'],
-      ],
-      projectId: params.entityType === 'project' ? params.entityId : undefined,
-      offerId: params.entityType === 'offer' ? params.entityId : undefined,
-      userId: params.userId,
-      metadata: {
-        milestoneName: params.milestoneName,
-        validatorName: params.validatorName,
-        entityType: params.entityType,
-      },
-    });
-
-    this.publish(event);
+    this.validationEventPublisher.publishValidationMilestoneValidated(params);
   }
 
   // Événements KPI
   public publishKpiRefreshHint(affectedQueryKeys: string[][]): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.KPI_REFRESH_HINT,
-      entity: 'system',
-      entityId: 'kpi-system',
-      severity: 'info',
-      affectedQueryKeys,
-    });
-
-    this.publish(event);
+    this.analyticsEventPublisher.publishKpiRefreshHint(affectedQueryKeys);
   }
 
   // Événements Fournisseurs
@@ -710,24 +528,7 @@ export class EventBus extends EventEmitter {
     offerId?: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.SUPPLIER_QUOTE_RECEIVED,
-      entity: 'supplier',
-      entityId: params.supplierRequestId,
-      severity: 'info',
-      affectedQueryKeys: [
-        ['/api/supplier-requests'],
-        ['/api/offers', params.offerId || ''],
-        ['/api/dashboard/kpis'],
-      ],
-      offerId: params.offerId,
-      userId: params.userId,
-      metadata: {
-        supplierName: params.supplierName,
-      },
-    });
-
-    this.publish(event);
+    this.supplierEventPublisher.publishSupplierQuoteReceived(params);
   }
 
   // Événements Alertes Techniques
@@ -739,20 +540,10 @@ export class EventBus extends EventEmitter {
     userId?: string;
     metadata?: Record<string, unknown>;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.TECHNICAL_ALERT,
-      entity: 'technical',
-      entityId: params.aoReference,
-      severity: 'warning',
-      title: '🚨 Alerte Technique Détectée',
+    this.alertEventPublisher.publishTechnicalAlert({
+      alertId: params.aoReference,
       message: `Score technique élevé (${params.score}) détecté pour AO ${params.aoReference}. Critères: ${params.triggeredCriteria.join(', ')}`,
-      affectedQueryKeys: [
-        ['/api/aos'],
-        ['/api/aos', params.aoId || ''],
-        ['/api/dashboard/alerts'],
-        ['/api/technical-alerts'],
-      ],
-      userId: params.userId,
+      severity: 'warning',
       metadata: {
         aoId: params.aoId,
         score: params.score,
@@ -761,8 +552,6 @@ export class EventBus extends EventEmitter {
         ...params.metadata,
       },
     });
-
-    this.publish(event);
   }
 
   // ========================================
@@ -776,23 +565,7 @@ export class EventBus extends EventEmitter {
     documentId: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.BATIGEST_EXPORT_QUEUED,
-      entity: 'batigest',
-      entityId: params.exportId,
-      severity: 'info',
-      affectedQueryKeys: [
-        ['/api/batigest/exports/all'],
-        ['/api/batigest/stats'],
-      ],
-      userId: params.userId,
-      metadata: {
-        documentType: params.documentType,
-        documentId: params.documentId,
-      },
-    });
-
-    this.publish(event);
+    this.systemEventPublisher.publishBatigestExportQueued(params);
   }
 
   // Export synchronisé avec succès
@@ -802,23 +575,7 @@ export class EventBus extends EventEmitter {
     documentId: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.BATIGEST_EXPORT_SYNCED,
-      entity: 'batigest',
-      entityId: params.exportId,
-      severity: 'success',
-      affectedQueryKeys: [
-        ['/api/batigest/exports/all'],
-        ['/api/batigest/stats'],
-      ],
-      userId: params.userId,
-      metadata: {
-        documentType: params.documentType,
-        documentId: params.documentId,
-      },
-    });
-
-    this.publish(event);
+    this.systemEventPublisher.publishBatigestExportSynced(params);
   }
 
   // Erreur lors de la synchronisation
@@ -829,24 +586,7 @@ export class EventBus extends EventEmitter {
     error: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.BATIGEST_EXPORT_ERROR,
-      entity: 'batigest',
-      entityId: params.exportId,
-      severity: 'error',
-      affectedQueryKeys: [
-        ['/api/batigest/exports/all'],
-        ['/api/batigest/stats'],
-      ],
-      userId: params.userId,
-      metadata: {
-        documentType: params.documentType,
-        documentId: params.documentId,
-        error: params.error,
-      },
-    });
-
-    this.publish(event);
+    this.systemEventPublisher.publishBatigestExportError(params);
   }
 
   // ========================================
@@ -864,28 +604,7 @@ export class EventBus extends EventEmitter {
     executionTimeMs: number;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_MAINTENANCE,
-      entity: 'system',
-      entityId: params.cacheKey,
-      severity: params.action === 'miss' ? 'info' : 'success',
-      message: `Cache ${params.action} pour ${params.entityType}:${params.entityId} (${params.executionTimeMs}ms)`,
-      affectedQueryKeys: [
-        ['/api/analytics/cache-metrics'],
-        ['/api/system/performance']
-      ],
-      userId: params.userId,
-      metadata: {
-        entityType: params.entityType,
-        entityId: params.entityId,
-        cacheKey: params.cacheKey,
-        action: params.action,
-        executionTimeMs: params.executionTimeMs
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.systemEventPublisher.publishContextCacheEvent(params);
   }
 
   /**
@@ -897,29 +616,7 @@ export class EventBus extends EventEmitter {
     executionTimeMs: number;
     isScheduled: boolean;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_MAINTENANCE,
-      entity: 'system',
-      entityId: 'prewarming-system',
-      severity: 'success',
-      title: '🔥 Cache Prewarming Exécuté',
-      message: `${params.contextCount} contextes préchargés en ${params.executionTimeMs}ms (${params.entityTypes.join(', ')})`,
-      affectedQueryKeys: [
-        ['/api/analytics/cache-metrics'],
-        ['/api/system/performance'],
-        ['/api/chatbot/health']
-      ],
-      metadata: {
-        entityTypes: params.entityTypes,
-        contextCount: params.contextCount,
-        executionTimeMs: params.executionTimeMs,
-        isScheduled: params.isScheduled,
-        action: 'prewarming_completed'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.systemEventPublisher.publishCachePrewarmingEvent(params);
   }
 
   /**
@@ -932,30 +629,7 @@ export class EventBus extends EventEmitter {
     afterValue: number;
     entityType?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_MAINTENANCE,
-      entity: 'system',
-      entityId: params.optimizationType,
-      severity: 'success',
-      title: '🚀 Optimisation Performance Détectée',
-      message: `Amélioration ${params.optimizationType}: +${params.improvementPercent.toFixed(1)}% (${params.beforeValue} → ${params.afterValue})`,
-      affectedQueryKeys: [
-        ['/api/analytics/performance'],
-        ['/api/system/health'],
-        ['/api/chatbot/health']
-      ],
-      metadata: {
-        optimizationType: params.optimizationType,
-        improvementPercent: params.improvementPercent,
-        beforeValue: params.beforeValue,
-        afterValue: params.afterValue,
-        entityType: params.entityType,
-        action: 'optimization_detected'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.systemEventPublisher.publishPerformanceOptimizationEvent(params);
   }
 
   // ========================================
@@ -972,32 +646,7 @@ export class EventBus extends EventEmitter {
     calculationMethod: string;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_TIMELINE_CALCULATED,
-      entity: 'date_intelligence',
-      entityId: params.timelineId,
-      severity: 'success',
-      title: '🧮 Timeline Intelligence Calculée',
-      message: `Timeline intelligente générée: ${params.phasesCount} phases, ${params.totalDuration} jours (${params.constraintsApplied} contraintes appliquées)`,
-      affectedQueryKeys: [
-        ['/api/projects', params.projectId, 'calculate-timeline'],
-        ['/api/projects', params.projectId],
-        ['/api/intelligence-rules'],
-        ['/api/dashboard/kpis']
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        phasesCount: params.phasesCount,
-        totalDuration: params.totalDuration,
-        constraintsApplied: params.constraintsApplied,
-        calculationMethod: params.calculationMethod,
-        action: 'timeline_calculated'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.dateIntelligenceEventPublisher.publishDateIntelligenceTimelineCalculated(params);
   }
 
   // Recalcul cascade effectué
@@ -1010,35 +659,7 @@ export class EventBus extends EventEmitter {
     recalculationType: string;
     userId?: string;
   }): void {
-    const severity = params.totalImpactDays > 0 ? 'warning' : 'success';
-    const impactIcon = params.totalImpactDays > 0 ? '⚠️' : '✅';
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_CASCADE_RECALCULATED,
-      entity: 'date_intelligence',
-      entityId: `cascade_${params.projectId}_${Date.now()}`,
-      severity,
-      title: `${impactIcon} Recalcul Cascade Effectué`,
-      message: `${params.affectedPhasesCount} phases recalculées depuis ${params.triggeredByPhase} (impact: ${params.totalImpactDays > 0 ? '+' : ''}${params.totalImpactDays} jours)`,
-      affectedQueryKeys: [
-        ['/api/projects', params.projectId, 'recalculate-from', params.triggeredByPhase],
-        ['/api/projects', params.projectId],
-        ['/api/date-alerts']
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        triggeredByPhase: params.triggeredByPhase,
-        newDate: params.newDate.toISOString(),
-        affectedPhasesCount: params.affectedPhasesCount,
-        totalImpactDays: params.totalImpactDays,
-        recalculationType: params.recalculationType,
-        action: 'cascade_recalculated'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.dateIntelligenceEventPublisher.publishDateIntelligenceCascadeRecalculated(params);
   }
 
   // Règle métier appliquée
@@ -1051,32 +672,7 @@ export class EventBus extends EventEmitter {
     impact: number;
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_RULE_APPLIED,
-      entity: 'date_intelligence',
-      entityId: params.ruleId,
-      severity: 'info',
-      title: '📝 Règle Métier Appliquée',
-      message: `Règle "${params.ruleName}" appliquée sur phase ${params.phase} (confiance: ${Math.round(params.confidence * 100)}%)`,
-      affectedQueryKeys: [
-        ['/api/intelligence-rules'],
-        ['/api/projects', params.projectId],
-        ['/api/intelligence-rules', params.ruleId]
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        ruleId: params.ruleId,
-        ruleName: params.ruleName,
-        phase: params.phase,
-        confidence: params.confidence,
-        impact: params.impact,
-        action: 'rule_applied'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.dateIntelligenceEventPublisher.publishDateIntelligenceRuleApplied(params);
   }
 
   // Alerte d'intelligence temporelle créée
@@ -1089,38 +685,7 @@ export class EventBus extends EventEmitter {
     projectId?: string;
     userId?: string;
   }): void {
-    const severityIcon = {
-      info: 'ℹ️',
-      warning: '⚠️',
-      error: '🚨'
-    };
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: 'date_intelligence',
-      entityId: params.alertId,
-      severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-      title: `${severityIcon[params.severity]} Alerte Intelligence Temporelle`,
-      message: `Nouvelle alerte: ${params.alertTitle}`,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/date-alerts', params.alertId],
-        ['/api/dashboard/alerts'],
-        ...(params.projectId ? [['/api/projects', params.projectId]] : [])
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        alertId: params.alertId,
-        alertTitle: params.alertTitle,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        action: 'alert_created'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.dateIntelligenceEventPublisher.publishDateIntelligenceAlertCreated(params);
   }
 
   // Problème de planification détecté
@@ -1133,32 +698,7 @@ export class EventBus extends EventEmitter {
     recommendations: string[];
     userId?: string;
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
-      entity: 'date_intelligence',
-      entityId: `issue_${params.projectId}_${Date.now()}`,
-      severity: params.severity === 'error' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-      title: '🛠️ Problème de Planification',
-      message: `${params.issueType}: ${params.description} (${params.affectedPhases.length} phases affectées)`,
-      affectedQueryKeys: [
-        ['/api/projects', params.projectId],
-        ['/api/date-alerts'],
-        ['/api/dashboard/planning-issues']
-      ],
-      projectId: params.projectId,
-      userId: params.userId,
-      metadata: {
-        issueType: params.issueType,
-        severity: params.severity,
-        description: params.description,
-        affectedPhases: params.affectedPhases,
-        recommendations: params.recommendations,
-        action: 'planning_issue_detected'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.dateIntelligenceEventPublisher.publishDateIntelligencePlanningIssueDetected(params);
   }
 
   // ========================================
@@ -1180,39 +720,7 @@ export class EventBus extends EventEmitter {
       actionRequired: boolean;
     };
   }): void {
-    const severityIcon = {
-      info: 'ℹ️',
-      warning: '⚠️',
-      critical: '🚨'
-    };
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: params.entity as unknown,
-      entityId: params.entityId,
-      severity: params.severity === 'critical' ? 'error' : params.severity === 'warning' ? 'warning' : 'info',
-      title: `${severityIcon[params.severity]} Alerte Détectée`,
-      message: params.message,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/date-alerts', params.entityId],
-        ['/api/dashboard/alerts'],
-        ['/api/date-alerts/summary']
-      ],
-      userId: params.metadata.affectedUsers[0], // Premier utilisateur affecté
-      metadata: {
-        alertId: params.id,
-        alertType: params.metadata.alertType,
-        phase: params.metadata.phase,
-        targetDate: params.metadata.targetDate,
-        affectedUsers: params.metadata.affectedUsers,
-        actionRequired: params.metadata.actionRequired,
-        action: 'alert_created'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.alertEventPublisher.publishDateAlertCreated(params);
   }
 
   // Alerte accusée réception
@@ -1230,30 +738,7 @@ export class EventBus extends EventEmitter {
       note?: string;
     };
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_ACKNOWLEDGED,
-      entity: params.entity,
-      entityId: params.entityId,
-      severity: 'info',
-      title: '✅ Alerte Accusée Réception',
-      message: params.message,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/date-alerts', params.metadata.alertId],
-        ['/api/dashboard/alerts']
-      ],
-      userId: params.userId,
-      metadata: {
-        alertId: params.metadata.alertId,
-        acknowledgedBy: params.metadata.acknowledgedBy,
-        acknowledgedAt: params.metadata.acknowledgedAt,
-        note: params.metadata.note,
-        action: 'alert_acknowledged'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.alertEventPublisher.publishDateAlertAcknowledged(params);
   }
 
   // Alerte résolue
@@ -1271,30 +756,7 @@ export class EventBus extends EventEmitter {
       resolution: string;
     };
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_RESOLVED,
-      entity: params.entity,
-      entityId: params.entityId,
-      severity: 'success',
-      title: '🎉 Alerte Résolue',
-      message: params.message,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/date-alerts', params.metadata.alertId],
-        ['/api/dashboard/alerts']
-      ],
-      userId: params.userId,
-      metadata: {
-        alertId: params.metadata.alertId,
-        resolvedBy: params.metadata.resolvedBy,
-        resolvedAt: params.metadata.resolvedAt,
-        resolution: params.metadata.resolution,
-        action: 'alert_resolved'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.alertEventPublisher.publishDateAlertResolved(params);
   }
 
   // Escalade d'alerte critique
@@ -1310,28 +772,7 @@ export class EventBus extends EventEmitter {
       immediateAction: boolean;
     };
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.SYSTEM_MAINTENANCE, // Utiliser le type système existant pour escalade
-      entity: params.entity,
-      entityId: params.entityId,
-      severity: 'error',
-      title: '🚨 ESCALADE CRITIQUE',
-      message: params.message,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/dashboard/alerts'],
-        ['/api/system/alerts']
-      ],
-      metadata: {
-        originalAlert: params.metadata.originalAlert,
-        escalationLevel: params.metadata.escalationLevel,
-        immediateAction: params.metadata.immediateAction,
-        action: 'critical_escalation'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.alertEventPublisher.publishSystemAlert(params);
   }
 
   // Conflit de ressources détecté
@@ -1343,32 +784,7 @@ export class EventBus extends EventEmitter {
     resourceType: string;
     shortfall: number;
   }): void {
-    const severityMap = { minor: 'info' as const, major: 'warning' as const, critical: 'error' as const };
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_PLANNING_ISSUE_DETECTED,
-      entity: 'date_intelligence',
-      entityId: params.conflictId,
-      severity: severityMap[params.severity],
-      title: '⚡ Conflit de Ressources',
-      message: `Conflit ${params.resourceType} le ${params.conflictDate.toLocaleDateString()}. Déficit: ${params.shortfall} équipe(s).`,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/dashboard/conflicts'],
-        ...params.affectedProjects.map(projectId => ['/api/projects', projectId])
-      ],
-      metadata: {
-        conflictType: 'resource_conflict',
-        affectedProjects: params.affectedProjects,
-        conflictDate: params.conflictDate.toISOString(),
-        resourceType: params.resourceType,
-        shortfall: params.shortfall,
-        action: 'resource_conflict_detected'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.riskEventPublisher.publishResourceConflictDetected(params);
   }
 
   // Opportunité d'optimisation détectée
@@ -1380,30 +796,7 @@ export class EventBus extends EventEmitter {
     estimatedGainDays: number;
     feasibility: 'high' | 'medium' | 'low';
   }): void {
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: 'date_intelligence',
-      entityId: params.opportunityId,
-      severity: 'info',
-      title: '💡 Opportunité d\'Optimisation',
-      message: `${params.opportunityType} possible. Gain estimé: ${params.estimatedGainDays} jour(s). Faisabilité: ${params.feasibility}.`,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/dashboard/optimizations'],
-        [`/api/${params.entityType}s`, params.entityId]
-      ],
-      metadata: {
-        opportunityType: params.opportunityType,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        estimatedGainDays: params.estimatedGainDays,
-        feasibility: params.feasibility,
-        action: 'optimization_detected'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.riskEventPublisher.publishOptimizationOpportunityDetected(params);
   }
 
   // Risque de retard détecté
@@ -1415,33 +808,7 @@ export class EventBus extends EventEmitter {
     riskFactors: string[];
     suggestedActions: string[];
   }): void {
-    const severityMap = { low: 'info' as const, medium: 'warning' as const, high: 'error' as const };
-    const riskIcons = { low: '🟡', medium: '🟠', high: '🔴' };
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: 'date_intelligence',
-      entityId: params.riskId,
-      severity: severityMap[params.riskLevel],
-      title: `${riskIcons[params.riskLevel]} Risque de Retard - ${params.phase}`,
-      message: `Risque ${params.riskLevel} détecté pour la phase ${params.phase}. ${params.riskFactors.length} facteur(s) identifié(s).`,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        ['/api/projects', params.projectId],
-        ['/api/dashboard/risks']
-      ],
-      projectId: params.projectId,
-      metadata: {
-        riskLevel: params.riskLevel,
-        phase: params.phase,
-        riskFactors: params.riskFactors,
-        suggestedActions: params.suggestedActions,
-        action: 'delay_risk_detected'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+    this.riskEventPublisher.publishDelayRiskDetected(params);
   }
 
   // Échéance critique approche
@@ -1455,38 +822,19 @@ export class EventBus extends EventEmitter {
     preparationStatus: string;
     requiredActions: string[];
   }): void {
-    const severity = params.daysRemaining <= 1 ? 'error' as const : 
-                    params.daysRemaining <= 3 ? 'warning' as const : 'info' as const;
-    
-    const urgencyIcon = params.daysRemaining <= 1 ? '🚨' : 
-                       params.daysRemaining <= 3 ? '⏰' : '📅';
-    
-    const event = createRealtimeEvent({
-      type: EventTypeEnum.DATE_INTELLIGENCE_ALERT_CREATED,
-      entity: 'date_intelligence',
-      entityId: params.deadlineId,
-      severity,
-      title: `${urgencyIcon} Échéance Critique - ${params.entityReference}`,
-      message: `Échéance dans ${params.daysRemaining} jour(s). Statut: ${params.preparationStatus}. ${params.requiredActions.length} action(s) requise(s).`,
-      affectedQueryKeys: [
-        ['/api/date-alerts'],
-        [`/api/${params.entityType}s`, params.entityId],
-        ['/api/dashboard/deadlines']
-      ],
+    this.alertEventPublisher.publishCriticalDeadlineAlert({
+      entity: params.entityType,
+      entityId: params.entityId,
+      deadline: params.deadline.toISOString(),
+      daysRemaining: params.daysRemaining,
+      affectedUsers: [], // TODO: Récupérer depuis params si disponible
       metadata: {
-        entityType: params.entityType,
-        entityId: params.entityId,
+        deadlineId: params.deadlineId,
         entityReference: params.entityReference,
-        deadline: params.deadline.toISOString(),
-        daysRemaining: params.daysRemaining,
         preparationStatus: params.preparationStatus,
         requiredActions: params.requiredActions,
-        action: 'critical_deadline_alert'
-              }
-
-                                                                                  });
-
-    this.publish(event);
+      },
+    });
   }
 
   // ========================================
@@ -1496,308 +844,43 @@ export class EventBus extends EventEmitter {
   // === BUSINESS ALERTS PUBLISHERS ===
 
   async publishBusinessAlertCreated(payload: BusinessAlertCreatedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.BUSINESS_ALERT_CREATED,
-        entity: 'business_alert',
-        entityId: payload.alert_id,
-        severity: payload.severity as 'info' | 'warning' | 'error' | 'critical',
-        affectedQueryKeys: [
-          ['/api/alerts', 'business'], // Liste alertes business
-          ['/api/alerts', payload.alert_id], // Alerte spécifique
-          ['/api/dashboard', 'alerts'], // Dashboard alertes
-          ['/api/notifications', 'alerts'] // Notifications temps réel
-        ],
-        metadata: {
-          alert_id: payload.alert_id,
-          alert_type: payload.alert_type,
-          entity_type: payload.entity_type,
-          entity_id: payload.entity_id,
-          entity_name: payload.entity_name,
-          severity: payload.severity,
-          title: payload.title,
-          threshold_value: payload.threshold_value,
-          actual_value: payload.actual_value,
-          variance: payload.variance,
-          triggered_at: payload.triggered_at,
-          threshold_id: payload.threshold_id,
-          context_data: payload.context_data,
-          requires_immediate_notification: payload.severity === 'critical'
-                                                                                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Événement business alert created publié - alert_id: ${payload.alert_id}, type: ${payload.alert_type}, severity: ${payload.severity}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de business alert created: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishBusinessAlertCreated(payload);
   }
 
   async publishBusinessAlertAcknowledged(payload: BusinessAlertAcknowledgedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.BUSINESS_ALERT_ACKNOWLEDGED,
-        entity: 'business_alert',
-        entityId: payload.alert_id,
-        severity: 'success',
-        prevStatus: payload.previous_status,
-        newStatus: payload.new_status,
-        affectedQueryKeys: [
-          ['/api/alerts', 'business'],
-          ['/api/alerts', payload.alert_id],
-          ['/api/dashboard', 'alerts'],
-          ['/api/alerts', 'status', 'acknowledged'] // Alertes par statut
-        ],
-        metadata: {
-          alert_id: payload.alert_id,
-          acknowledged_by: payload.acknowledged_by,
-          acknowledged_at: payload.acknowledged_at,
-          notes: payload.notes,
-          previous_status: payload.previous_status,
-          user_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Alerte reconnue - alert_id: ${payload.alert_id}, by: ${payload.acknowledged_by}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de business alert acknowledged: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishBusinessAlertAcknowledged(payload);
   }
 
   async publishBusinessAlertResolved(payload: BusinessAlertResolvedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.BUSINESS_ALERT_RESOLVED,
-        entity: 'business_alert',
-        entityId: payload.alert_id,
-        severity: 'success',
-        prevStatus: payload.previous_status,
-        newStatus: payload.new_status,
-        affectedQueryKeys: [
-          ['/api/alerts', 'business'],
-          ['/api/alerts', payload.alert_id],
-          ['/api/dashboard', 'alerts'],
-          ['/api/alerts', 'status', 'resolved'], // Alertes résolues
-          ['/api/analytics', 'alerts', 'resolution_metrics'] // Métriques résolution
-        ],
-        metadata: {
-          alert_id: payload.alert_id,
-          resolved_by: payload.resolved_by,
-          resolved_at: payload.resolved_at,
-          resolution_notes: payload.resolution_notes,
-          previous_status: payload.previous_status,
-          resolution_duration_minutes: payload.resolution_duration_minutes,
-          user_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Alerte résolue - alert_id: ${payload.alert_id}, by: ${payload.resolved_by}, duration: ${payload.resolution_duration_minutes || 'N/A'} min`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de business alert resolved: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishBusinessAlertResolved(payload);
   }
 
   async publishBusinessAlertDismissed(payload: BusinessAlertDismissedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.BUSINESS_ALERT_DISMISSED,
-        entity: 'business_alert',
-        entityId: payload.alert_id,
-        severity: 'warning',
-        prevStatus: payload.previous_status,
-        newStatus: payload.new_status,
-        affectedQueryKeys: [
-          ['/api/alerts', 'business'],
-          ['/api/alerts', payload.alert_id],
-          ['/api/dashboard', 'alerts'],
-          ['/api/alerts', 'status', 'dismissed'] // Alertes ignorées
-        ],
-        metadata: {
-          alert_id: payload.alert_id,
-          dismissed_by: payload.dismissed_by,
-          dismissed_at: payload.dismissed_at,
-          dismissal_reason: payload.dismissal_reason,
-          previous_status: payload.previous_status,
-          user_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Alerte rejetée - alert_id: ${payload.alert_id}, by: ${payload.dismissed_by}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de business alert dismissed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishBusinessAlertDismissed(payload);
   }
 
   async publishBusinessAlertAssigned(payload: BusinessAlertAssignedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.BUSINESS_ALERT_ASSIGNED,
-        entity: 'business_alert',
-        entityId: payload.alert_id,
-        severity: 'info',
-        affectedQueryKeys: [
-          ['/api/alerts', 'business'],
-          ['/api/alerts', payload.alert_id],
-          ['/api/alerts', 'assigned', payload.assigned_to], // Alertes assignées à user
-          ['/api/dashboard', 'alerts'],
-          ['/api/notifications', payload.assigned_to] // Notifications personnelles
-        ],
-        metadata: {
-          alert_id: payload.alert_id,
-          assigned_to: payload.assigned_to,
-          assigned_by: payload.assigned_by,
-          assigned_at: payload.assigned_at,
-          previous_assigned_to: payload.previous_assigned_to,
-          user_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Alerte assignée - alert_id: ${payload.alert_id}, to: ${payload.assigned_to}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de business alert assigned: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishBusinessAlertAssigned(payload);
   }
 
   // === THRESHOLDS PUBLISHERS ===
 
   async publishAlertThresholdCreated(payload: AlertThresholdCreatedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.ALERT_THRESHOLD_CREATED,
-        entity: 'alert_threshold',
-        entityId: payload.threshold_id,
-        severity: 'success',
-        affectedQueryKeys: [
-          ['/api/alerts', 'thresholds'], // Liste seuils
-          ['/api/alerts', 'settings'], // Configuration alertes
-          ['/api/alerts', 'thresholds', payload.threshold_key], // Seuils par type
-          ['/api/dashboard', 'settings'] // Dashboard config
-        ],
-        metadata: {
-          threshold_id: payload.threshold_id,
-          threshold_key: payload.threshold_key,
-          operator: payload.operator,
-          threshold_value: payload.threshold_value,
-          scope_type: payload.scope_type,
-          scope_entity_id: payload.scope_entity_id,
-          severity: payload.severity,
-          created_by: payload.created_by,
-          is_active: payload.is_active,
-          notification_channels: payload.notification_channels,
-          admin_action: true
-                                                                                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Seuil d'alerte créé - threshold_id: ${payload.threshold_id}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de alert threshold created: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishAlertThresholdCreated(payload);
   }
 
   async publishAlertThresholdUpdated(payload: AlertThresholdUpdatedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.ALERT_THRESHOLD_UPDATED,
-        entity: 'alert_threshold',
-        entityId: payload.threshold_id,
-        severity: 'info',
-        affectedQueryKeys: [
-          ['/api/alerts', 'thresholds'],
-          ['/api/alerts', 'settings'],
-          ['/api/alerts', 'thresholds', payload.threshold_id],
-          ['/api/dashboard', 'settings']
-        ],
-        metadata: {
-          threshold_id: payload.threshold_id,
-          updated_by: payload.updated_by,
-          updated_at: payload.updated_at,
-          changes: payload.changes,
-          was_active: payload.was_active,
-          is_active: payload.is_active,
-          activation_changed: payload.was_active !== payload.is_active,
-          admin_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Seuil d'alerte mis à jour - threshold_id: ${payload.threshold_id}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de alert threshold updated: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishAlertThresholdUpdated(payload);
   }
 
   async publishAlertThresholdDeactivated(payload: AlertThresholdDeactivatedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.ALERT_THRESHOLD_DEACTIVATED,
-        entity: 'alert_threshold',
-        entityId: payload.threshold_id,
-        severity: 'warning',
-        affectedQueryKeys: [
-          ['/api/alerts', 'thresholds'],
-          ['/api/alerts', 'settings'],
-          ['/api/alerts', 'thresholds', payload.threshold_id],
-          ['/api/dashboard', 'settings']
-        ],
-        metadata: {
-          threshold_id: payload.threshold_id,
-          deactivated_by: payload.deactivated_by,
-          deactivated_at: payload.deactivated_at,
-          reason: payload.reason,
-          admin_action: true
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Seuil d'alerte désactivé - threshold_id: ${payload.threshold_id}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de alert threshold deactivated: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishAlertThresholdDeactivated(payload);
   }
 
   // === HELPERS DÉCLENCHEURS ÉVALUATION ===
 
   async publishPredictiveSnapshotSaved(payload: PredictiveSnapshotSavedPayload): Promise<void> {
-    try {
-      const event = createRealtimeEvent({
-        type: EventTypeEnum.PREDICTIVE_SNAPSHOT_SAVED,
-        entity: 'system',
-        entityId: payload.snapshot_id,
-        severity: 'info',
-        affectedQueryKeys: [
-          ['/api/predictive', payload.calculation_type],
-          ['/api/alerts', 'evaluation', 'trigger'] // Déclenche évaluation seuils si besoin
-        ],
-        metadata: {
-          snapshot_id: payload.snapshot_id,
-          calculation_type: payload.calculation_type,
-          calculated_at: payload.calculated_at,
-          values: payload.values,
-          triggers_evaluation: payload.triggers_evaluation,
-          confidence_score: payload.confidence_score,
-          triggers_alert_evaluation: payload.triggers_evaluation
-                }
-                                                                              });
-      
-      this.publish(event);
-      
-      log(`EventBus: Snapshot prédictif sauvegardé - snapshot_id: ${payload.snapshot_id}, type: ${payload.calculation_type}`);
-    } catch (error) {
-      log(`EventBus: Erreur lors de la publication de predictive snapshot saved: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await this.businessAlertEventPublisher.publishPredictiveSnapshotSaved(payload);
   }
 
   /**

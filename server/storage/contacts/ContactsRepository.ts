@@ -17,13 +17,19 @@ import { logger } from './utils/logger';
 import { 
   aoContacts,
   projectContacts,
+  contactsMaitreOeuvre,
+  validationMilestones,
   type AoContacts, 
   type InsertAoContacts,
   type ProjectContacts,
-  type InsertProjectContacts
+  type InsertProjectContacts,
+  type ContactMaitreOeuvre,
+  type InsertContactMaitreOeuvre,
+  type ValidationMilestone,
+  type InsertValidationMilestone
 } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and } from 'drizzle-orm';
 import { safeInsert, safeDelete } from '../../utils/safe-query';
 
 /**
@@ -438,3 +444,141 @@ export class ContactsRepository extends BaseRepository<
       { id: normalizedId }
     );
   }
+
+  // ========================================
+  // CONTACTS MAÎTRE D'ŒUVRE OPERATIONS
+  // ========================================
+
+  async getContactsMaitreOeuvre(maitreOeuvreId: string, tx?: DrizzleTransaction): Promise<ContactMaitreOeuvre[]> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        return await dbToUse.select()
+          .from(contactsMaitreOeuvre)
+          .where(and(
+            eq(contactsMaitreOeuvre.maitreOeuvreId, maitreOeuvreId),
+            eq(contactsMaitreOeuvre.isActive, true)
+          ))
+          .orderBy(contactsMaitreOeuvre.nom);
+      },
+      'getContactsMaitreOeuvre',
+      { maitreOeuvreId }
+    );
+  }
+
+  async createContactMaitreOeuvre(contactData: InsertContactMaitreOeuvre, tx?: DrizzleTransaction): Promise<ContactMaitreOeuvre> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [newContact] = await dbToUse.insert(contactsMaitreOeuvre)
+          .values(contactData)
+          .returning();
+        this.emitEvent('contact_maitre_oeuvre:created', { id: newContact.id });
+        return newContact;
+      },
+      'createContactMaitreOeuvre',
+      { maitreOeuvreId: contactData.maitreOeuvreId }
+    );
+  }
+
+  async updateContactMaitreOeuvre(id: string, contactData: Partial<InsertContactMaitreOeuvre>, tx?: DrizzleTransaction): Promise<ContactMaitreOeuvre> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [updatedContact] = await dbToUse.update(contactsMaitreOeuvre)
+          .set({ ...contactData, updatedAt: new Date() })
+          .where(eq(contactsMaitreOeuvre.id, id))
+          .returning();
+        if (!updatedContact) {
+          throw new NotFoundError(`Contact maître d'œuvre avec id ${id} non trouvé`);
+        }
+        this.emitEvent('contact_maitre_oeuvre:updated', { id });
+        return updatedContact;
+      },
+      'updateContactMaitreOeuvre',
+      { id }
+    );
+  }
+
+  async deleteContactMaitreOeuvre(id: string, tx?: DrizzleTransaction): Promise<void> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        await dbToUse.update(contactsMaitreOeuvre)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(contactsMaitreOeuvre.id, id));
+        this.emitEvent('contact_maitre_oeuvre:deleted', { id });
+      },
+      'deleteContactMaitreOeuvre',
+      { id }
+    );
+  }
+
+  // ========================================
+  // VALIDATION MILESTONES OPERATIONS
+  // ========================================
+
+  async getValidationMilestones(offerId: string, tx?: DrizzleTransaction): Promise<ValidationMilestone[]> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        return await dbToUse.select()
+          .from(validationMilestones)
+          .where(eq(validationMilestones.offerId, offerId))
+          .orderBy(validationMilestones.createdAt);
+      },
+      'getValidationMilestones',
+      { offerId }
+    );
+  }
+
+  async createValidationMilestone(milestoneData: InsertValidationMilestone, tx?: DrizzleTransaction): Promise<ValidationMilestone> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [newMilestone] = await dbToUse.insert(validationMilestones)
+          .values(milestoneData)
+          .returning();
+        this.emitEvent('validation_milestone:created', { id: newMilestone.id, offerId: milestoneData.offerId });
+        return newMilestone;
+      },
+      'createValidationMilestone',
+      { offerId: milestoneData.offerId }
+    );
+  }
+
+  async updateValidationMilestone(id: string, milestoneData: Partial<InsertValidationMilestone>, tx?: DrizzleTransaction): Promise<ValidationMilestone> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [updatedMilestone] = await dbToUse.update(validationMilestones)
+          .set({ ...milestoneData, updatedAt: new Date() })
+          .where(eq(validationMilestones.id, id))
+          .returning();
+        if (!updatedMilestone) {
+          throw new NotFoundError(`Milestone de validation avec id ${id} non trouvé`);
+        }
+        this.emitEvent('validation_milestone:updated', { id });
+        return updatedMilestone;
+      },
+      'updateValidationMilestone',
+      { id }
+    );
+  }
+
+  async deleteValidationMilestone(id: string, tx?: DrizzleTransaction): Promise<void> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        await safeDelete(
+          'validation_milestones',
+          () => dbToUse.delete(validationMilestones).where(eq(validationMilestones.id, id)),
+          1
+        );
+        this.emitEvent('validation_milestone:deleted', { id });
+      },
+      'deleteValidationMilestone',
+      { id }
+    );
+  }
+}

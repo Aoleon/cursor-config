@@ -167,7 +167,7 @@ const priorityFiles = [
   'server/modules/alerts/routes.ts',
   'server/modules/chatbot/routes.ts',
   'server/modules/commercial/routes.ts',
-  'server/replitAuth.ts',
+  // 'server/replitAuth.ts',  // ← BANNI : fichier protégé, modifications manuelles uniquement
   'server/services/ActionExecutionService.ts'
 ];
 

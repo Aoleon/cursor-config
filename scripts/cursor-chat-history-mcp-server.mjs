@@ -1144,10 +1144,76 @@ class CursorChatHistoryServer {
     }
   }
 
+  async syncConversations(args) {
+    try {
+      // Utiliser le wrapper pour appeler le service TypeScript
+      const { syncConversations: sync } = await import('./cursor-storage-wrapper.mjs');
+      const result = await sync(args);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              stored: result.stored,
+              skipped: result.skipped,
+              errors: result.errors,
+              message: `Synchronisation terminée: ${result.stored} stockées, ${result.skipped} ignorées`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error(`Erreur syncConversations: ${error.message}`);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ error: error.message }, null, 2),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  async getStoredConversations(args) {
+    try {
+      // Utiliser le wrapper pour appeler le service TypeScript
+      const { getStoredConversations: getStored } = await import('./cursor-storage-wrapper.mjs');
+      const result = await getStored(args);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              conversations: result.conversations || [],
+              total: result.total || 0,
+              limit: args?.limit || 50,
+              offset: args?.offset || 0,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error(`Erreur getStoredConversations: ${error.message}`);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ error: error.message, conversations: [], total: 0 }, null, 2),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Serveur MCP Cursor Chat History démarré (v1.4.1 - analyse améliorée avec recommandations codebase)');
+    console.error('Serveur MCP Cursor Chat History démarré (v1.5.0 - stockage local conversations)');
   }
 
   // Nettoyage à la fermeture

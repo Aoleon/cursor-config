@@ -9,8 +9,8 @@
  * - Vérifier si "Fin d'études" peut être validé
  */
 
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError } from '../utils/error-handler';
 import type { IStorage } from '../storage-poc';
 import type { EventBus } from '../eventBus';
 import { logger } from '../utils/logger';
@@ -52,10 +52,10 @@ export class BeQualityChecklistService {
           logger.info('Checklist déjà initialisée', {
             metadata: {
               service: 'BeQualityChecklistService',
-                      operation: 'initializeChecklist',
+              operation: 'initializeChecklist',
               offerId
-                    }
-                  );
+            }
+          });
           return existing;
         }
 
@@ -74,8 +74,8 @@ export class BeQualityChecklistService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-                      id: crypto.randomUUID(),
-            type: 'be:checklist:initializas unknown, unknown,
+            id: crypto.randomUUID(),
+            type: 'be:checklist:initialized',
             entity: 'offer',
             entityId: offerId,
             message: `Checklist qualité BE initialisée pour offre ${offer.reference}`,
@@ -83,23 +83,23 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', offerId, 'be-checklist']
             ],
-                      userId: undefined,
+            userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               offerId,
               itemsCount: items.length
-                    }
-                  );
+            }
+          });
         }
 
         logger.info('Checklist qualité BE initialisée', {
           metadata: {
             service: 'BeQualityChecklistService',
-                    operation: 'initializeChecklist',
+            operation: 'initializeChecklist',
             offerId,
             itemsCount: items.length
-                  }
-                );
+          }
+        });
 
         return items;
       },
@@ -133,8 +133,8 @@ export class BeQualityChecklistService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-                    id: crypto.randomUUID(),
-            type: 'be:checklist:item:cas unknown, as unknown,
+            id: crypto.randomUUID(),
+            type: 'be:checklist:item:checked',
             entity: 'offer',
             entityId: updated.offerId,
             message: `Item checklist ${updated.itemType} marqué comme ${status}`,
@@ -142,14 +142,14 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', updated.offerId, 'be-checklist']
             ],
-                    userId: checkedBy,
+            userId: checkedBy,
             timestamp: new Date().toISOString(),
             metadata: {
               itemId,
               itemType: updated.itemType,
               status
-                    }
-                  );
+            }
+          });
         }
 
         return updated;
@@ -171,8 +171,8 @@ export class BeQualityChecklistService {
         
         if (result.isValid && this.eventBus) {
           this.eventBus.publish({
-                      id: crypto.randomUUID(),
-            type: 'be:checklistas unknown,tas unknown unknown,
+            id: crypto.randomUUID(),
+            type: 'be:checklist:validated',
             entity: 'offer',
             entityId: offerId,
             message: `Checklist qualité BE validée pour offre`,
@@ -180,12 +180,12 @@ export class BeQualityChecklistService {
             affectedQueryKeys: [
               ['/api/offers', offerId, 'be-checklist']
             ],
-                      userId: undefined,
+            userId: undefined,
             timestamp: new Date().toISOString(),
             metadata: {
               offerId
-                    }
-                  );
+            }
+          });
         }
 
         return result;
@@ -227,6 +227,7 @@ export class BeQualityChecklistService {
       }
     );
   }
+}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

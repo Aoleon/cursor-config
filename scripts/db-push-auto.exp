@@ -35,6 +35,11 @@ expect {
         send "y\r"
         exp_continue
     }
+    "Do you want to truncate*" {
+        # Ne pas truncater
+        send "\r"
+        exp_continue
+    }
     -ex "all enum conflicts resolved" {
         # Continuer après résolution des conflits
         exp_continue

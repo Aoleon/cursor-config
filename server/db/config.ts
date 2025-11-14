@@ -4,8 +4,8 @@
  */
 
 import { Pool, neonConfig, PoolClient } from '@neondatabase/serverless';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
 import * as schema from '@shared/schema';
@@ -57,46 +57,55 @@ class ConnectionManager extends EventEmitter {
       logger.fatal('Database configuration error', error, { metadata: {
           module: 'DatabaseConfig',
           operation: 'initializePool'
-            });
+        }
+      });
       throw error;
     }
 
-    return withErrorHandling(
-    async () => {
+    withErrorHandling(
+      async () => {
+        // Create pool with optimized settings
+        this.pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          max: 25,                       // Maximum 25 connexions simultanées
+          min: 5,                        // Minimum 5 connexions toujours actives
+          idleTimeoutMillis: 30000,      // 30 secondes avant fermeture connexion inactive
+          connectionTimeoutMillis: 10000, // 10 secondes timeout pour obtenir connexion
+          maxUses: 7500,                 // Rotation après 7500 utilisations
+          allowExitOnIdle: true,          // Permet fermeture propre si inactif
+          query_timeout: 30000,           // 30 seconds query timeout
+          statement_timeout: 30000,       // 30 seconds statement timeout
+        });
 
-      // Create pool with optimized settings
-      this.pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        max: 25,                       // Maximum 25 connexions simultanées
-        min: 5,                        // Minimum 5 connexions toujours actives
-        idleTimeoutMillis: 30000,      // 30 secondes avant fermeture connexion inactive
-        connectionTimeoutMillis: 10000, // 10 secondes timeout pour obtenir connexion
-        maxUses: 7500,                 // Rotation après 7500 utilisations
-        allowExitOnIdle: true,          // Permet fermeture propre si inactif
-        query_timeout: 30000,           // 30 seconds query timeout
-        statement_timeout: 30000,       // 30 seconds statement timeout
-      });
-
-      this.attachPoolListeners();
-      this.isConnected = true;
-      this.connectionStats.lastSuccess = new Date();
-      
-      logger.info('Database pool initialized successfully', { metadata: {
-          module: 'DatabaseConfig',
-          operation: 'initializePool',
-          poolSize: 25,
-          minConnections: 5
-              }
-
-            });
-
-    
-    },
-    {
-      operation: 'now',
-      service: 'config',
-      metadata: {}
+        this.attachPoolListeners();
+        this.isConnected = true;
+        this.connectionStats.lastSuccess = new Date();
+        
+        logger.info('Database pool initialized successfully', { metadata: {
+            module: 'DatabaseConfig',
+            operation: 'initializePool',
+            poolSize: 25,
+            minConnections: 5
+          }
+        });
+      },
+      {
+        operation: 'now',
+        service: 'config',
+        metadata: {}
+      }
+    ).catch((error) => {
+      this.handleInitializationError(error);
     });
+  }
+
+  /**
+   * Attach event listeners to the connection pool
+   */
+  private attachPoolListeners(): void {
+    if (!this.pool) {
+      return;
+    }
 
     // Connection lifecycle events
     this.pool.on('connect', (client: PoolClient) => {
@@ -106,9 +115,8 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'poolConnect',
           totalConnections: this.connectionStats.totalConnections
-              }
-
-            });
+        }
+      });
       
       this.emit('connect', client);
     });
@@ -117,22 +125,20 @@ class ConnectionManager extends EventEmitter {
       // Debug level - too verbose for production
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Connection acquired from pool', { metadata: {
-                  module: 'DatabaseConfig',
-                  operation: 'poolAcquire'
-                }
-
-            });
-                                                                                    }
-
-                                                                                  });
+          module: 'DatabaseConfig',
+          operation: 'poolAcquire'
+        }
+      });
+      }
+    });
 
     this.pool.on('remove', (client: PoolClient) => {
       logger.debug('Connection removed from pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'poolRemove'
-              }
-
-            });
+        }
+      });
+    });
   }
 
   /**
@@ -165,9 +171,8 @@ class ConnectionManager extends EventEmitter {
     logger.error('Failed to initialize database pool', error as Error, { metadata: {
         module: 'DatabaseConfig',
         operation: 'initializePool'
-            }
-
-                                    });
+      }
+    });
 
     // Schedule reconnection attempt
     this.handleReconnection();
@@ -188,7 +193,8 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'handleReconnection',
           attempts: this.reconnectAttempts
-            });
+        }
+      });
       
       this.emit('maxReconnectAttemptsReached');
       return;
@@ -205,9 +211,8 @@ class ConnectionManager extends EventEmitter {
         operation: 'handleReconnection',
         attempt: this.reconnectAttempts + 1,
         delayMs: delay
-            }
-
-            });
+      }
+    });
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
@@ -223,9 +228,8 @@ class ConnectionManager extends EventEmitter {
         module: 'DatabaseConfig',
         operation: 'reconnect',
         attempt: this.reconnectAttempts
-            }
-
-            });
+      }
+    });
 
     return withErrorHandling(
     async () => {
@@ -235,13 +239,14 @@ class ConnectionManager extends EventEmitter {
         try {
           await this.pool.end();
         } catch (error) {
-          logger.error('Error closing pool', { metadata: {
-                    module: 'DatabaseConfig',
-                    operation: 'disconnect',
-                    error: error instanceof Error ? error.message : String(error)
-
-                });
-                  }
+          logger.error('Error closing pool', error as Error, { metadata: {
+            module: 'DatabaseConfig',
+            operation: 'disconnect',
+            error: error instanceof Error ? error.message : String(error)
+          }
+        });
+        }
+      }
     },
     {
       operation: 'disconnect',
@@ -272,8 +277,8 @@ class ConnectionManager extends EventEmitter {
     {
       operation: 'testConnection',
       service: 'config',
-      metadata: {
-      });
+      metadata: {}
+    });
   }
 
   /**
@@ -294,19 +299,19 @@ class ConnectionManager extends EventEmitter {
       try {
         await this.testConnection();
       } catch (error) {
-        logger.error('Health check failed', { metadata: {
-                  module: 'DatabaseConfig',
-                  operation: 'healthCheck',
-                  error: error instanceof Error ? error.message : String(error)
-                }
-
-            });
+        logger.error('Health check failed', error as Error, { metadata: {
+          module: 'DatabaseConfig',
+          operation: 'healthCheck',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
         
         if (this.isCriticalError(error as Error)) {
           this.isConnected = false;
           this.handleReconnection();
         }
-}, 30000); // 30 seconds;
+      }
+    }, 30000); // 30 seconds
   }
 
   /**
@@ -318,9 +323,8 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'gracefulShutdown',
           signal
-              }
-
-                                    });
+        }
+      });
 
       await this.close();
       process.exit(0);
@@ -334,7 +338,9 @@ class ConnectionManager extends EventEmitter {
       logger.fatal('Uncaught exception in database config', error, { metadata: {
           module: 'DatabaseConfig',
           operation: 'uncaughtException'
-            });
+        }
+      });
+    });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
@@ -342,7 +348,9 @@ class ConnectionManager extends EventEmitter {
           module: 'DatabaseConfig',
           operation: 'unhandledRejection',
           promise: String(promise)
-            });
+        }
+      });
+    });
   }
 
   /**
@@ -403,31 +411,33 @@ class ConnectionManager extends EventEmitter {
       logger.info('Closing database pool', { metadata: {
           module: 'DatabaseConfig',
           operation: 'close'
-              }
+        }
+      });
 
-            });
-
-      return withErrorHandling(
-    async () => {
-
-        await this.pool.end();
-        logger.info('Database pool closed successfully', { metadata: {
-                  module: 'DatabaseConfig',
-                  operation: 'close'
-
-              });
-      
-    },
-    {
-      operation: 'now',
-      service: 'config',
-      metadata: {}
-    });
+      await withErrorHandling(
+        async () => {
+          if (this.pool) {
+            await this.pool.end();
+          }
+          logger.info('Database pool closed successfully', { metadata: {
+            module: 'DatabaseConfig',
+            operation: 'close'
+          }
+        });
+        },
+        {
+          operation: 'now',
+          service: 'config',
+          metadata: {}
+        }
+      );
 
       this.pool = null;
       this.isConnected = false;
       this.emit('closed');
     }
+  }
+}
 
 // ========================================
 // SINGLETON INSTANCE

@@ -1,6 +1,6 @@
 import { Client } from '@microsoft/microsoft-graph-client';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import { microsoftAuthService } from './MicrosoftAuthService';
 import { logger } from '../utils/logger';
 import { executeOneDrive } from './resilience';
@@ -58,22 +58,25 @@ export class OneDriveService {
     this.client = Client.init({
       authProvider: async (done) => {
         return withErrorHandling(
-    async () => {
-
-          const token = await microsoftAuthService.getAccessToken();
-          done(null, token);
-        
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {}
-    } );
+          async () => {
+            const token = await microsoftAuthService.getAccessToken();
+            done(null, token);
+          },
+          {
+            operation: 'authProvider',
+            service: 'OneDriveService',
+            metadata: {
+              hasAuthProvider: true
+            }
+          }
+        );
+      }
+    });
 
     // PERF-5: Initialize cache for OneDrive metadata
     this.cache = getCacheService();
 
-    logger.info('OneDriveService initialized', { metadata: { cacheEnabled: true 
+    logger.info('OneDriveService initialized', { metadata: { cacheEnabled: true } });
   }
 
   /**
@@ -87,36 +90,38 @@ export class OneDriveService {
     const cached = await this.cache.get<unknown>(cacheKey);
     
     if (cached) {
-      logger.debug('OneDrive drive info from cache', { metadata: { cacheKey 
+      logger.debug('OneDrive drive info from cache', { metadata: { cacheKey } });
       return cached;
     }
 
     return withErrorHandling(
-    async () => {
+      async () => {
+        const drive = await this.client.api('/me/drive').get();
+        const driveInfo = {
+          id: drive.id,
+          driveType: drive.driveType,
+          owner: drive.owner?.user?.displayName,
+          quota: {
+            total: drive.quota?.total,
+            used: drive.quota?.used,
+            remaining: drive.quota?.remaining
+          }
+        };
 
-      const drive = await this.client.api('/me/drive').get();
-      const driveInfo = {
-        id: drive.id,
-        driveType: drive.driveType,
-        owner: drive.owner?.user?.displayName,
-        quota: {
-          total: drive.quota?.total,
-          used: drive.quota?.used,
-          remaining: drive.quota?.remaining
+        // PERF-5: Cache the result
+        await this.cache.set(cacheKey, driveInfo, TTL_CONFIG.ONEDRIVE_DRIVE_INFO);
+
+        return driveInfo;
+      },
+      {
+        operation: 'getDriveInfo',
+        service: 'OneDriveService',
+        metadata: {
+          cacheKey,
+          cacheEnabled: true
         }
-      };
-
-      // PERF-5: Cache the result
-      await this.cache.set(cacheKey, driveInfo, TTL_CONFIG.ONEDRIVE_DRIVE_INFO);
-
-      return driveInfo;
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
+      }
+    );
   }
 
   /**
@@ -125,26 +130,27 @@ export class OneDriveService {
    */
   async getDriveByUserId(userId: string) {
     return withErrorHandling(
-    async () => {
-
-      const drive = await this.client.api(`/users/${userId}/drive`).get();
-      return {
-        id: drive.id,
-        driveType: drive.driveType,
-        owner: drive.owner?.user?.displayName,
-        quota: {
-          total: drive.quota?.total,
-          used: drive.quota?.used,
-          remaining: drive.quota?.remaining
+      async () => {
+        const drive = await this.client.api(`/users/${userId}/drive`).get();
+        return {
+          id: drive.id,
+          driveType: drive.driveType,
+          owner: drive.owner?.user?.displayName,
+          quota: {
+            total: drive.quota?.total,
+            used: drive.quota?.used,
+            remaining: drive.quota?.remaining
+          }
+        };
+      },
+      {
+        operation: 'getDriveByUserId',
+        service: 'OneDriveService',
+        metadata: {
+          userId
         }
-      };
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
+      }
+    );
   }
 
   /**
@@ -156,7 +162,7 @@ export class OneDriveService {
     const cached = await this.cache.get<(OneDriveFile | OneDriveFolder)[]>(cacheKey);
     
     if (cached) {
-      logger.debug('OneDrive directory list from cache', { metadata: { path, itemCount: cached.length 
+      logger.debug('OneDrive directory list from cache', { metadata: { path, itemCount: cached.length } });
       return cached;
     }
 
@@ -179,8 +185,8 @@ export class OneDriveService {
         nextLink = response['@odata.nextLink'] || null;
         
         if (nextLink) {
-          logger.info('OneDrive pagination: fetching next page', { metadata: { path, currentItems: allItems.length 
-                  }
+          logger.info('OneDrive pagination: fetching next page', { metadata: { path, currentItems: allItems.length } });
+        }
       }
 
       return allItems;
@@ -206,7 +212,7 @@ export class OneDriveService {
   async saveDeltaLink(path: string, deltaLink: string): Promise<void> {
     const cacheKey = this.cache.buildKey('onedrive', 'delta-link', { path });
     await this.cache.set(cacheKey, deltaLink, TTL_CONFIG.ONEDRIVE_DELTA_LINK);
-    logger.debug('OneDrive delta link saved', { metadata: { path, cacheKey 
+    logger.debug('OneDrive delta link saved', { metadata: { path, cacheKey } });
   }
 
   /**
@@ -222,7 +228,7 @@ export class OneDriveService {
     if (!deltaLink) {
       deltaLink = await this.getDeltaLink(path);
       if (deltaLink) {
-        logger.info('OneDrive delta: using cached delta link', { metadata: { path 
+        logger.info('OneDrive delta: using cached delta link', { metadata: { path } });
       }
     }
 
@@ -233,14 +239,14 @@ export class OneDriveService {
       if (deltaLink) {
         // Use delta link for incremental changes
         endpoint = deltaLink;
-        logger.info('OneDrive delta: incremental sync', { metadata: { path, hasPreviousDelta: true 
+        logger.info('OneDrive delta: incremental sync', { metadata: { path, hasPreviousDelta: true } });
       } else {
         // Initial sync - use delta endpoint
         endpoint = path
           ? `/me/drive/root:/${this.encodePath(path)}:/delta`
           : '/me/drive/root/delta';
         
-        logger.info('OneDrive delta: initial sync', { metadata: { path 
+        logger.info('OneDrive delta: initial sync', { metadata: { path } });
       }
 
       const allItems: (OneDriveFile | OneDriveFolder)[] = [];
@@ -252,14 +258,22 @@ export class OneDriveService {
         const response = await this.client.api(nextLink).get();
         const items = response.value || [];
         
+        interface OneDriveDeltaItem {
+          id?: string;
+          name?: string;
+          deleted?: boolean;
+          folder?: unknown;
+        }
+
         // Map ALL items including deleted ones (consumers need to handle deletions)
-        const mappedItems = items.map((: unknown) => {
+        const mappedItems = items.map((item: unknown) => {
+          const deltaItem = item as OneDriveDeltaItem;
           // For deleted items, create minimal object with deleted flag
-          if (item.deleted) {
-            const isFolder = !!item.folder;
+          if (deltaItem.deleted) {
+            const isFolder = !!deltaItem.folder;
             return {
-                  id: item.id,
-                  name: item.name || 'deleted-item',
+              id: deltaItem.id || '',
+              name: deltaItem.name || 'deleted-item',
               deleted: true,
               isFolder,
               parentPath: path,
@@ -273,34 +287,27 @@ export class OneDriveService {
         allItems.push(...mappedItems);
         
         // Log deletion events
-        const deletedCount = items.f: unknown) => i.deleted).length;
+        const deletedCount = items.filter((item: unknown) => (item as OneDriveDeltaItem).deleted).length;
         if (deletedCount > 0) {
-          logger.info('OneDrive delta: deletions detected', { metadata: { path, deletedItems: deletedCount 
-                  }
+          logger.info('OneDrive delta: deletions detected', { metadata: { path, deletedItems: deletedCount } });
+        }
 
         // Check for delta link (indicates end of delta sequence)
         if (response['@odata.deltaLink']) {
           newDeltaLink = response['@odata.deltaLink'];
           nextLink = null;
           
-          logger.info('OneDrive delta: sync complete', { metadata: {
+          logger.info('OneDrive delta: sync complete', { 
+            metadata: {
               path,
               totalItems: allItems.length,
               hasDeltaLink: true 
-              
-                  }
- 
-              
-            });
+            }
+          });
         } else if (response['@odata.nextLink']) {
           // More pages available
           nextLink = response['@odata.nextLink'];
-          logger.info('OneDrive delta: fetching next page', { metadata: { path, currentItems: allItems.length  
-              
-                  }
-  
-              
-            });
+          logger.info('OneDrive delta: fetching next page', { metadata: { path, currentItems: allItems.length } });
         } else {
           // No more data
           nextLink = null;
@@ -315,11 +322,11 @@ export class OneDriveService {
     }, `getItemsDelta:${path || 'root'}`);
 
     // PERF-5: Save new delta link to cache if we got one
-    if (result.deltaLink) {
+    if (result && result.deltaLink) {
       await this.saveDeltaLink(path, result.deltaLink);
     }
 
-    return result;
+    return result || { items: [], deltaLink: null, hasMore: false };
   }
 
   /**
@@ -334,7 +341,7 @@ export class OneDriveService {
       await this.cache.invalidate(listCacheKey);
       await this.cache.invalidate(deltaCacheKey);
       
-      logger.info('OneDrive cache invalidated for path', { metadata: { path 
+      logger.info('OneDrive cache invalidated for path', { metadata: { path } });
     } else {
       // Invalidate all OneDrive cache
       await this.cache.invalidatePattern('onedrive:*');
@@ -348,18 +355,18 @@ export class OneDriveService {
    */
   async getItem(itemId: string): Promise<OneDriveFile | OneDriveFolder> {
     return withErrorHandling(
-    async () => {
-
-      const item = await this.client.api(`/me/drive/items/${itemId}`).get();
-      return this.mapToOneDriveItem(item);
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {
-      });`, 500);
-    }
+      async () => {
+        const item = await this.client.api(`/me/drive/items/${itemId}`).get();
+        return this.mapToOneDriveItem(item);
+      },
+      {
+        operation: 'getItem',
+        service: 'OneDriveService',
+        metadata: {
+          itemId
+        }
+      }
+    );
   }
 
   /**
@@ -367,18 +374,18 @@ export class OneDriveService {
    */
   async getItemByPath(path: string): Promise<OneDriveFile | OneDriveFolder> {
     return withErrorHandling(
-    async () => {
-
-      const item = await this.client.api(`/me/drive/root:/${this.encodePath(path)}`).get();
-      return this.mapToOneDriveItem(item);
-    
-    },
-    {
-      operation: 'constructor',
-service: 'OneDriveService',
-      metadata: {
-      });`, 500);
-    }
+      async () => {
+        const item = await this.client.api(`/me/drive/root:/${this.encodePath(path)}`).get();
+        return this.mapToOneDriveItem(item);
+      },
+      {
+        operation: 'getItemByPath',
+        service: 'OneDriveService',
+        metadata: {
+          path
+        }
+      }
+    );
   }
 
   /**
@@ -389,26 +396,29 @@ service: 'OneDriveService',
     options: UploadOptions
   ): Promise<OneDriveFile> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const { path, fileName, conflictBehavior = 'rename' } = options;
+        const fullPath = path ? `${path}/${fileName}` : fileName;
 
-      const { path, fileName, conflictBehavior = 'rename' } = options;
-      const fullPath = path ? `${path}/${fileName}` : fileName;
+        const item = await this.client
+          .api(`/me/drive/root:/${this.encodePath(fullPath)}:/content`)
+          .header('Content-Type', 'application/octet-stream')
+          .put(fileBuffer);
 
-      const item = await this.client
-        .api(`/me/drive/root:/${this.encodePath(fullPath)}:/content`)
-        .header('Content-Type', 'application/octet-stream')
-        .put(fileBuffer);
-
-      logger.info('File uploaded to OneDrive', { metadata: { fileName, path, size: fileBuffer.length 
-      return this.mapToOneDriveItem(item) as OneDriveFile;
-    
-    },
-    {
-      operation: 'constructor',
-service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        logger.info('File uploaded to OneDrive', { metadata: { fileName, path, size: fileBuffer.length } });
+        return this.mapToOneDriveItem(item) as OneDriveFile;
+      },
+      {
+        operation: 'uploadSmallFile',
+        service: 'OneDriveService',
+        metadata: {
+          fileName: options.fileName,
+          path: options.path,
+          size: fileBuffer.length,
+          conflictBehavior: options.conflictBehavior || 'rename'
+        }
+      }
+    );
   }
 
   /**
@@ -419,77 +429,80 @@ service: 'OneDriveService',
     options: UploadOptions
   ): Promise<OneDriveFile> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const { path, fileName, conflictBehavior = 'rename' } = options;
+        const fullPath = path ? `${path}/${fileName}` : fileName;
 
-      const { path, fileName, conflictBehavior = 'rename' } = options;
-      const fullPath = path ? `${path}/${fileName}` : fileName;
-
-      // Create upload session
-      const uploadSession = await this.client
-        .api(`/me/drive/root:/${this.encodePath(fullPath)}:/createUploadSession`)
-        .post({
-          item: {
-            '@microsoft.graph.conflictBehavior': conflictBehavior,
-                name: fileName
+        // Create upload session
+        const uploadSession = await this.client
+          .api(`/me/drive/root:/${this.encodePath(fullPath)}:/createUploadSession`)
+          .post({
+            item: {
+              '@microsoft.graph.conflictBehavior': conflictBehavior,
+              name: fileName
+            }
           });
 
-      const uploadUrl = uploadSession.uploadUrl;
-      const fileSize = fileBuffer.length;
-      const chunkSize = 320 * 1024; // 320KB chunks
-      let uploadedBytes = 0;
-      let finalResponse: Response | null = null;
+        const uploadUrl = uploadSession.uploadUrl;
+        const fileSize = fileBuffer.length;
+        const chunkSize = 320 * 1024; // 320KB chunks
+        let uploadedBytes = 0;
+        let finalResponse: Response | null = null;
 
-      // Upload in chunks
-      while (uploadedBytes < fileSize) {
-        const chunkEnd = Math.min(uploadedBytes + chunkSize, fileSize);
-        const chunk = fileBuffer.slice(uploadedBytes, chunkEnd);
+        // Upload in chunks
+        while (uploadedBytes < fileSize) {
+          const chunkEnd = Math.min(uploadedBytes + chunkSize, fileSize);
+          const chunk = fileBuffer.slice(uploadedBytes, chunkEnd);
 
-        const response = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Length': chunk.length.toString(),
-            'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${fileSize}`
-          },
-          body: chunk
-        });
+          const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Length': chunk.length.toString(),
+              'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${fileSize}`
+            },
+            body: chunk
+          });
 
-        if (!response.ok && response.status !== 202) {
-          throw new AppError(`Upload failed with status ${response.status}`, 500);
+          if (!response.ok && response.status !== 202) {
+            throw new AppError(`Upload failed with status ${response.status}`, 500);
+          }
+
+          uploadedBytes = chunkEnd;
+          finalResponse = response;
+          logger.debug('Upload progress', { metadata: { uploadedBytes, fileSize, percentage: (uploadedBytes / fileSize * 100).toFixed(1) } });
         }
 
-        uploadedBytes = chunkEnd;
-        finalResponse = response;
-        logger.debug('Upload progress', { metadata: { uploadedBytes, fileSize, percentage: (uploadedBytes / fileSize * 100).toFixed(1) 
-      }
+        // Parse final response to get uploaded file metadata
+        // OneDrive returns the file metadata in the final chunk response
+        if (!finalResponse) {
+          throw new AppError('Upload completed but no response received', 500);
+        }
 
-      // Parse final response to get uploaded file metadata
-      // OneDrive returns the file metadata in the final chunk response
-      if (!finalResponse) {
-        throw new AppError('Upload completed but no response received', 500);
+        const uploadedItem = await finalResponse.json();
+        
+        logger.info('Large file uploaded to OneDrive', { 
+          metadata: { 
+            fileName, 
+            path, 
+            size: fileSize,
+            actualName: uploadedItem.name,
+            oneDriveId: uploadedItem.id 
+          }
+        });
+        // Return the metadata from the upload response (handles renamed files correctly)
+        return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
+      },
+      {
+        operation: 'uploadLargeFile',
+        service: 'OneDriveService',
+        metadata: {
+          fileName: options.fileName,
+          path: options.path,
+          size: fileBuffer.length,
+          conflictBehavior: options.conflictBehavior || 'rename'
+        }
       }
-
-      const uploadedItem = await finalResponse.json();
-      
-      logger.info('Large file uploaded to OneDrive', { metadata: { 
-          fileName, 
-          path, 
-          size: fileSize,
-          actualName: uploadedItem.name,
-          oneDriveId: uploadedItem.id 
-              
-              }
- 
-              
-            });
-      // Return the metadata from the upload response (handles renamed files correctly)
-      return this.mapToOneDriveItem(uploadedItem) as OneDriveFile;
-    },
-    {
-      operation: 'constructor',
-service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+    );
   }
 
   /**
@@ -497,28 +510,28 @@ service: 'OneDriveService',
    */
   async downloadFile(itemId: string): Promise<Buffer> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const response = await this.client
+          .api(`/me/drive/items/${itemId}/content`)
+          .getStream();
 
-      const response = await this.client
-.api(`/me/drive/items/${itemId}/content`);
-        .getStream();
+        const chunks: Buffer[] = [];
+        for await (const chunk of response as Readable) {
+          chunks.push(chunk);
+        }
 
-      const chunks: Buffer[] = [];
-      for await (const chunk of response as Readable) {
-        chunks.push(chunk);
+        const buffer = Buffer.concat(chunks);
+        logger.info('File downloaded from OneDrive', { metadata: { itemId, size: buffer.length } });
+        return buffer;
+      },
+      {
+        operation: 'downloadFile',
+        service: 'OneDriveService',
+        metadata: {
+          itemId
+        }
       }
-
-      const buffer = Buffer.concat(chunks);
-      logger.info('File downloaded from OneDrive', { metadata: { itemId, size: buffer.length 
-            });
-      return buffer;
-    },
-    {
-      operation: 'constructor',
-service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+    );
   }
 
   /**
@@ -526,28 +539,29 @@ service: 'OneDriveService',
    */
   async createFolder(folderName: string, parentPath: string = ''): Promise<OneDriveFolder> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const endpoint = parentPath
+          ? `/me/drive/root:/${this.encodePath(parentPath)}:/children`
+          : '/me/drive/root/children';
 
-      const endpoint = parentPath
-? `/me/drive/root:/${this.encodePath(parentPath)}:/children`;
-        : '/me/drive/root/children';
+        const folder = await this.client.api(endpoint).post({
+          name: folderName,
+          folder: {},
+          '@microsoft.graph.conflictBehavior': 'rename'
+        });
 
-      const folder = await this.client.api(endpoint).post({
-        name: folderName,
-        folder: {},
-        '@microsoft.graph.conflictBehavior': 'rename'
-      });
-
-      logger.info('Folder created on OneDrive', { metadata: { folderName, parentPath 
-      return this.mapToOneDriveItem(folder) as OneDriveFolder;
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        logger.info('Folder created on OneDrive', { metadata: { folderName, parentPath } });
+        return this.mapToOneDriveItem(folder) as OneDriveFolder;
+      },
+      {
+        operation: 'createFolder',
+        service: 'OneDriveService',
+        metadata: {
+          folderName,
+          parentPath
+        }
+      }
+    );
   }
 
   /**
@@ -555,18 +569,18 @@ service: 'OneDriveService',
    */
   async deleteItem(itemId: string): Promise<void> {
     return withErrorHandling(
-    async () => {
-
-      await this.client.api(`/me/drive/items/${itemId}`).delete();
-      logger.info('Item deleted from OneDrive', { metadata: { itemId 
-            });
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+      async () => {
+        await this.client.api(`/me/drive/items/${itemId}`).delete();
+        logger.info('Item deleted from OneDrive', { metadata: { itemId } });
+      },
+      {
+        operation: 'deleteItem',
+        service: 'OneDriveService',
+        metadata: {
+          itemId
+        }
+      }
+    );
   }
 
   /**
@@ -574,24 +588,35 @@ service: 'OneDriveService',
    */
   async searchFiles(query: string): Promise<OneDriveFile[]> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const response = await this.client
+          .api(`/me/drive/root/search(q='${encodeURIComponent(query)}')`)
+          .get();
 
-      const response = await this.client
-        .api(`/me/drive/root/search(q='${encodeURIComponent(query)}')`)
-        .get();
+        interface OneDriveSearchItem {
+          file?: { mimeType?: string };
+          folder?: unknown;
+          id?: string;
+          name?: string;
+          webUrl?: string;
+          createdDateTime?: string;
+          lastModifiedDateTime?: string;
+          size?: number;
+        }
 
-      const items = response.value || [];
-      return items
-        .: unknown)unknown unknown) => item.file) // Only files, not folders
-  : unknown)unknowntem: unknown) => this.mapToOneDriveItem(item) as OneDriveFile);
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        const items = (response.value || []) as OneDriveSearchItem[];
+        return items
+          .filter((item) => item.file) // Only files, not folders
+          .map((item) => this.mapToOneDriveItem(item) as OneDriveFile);
+      },
+      {
+        operation: 'searchFiles',
+        service: 'OneDriveService',
+        metadata: {
+          query
+        }
+      }
+    );
   }
 
   /**
@@ -599,25 +624,27 @@ service: 'OneDriveService',
    */
   async createShareLink(itemId: string, options: ShareLinkOptions = { type: 'view', scope: 'organization' }): Promise<string> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const response = await this.client
+          .api(`/me/drive/items/${itemId}/createLink`)
+          .post({
+            type: options.type,
+            scope: options.scope
+          });
 
-      const response = await this.client
-        .api(`/me/drive/items/${itemId}/createLink`)
-        .post({
+        logger.info('Share link created', { metadata: { itemId, type: options.type, scope: options.scope } });
+        return response.link.webUrl;
+      },
+      {
+        operation: 'createShareLink',
+        service: 'OneDriveService',
+        metadata: {
+          itemId,
           type: options.type,
           scope: options.scope
-        });
-
-      logger.info('Share link created', { metadata: { itemId, type: options.type, scope: options.scope 
-      return response.link.webUrl;
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        }
+      }
+    );
   }
 
   /**
@@ -625,26 +652,28 @@ service: 'OneDriveService',
    */
   async copyItem(itemId: string, destinationFolderId: string, newName?: string): Promise<void> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        await this.client
+          .api(`/me/drive/items/${itemId}/copy`)
+          .post({
+            parentReference: {
+              id: destinationFolderId
+            },
+            name: newName
+          });
 
-      await this.client
-.api(`/me/drive/items/${itemId}/copy`);
-        .post({
-          parentReference: {
-                id: destinationFolderId
-          },
-          name: newName
-        });
-
-      logger.info('Item copied on OneDrive', { metadata: { itemId, destinationFolderId, newName 
-    
-    },
-    {
-      operation: 'constructor',
-service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        logger.info('Item copied on OneDrive', { metadata: { itemId, destinationFolderId, newName } });
+      },
+      {
+        operation: 'copyItem',
+        service: 'OneDriveService',
+        metadata: {
+          itemId,
+          destinationFolderId,
+          newName: newName || undefined
+        }
+      }
+    );
   }
 
   /**
@@ -652,37 +681,61 @@ service: 'OneDriveService',
    */
   async moveItem(itemId: string, newParentId?: string, newName?: string): Promise<OneDriveFile | OneDriveFolder> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        interface UpdateItemData {
+          name?: string;
+          parentReference?: { id: string };
+        }
 
-      const updateData: unknown = {};
-      if (newName) updateData.name = newName;
-      if (newParentId) updateData.parentReference = { id: newParentId };
+        const updateData: UpdateItemData = {};
+        if (newName) updateData.name = newName;
+        if (newParentId) updateData.parentReference = { id: newParentId };
 
-      const item = await this.client
-.api(`/me/drive/items/${itemId}`);
-        .patch(updateData);
+        const item = await this.client
+          .api(`/me/drive/items/${itemId}`)
+          .patch(updateData);
 
-      logger.info('Item moved/renamed on OneDrive', { metadata: { itemId, newParentId, newName 
-            });
-      return this.mapToOneDriveItem(item);
-    },
-    {
-      operation: 'constructor',
-      service: 'OneDriveService',
-      metadata: {       }
-     });
-    }
+        logger.info('Item moved/renamed on OneDrive', { metadata: { itemId, newParentId, newName } });
+        return this.mapToOneDriveItem(item);
+      },
+      {
+        operation: 'moveItem',
+        service: 'OneDriveService',
+        metadata: {
+          itemId,
+          newParentId: newParentId || undefined,
+          newName: newName || undefined
+        }
+      }
+    );
   }
 
   private mapToOneDriveItem(item: unknown, parentPath?: string): OneDriveFile | OneDriveFolder {
-    const isFolder = !!item.folder;
+    interface OneDriveApiItem {
+      id?: string;
+      name?: string;
+      webUrl?: string;
+      createdDateTime?: string;
+      lastModifiedDateTime?: string;
+      folder?: {
+        childCount?: number;
+      };
+      file?: {
+        mimeType?: string;
+      };
+      size?: number;
+      '@microsoft.graph.downloadUrl'?: string;
+    }
+
+    const apiItem = item as OneDriveApiItem;
+    const isFolder = !!apiItem.folder;
     
     const baseItem = {
-      id: item.id,
-      name: item.name,
-      webUrl: item.webUrl,
-      createdDateTime: item.createdDateTime,
-      lastModifiedDateTime: item.lastModifiedDateTime,
+      id: apiItem.id || '',
+      name: apiItem.name || '',
+      webUrl: apiItem.webUrl || '',
+      createdDateTime: apiItem.createdDateTime || '',
+      lastModifiedDateTime: apiItem.lastModifiedDateTime || '',
       parentPath
     };
 
@@ -690,15 +743,15 @@ service: 'OneDriveService',
       return {
         ...baseItem,
         isFolder: true,
-        itemCount: item.folder?.childCount || 0
+        itemCount: apiItem.folder?.childCount || 0
       } as OneDriveFolder;
     } else {
       return {
         ...baseItem,
         isFolder: false,
-        size: item.size || 0,
-        mimeType: item.file?.mimeType || 'application/octet-stream',
-        downloadUrl: item['@microsoft.graph.downloadUrl']
+        size: apiItem.size || 0,
+        mimeType: apiItem.file?.mimeType || 'application/octet-stream',
+        downloadUrl: apiItem['@microsoft.graph.downloadUrl']
       } as OneDriveFile;
     }
   }

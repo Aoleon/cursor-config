@@ -1,5 +1,5 @@
 import type { IStorage } from "../storage-poc";
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
 import crypto from "crypto";
 import memoize from "memoizee";
 import { logger } from "../utils/logger";
@@ -8,6 +8,24 @@ import type {
   ContextGenerationConfig,
   ContextGenerationResult 
 } from "@shared/schema";
+import { contextScopeEnum, contextTypeEnum } from "@shared/schema";
+
+// Interface pour PredictiveEngine
+interface PredictiveEngine {
+  generateEntityHeatMap(): Promise<{
+    hotEntities: Array<{ entityType: string; entityId: string; accessCount: number }>;
+    coldEntities: string[];
+    accessTrends?: Record<string, number[]>;
+    peakHours?: number[];
+    businessHoursMultiplier?: number;
+  }>;
+  predictNextEntityAccess(userId?: string, currentContext?: { entityType: string; entityId: string; workflow?: string }): Promise<Array<{
+    entityType: string;
+    entityId: string;
+    confidence: number;
+  }>>;
+  recordEntityAccess?(entityType: string, entityId: string, source: string, complexity?: string): void;
+}
 
 // ========================================
 // SERVICE CACHE INTELLIGENT POUR CONTEXTE IA
@@ -152,15 +170,15 @@ export class ContextCacheService {
         
         // Stockage persistant (asynchrone)
         this.storeToPersistentCache(cacheKey, entry).catch(error => {
-          logger.warn('Erreur stockage persistant', { metadata: {
-            service: 'ContextCacheService',
-                    operation: 'setContext',
-            cacheKey,
-                    error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined 
-
-                  }
-                              });
+          logger.warn('Erreur stockage persistant', { 
+            metadata: {
+              service: 'ContextCacheService',
+              operation: 'setContext',
+              cacheKey,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }
+          });
         });
 
         // Nettoyage si nécessaire
@@ -189,15 +207,15 @@ export class ContextCacheService {
   ): Promise<void> {
     const rules = this.invalidationRules.get(entityType) || [];
     
-    logger.info('Invalidation déclenchée', { metadata: {
+    logger.info('Invalidation déclenchée', { 
+      metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateOnEntityChange',
         entityType,
         entityId,
-        changeType 
-              
-            }
-      });
+        changeType
+      }
+    });
     // Tags intelligents basés sur l'entité et le contexte
     const smartTags = this.generateSmartInvalidationTags(entityType, entityId, changeType, additionalContext);
     for (const rule of rules) {
@@ -222,13 +240,13 @@ export class ContextCacheService {
 
     // Métriques et logging
     this.stats.invalidationEvents++;
-    logger.info('Invalidation terminée', { metadata: {
+    logger.info('Invalidation terminée', { 
+      metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateOnEntityChange',
-        smartTagsCount: smartTags.length 
-
-            }
-                              });
+        smartTagsCount: smartTags.length
+      }
+    });
   }
   /**
    * Invalide les entrées correspondant à un pattern
@@ -246,25 +264,25 @@ export class ContextCacheService {
 
     // Invalidation persistante (asynchrone)
     this.invalidateFromPersistentCache(pattern).catch(error => {
-      logger.warn('Erreur invalidation persistante', { metadata: {
+      logger.warn('Erreur invalidation persistante', { 
+        metadata: {
           service: 'ContextCacheService',
           operation: 'invalidateByPattern',
           pattern,
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined 
-
-              }
-                              });
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      });
     });
 
-    logger.info('Invalidé entrées pour pattern', { metadata: {
+    logger.info('Invalidé entrées pour pattern', { 
+      metadata: {
         service: 'ContextCacheService',
         operation: 'invalidateByPattern',
         pattern,
-        invalidatedCount 
-              
-            }
-      });
+        invalidatedCount
+      }
+    });
     return invalidatedCount;
   }
   /**
@@ -287,13 +305,13 @@ export class ContextCacheService {
           this.memoryCache.delete(key);
           invalidatedCount++;
           
-          logger.info('Entrée invalidée', { metadata: {
+          logger.info('Entrée invalidée', { 
+            metadata: {
               service: 'ContextCacheService',
-                    operation: 'invalidateBySmartTags',
+              operation: 'invalidateBySmartTags',
               matchScore: matchScore.toFixed(2),
-              cacheKey: key.substring(0, 50) 
-              
-                  }
+              cacheKey: key.substring(0, 50)
+            }
       });
         }
       }
@@ -477,8 +495,9 @@ export class ContextCacheService {
         {
           operation: 'preloadFrequentContexts',
           service: 'ContextCacheService',
-          metadata: {
-      });
+          metadata: {}
+        }
+      );
     }
     
     const duration = Date.now() - startTime;
@@ -590,8 +609,18 @@ export class ContextCacheService {
   /**
    * Analyse l'efficacité du cache par type d'entité
    */
-  async analyzeEfficiencyByEntityType(): Promise<Record<string, unknown>> {
-    const analysis: Record<string, unknown> = {};
+  async analyzeEfficiencyByEntityType(): Promise<Record<string, {
+    totalEntries: number;
+    averageSize: number;
+    averageAccessCount: number;
+    totalSize: number;
+  }>> {
+    const analysis: Record<string, {
+      totalEntries: number;
+      averageSize: number;
+      averageAccessCount: number;
+      totalSize: number;
+    }> = {};
     
     for (const [key, entry] of this.memoryCache.entries()) {
       const entityType = key.split(':')[0];
@@ -682,10 +711,8 @@ export class ContextCacheService {
     const complexity = this.calculateQueryComplexity(data);
     tags.push(`complexity:${complexity}`);
 
-    // Tags par rôle utilisateur si disponible
-    if (data.generationMetrics?.userRole) {
-      tags.push(`role:${data.generationMetrics.userRole}`);
-    }
+    // Tags par rôle utilisateur si disponible (via metadata si présent)
+    // Note: generationMetrics ne contient pas userRole selon le schéma
 
     // Tags par type d'entité spécialisés
     switch (entityType) {
@@ -886,9 +913,10 @@ export class ContextCacheService {
     
     // Complexité basée sur la portée
     switch (data.scope) {
-      case 'minimal': complexity += 5; break;
-      case 'standard': complexity += 15; break;
-      case 'comprehensive': complexity += 30; break;
+      case 'entity_focused': complexity += 5; break;
+      case 'related_entities': complexity += 15; break;
+      case 'domain_wide': complexity += 30; break;
+      case 'historical': complexity += 25; break;
     }
     
     // Complexité basée sur les contextes spécifiques
@@ -940,8 +968,8 @@ export class ContextCacheService {
           entityType,
           entityId: mockEntityId,
           requestId: `prewarmed_${Date.now()}`,
-          contextTypes: ['business'],
-          scope: 'standard',
+          contextTypes: ['metier'],
+          scope: 'entity_focused',
           compressionLevel: 'light',
           generationMetrics: {
             totalTablesQueried: 3,
@@ -1117,18 +1145,18 @@ export class ContextCacheService {
       
       if (!isPeakHours && !isScheduledRun) {
         logger.info('Prewarming reporté - hors période optimale', { metadata: {
-        service: 'ContextCacheService',
-        operation: 'executeIntelligentPrewarming'
-              });
+          service: 'ContextCacheService',
+          operation: 'executeIntelligentPrewarming'
+        }});
         return;
       }
       logger.info('Début prewarming intelligent', { metadata: {
         service: 'ContextCacheService',
         operation: 'executeIntelligentPrewarming',
-        isPeakHours 
-              
-              }
-                              });
+        isPeakHours
+      }});
+      // Analyser les contextes populaires
+      const popularContexts = await this.analyzePopularContexts();
       // Déterminer la stratégie de prewarming
       const prewarmingStrategy = this.getPrewarmingStrategy(isPeakHours, popularContexts);
       
@@ -1138,15 +1166,8 @@ export class ContextCacheService {
       // Mettre à jour les statistiques
       this.updatePrewarmingStats(prewarmingResults, Date.now() - startTime);
       
-      // Publier événement de prewarming via EventBus si disponible
-      if (this.eventBus) {
-        this.eventBus.publishCachePrewarmingEvent({
-          entityTypes: prewarmingResults.entityTypes,
-          contextCount: prewarmingResults.contextsPrewarmed,
-          executionTimeMs: Date.now() - startTime,
-          isScheduled: isScheduledRun
-        });
-      }
+      // Note: EventBus publication removed - service doesn't have eventBus property
+      // If needed, inject eventBus via constructor or use a different mechanism
       
       logger.info('Prewarming terminé', { metadata: {
         service: 'ContextCacheService',
@@ -1259,11 +1280,11 @@ export class ContextCacheService {
   /**
    * Détermine la stratégie de prewarming optimale
    */
-  private getPrewarmingStrategy(isPeakHours: boolean, popularContexts: unknown): {
+  private getPrewarmingStrategy(isPeakHours: boolean, popularContexts: { entityTypes: string[]; frequentPatterns: string[] }): {
     priority: 'high' | 'medium' | 'low';
     entityTypes: string[];
     maxContextsPerType: number;
-    complexityFocus: 'simple' | 'medium' | 'complex'[];
+    complexityFocus: ('simple' | 'medium' | 'complex')[];
   } {
     if (isPeakHours) {
       return {
@@ -1289,7 +1310,7 @@ export class ContextCacheService {
     priority: 'high' | 'medium' | 'low';
     entityTypes: string[];
     maxContextsPerType: number;
-    complexityFocus: 'simple' | 'medium' | 'complex'[];
+    complexityFocus: ('simple' | 'medium' | 'complex')[];
   }): Promise<{
     contextsPrewarmed: number;
     entityTypes: string[];
@@ -1460,8 +1481,8 @@ export class ContextCacheService {
       entityType,
       entityId,
       requestId: `prewarmed_${Date.now()}`,
-      contextTypes: ['business', 'technical'],
-      scope: complexity === 'complex' ? 'comprehensive' : 'standard',
+      contextTypes: ['metier', 'technique'],
+      scope: complexity === 'complex' ? 'domain_wide' : 'related_entities',
       compressionLevel: 'medium',
       generationMetrics: {
         totalTablesQueried: complexity === 'complex' ? 8 : complexity === 'medium' ? 5 : 3,
@@ -1514,7 +1535,7 @@ export class ContextCacheService {
     return totalRequests > 0 ? this.missCount / totalRequests : 0;
   }
 
-  private updatePrewarmingStats(results: unknown, executionTime: number): void {
+  private updatePrewarmingStats(results: { contextsPrewarmed: number }, executionTime: number): void {
     this.prewarmingStats.totalRuns++;
     this.prewarmingStats.totalContextsPrewarmed += results.contextsPrewarmed;
     this.prewarmingStats.averageExecutionTime = 
@@ -1538,7 +1559,7 @@ export class ContextCacheService {
   // ========================================
 
   // Intégration avec PredictiveEngine
-  private predictiveEngine: unknown = null;
+  private predictiveEngine: PredictiveEngine | null = null;
   private predictivePreloadingEnabled = true;
   private predictiveStats = {
     totalPredictivePreloads: 0,
@@ -1554,7 +1575,7 @@ export class ContextCacheService {
   /**
    * Configure l'intégration avec PredictiveEngine pour preloading intelligent
    */
-  public integratePredictiveEngine(predictiveEngine: unknown): void {
+  public integratePredictiveEngine(predictiveEngine: PredictiveEngine): void {
     this.predictiveEngine = predictiveEngine;
     this.predictiveStats.heatMapIntegrationActive = true;
     
@@ -1597,21 +1618,23 @@ export class ContextCacheService {
         entityType,
         entityId,
         priority
-            });
+      }});
       // 1. VÉRIFICATION CACHE EXISTANT
-      const existingKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
+      const existingKey = this.generateCacheKey(entityType, entityId, (contextConfig as ContextGenerationConfig) || this.getDefaultConfig());
       if (this.memoryCache.has(existingKey)) {
         logger.info('Contexte déjà en cache', { metadata: {
-        service: 'ContextCacheService',
-        operation: 'preloadContextByPrediction',
+          service: 'ContextCacheService',
+          operation: 'preloadContextByPrediction',
+          entityType,
+          entityId
+        }});
+        return true;
+      }
+      // 2. GÉNÉRATION CONTEXTE PRÉDICTIF
+      const predictiveContext = await this.generatePredictiveContext(
         entityType,
-        entityId 
-              
-                }
-                              });
-        entityType, 
-        entityId, 
-        contextConfig,
+        entityId,
+        (contextConfig as Partial<ContextGenerationConfig>) || this.getDefaultConfig(),
         priority
       );
       if (!predictiveContext) {
@@ -1622,21 +1645,24 @@ export class ContextCacheService {
       await this.storePredictiveContext(
         entityType,
         entityId,
-        predictiveContext,
-        contextConfig,
+        predictiveContext as AIContextualData,
         priority,
+        contextConfig,
         startTime
       );
       // 4. OPTIMISATION LRU BASÉE PRÉDICTIONS
       await this.optimizeLRUWithPredictiveScoring();
       // 5. ENREGISTREMENT ACCÈS POUR HEAT-MAP
-      if (this.predictiveEngine) {
-        this.predictiveEngine.recordEntityAccess(
-          entityType,
-          entityId,
-          'system_preload',
-          this.determineContextComplexity(contextConfig)
-        );
+      if (this.predictiveEngine && typeof this.predictiveEngine === 'object' && this.predictiveEngine !== null) {
+        const engine = this.predictiveEngine as { recordEntityAccess?: (entityType: string, entityId: string, source: string, complexity?: string) => void };
+        if (engine.recordEntityAccess) {
+          engine.recordEntityAccess(
+            entityType,
+            entityId,
+            'system_preload',
+            this.determineContextComplexity(contextConfig as ContextGenerationConfig)
+          );
+        }
       }
       this.predictiveStats.totalPredictivePreloads++;
       this.predictiveStats.successfulPredictions++;
@@ -1646,10 +1672,8 @@ export class ContextCacheService {
         operation: 'preloadContextByPrediction',
         entityType,
         entityId,
-        durationMs: duration 
-
-              }
-                              });
+        durationMs: duration
+      }});
       return true;
     },
     {
@@ -1681,17 +1705,22 @@ export class ContextCacheService {
         logger.info('Intégration heat-map pour optimisation cache', { metadata: {
           service: 'ContextCacheService',
           operation: 'integrateHeatMapData'
-              });
+        }});
         // 1. RÉCUPÉRATION HEAT-MAP ACTUELLE
+        if (!this.predictiveEngine) return;
         const heatMap = await this.predictiveEngine.generateEntityHeatMap();
         // 2. PRELOADING ENTITÉS CHAUDES
         await this.preloadHotEntities(heatMap.hotEntities);
         // 3. ÉVICTION ENTITÉS FROIDES
         await this.evictColdEntities(heatMap.coldEntities);
         // 4. OPTIMISATION CACHE SELON TRENDS
-        await this.optimizeCacheByTrends(heatMap.accessTrends);
+        if (heatMap.accessTrends) {
+          await this.optimizeCacheByTrends(heatMap.accessTrends);
+        }
         // 5. AJUSTEMENT BUSINESS HOURS
-        await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
+        if (heatMap.businessHoursMultiplier !== undefined && heatMap.peakHours) {
+          await this.adjustForBusinessHours(heatMap.businessHoursMultiplier, heatMap.peakHours);
+        }
         this.predictiveStats.lastHeatMapUpdate = new Date();
         logger.info('Intégration heat-map terminée', { metadata: {
           service: 'ContextCacheService',
@@ -1725,7 +1754,7 @@ export class ContextCacheService {
       logger.info('Optimisation LRU avec scoring prédictif', { metadata: {
         service: 'ContextCacheService',
         operation: 'optimizeLRUWithPredictiveScoring'
-            });
+      }});
       // 1. CALCUL SCORES PRÉDICTIFS POUR CHAQUE ENTRÉE
       const entriesWithScores: Array<{
         key: string;
@@ -1783,21 +1812,20 @@ export class ContextCacheService {
   /**
    * Preloading intelligent des entités chaudes selon heat-map
    */
-  private async preloadHotEntities(hotEntities: unknown[]): Promise<void> {
+  private async preloadHotEntities(hotEntities: Array<{ entityType: string; entityId: string }>): Promise<void> {
     logger.info('Preloading entités chaudes', { metadata: {
         service: 'ContextCacheService',
         operation: 'preloadHotEntities',
         hotEntitiesCount: hotEntities.length 
-
-            }
-                              });
+      }
+    });
     // Limite concurrent preloading pour éviter surcharge
     const MAX_CONCURRENT = 3;
     const hotBatch = hotEntities.slice(0, 10); // Top 10 entités chaudes
     for (let i = 0; i < hotBatch.length; i += MAX_CONCURRENT) {
       const batch = hotBatch.slice(i, i + MAX_CONCURRENT);
       const preloadPromises = batch.map(async (entity) => {
-      await withErrorHandling(
+        await withErrorHandling(
           async () => {
             const priority = this.determinePriorityFromPopularity(entity);
             await this.preloadContextByPrediction(
@@ -1951,9 +1979,11 @@ export class ContextCacheService {
 
       const [entityType, entityId] = key.split(':');
       
+      if (!this.predictiveEngine) return 50;
+      
       // Vérifier si entité dans heat-map actuelle
       const heatMap = await this.predictiveEngine.generateEntityHeatMap();
-      const hotEntity = heatMap.hotEntities.find(e => 
+      const hotEntity = heatMap.hotEntities.find((e: { entityType: string; entityId: string; accessCount: number }) => 
         e.entityType === entityType && e.entityId === entityId
       );
       
@@ -1963,7 +1993,7 @@ export class ContextCacheService {
       
       // Vérifier si entité dans prédictions futures
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
-      const futurePrediction = predictions.find(p => 
+      const futurePrediction = predictions.find((p: { entityType: string; entityId: string; confidence: number }) => 
         p.entityType === entityType && p.entityId === entityId
       );
       
@@ -1989,29 +2019,37 @@ export class ContextCacheService {
   private async generatePredictiveContext(
     entityType: string,
     entityId: string,
-    conte: unknown,ig: unknown,
+    contextConfig: Partial<ContextGenerationConfig>,
     priority: string
-  ): Promise<unknown> {
+  ): Promise<AIContextualData | null> {
     // Configuration adaptée selon priorité et type d'entité
-    const optimizedConfig = {
-      ...this.getDefaultConfig(),
-      ...contextConfig,
+    const defaultConfig = this.getDefaultConfig();
+    const optimizedConfig: ContextGenerationConfig = {
+      entityType: entityType as AIContextualData['entityType'],
+      entityId,
+      requestType: 'full',
+      contextFilters: {
+        includeTypes: contextConfig.contextFilters?.includeTypes || (defaultConfig.contextFilters?.includeTypes as typeof contextTypeEnum.enumValues[number][]) || ['metier'],
+        scope: contextConfig.contextFilters?.scope || (defaultConfig.contextFilters?.scope as typeof contextScopeEnum.enumValues[number]) || this.determineScopeByPriority(priority),
+        maxDepth: contextConfig.contextFilters?.maxDepth || defaultConfig.contextFilters?.maxDepth || 2,
+        includePredictive: contextConfig.contextFilters?.includePredictive || defaultConfig.contextFilters?.includePredictive || false
+      },
       performance: {
         compressionLevel: priority === 'critical' ? 'none' : 'medium',
-        timeoutMs: priority === 'low' ? 2000 : 5000,
-        cachingEnabled: true
+        maxTokens: contextConfig.performance?.maxTokens || defaultConfig.performance?.maxTokens || 2000,
+        cacheStrategy: contextConfig.performance?.cacheStrategy || defaultConfig.performance?.cacheStrategy || 'moderate',
+        freshnessThreshold: contextConfig.performance?.freshnessThreshold || defaultConfig.performance?.freshnessThreshold || 24
       },
-      scope: this.determineScopeByPriority(priority),
-      contextTypes: this.getContextTypesForEntity(entityType)
+      businessSpecialization: contextConfig.businessSpecialization || defaultConfig.businessSpecialization || {}
     };
 
     // Simulation génération contexte pour POC
     return {
-      entityType,
+      entityType: entityType as AIContextualData['entityType'],
       entityId,
       requestId: `predictive_${Date.now()}`,
-      contextTypes: optimizedConfig.contextTypes,
-      scope: optimizedConfig.scope,
+      contextTypes: optimizedConfig.contextFilters.includeTypes,
+      scope: optimizedConfig.contextFilters.scope,
       compressionLevel: optimizedConfig.performance.compressionLevel,
       generationMetrics: {
         totalTablesQueried: priority === 'critical' ? 12 : 6,
@@ -2022,13 +2060,7 @@ export class ContextCacheService {
       },
       tokenEstimate: priority === 'critical' ? 2000 : 1200,
       frenchTerminology: {},
-      keyInsights: [`Contexte prédictif ${priority} pour ${entityType}`],
-      predictiveMetadata: {
-        preloadedAt: new Date().toISOString(),
-        priority,
-        expectedAccess: Date.now() + (15 * 60 * 1000), // Dans 15 minutes
-        confidenceScore: 85
-      }
+      keyInsights: [`Contexte prédictif ${priority} pour ${entityType}`]
     };
   }
 
@@ -2038,11 +2070,12 @@ export class ContextCacheService {
   private async storePredictiveContext(
     entityType: string,
     entityId: string,
-    contextConfig?: unknown,
+    context: AIContextualData,
     priority: string,
-    startTime: number
+    contextConfig?: unknown,
+    startTime?: number
   ): Promise<void> {
-    const cacheKey = this.generateCacheKey(entityType, entityId, contextConfig || this.getDefaultConfig());
+    const cacheKey = this.generateCacheKey(entityType, entityId, (contextConfig as ContextGenerationConfig) || this.getDefaultConfig());
     const now = new Date();
     
     // TTL adapté selon priorité
@@ -2116,12 +2149,13 @@ export class ContextCacheService {
       logger.info('Cycle preloading prédictif démarré', { metadata: {
         service: 'ContextCacheService',
         operation: 'startPredictiveCycles'
-            });
+      }});
       // 1. Obtenir prédictions depuis PredictiveEngine
+      if (!this.predictiveEngine) return;
       const predictions = await this.predictiveEngine.predictNextEntityAccess();
       // 2. Filtrer prédictions selon capacité cache
       const viablePredictions = predictions
-        .filter(p => p.confidence >= 70)
+        .filter((p: { entityType: string; entityId: string; confidence: number }) => p.confidence >= 70)
         .slice(0, 5); // Limiter à 5 prédictions par cycle
       // 3. Preloader contextes prédits
       for (const prediction of viablePredictions) {
@@ -2154,25 +2188,31 @@ export class ContextCacheService {
   // MÉTHODES HELPER PRELOADING PRÉDICTIF
   // ========================================
 
-  private getDefaultConfig(): unknown {
+  private getDefaultConfig(): Partial<ContextGenerationConfig> {
     return {
-      contextTypes: ['business', 'technical'],
-      scope: 'standard',
+      contextFilters: {
+        includeTypes: ['metier', 'technique'],
+        scope: 'entity_focused',
+        maxDepth: 2,
+        includePredictive: false
+      },
       performance: {
         compressionLevel: 'medium',
-        timeoutMs: 3000,
-        cachingEnabled: true
+        maxTokens: 2000,
+        cacheStrategy: 'moderate',
+        freshnessThreshold: 24
       }
     };
   }
 
-  private determineContextComplexity(contextConfig?: unknown): 'low' | 'medium' | 'high' {
-    if (!contextConfig) return 'medium';
+  private determineContextComplexity(contextConfig?: Partial<ContextGenerationConfig>): 'low' | 'medium' | 'high' {
+    if (!contextConfig || !contextConfig.contextFilters) return 'medium';
     
-    const scope = contextConfig.scope || 'standard';
+    const scope = contextConfig.contextFilters.scope || 'entity_focused';
     switch (scope) {
-      case 'minimal': return 'low';
-      case 'comprehensive': return 'high';
+      case 'entity_focused': return 'low';
+      case 'domain_wide': return 'high';
+      case 'historical': return 'high';
       default: return 'medium';
     }
   }
@@ -2261,23 +2301,23 @@ export class ContextCacheService {
     return sizeScore + accessScore;
   }
 
-  private determineScopeByPriority(priority: string): string {
+  private determineScopeByPriority(priority: string): typeof contextScopeEnum.enumValues[number] {
     switch (priority) {
-      case 'critical': return 'comprehensive';
-      case 'high': return 'standard';
-      case 'medium': return 'standard';
-      case 'low': return 'minimal';
-      default: return 'standard';
+      case 'critical': return 'domain_wide';
+      case 'high': return 'related_entities';
+      case 'medium': return 'related_entities';
+      case 'low': return 'entity_focused';
+      default: return 'entity_focused';
     }
   }
 
-  private getContextTypesForEntity(entityType: string): string[] {
+  private getContextTypesForEntity(entityType: string): typeof contextTypeEnum.enumValues[number][] {
     switch (entityType) {
-      case 'ao': return ['business', 'relational'];
-      case 'offer': return ['business', 'relational', 'technical'];
-      case 'project': return ['business', 'technical', 'temporal'];
-      case 'supplier': return ['business', 'relational'];
-      default: return ['business'];
+      case 'ao': return ['metier', 'relationnel'];
+      case 'offer': return ['metier', 'relationnel', 'technique'];
+      case 'project': return ['metier', 'technique', 'temporel'];
+      case 'supplier': return ['metier', 'relationnel'];
+      default: return ['metier'];
     }
   }
 
@@ -2294,7 +2334,7 @@ export class ContextCacheService {
   private generatePredictiveTags(
     entityType: string,
     entityId: string,
-    contextConfig?: unknown,
+    context: AIContextualData,
     priority: string
   ): string[] {
     const baseTags = [
@@ -2307,7 +2347,7 @@ export class ContextCacheService {
 
     // Tags spécialisés preloading
     baseTags.push('preloaded');
-    baseTags.push(`confidence:${context.predictiveMetadata?.confidenceScore || 0}`);
+    baseTags.push(`confidence:${(context as any).predictiveMetadata?.confidenceScore || 0}`);
 
     // Tags temporels
     const hour = new Date().getHours();

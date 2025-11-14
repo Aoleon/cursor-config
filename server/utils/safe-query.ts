@@ -7,6 +7,8 @@ import { db } from '../db';
 import { logger } from './logger';
 import { DatabaseError } from './error-handler';
 import { isRetryableError, getDatabaseErrorMessage } from './database-helpers';
+import { withRetry } from './retry-helper';
+import { withErrorHandling } from './error-handler';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -42,18 +44,16 @@ export async function safeQuery<T>(
     operation = 'executeQuery'
   } = options;
   
-  let lastError: Error | undefined;
   const startTime = Date.now();
   
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
+  return withRetry(
+    async () => {
       // Log query start if requested
       if (logQuery) {
         logger.debug('Executing database query', {
           service,
           metadata: {
             operation,
-            attempt: attempt + 1,
             maxRetries: retries,
             timeout
           }
@@ -80,34 +80,42 @@ export async function safeQuery<T>(
           service,
           metadata: {
             operation,
-            duration,
-            attempt: attempt + 1
+            duration
           }
         });
       }
       
+      // Monitor slow queries (> 20s)
+      if (duration >= 20000) {
+        const { getSQLPerformanceMonitor } = await import('../services/SQLPerformanceMonitor');
+        const monitor = getSQLPerformanceMonitor();
+        monitor.recordQuery(
+          {
+            query: operation,
+            duration,
+            tablesQueried: [],
+            executionPlan: undefined
+          },
+          {
+            service,
+            operation
+          }
+        );
+      }
+      
       return result;
-    } catch (error: unknown) {
-      // Type guard for Postgres error
-      type PostgresError = Error & { 
-        code?: string; 
-        detail?: string; 
-        constraint?: string; 
-        table?: string; 
-        column?: string;
-      };
-      
-      const err: PostgresError = error instanceof Error 
-        ? (error as PostgresError)
-        : new Error(String(error)) as PostgresError;
-      
-      lastError = err;
-      
-      // Check if error is retryable
-      const retryable = err.code === '40001' || err.code === '40P01'; // Serialization failure or deadlock
-      
-      if (retryable && attempt < retries - 1) {
-        const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
+    },
+    {
+      maxRetries: retries,
+      initialDelay: retryDelay,
+      backoffMultiplier: 2,
+      retryCondition: (error: unknown) => {
+        const err = error as Error & { code?: string };
+        // Retry on serialization failure or deadlock
+        return err.code === '40001' || err.code === '40P01' || isRetryableError(error);
+      },
+      onRetry: (attempt: number, delay: number, error: unknown) => {
+        const err = error as Error & { code?: string };
         logger.warn('Database query failed, retrying', {
           service,
           metadata: {
@@ -118,39 +126,44 @@ export async function safeQuery<T>(
             delay
           }
         });
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
       }
-      
-      // Log final failure with Postgres error details
-      const duration = Date.now() - startTime;
-      logger.error('Database query failed permanently', lastError, {
-        service,
-        metadata: {
-          operation,
-          attempt: attempt + 1,
-          maxRetries: retries,
-          duration,
-          retryable,
-          // Expose Postgres error details for debugging
-          errorCode: err.code,
-          errorDetail: err.detail,
-          errorConstraint: err.constraint,
-          errorTable: err.table,
-          errorColumn: err.column,
-          errorMessage: lastError?.message
-        }
-      });
-      
-      break;
     }
-  }
-  
-  // Transform to user-friendly error message
-  const message = getDatabaseErrorMessage(lastError);
-  throw new DatabaseError(message, lastError);
+  ).catch((error: unknown) => {
+    // Type guard for Postgres error
+    type PostgresError = Error & { 
+      code?: string; 
+      detail?: string; 
+      constraint?: string; 
+      table?: string; 
+      column?: string;
+    };
+    
+    const lastError = error instanceof Error 
+      ? (error as PostgresError)
+      : new Error(String(error)) as PostgresError;
+    
+    // Log final failure with Postgres error details
+    const duration = Date.now() - startTime;
+    logger.error('Database query failed permanently', lastError, {
+      service,
+      metadata: {
+        operation,
+        maxRetries: retries,
+        duration,
+        // Expose Postgres error details for debugging
+        errorCode: lastError.code,
+        errorDetail: lastError.detail,
+        errorConstraint: lastError.constraint,
+        errorTable: lastError.table,
+        errorColumn: lastError.column,
+        errorMessage: lastError.message
+      }
+    });
+    
+    // Transform to user-friendly error message
+    const message = getDatabaseErrorMessage(lastError);
+    throw new DatabaseError(message, lastError);
+  });
 }
 
 /**
@@ -173,48 +186,47 @@ export async function safeBatch<T>(
   
   const startTime = Date.now();
   
-  try {
-    logger.debug('Executing batch queries', {
+  return withErrorHandling(
+    async () => {
+      logger.debug('Executing batch queries', {
+        service,
+        metadata: {
+          operation,
+          queryCount: queries.length
+        }
+      });
+      
+      // Execute all queries in parallel with individual error handling
+      const results = await Promise.all(
+        queries.map((queryFn, index) => 
+          safeQuery(queryFn, {
+            ...queryOptions,
+            service,
+            operation: `${operation}_query_${index + 1}`
+          })
+        )
+      );
+      
+      const duration = Date.now() - startTime;
+      logger.info('Batch queries completed successfully', {
+        service,
+        metadata: {
+          operation,
+          queryCount: queries.length,
+          duration
+        }
+      });
+      
+      return results;
+    },
+    {
+      operation,
       service,
       metadata: {
-        operation,
         queryCount: queries.length
       }
-    });
-    
-    // Execute all queries in parallel with individual error handling
-    const results = await Promise.all(
-      queries.map((queryFn, index) => 
-        safeQuery(queryFn, {
-          ...queryOptions,
-          service,
-          operation: `${operation}_query_${index + 1}`
-        })
-      )
-    );
-    
-    const duration = Date.now() - startTime;
-    logger.info('Batch queries completed successfully', {
-      service,
-      metadata: {
-        operation,
-        queryCount: queries.length,
-        duration
-      }
-    });
-    
-    return results;
-  } catch (error) {
-    logger.error('Batch queries failed', {
-      service,
-      metadata: {
-        operation,
-        queryCount: queries.length,
-        error: error instanceof Error ? error.message : String(error)
-      }
-    });
-    throw error;
-  }
+    }
+  );
 }
 
 /**
@@ -234,23 +246,21 @@ export async function executeWithMetrics<T>(
   },
   queryFn: () => Promise<T>
 ): Promise<T> {
-  try {
-    return await safeQuery(queryFn, {
-      service: context.service,
-      operation: context.operation,
-      logQuery: true
-    });
-  } catch (error) {
-    logger.error('Query execution failed', {
-      service: context.service,
-      metadata: {
+  return withErrorHandling(
+    async () => {
+      return await safeQuery(queryFn, {
+        service: context.service,
         operation: context.operation,
-        ...context.metadata,
-        error: error instanceof Error ? error.message : String(error)
-      }
-    });
-    throw error;
-  }
+        logQuery: true
+      });
+    },
+    {
+      operation: context.operation,
+      service: context.service,
+      userId: context.userId,
+      metadata: context.metadata
+    }
+  );
 }
 
 /**
@@ -271,6 +281,7 @@ export async function safeGetOne<T>(
     const result = await safeQuery(queryFn, options);
     return result ?? null;
   } catch (error) {
+    // Retourner null au lieu de throw pour cette fonction utilitaire
     logger.error(`Error getting ${entityName}`, { metadata: {
         service: 'SafeQuery',
         operation: 'safeGetOne',
@@ -297,6 +308,7 @@ export async function safeCount(
   try {
     return await safeQuery(queryFn, options);
   } catch (error) {
+    // Retourner 0 au lieu de throw pour cette fonction utilitaire
     logger.error('Error counting records', { metadata: {
         service: 'SafeQuery',
         operation: 'safeCount',
@@ -326,6 +338,7 @@ export async function safeExists(
     }
     return result?.exists ?? false;
   } catch (error) {
+    // Retourner false au lieu de throw pour cette fonction utilitaire
     logger.error('Error checking existence', { metadata: {
         service: 'SafeQuery',
         operation: 'safeExists',
@@ -353,6 +366,7 @@ export async function healthCheck(): Promise<boolean> {
     );
     return true;
   } catch (error) {
+    // Retourner false au lieu de throw pour health check
     logger.error('Health check failed', { metadata: {
         service: 'SafeQuery',
         operation: 'healthCheck',
@@ -371,22 +385,22 @@ export async function safeInsert<T>(
   insertFn: () => Promise<T>,
   options: SafeQueryOptions = {}
 ): Promise<T> {
-  try {
-    return await safeQuery(insertFn, {
-      ...options,
+  return withErrorHandling(
+    async () => {
+      return await safeQuery(insertFn, {
+        ...options,
+        service: options.service || 'SafeInsert',
+        operation: options.operation || `insert_${tableName}`
+      });
+    },
+    {
+      operation: options.operation || `insert_${tableName}`,
       service: options.service || 'SafeInsert',
-      operation: options.operation || `insert_${tableName}`
-    });
-  } catch (error) {
-    logger.error('Error inserting record', {
       metadata: {
-        service: 'SafeInsert',
-        operation: `insert_${tableName}`,
-        error: error instanceof Error ? error.message : String(error)
+        tableName
       }
-    });
-    throw error;
-  }
+    }
+  );
 }
 
 /**

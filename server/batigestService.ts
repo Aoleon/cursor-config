@@ -241,8 +241,18 @@ export interface BatigestAnalytics {
   }>;
 }
 
+// Type pour ConnectionPool de mssql (importé dynamiquement)
+type MssqlConnectionPool = {
+  connect: () => Promise<MssqlConnectionPool>;
+  close: () => Promise<void>;
+  request: () => {
+    input: (name: string, type: unknown, value: unknown) => unknown;
+    query: (sql: string) => Promise<{ recordset: unknown[] }>;
+  };
+};
+
 export class BatigestService {
-  private pool: unknown = null;
+  private pool: MssqlConnectionPool | null = null;
   private isConnected = false;
 
   /**
@@ -262,18 +272,23 @@ export class BatigestService {
       if (!this.isConnected) {
         // Import conditionnel de mssql seulement quand nécessaire
         const sql = (await import('mssql')).default;
-        this.pool = new sql.ConnectionPool(batigestConfig);
-        await this.pool.connect();
+        const pool = new sql.ConnectionPool(batigestConfig);
+        await pool.connect();
+        this.pool = pool as unknown as MssqlConnectionPool;
         this.isConnected = true;
         logger.info('BatigestService - Connection established');
       }
-    
     },
     {
-      operation: 'parseInt',
+      operation: 'connect',
       service: 'batigestService',
-      metadata: {}
-    });
+      metadata: {
+        simulationMode: SIMULATION_MODE,
+        server: batigestConfig.server,
+        database: batigestConfig.database
+      }
+    }
+  );
   }
 
   /**
@@ -569,7 +584,12 @@ export class BatigestService {
         return acc;
       }, {});
       
-      const coefficientsParFamille = Object.values(familleStats).map((stat: any) => {
+      interface FamilleStat {
+        coefficients: number[];
+        famille: string;
+      }
+      
+      const coefficientsParFamille = Object.values(familleStats).map((stat: FamilleStat) => {
         const coefficients = stat.coefficients || [];
         const moyenne = coefficients.reduce((sum: number, val: number) => sum + val, 0) / (coefficients.length || 1);
         const variance = coefficients.reduce((acc: number, val: number) => acc + Math.pow(val - moyenne, 2), 0) / (coefficients.length || 1);
@@ -664,24 +684,36 @@ export class BatigestService {
     `;
     
     const factResult = await this.pool!.request().query(factQuery);
-    const factData = factResult.recordset[0];
+    const factData = factResult.recordset[0] as { montantTotal?: number; nombreFactures?: number; retardMoyen?: number } | undefined;
+    
+    interface CoefficientRow {
+      famille?: string;
+      coefficientMoyen?: number;
+      nombreElements?: number;
+      ecartType?: number;
+    }
     
     return {
-      chiffreAffairesRealise: caData.CA_REALISE || 0,
-      chiffreAffairesPrevu: caData.CA_PREVU || 0,
-      tauxConversionDevis: caData.CA_PREVU > 0 ? (caData.CA_REALISE / caData.CA_PREVU) * 100 : 0,
+      chiffreAffairesRealise: caData?.CA_REALISE || 0,
+      chiffreAffairesPrevu: caData?.CA_PREVU || 0,
+      tauxConversionDevis: (caData?.CA_PREVU || 0) > 0 ? ((caData?.CA_REALISE || 0) / (caData?.CA_PREVU || 1)) * 100 : 0,
       margeReelleMoyenne: 0, // À calculer selon la logique métier
       margePrevueMoyenne: 0, // À calculer selon la logique métier
       
-      coefficientsParFamille: coeffResult.recordset.map((row: any) => ({
-        nombreElements: row.nombreElements,
-        ecartType: row.ecartType || 0,
-      })),
+      coefficientsParFamille: coeffResult.recordset.map((row: unknown) => {
+        const typedRow = row as CoefficientRow;
+        return {
+          famille: typedRow.famille || 'Non classé',
+          coefficientMoyen: typedRow.coefficientMoyen || 0,
+          nombreElements: typedRow.nombreElements || 0,
+          ecartType: typedRow.ecartType || 0,
+        };
+      }),
       
       factuationEnCours: {
-        montantTotal: factData.montantTotal || 0,
-        nombreFactures: factData.nombreFactures || 0,
-        retardMoyen: factData.retardMoyen || 0,
+        montantTotal: factData?.montantTotal || 0,
+        nombreFactures: factData?.nombreFactures || 0,
+        retardMoyen: factData?.retardMoyen || 0,
       },
       
       evolutionMarges: [], // À implémenter selon les besoins
@@ -709,10 +741,11 @@ export class BatigestService {
       const testQuery = "SELECT TOP 1 GETDATE() as TEST_DATE";
       const result = await this.pool!.request().query(testQuery);
       
+      const testRow = result.recordset[0] as { TEST_DATE?: string } | undefined;
       return {
         connected: true,
         mode: 'production',
-        message: `Connexion OK - Test effectué le ${result.recordset[0].TEST_DATE}`
+        message: `Connexion OK - Test effectué le ${testRow?.TEST_DATE || new Date().toLocaleString('fr-FR')}`
       };
     },
     {
@@ -737,7 +770,8 @@ export class BatigestService {
     const request = this.pool!.request();
     const result = await request.query(query);
     
-    return result.recordset[0]?.NEXT_SEQUENCE || 1;
+    const sequenceRow = result.recordset[0] as { NEXT_SEQUENCE?: number } | undefined;
+    return sequenceRow?.NEXT_SEQUENCE || 1;
   }
 }
 

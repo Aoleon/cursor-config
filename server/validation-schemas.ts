@@ -261,7 +261,7 @@ export const uploadSupplierDocumentSchema = z.object({
   supplierId: z.string().uuid("ID fournisseur invalide"),
   documentType: z.enum(["devis", "catalogue", "certification", "conditions", "autre"]),
   sessionId: z.string().uuid("ID session invalide").optional(),
-  metadata: z.record(z.string()unknown.any()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 }).strict();
 
 // POST /api/supplier-documents/:id/analyze

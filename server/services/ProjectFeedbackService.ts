@@ -9,8 +9,8 @@
  * - Publier événements pour notifications
  */
 
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError } from '../utils/error-handler';
 import type { IStorage } from '../storage-poc';
 import type { EventBus } from '../eventBus';
 import { logger } from '../utils/logger';
@@ -61,8 +61,8 @@ export class ProjectFeedbackService {
               feedbackId: feedback.id,
               feedbackType: feedback.feedbackType,
               severity: feedback.severity
-                    }
-                  );
+            }
+          });
         }
 
         logger.info('Feedback terrain créé', { metadata: {
@@ -111,8 +111,8 @@ export class ProjectFeedbackService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-                  id: crypto.randomUUID(),
-            type: 'project:feedback:assignas unknown, unknown,
+            id: crypto.randomUUID(),
+            type: 'project:feedback:assigned',
             entity: 'project',
             entityId: feedback.projectId,
             message: `Feedback assigné à ${user.email}`,
@@ -120,13 +120,13 @@ export class ProjectFeedbackService {
             affectedQueryKeys: [
               ['/api/projects', feedback.projectId, 'feedback-terrain']
             ],
-                  userId: assignedTo,
+            userId: assignedTo,
             timestamp: new Date().toISOString(),
             metadata: {
               feedbackId: feedback.id,
               assignedTo
-                    }
-                  );
+            }
+          });
         }
 
         logger.info('Feedback assigné', { metadata: {
@@ -180,8 +180,8 @@ export class ProjectFeedbackService {
         // Publier événement
         if (this.eventBus) {
           this.eventBus.publish({
-                  id: crypto.randomUUID(),
-            type: 'project:feedback:reas unknown, as unknown,
+            id: crypto.randomUUID(),
+            type: 'project:feedback:resolved',
             entity: 'project',
             entityId: feedback.projectId,
             message: `Feedback résolu: ${feedback.title}`,
@@ -189,13 +189,13 @@ export class ProjectFeedbackService {
             affectedQueryKeys: [
               ['/api/projects', feedback.projectId, 'feedback-terrain']
             ],
-                  userId: resolvedBy,
+            userId: resolvedBy,
             timestamp: new Date().toISOString(),
             metadata: {
               feedbackId: feedback.id,
               resolvedBy
-                    }
-                  );
+            }
+          });
         }
 
         logger.info('Feedback résolu', { metadata: {
@@ -216,6 +216,7 @@ export class ProjectFeedbackService {
       }
     );
   }
+}
 
 // Export singleton instance
 import { storage } from '../storage-poc';

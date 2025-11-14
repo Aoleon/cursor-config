@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../utils/logger';
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
 import { ErrorEvent, ErrorMetrics, TimeWindowMetrics } from './error-collector';
 
 // ========================================
@@ -39,7 +39,7 @@ export interface Alert {
   acknowledgedBy?: string;
   metrics: AlertMetrics;
   message: string;
-  details?: Record<st, unknown>unknown>;
+  details?: Record<string, unknown>;
   notificationsSent: number;
   lastNotificationAt?: Date;
 }
@@ -279,6 +279,7 @@ export class AlertManager {
 
             });
     }
+  }
 
   /**
    * Vérifie toutes les règles d'alerte
@@ -334,6 +335,7 @@ export class AlertManager {
       // L'alerte n'est plus déclenchée, la marquer comme résolue
       this.resolveAlert(existingAlert, now);
     }
+  }
 
   /**
    * Déclenche une nouvelle alerte
@@ -415,8 +417,8 @@ export class AlertManager {
   /**
    * Récupère les métriques pertinentes pour une règle
    */
-  private getRelevantMetrics(rule: AlertRule, metrics: AlertMetrics): Recor, unknown>unknown>unknown> {
-    const relevant: R, unknown>unknown>unknown any> = {};
+  private getRelevantMetrics(rule: AlertRule, metrics: AlertMetrics): Record<string, unknown> {
+    const relevant: Record<string, unknown> = {};
     
     // Métriques communes
     relevant.errorRate = metrics.errorRate;
@@ -477,25 +479,26 @@ export class AlertManager {
       const handler = this.notificationCallbacks.get(action);
       
       if (handler) {
-      await withErrorHandling(
-    async () => {
-
-          await handler(alert);
-          alert.notificationsSent++;
-          alert.lastNotificationAt = new Date();
-        
-    },
-    {
-      operation: 'async',
-      service: 'alert-manager',
-      metadata: {
-      });
+        await withErrorHandling(
+          async () => {
+            await handler(alert);
+            alert.notificationsSent++;
+            alert.lastNotificationAt = new Date();
+          },
+          {
+            operation: 'sendNotification',
+            service: 'alert-manager',
+            metadata: { action, alertId: alert.id },
+          }
+        );
       } else if (action === 'log') {
         // Log par défaut si pas de handler
         this.logAlert(alert);
         alert.notificationsSent++;
         alert.lastNotificationAt = new Date();
       }
+    }
+  }
 
   /**
    * Log une alerte
@@ -512,10 +515,9 @@ export class AlertManager {
         ruleId: alert.ruleId,
         severity: alert.severity,
         status: alert.status,
-        metrics: alert.details?.metrics
-              }
-
-                                                                                  });
+        metrics: alert.details?.metrics,
+      },
+    };
     
     const message = `🚨 ALERTE [${alert.severity.toUpperCase()}]: ${alert.message}`;
     
@@ -532,6 +534,7 @@ export class AlertManager {
       default:
         logger.info(message, logContext);
     }
+  }
 
   /**
    * Détermine si une notification doit être renvoyée
@@ -593,6 +596,8 @@ export class AlertManager {
       if (rule && !rule.condition(metrics) && alert.status === 'active') {
         this.resolveAlert(alert, now);
       }
+    }
+  }
 
   /**
    * Reconnaît une alerte (acknowledge)
@@ -746,6 +751,7 @@ export class AlertManager {
     this.stop();
     this.reset();
   }
+}
 
 // Instance singleton
 let alertManagerInstance: AlertManager | null = null;

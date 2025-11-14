@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import type { IStorage } from '../../storage-poc';
+import type { EventBus } from '../../eventBus';
 import { isAuthenticated } from '../../replitAuth';
 import { validateBody, validateParams, validateQuery, commonParamSchemas } from '../../middleware/validation';
 import { rateLimits } from '../../middleware/rate-limiter';
@@ -23,12 +24,12 @@ import {
   materialColorAlertRuleSchema,
   type MaterialColorAlertRule
 } from '@shared/schema';
-import { ScoringService } from '../../services/scoringService';
+import { getBusinessAnalyticsService } from '../../services/consolidated/BusinessAnalyticsService';
 
 /**
  * Middleware: Check if user is admin or responsable
  */
-const isAdminOrResponsible = (req: unknown,: unknown, unknown, next: unknown) => {
+const isAdminOrResponsible = (req: unknown, res: unknown, next: unknown) => {
   const user = req.user || req.session?.user;
   
   if (!user) {
@@ -49,7 +50,10 @@ const isAdminOrResponsible = (req: unknown,: unknown, unknown, next: unknown) =>
 /**
  * Middleware: Check if user is responsable_be or admin
  */
-const requireTechnicalValidationRol: unknown,: unknown,y, res: unknown, : unknown) => {
+const requireTechnicalValidationRole = (req: any, res: any, next: any) => {
+  const user = (req as any).user || (req as any).session?.user;
+  const userRole = user?.role;
+  if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
     return res.status(403).json({
       success: false,
       message: "Accès refusé. Rôle 'responsable_be' ou 'admin' requis."
@@ -76,7 +80,9 @@ const scorePreviewSchema = z.object({
 /**
  * Factory function to create Configuration routes with dependency injection
  */
-export function createConfigurationRoutes(storage: IStorage, : unknown) {
+export function createConfigurationRoutes(storage: IStorage, eventBus: EventBus) {
+  const router = Router();
+  
   // TECHNICAL SCORING ROUTES
   // ========================================
 
@@ -101,9 +107,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
         success: true,
         data: config
       });
-          }
-        })
-      );
+    })
+  );
 
   // PATCH /api/scoring-config - Update scoring configuration
   router.patch("/api/scoring-config",
@@ -139,9 +144,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
         message: "Configuration mise à jour avec succès",
         data: config
       });
-          }
-        })
-      );
+    })
+  );
 
   // POST /api/score-preview - Calculate score preview
   router.post("/api/score-preview",
@@ -157,7 +161,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
       const { specialCriteria, config } = req.body;
       
       const scoringConfig = config || await storage.getScoringConfig();
-      const result = ScoringService.compute(specialCriteria, scoringConfig);
+      const analyticsService = getBusinessAnalyticsService(storage, eventBus);
+      const result = analyticsService.computeTechnicalScore(specialCriteria, scoringConfig);
       
       logger.info('Résultat aperçu scoring calculé', { metadata: {
  result
@@ -170,11 +175,10 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
           result,
           usedConfig: scoringConfig,
           inputCriteria: specialCriteria
-
-            });
-          }
-        })
-      );
+        }
+      });
+    })
+  );
 
   // ========================================
   // MATERIAL-COLOR RULES ROUTES
@@ -201,9 +205,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
         data: rules,
         total: rules.length
       });
-          }
-        })
-      );
+    })
+  );
 
   // PUT /api/settings/material-color-rules - Update material-color rules
   router.put('/api/settings/material-color-rules',
@@ -240,9 +243,8 @@ export function createConfigurationRoutes(storage: IStorage, : unknown) {
         message: `${newRules.length} règles matériaux-couleurs mises à jour avec succès`,
         data: newRules
       });
-          }
-        })
-      );
+    })
+  );
 
   // ========================================
   // EQUIPMENT BATTERIES ROUTES

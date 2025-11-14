@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
 import { Request, Response, NextFunction } from 'express';
 import { mondayConfig } from '../config';
 import { logger } from '../utils/logger';
@@ -83,7 +83,7 @@ export function verifyMondaySignature(
     {
       operation: 'verifyMondaySignature',
       service: 'monday-webhook',
-      metadata: {
-      });
+      metadata: {}
+    });
     return res.status(400).json({ error: 'Invalid JSON' });
   }

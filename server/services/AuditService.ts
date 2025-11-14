@@ -152,8 +152,9 @@ export class AuditService {
         metadata: {
           ...event.metadata,
           source: 'audit_service',
-          version: '1.0'       }
-     });
+          version: '1.0'
+        }
+      };
 
       // Insérer l'événement d'audit
       await db.insert(auditLogs).values({

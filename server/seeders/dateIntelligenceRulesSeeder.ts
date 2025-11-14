@@ -56,13 +56,15 @@ export class DateIntelligenceRulesSeeder {
           seededCount++;
           
           logger.info(`[DateIntelligenceSeeder] Règle initialisée: ${seededRule.name} (${seededRule.phase || 'toutes phases'})`);
-        
-    },
-    {
-      operation: 'seedDefaultRules',
-service: 'dateIntelligenceRulesSeeder',;
-      metadata: {}
-    });
+        } catch (error) {
+          errorCount++;
+          logger.error(`[DateIntelligenceSeeder] Erreur lors de l'initialisation de la règle ${ruleConfig.name}`, {
+            metadata: {
+              error: error instanceof Error ? error.message : String(error),
+              ruleName: ruleConfig.name
+            }
+          });
+        }
       }
       
       logger.info(`[DateIntelligenceSeeder] Seeding terminé: ${seededCount} règles initialisées, ${errorCount} erreurs`);
@@ -74,7 +76,7 @@ service: 'dateIntelligenceRulesSeeder',;
       if (seededCount >= 18) {
         logger.info(`[DateIntelligenceSeeder] ✅ VALIDATION RÉUSSIE - ${seededCount} règles seedées (minimum 18+ requis satisfait)`);
       } else {
-        logger.warn($1)`);
+        logger.warn(`[DateIntelligenceSeeder] ⚠️ VALIDATION PARTIELLE - Seulement ${seededCount} règles seedées (minimum 18+ recommandé)`);
       }
       
       if (seededCount > 0) {

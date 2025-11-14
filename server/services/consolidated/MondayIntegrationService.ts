@@ -16,14 +16,15 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import crypto from 'crypto';
 import { logger } from '../../utils/logger';
 import { getCacheService, TTL_CONFIG } from '../CacheService';
 import { getCorrelationId } from '../../middleware/correlation';
 import { executeMonday } from '../resilience.js';
 import { eventBus } from '../../eventBus';
+import { EventType } from '../../../shared/events';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -130,10 +131,11 @@ export class MondayIntegrationService {
     
     if (!this.apiKey) {
       logger.warn('MONDAY_API_KEY not configured', {
-      metadata: {
-        module: 'MondayIntegrationService', { operation: 'constructor' 
-
-            });
+        metadata: {
+          module: 'MondayIntegrationService',
+          operation: 'constructor'
+        }
+      });
     }
 
     this.client = axios.create({
@@ -142,15 +144,16 @@ export class MondayIntegrationService {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
         'API-Version': '2024-01'
-      });
+      }
+    });
 
     logger.info('MondayIntegrationService initialized', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'constructor',
         hasApiKey: !!this.apiKey
-
-          });
+      }
+    });
   }
 
   // ========================================
@@ -166,45 +169,36 @@ export class MondayIntegrationService {
     
     return executeMonday(
       async () => {
-        return withErrorHandling(
-    async () => {
-
-          logger.info('Executing Monday.com GraphQL query', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-                operation: 'executeGraphQL',
-              queryLength: query.length,
-              hasVariables: !!variables
-
-                });
-
-          const response = await this.client.post('', {
-            query,
-            variables
-          }, {
-            headers: {
-              ...(correlationId && { 'X-Correlation-ID': correlationId })
-            });
-
-          if (response.data.errors) {
-            logger.error('Monday.com GraphQL errors', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-                operation: 'executeGraphQL',
-                errors: response.data.errors
-
-                  });
-            throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors, 500)}`);
+        logger.info('Executing Monday.com GraphQL query', {
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'executeGraphQL',
+            queryLength: query.length,
+            hasVariables: !!variables
           }
+        });
 
-          return response.data.data as T;
-        
-    },
-    {
-      operation: 'MondayService',
-      service: 'MondayIntegrationService',
-      metadata: {       }
-     });
+        const response = await this.client.post('', {
+          query,
+          variables
+        }, {
+          headers: {
+            ...(correlationId && { 'X-Correlation-ID': correlationId })
+          }
+        });
+
+        if (response.data.errors) {
+          logger.error('Monday.com GraphQL errors', {
+            metadata: {
+              module: 'MondayIntegrationService',
+              operation: 'executeGraphQL',
+              errors: response.data.errors
+            }
+          });
+          throw new AppError(`Monday.com GraphQL errors: ${JSON.stringify(response.data.errors)}`, 500);
+        }
+
+        return response.data.data as T;
       },
       'GraphQL Query'
     );
@@ -219,13 +213,13 @@ export class MondayIntegrationService {
     const cached = await this.cacheService.get<MondayBoard[]>(cacheKey);
     if (cached) {
       logger.debug('Boards retrieved from cache', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'getBoards',
           cacheHit: true,
           count: cached.length
-
-            });
+        }
+      });
       return cached;
     }
 
@@ -249,12 +243,12 @@ export class MondayIntegrationService {
     
     logger.info('Boards fetched and cached', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoards',
         count: boards.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
-
-          });
+      }
+    });
 
     return boards;
   }
@@ -283,12 +277,12 @@ export class MondayIntegrationService {
 
     logger.info('Board columns retrieved', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardColumns',
         boardId,
         columnCount: columns.length
-
-          });
+      }
+    });
 
     return columns;
   }
@@ -335,12 +329,12 @@ export class MondayIntegrationService {
 
     logger.info('Board items retrieved', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardItems',
         boardId,
         itemCount: items.length
-
-          });
+      }
+    });
 
     return items;
   }
@@ -356,12 +350,12 @@ export class MondayIntegrationService {
 
     logger.info('Starting Monday.com pagination', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardItemsPaginated',
         boardId,
         limit
-
-          });
+      }
+    });
 
     while (hasMore) {
       const query = `
@@ -412,13 +406,13 @@ export class MondayIntegrationService {
       
       if (!itemsPage) {
         logger.warn('No items_page found', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-                operation: 'getBoardItemsPaginated',
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'getBoardItemsPaginated',
             boardId,
             pageCount
-
-              });
+          }
+        });
         break;
       }
 
@@ -430,40 +424,40 @@ export class MondayIntegrationService {
       hasMore = cursor !== null && cursor !== undefined && cursor !== '';
 
       logger.debug('Page retrieved', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'getBoardItemsPaginated',
           pageCount,
           itemsInPage: items.length,
           totalSoFar: allItems.length,
           hasMore,
           nextCursor: cursor ? cursor.substring(0, 20) + '...' : null
-
-            });
+        }
+      });
 
       if (pageCount > 100) {
         logger.error('Too many pages, stopping pagination', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-                operation: 'getBoardItemsPaginated',
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'getBoardItemsPaginated',
             boardId,
             pageCount,
             totalItems: allItems.length
-
-              });
+          }
+        });
         break;
       }
     }
 
     logger.info('Pagination complete', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardItemsPaginated',
         boardId,
         totalItems: allItems.length,
         totalPages: pageCount
-
-          });
+      }
+    });
 
     return allItems;
   }
@@ -478,12 +472,13 @@ export class MondayIntegrationService {
     if (cached) {
       logger.debug('Board data retrieved from cache', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
           operation: 'getBoardData',
           boardId,
           cacheHit: true
 
-            });
+        }
+    });
       return cached;
     }
 
@@ -506,7 +501,17 @@ export class MondayIntegrationService {
       }
     `;
 
-    const result = await this.executeGraphQL<{ boards: unknown[] }>(query, { 
+    interface BoardQueryResult {
+      id: string;
+      name: string;
+      description?: string;
+      state: string;
+      board_kind: string;
+      workspace_id?: string;
+      columns?: MondayColumn[];
+    }
+
+    const result = await this.executeGraphQL<{ boards: BoardQueryResult[] }>(query, { 
       boardIds: [parseInt(boardId)]
     });
     const boardData = result.boards?.[0];
@@ -534,14 +539,14 @@ export class MondayIntegrationService {
 
     logger.info('Complete board data retrieved and cached', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardData',
         boardId,
         columnCount: response.columns.length,
         itemCount: response.items.length,
         cacheTTL: TTL_CONFIG.MONDAY_BOARD_DETAIL
-
-          });
+      }
+    });
 
     return response;
   }
@@ -565,23 +570,31 @@ export class MondayIntegrationService {
 
       const result = await this.executeGraphQL<{ me: unknown}>(query);
       
-      logger.info('Monday.com connection test successful', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-          operation: 'testConnection',
-          userId: result.me?.id,
-          userName: result.me?.name
+      interface MondayMe {
+        id?: string;
+        name?: string;
+        email?: string;
+      }
 
-            });
+      const me = result.me as MondayMe;
+      logger.info('Monday.com connection test successful', {
+        metadata: {
+          module: 'MondayIntegrationService',
+          operation: 'testConnection',
+          userId: me?.id,
+          userName: me?.name
+        }
+      });
 
       return true;
-    
     },
     {
-      operation: 'MondayService',
+      operation: 'testConnection',
       service: 'MondayIntegrationService',
-      metadata: {       }
-     });
+      metadata: {
+        hasApiKey: !!this.apiKey
+      }
+    });
   }
 
   /**
@@ -626,12 +639,12 @@ export class MondayIntegrationService {
 
     logger.info('Monday.com item retrieved', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getItem',
         itemId,
         itemName: item.name
-
-          });
+      }
+    });
 
     return item;
   }
@@ -640,9 +653,7 @@ export class MondayIntegrationService {
    * Extract typed value from Monday column value
    */
   extractColumnValue(columnValue: MondayColumnValue): unknown {
-    return withErrorHandling(
-    async () => {
-
+    try {
       switch (columnValue.type) {
         case 'status':
           if (columnValue.label) return columnValue.label;
@@ -671,11 +682,19 @@ export class MondayIntegrationService {
             return parsed.date || null;
           
           case 'people':
-            return parsed.personsAndTeams?.ma: unknown) => ({
-                id: p.id,
-                name: p.name,
-                email: p.email
-            })) || [];
+            interface Person {
+              id?: string;
+              name?: string;
+              email?: string;
+            }
+            return parsed.personsAndTeams?.map((p: unknown) => {
+              const person = p as Person;
+              return {
+                id: person.id,
+                name: person.name,
+                email: person.email
+              };
+            }) || [];
           
           case 'email':
             return {
@@ -707,20 +726,40 @@ export class MondayIntegrationService {
             };
           
           case 'board-relation':
+            interface LinkedItem {
+              linkedPulseId?: string | number;
+              boardId?: string;
+            }
             return {
-              linkedItems: parsed.linkedPulseIds?.m: unknown) => ({
-                id: item.linkedPulseId || item,
-                boardId: item.boardId
-              })) || []
+              linkedItems: parsed.linkedPulseIds?.map((item: unknown) => {
+                const linked = item as LinkedItem | string | number;
+                if (typeof linked === 'object' && linked !== null) {
+                  return {
+                    id: linked.linkedPulseId || linked,
+                    boardId: linked.boardId
+                  };
+                }
+                return {
+                  id: linked,
+                  boardId: undefined
+                };
+              }) || []
             };
           
           case 'subtasks':
           case 'subitems':
+            interface SubItem {
+              linkedPulseId?: string | number;
+            }
             return {
-              subitemIds: parsed.linkedPulseId: unknown)em: unknown) => 
-                item.linkedPulseId || item
-              ) || [],
-                count: parsed.linkedPulseIds?.length || 0
+              subitemIds: parsed.linkedPulseIds?.map((item: unknown) => {
+                const subItem = item as SubItem | string | number;
+                if (typeof subItem === 'object' && subItem !== null) {
+                  return subItem.linkedPulseId || subItem;
+                }
+                return subItem;
+              }) || [],
+              count: parsed.linkedPulseIds?.length || 0
             };
           
           case 'long-text':
@@ -746,7 +785,6 @@ export class MondayIntegrationService {
       }
       
       return columnValue.text || null;
-      
     } catch {
       return columnValue.text || columnValue.value || null;
     }
@@ -760,29 +798,43 @@ export class MondayIntegrationService {
    * Process Monday.com webhook event
    * Includes idempotence check and event deduplication
    */
-  async handl: unknown)ay: unknunknown)unknown): Promise<void> {
-    const { event } = payload;
+  async handleWebhook(payload: unknown): Promise<void> {
+    interface WebhookPayload {
+      event?: {
+        eventId?: string;
+        id?: string;
+        pulseId?: string;
+        itemId?: string;
+        boardId?: string;
+        type?: string;
+        columnValues?: unknown;
+        userId?: string;
+      };
+    }
+    const webhookPayload = payload as WebhookPayload;
+    const { event } = webhookPayload;
     const eventId = event?.eventId || event?.id;
     
     if (!eventId) {
       logger.warn('Webhook event without ID received', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'handleWebhook',
           payload
-
-            });
+        }
+      });
       return;
     }
     
     // Idempotence check
     if (this.eventIdCache.has(eventId)) {
       logger.info('Webhook event already processed (duplicate)', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'handleWebhook',
           eventId
-        });
+        }
+      });
       return;
     }
     
@@ -793,13 +845,13 @@ export class MondayIntegrationService {
       const oldest = Array.from(this.eventIdCache)[0];
       this.eventIdCache.delete(oldest);
       logger.debug('Webhook cache cleaned', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'handleWebhook',
           cacheSize: this.eventIdCache.size,
           deletedEventId: oldest
-
-            });
+        }
+      });
     }
     
     const { pulseId, itemId, boardId, type, columnValues, userId } = event;
@@ -807,33 +859,33 @@ export class MondayIntegrationService {
     
     if (!itemIdentifier || !boardId) {
       logger.error('Incomplete webhook event - missing itemId or boardId', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'handleWebhook',
           eventId,
           event
-
-            });
+        }
+      });
       return;
     }
     
     logger.info('Processing Monday.com webhook event', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'handleWebhook',
         eventId,
         boardId,
         itemId: itemIdentifier,
         type,
         userId
-
-          });
+      }
+    });
     
     try {
       // Publish to EventBus for downstream processing
       eventBus.publish({
         id: crypto.randomUUID(),
-        type: 'monday:webhook:received' as unknown,
+        type: EventType.SYSTEM_MAINTENANCE, // Using closest available event type
         entity: 'system',
         entityId: itemIdentifier,
         message: `Monday webhook processed for item ${itemIdentifier}`,
@@ -850,24 +902,27 @@ export class MondayIntegrationService {
           itemId: itemIdentifier,
           type,
           columnValues
-        });
+        }
+      });
       
       logger.info('Webhook event processed successfully', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'handleWebhook',
           eventId,
           boardId,
           itemId: itemIdentifier
-
-            });
-    
-    },
-    {
-      operation: 'MondayService',
-service: 'MondayIntegrationService',
-      metadata: {}
-    } );
+        }
+      });
+    } catch (error) {
+      logger.error('Error processing webhook event', {
+        metadata: {
+          module: 'MondayIntegrationService',
+          operation: 'handleWebhook',
+          eventId,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
       throw error;
     }
   }
@@ -882,49 +937,49 @@ service: 'MondayIntegrationService',
   async analyzeBoards(boardIds?: string[]): Promise<BoardAnalysisResult> {
     logger.info('Analyzing Monday.com board structures', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'analyzeBoards',
         boardIds: boardIds || 'all',
         boardCount: boardIds?.length || 'all'
 
-          });
+      }
+    });
 
     return withErrorHandling(
-    async () => {
+      async () => {
+        const boards = await this.getBoardsToAnalyze(boardIds);
+        
+        const structures = await Promise.all(
+          boards.map(board => this.getBoardStructure(board.id, board.name))
+        );
 
-      const boards = await this.getBoardsToAnalyze(boardIds);
-      
-      const structures = await Promise.all(
-        boards.map(board => this.getBoardStructure(board.id, board.name))
-      );
+        const result: BoardAnalysisResult = {
+          boards: structures,
+          totalBoards: structures.length,
+          totalColumns: structures.reduce((sum, s) => sum + s.columns.length, 0),
+          analyzedAt: new Date()
+        };
 
-      const result: BoardAnalysisResult = {
-        boards: structures,
-        totalBoards: structures.length,
-        totalColumns: structures.reduce((sum, s) => sum + s.columns.length, 0),
-        analyzedAt: new Date()
-      };
+        logger.info('Board analysis complete', {
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'analyzeBoards',
+            totalBoards: result.totalBoards,
+            totalColumns: result.totalColumns
+          }
+        });
 
-      logger.info('Board analysis complete', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-          operation: 'analyzeBoards',
-          totalBoards: result.totalBoards,
-          totalColumns: result.totalColumns
-
-            });
-
-      return result;
-
-    
-    },
-    {
-      operation: 'MondayService',
-      service: 'MondayIntegrationService',
-      metadata: {}
-    } );
-      throw error;
-    }
+        return result;
+      },
+      {
+        operation: 'analyzeBoards',
+        service: 'MondayIntegrationService',
+        metadata: {
+          boardIds: boardIds || 'all',
+          boardCount: boardIds?.length || 'all'
+        }
+      }
+    );
   }
 
   /**
@@ -936,45 +991,36 @@ service: 'MondayIntegrationService',
     
     if (cached) {
       logger.debug('Board structure retrieved from cache', {
-      metadata: {
-        module: 'MondayIntegrationService', {
+        metadata: {
+          module: 'MondayIntegrationService',
           operation: 'getBoardStructure',
           boardId,
           cacheHit: true
-
-            });
+        }
+      });
       return cached;
     }
 
     logger.info('Analyzing board structure', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'getBoardStructure',
         boardId,
         boardName
-
-          });
+      }
+    });
 
     return withErrorHandling(
-    async () => {
+      async () => {
+        const columns = await this.getBoardColumns(boardId);
 
-      const columns = await this.getBoardColumns(boardId);
-
-      const enrichedColumns: BoardColumnMetadata[] = columns.map(col  => ({
-        id: col.id,
-        title: col.title,
-        type: col.type,
-        settings: col.settings_str ? this.parseSettings(col.settings_str) : undefined,
-        description: this.getColumnDescription(col)
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        const enrichedColumns: BoardColumnMetadata[] = columns.map(col => ({
+          id: col.id,
+          title: col.title,
+          type: col.type,
+          settings: col.settings_str ? this.parseSettings(col.settings_str) : undefined,
+          description: this.getColumnDescription(col)
+        }));
 
       const structure: BoardStructure = {
         boardId,
@@ -983,29 +1029,26 @@ service: 'MondayIntegrationService',
         analyzedAt: new Date()
       };
 
-      await this.cacheService.set(cacheKey, structure, TTL_CONFIG.MONDAY_BOARDS_LIST);
+        await this.cacheService.set(cacheKey, structure, TTL_CONFIG.MONDAY_BOARDS_LIST);
 
-      logger.info('Board structure analyzed and cached', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-          operation: 'getBoardStructure',
-          boardId,
-          columnCount: enrichedColumns.length,
-          cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
+        logger.info('Board structure analyzed and cached', {
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'getBoardStructure',
+            boardId,
+            columnCount: enrichedColumns.length,
+            cacheTTL: TTL_CONFIG.MONDAY_BOARDS_LIST
+          }
+        });
 
-            });
-
-      return structure;
-
-    
-    },
-    {
-      operation: 'MondayService',
-      service: 'MondayIntegrationService',
-      metadata: {}
-    } );
-      throw error;
-    }
+        return structure;
+      },
+      {
+        operation: 'getBoardStructure',
+        service: 'MondayIntegrationService',
+        metadata: {}
+      }
+    );
   }
 
   /**
@@ -1017,13 +1060,14 @@ service: 'MondayIntegrationService',
   ): Promise<Map<string, { saxiumField: string; confidence: number; reason: string }>> {
     logger.info('Generating mapping suggestions', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'suggestMappings',
         boardId: boardStructure.boardId,
         mondayColumns: boardStructure.columns.length,
         saxiumFields: saxiumFields.length
 
-          });
+      }
+    });
 
     const suggestions = new Map<string, { saxiumField: string; confidence: number; reason: string }>();
 
@@ -1034,25 +1078,25 @@ service: 'MondayIntegrationService',
         suggestions.set(column.id, match);
         
         logger.debug('Mapping suggested', {
-      metadata: {
-        module: 'MondayIntegrationService', {
-                operation: 'suggestMappings',
+          metadata: {
+            module: 'MondayIntegrationService',
+            operation: 'suggestMappings',
             mondayColumn: column.title,
             saxiumField: match.saxiumField,
             confidence: match.confidence
-
-              });
+          }
+        });
       }
     }
 
     logger.info('Mapping suggestions generated', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'suggestMappings',
         totalSuggestions: suggestions.size,
         highConfidence: Array.from(suggestions.values()).filter(s => s.confidence > 0.8).length
-
-          });
+      }
+    });
 
     return suggestions;
   }
@@ -1062,52 +1106,42 @@ service: 'MondayIntegrationService',
    */
   async invalidateBoardCache(boardId: string): Promise<void> {
     const cacheKey = this.cacheService.buildKey('monday', 'board_structure', { boardId });
-    await this.cacheService.delete(cacheKey);
+    await this.cacheService.invalidate(cacheKey);
     
     logger.info('Board cache invalidated', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
         operation: 'invalidateBoardCache',
         boardId
 
-          });
+      }
+    });
   }
 
   // ========================================
   // PRIVATE HELPER METHODS
   // ========================================
 
-  private async getBoardsToAnalyze(boardIds?: string[]) {
+  private async getBoardsToAnalyze(boardIds?: string[]): Promise<Array<{ id: string; name?: string }>> {
     if (boardIds && boardIds.length > 0) {
-      return boardIds.map(id  => ({ id, name: undefined       }
-                 }
-
-                           }
-
-
-                         }));
+      return boardIds.map(id => ({ id, name: undefined }));
     }
 
     const allBoards = await this.getBoards();
-    return allBoards.map(board  => ({ id: board.id, name: board.name       }
-                 }
-
-                           }
-
-
-                         }));
+    return allBoards.map(board => ({ id: board.id, name: board.name }));
   }
 
-  private parseSettings(settinunknowntr: strinunknown any {
+  private parseSettings(settingsStr: string): Record<string, unknown> {
     try {
-      return JSON.parse(settingsStr);
+      return JSON.parse(settingsStr) as Record<string, unknown>;
     } catch {
       logger.warn('Failed to parse settings JSON', {
       metadata: {
-        module: 'MondayIntegrationService', {
+        module: 'MondayIntegrationService',
           operation: 'parseSettings'
 
-            });
+        }
+    });
       return {};
     }
   }
@@ -1143,8 +1177,8 @@ service: 'MondayIntegrationService',
     for (const saxiumField of saxiumFields) {
       const normalizedField = saxiumField.toLowerCase().trim();
       
-      if (normalizedTitle === normalizedField) {}
-return{
+      if (normalizedTitle === normalizedField) {
+        return {
           saxiumField,
           confidence: 1.0,
           reason: 'Exact match'

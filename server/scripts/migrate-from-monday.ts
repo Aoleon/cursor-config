@@ -18,19 +18,20 @@
  *   --skip-existing     Skip items déjà migrés (défaut: true)
  */
 
-import { MondayMigrationService } from './consolidated/MondayMigrationService';
-import { withErrorHandling } from './utils/error-handler';
-import { MondayIntegrationService } from './consolidated/MondayIntegrationService';
+import { withErrorHandling } from '../utils/error-handler';
 import { storage } from '../storage-poc';
 import { logger } from '../utils/logger';
 import type { EntityType } from '../config/monday-migration-mapping';
+import type { MigrationOptions, MigrationReport } from '../services/MondayMigrationServiceEnhanced';
+import { getMondayMigrationServiceEnhanced } from '../services/MondayMigrationServiceEnhanced';
+import { MondaySchemaAnalyzer } from '../services/MondaySchemaAnalyzer';
 
 /**
  * Parse arguments CLI
  */
 function parseArgs(): Partial<MigrationOptions> & { help?: boolean; analyze?: boolean } {
   const args = process.argv.slice(2);
-  const options: unknown = {};
+  const options: Partial<MigrationOptions> & { help?: boolean; analyze?: boolean } = {};
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') {
@@ -70,6 +71,8 @@ function parseArgs(): Partial<MigrationOptions> & { help?: boolean; analyze?: bo
       } else if (key === 'batch-size') {
         options.batchSize = parseInt(value, 10);
       }
+    }
+  }
 
   return options;
 }
@@ -142,7 +145,7 @@ RAPPORT DE MIGRATION:
 /**
  * Affiche rapport migration formatté
  */
-function printReport(report: unknown) {
+function printReport(report: MigrationReport) {
   logger.info(`
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                     RAPPORT MIGRATION MONDAY → SAXIUM                     ║
@@ -170,12 +173,16 @@ ${report.successful.length > 0 ? `✅ SUCCÈS (${report.successful.length} items
 ` : ''}
 
 ${report.skipped.length > 0 ? `⏭️  SKIPPED (${report.skipped.length} items)
-${report.skipped.slice(0, 5).ma: unknown) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
+${report.skipped.slice(0, 5).map((s) => `   - ${s.mondayId}: ${s.reason}`).join('\n')}
+` : ''}
 
 ${report.errors.length > 0 ? `❌ ERREURS (${report.errors.length} items)
-${report.errors.slice(0, 5: unknown) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
+${report.errors.slice(0, 5).map((e) => `   - ${e.mondayId}: ${e.error}`).join('\n')}
+` : ''}
+
 ${report.missingFields.length > 0 ? `⚠️  CHAMPS MANQUANTS (${report.missingFields.length} items)
-${report.missingFields.slice(: unknown)unknown any) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
+${report.missingFields.slice(0, 5).map((m) => `   - ${m.mondayId}: ${m.fields.join(', ')}`).join('\n')}
+` : ''}
 
 ${report.isDryRun && report.preview ? `
 🔍 PREVIEW DONNÉES TRANSFORMÉES (10 premiers items)
@@ -192,7 +199,7 @@ ${JSON.stringify(report.preview, null, 2)}
 async function runAnalyze(entityType: EntityType, boardId?: string) {
   logger.info(`\n🔍 Analyse structure board Monday.com pour: ${entityType}\n`);
 
-  const analyzer = getMondaySchemaAnalyzer();
+  const analyzer = new MondaySchemaAnalyzer();
   
   return withErrorHandling(
     async () => {
@@ -219,19 +226,18 @@ async function runAnalyze(entityType: EntityType, boardId?: string) {
       for (const col of board.columns) {
         logger.info(`      - ${col.id.padEnd(20)} ${col.title.padEnd(30)} [${col.type}]${col.description ? ` - ${col.description}` : ''}`);
       }
-
-  
+    }
     },
     {
-      operation: 'insertion',
+      operation: 'analyzeBoards',
       service: 'migrate-from-monday',
       metadata: {
-
-              }
-
-            );\n`);
-    process.exit(1);
-  }
+        entityType,
+        boardId: boardId || 'all'
+      }
+    }
+  );
+}
 
 /**
  * Fonction principale
@@ -285,7 +291,7 @@ async function main() {
   return withErrorHandling(
     async () => {
 
-    // Instancier service
+    // Utiliser service enhanced (avec storage)
     const migrationService = getMondayMigrationServiceEnhanced(storage);
 
     // Exécuter migration
@@ -305,27 +311,27 @@ async function main() {
       logger.info('✅ Migration terminée avec succès\n');
       process.exit(0);
     }
-
-  
     },
     {
-      operation: 'insertion',
+      operation: 'migrate',
       service: 'migrate-from-monday',
       metadata: {
-
-              }
-
-            );
-   
-   Stack trace:
-   ${error instanceof Error ? error.stack : 'N/A'}
-    `);
-    
-    process.exit(1);
-  }
+        entityType: options.entityType,
+        boardId: options.boardId,
+        dryRun: options.dryRun || false,
+        verbose: options.verbose || false
+      }
+    }
+  );
+}
 
 // Exécuter script
 main().catch((error) => {
-  logger.error('Erreur', 'Erreur fatale:', error);
+  logger.error('Erreur fatale lors de l\'exécution du script', error as Error, {
+    metadata: {
+      operation: 'main',
+      service: 'migrate-from-monday'
+    }
+  });
   process.exit(1);
 });

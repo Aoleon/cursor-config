@@ -37,15 +37,7 @@ export function registerBatigestRoutes(app: Express) {
     });
 
     res.json(result);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   /**
    * Synchronise un dossier d'offre avec Batigest
@@ -61,7 +53,7 @@ export function registerBatigestRoutes(app: Express) {
     logger.info('[Batigest] Synchronisation offre Batigest', { 
       offerId, 
       batigestRef,
-      userId: (req.uas unknown?.id 
+      userId: (req.user as unknown)?.id 
     });
 
     // Vérifier que l'offre existe
@@ -121,17 +113,8 @@ export function registerBatigestRoutes(app: Express) {
       integration: integration[0],
       batigestData: syncResult.batigestData,
       message: syncResult.message
-
-          });
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+    });
+  }));
 
   /**
    * Récupère les devis clients depuis Batigest

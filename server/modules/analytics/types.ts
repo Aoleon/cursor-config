@@ -212,14 +212,14 @@ export interface PredictiveRecommendation {
   actions?: Array<{
     label: string;
     action: string;
-    par: unknown;unknown;
+    par: unknown;
   }>;
 }
 
 // Snapshot types
 export interface AnalyticsSnapshot {
   id: string;
-  type: 'revenue' | 'risks' | 'recommendations' | 'full': unknown;ta: a: unknown;paraunknown;unknown;
+  type: 'revenue' | 'risks' | 'recommendations' | 'full';
   createdAt: Date;
   createdBy: string;
   notes?: string;
@@ -298,20 +298,21 @@ export interface AnalyticsQueryParams {
   dateTo?: string;
   granularity?: 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
   groupBy?: string[];
-  filters?: Record<st, unknown>unknown>;
+  filters?: Record<string, unknown>;
   metrics?: string[];
   limit?: number;
   offset?: number;
 }
 
 // Response types
-export interface AnalyticsResponse<unknunknown>any> {
+export interface AnalyticsResponse<T = any> {
   data: T;
   metadata?: {
     period?: {
       start: Date;
       end: Date;
-   : unknown;  fiunknunknown;s?: any;
+    };
+    filters?: any;
     totalCount?: number;
     page?: number;
     pageSize?: number;

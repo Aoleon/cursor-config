@@ -1,0 +1,15 @@
+{
+  "setup-worktree": [
+    "npm install",
+    "npm run check"
+  ],
+  "setup-worktree-unix": [
+    "npm install",
+    "npm run check"
+  ],
+  "setup-worktree-windows": [
+    "npm install",
+    "npm run check"
+  ],
+  "description": "Configuration Cursor Worktrees pour JLM App - Installe les dépendances et vérifie le typage TypeScript lors de la création d'un nouveau worktree"
+}

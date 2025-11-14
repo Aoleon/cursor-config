@@ -365,9 +365,7 @@ export class HandlebarsTemplateService {
    * Remplace complètement la méthode naïve replaceVariables
    */
   public renderTemplate(templateContent: string, data: Record<string, unknown>, templateKey?: string): string {
-    return withErrorHandling(
-    async () => {
-
+    try {
       // Utiliser une clé unique basée sur le hash du template si pas fournie
       const key = templateKey || `template_${this.hashString(templateContent)}`;
       
@@ -378,48 +376,29 @@ export class HandlebarsTemplateService {
       const rendered = compiledTemplate(data);
       
       return rendered;
-    
-    },
-    {
-      operation: 'MockEmailService',
-      service: 'emailService',
-      metadata: {}
-    } );
+    } catch (error) {
       logger.error('Template content preview', { metadata: {
-          service: 'EmailService',
-          operation: 'renderTemplate',
-          templatePreview: templateContent.substring(0, 200) + '...' 
-              
-              }
- 
-              
-            });
+        service: 'EmailService',
+        operation: 'renderTemplate',
+        templatePreview: templateContent.substring(0, 200) + '...'
+      }});
       logger.error('Template data provided', { metadata: {
-          service: 'EmailService',
-          operation: 'renderTemplate',
-          data: JSON.stringify(data, null, 2) 
-              
-              }
- 
-              
-            });
-      
-      // Fallback: rendu naïf en cas d'erreur Handlebars
+        service: 'EmailService',
+        operation: 'renderTemplate',
+        data: JSON.stringify(data, null, 2)
+      }});
       return this.fallbackRender(templateContent, data);
     }
+  }
 
   /**
    * Méthode de fallback qui fait un remplacement naïf en cas d'erreur Handlebars
    */
   private fallbackRender(template: string, data: Record<string, unknown>): string {
     logger.warn('Utilisation du fallback naïf', { metadata: {
-          service: 'EmailService',
-          operation: 'renderTemplate' 
-
-                    }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+      service: 'EmailService',
+      operation: 'renderTemplate'
+    }});
     let result = template;
     Object.entries(data).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
@@ -461,28 +440,63 @@ export class HandlebarsTemplateService {
     result?: string;
     error?: string;
   } {
-    return withErrorHandling(
-    async () => {
-
+    try {
       const result = this.renderTemplate(templateContent, testData);
       return { success: true, result };
-    
-    },
-    {
-      operation: 'MockEmailService',
-      service: 'emailService',
-      metadata: {       }
-     });
-      logger.info('Service email SendGrid configuré', { metadata: {
-        service: 'EmailService',
-        operation: 'constructor',
-        provider: 'SendGrid' 
-
-                      }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
     }
+  }
+}
+
+// Instance singleton du service de templating
+const templateService = HandlebarsTemplateService.getInstance();
+
+// ========================================
+// INTERFACE ET CLASSES EMAIL SERVICE
+// ========================================
+
+/**
+ * Interface pour les services email
+ */
+export interface IEmailService {
+  sendSupplierInvitation(data: SupplierInvitationData): Promise<EmailResult>;
+  sendSessionReminder(
+    contactEmail: string,
+    contactName: string,
+    aoReference: string,
+    expirationDate: string,
+    accessUrl: string,
+    timeRemaining: string
+  ): Promise<EmailResult>;
+  sendDocumentReceivedConfirmation(
+    contactEmail: string,
+    contactName: string,
+    documentName: string,
+    uploadDate: string,
+    accessUrl: string
+  ): Promise<EmailResult>;
+  generateSupplierAccessUrl(sessionToken: string): string;
+  formatDate(date: Date): string;
+  calculateTimeRemaining(expirationDate: Date): string;
+  isReady(): boolean;
+  getAvailableTemplates(): EmailTemplate[];
+}
+
+/**
+ * Service email Mock pour le développement
+ */
+export class MockEmailService implements IEmailService {
+  private fromEmail: string;
+  private fromName: string;
+
+  constructor() {
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@jlm-construction.fr';
+    this.fromName = process.env.FROM_NAME || 'JLM Construction';
+  }
 
   /**
    * Envoie une invitation à un fournisseur pour soumissionner
@@ -495,7 +509,7 @@ export class HandlebarsTemplateService {
         supplierName: data.supplierName
       }],
       templateId: 'SUPPLIER_INVITATION',
-      dynamicData: data,
+      dynamicData: data as unknown as Record<string, unknown>,
       replyTo: data.supportEmail,
       fromName: data.companyName
     };
@@ -561,7 +575,218 @@ export class HandlebarsTemplateService {
   private async sendTemplatedEmail(emailData: EmailData): Promise<EmailResult> {
     return withErrorHandling(
     async () => {
+      // Vérifier que le template existe
+      const template = EMAIL_TEMPLATES[emailData.templateId];
+      if (!template) {
+        throw new AppError(`Template ${emailData.templateId} non trouvé`, 500);
+      }
 
+      // Rendre les templates avec Handlebars
+      const subject = templateService.renderTemplate(template.subject, emailData.dynamicData, `${emailData.templateId}_subject`);
+      const htmlContent = templateService.renderTemplate(template.htmlContent, emailData.dynamicData, `${emailData.templateId}_html`);
+      const textContent = templateService.renderTemplate(template.textContent, emailData.dynamicData, `${emailData.templateId}_text`);
+
+      // TODO: Implémentation SendGrid réelle avec resilience wrapper
+      // Quand prêt pour la production, remplacer la simulation ci-dessous par :
+      // 
+      // const result = await executeSendGrid(
+      //   async () => {
+      //     const sgMail = require('@sendgrid/mail');
+      //     sgMail.setApiKey(this.apiKey!);
+      //     return sgMail.send({
+      //       to: emailData.to[0].email,
+      //       from: { email: this.fromEmail, name: emailData.fromName || this.fromName },
+      //       subject: subject,
+      //       html: htmlContent,
+      //       text: textContent,
+      //       replyTo: emailData.replyTo
+      //     });
+      //   },
+      //   'Send Email'
+      // );
+      // 
+      // return {
+      //   success: true,
+      //   messageId: result[0].messageId,
+      //   deliveryStatus: 'pending'
+      // };
+
+      // Mode Mock : afficher dans la console
+      logger.info('=== [MockEmailService] EMAIL SIMULÉ ===', { metadata: {
+        service: 'EmailService',
+        operation: 'sendTemplatedEmail',
+        provider: 'Mock',
+        template: template.name,
+        to: emailData.to,
+        subject,
+        htmlLength: htmlContent.length,
+        textLength: textContent.length
+      }});
+      
+      return {
+        success: true,
+        messageId: `mock_${Date.now()}`,
+        deliveryStatus: 'pending'
+      };
+    },
+    {
+      operation: 'MockEmailService.sendTemplatedEmail',
+      service: 'emailService',
+      metadata: {}
+    }
+    );
+  }
+
+  /**
+   * Génère l'URL d'accès sécurisé pour un fournisseur
+   */
+  generateSupplierAccessUrl(sessionToken: string): string {
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
+    return `${baseUrl}/supplier-portal/${sessionToken}`;
+  }
+
+  /**
+   * Formate les dates pour l'affichage dans les emails
+   */
+  formatDate(date: Date): string {
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  /**
+   * Calcule le temps restant avant expiration
+   */
+  calculateTimeRemaining(expirationDate: Date): string {
+    const now = new Date();
+    const diff = expirationDate.getTime() - now.getTime();
+    
+    if (diff <= 0) {
+      return 'Expiré';
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      return `${days} jour${days > 1 ? 's' : ''}`;
+    } else {
+      return `${hours} heure${hours > 1 ? 's' : ''}`;
+    }
+  }
+
+  /**
+   * Vérifie si le service email est configuré
+   */
+  isReady(): boolean {
+    return true; // Mock est toujours prêt
+  }
+
+  /**
+   * Retourne les templates disponibles
+   */
+  getAvailableTemplates(): EmailTemplate[] {
+    return Object.values(EMAIL_TEMPLATES);
+  }
+}
+
+/**
+ * Service email SendGrid pour la production
+ */
+export class SendGridEmailService implements IEmailService {
+  private apiKey?: string;
+  private fromEmail: string;
+  private fromName: string;
+  private isConfigured: boolean;
+
+  constructor() {
+    this.apiKey = process.env.SENDGRID_API_KEY;
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@jlm-construction.fr';
+    this.fromName = process.env.FROM_NAME || 'JLM Construction';
+    this.isConfigured = !!this.apiKey;
+  }
+
+  /**
+   * Envoie une invitation à un fournisseur pour soumissionner
+   */
+  async sendSupplierInvitation(data: SupplierInvitationData): Promise<EmailResult> {
+    const emailData: EmailData = {
+      to: [{
+        email: data.contactEmail,
+        name: data.contactName,
+        supplierName: data.supplierName
+      }],
+      templateId: 'SUPPLIER_INVITATION',
+      dynamicData: data as unknown as Record<string, unknown>,
+      replyTo: data.supportEmail,
+      fromName: data.companyName
+    };
+
+    return this.sendTemplatedEmail(emailData);
+  }
+
+  /**
+   * Envoie un rappel d'expiration de session
+   */
+  async sendSessionReminder(
+    contactEmail: string, 
+    contactName: string, 
+    aoReference: string,
+    expirationDate: string,
+    accessUrl: string,
+    timeRemaining: string
+  ): Promise<EmailResult> {
+    const emailData: EmailData = {
+      to: [{ email: contactEmail, name: contactName }],
+      templateId: 'SESSION_REMINDER',
+      dynamicData: {
+        contactName,
+        aoReference,
+        expirationDate,
+        timeRemaining,
+        accessUrl,
+        companyName: this.fromName
+      }
+    };
+
+    return this.sendTemplatedEmail(emailData);
+  }
+
+  /**
+   * Confirme la réception d'un document
+   */
+  async sendDocumentReceivedConfirmation(
+    contactEmail: string,
+    contactName: string,
+    documentName: string,
+    uploadDate: string,
+    accessUrl: string
+  ): Promise<EmailResult> {
+    const emailData: EmailData = {
+      to: [{ email: contactEmail, name: contactName }],
+      templateId: 'DOCUMENT_RECEIVED',
+      dynamicData: {
+        contactName,
+        documentName,
+        uploadDate,
+        accessUrl,
+        companyName: this.fromName
+      }
+    };
+
+    return this.sendTemplatedEmail(emailData);
+  }
+
+  /**
+   * Envoie un email basé sur un template
+   */
+  private async sendTemplatedEmail(emailData: EmailData): Promise<EmailResult> {
+    return withErrorHandling(
+    async () => {
       // Vérifier que le template existe
       const template = EMAIL_TEMPLATES[emailData.templateId];
       if (!template) {
@@ -605,7 +830,7 @@ export class HandlebarsTemplateService {
 
       logger.info('SIMULATION Email SendGrid', { metadata: {
         service: 'EmailService',
-        operation: 'sendSupplierInvitation',
+        operation: 'sendTemplatedEmail',
         provider: 'SendGrid',
         simulationData: {
           to: emailData.to,
@@ -613,35 +838,10 @@ export class HandlebarsTemplateService {
           template: template.name,
           data: emailData.dynamicData,
           htmlLength: htmlContent.length,
-          textLength: textContent.length 
-
-                                                                                                                                                                                                                                                                                                                                                                                              }
- 
-              
-                                                                                                                                                                                                                                                                                          });
-      // Validation du rendu conditionnel pour les instructions
-      if (emailData.templateId === 'SUPPLIER_INVITATION') {
-        if (emailData.dynamicData.instructions) {
-          logger.info('Instructions détectées - rendu conditionnel activé', { metadata: {
-        service: 'EmailService',
-        operation: 'sendSupplierInvitation',
-        provider: 'SendGrid' 
-
-                          }
- 
-              
-                                                                                                                                                                                                                                                                                          });
-        } else {
-          logger.info('Pas d\'instructions - bloc conditionnel masqué', { metadata: {
-        service: 'EmailService',
-        operation: 'sendSupplierInvitation',
-        provider: 'SendGrid' 
-
-                          }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+          textLength: textContent.length
         }
+      }});
+      
       return {
         success: true,
         messageId: `sendgrid_pending_${Date.now()}`,
@@ -649,20 +849,12 @@ export class HandlebarsTemplateService {
       };
     },
     {
-      operation: 'MockEmailService',
+      operation: 'SendGridEmailService.sendTemplatedEmail',
       service: 'emailService',
       metadata: {}
-    } );
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erreur inconnue',
-        deliveryStatus: 'failed'
-      };
     }
-
-  // CORRECTION CRITIQUE : La méthode replaceVariables naïve a été supprimée
-  // et remplacée par le service Handlebars centralisé qui gère correctement
-  // les blocs conditionnels {{#if}}...{{/if}}
+    );
+  }
 
   /**
    * Génère l'URL d'accès sécurisé pour un fournisseur
@@ -704,6 +896,7 @@ export class HandlebarsTemplateService {
     } else {
       return `${hours} heure${hours > 1 ? 's' : ''}`;
     }
+  }
 
   /**
    * Vérifie si le service email est configuré
@@ -718,6 +911,8 @@ export class HandlebarsTemplateService {
   getAvailableTemplates(): EmailTemplate[] {
     return Object.values(EMAIL_TEMPLATES);
   }
+}
+
 
 // ========================================
 // FACTORY PATTERN ET CONFIGURATION
@@ -773,14 +968,10 @@ export const emailService: IEmailService = createEmailService();
 
 // Afficher le type de service utilisé
 logger.info('Service actif', { metadata: {
-        service: 'EmailService',
-        operation: 'init',
-        serviceName: emailService.constructor.name 
-
-                }
- 
-              
-                                                                                                                                                                                                                                                                                          });
+  service: 'EmailService',
+  operation: 'init',
+  serviceName: emailService.constructor.name
+}});
 // ========================================
 // HELPER FUNCTIONS POUR WORKFLOW FOURNISSEURS
 // ========================================
@@ -836,19 +1027,8 @@ export function scheduleSessionReminders(session: SupplierQuoteSession): void {
 // EXPORTS POUR COMPATIBILITÉ ET USAGE FACILE
 // ========================================
 
-/**
- * Re-export des types principaux pour faciliter l'usage
- */
-export type {
-  IEmailService,
-  EmailTemplate,
-  EmailRecipient,
-  EmailData,
-  EmailResult,
-  SupplierInvitationData,
-  EmailServiceConfig,
-  EmailProviderType
-};
+// Note: Les types sont déjà exportés directement lors de leur déclaration
+// Pas besoin de re-export avec export type car ils sont déjà exportés
 
 // Note: createEmailService est déjà exportée directement lors de sa déclaration
 

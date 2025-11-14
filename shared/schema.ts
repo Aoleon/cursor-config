@@ -6293,6 +6293,46 @@ export const chatbotSuggestions = pgTable("chatbot_suggestions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
+// Table pour stocker les conversations Cursor (pour permettre à l'agent de s'améliorer)
+export const cursorConversations = pgTable("cursor_conversations", {
+  id: varchar("id", { length: 255 }).primaryKey(), // ID de la conversation Cursor
+  cursorConversationId: varchar("cursor_conversation_id", { length: 255 }).notNull().unique(), // ID original de Cursor
+  title: text("title"), // Titre de la conversation
+  projectPath: text("project_path"), // Chemin du projet
+  
+  // Contenu complet de la conversation
+  messages: jsonb("messages").notNull(), // Tous les messages de la conversation
+  metadata: jsonb("metadata"), // Métadonnées supplémentaires (workspace, context, etc.)
+  
+  // Informations de contexte
+  workspaceFolder: text("workspace_folder"), // Dossier workspace
+  contextFiles: text("context_files").array(), // Fichiers dans le contexte
+  contextRules: text("context_rules").array(), // Règles Cursor utilisées
+  
+  // Métadonnées temporelles
+  createdAt: timestamp("created_at").notNull(), // Date de création dans Cursor
+  updatedAt: timestamp("updated_at"), // Dernière mise à jour
+  archivedAt: timestamp("archived_at"), // Date d'archivage dans Cursor (si connue)
+  storedAt: timestamp("stored_at").defaultNow().notNull(), // Date de stockage dans notre DB
+  
+  // Métadonnées pour l'analyse
+  messageCount: integer("message_count").notNull(), // Nombre de messages
+  hasCodeChanges: boolean("has_code_changes").default(false), // Contient des changements de code
+  hasErrors: boolean("has_errors").default(false), // Contient des erreurs
+  hasSolutions: boolean("has_solutions").default(false), // Contient des solutions
+  topics: text("topics").array(), // Topics identifiés dans la conversation
+  
+  // Index pour recherche rapide
+  searchText: text("search_text"), // Texte de recherche (titre + premiers messages)
+}, (table) => {
+  return {
+    // Index pour recherche rapide
+    createdAtIdx: index("cursor_conversations_created_at_idx").on(table.createdAt),
+    projectPathIdx: index("cursor_conversations_project_path_idx").on(table.projectPath),
+    storedAtIdx: index("cursor_conversations_stored_at_idx").on(table.storedAt),
+  };
+});
+
 // Table pour les métriques d'usage du chatbot
 export const chatbotUsageMetrics = pgTable("chatbot_usage_metrics", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -6921,6 +6961,11 @@ export const insertChatbotUsageMetricsSchema = createInsertSchema(chatbotUsageMe
 
 export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
 export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
+
+// Types pour les conversations Cursor
+export const insertCursorConversationSchema = createInsertSchema(cursorConversations);
+export type CursorConversation = typeof cursorConversations.$inferSelect;
+export type InsertCursorConversation = z.infer<typeof insertCursorConversationSchema>;
 
 export type ChatbotFeedback = typeof chatbotFeedback.$inferSelect;
 export type InsertChatbotFeedback = z.infer<typeof insertChatbotFeedbackSchema>;

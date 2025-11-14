@@ -1,33 +1,38 @@
 /**
- * BUSINESS ANALYTICS SERVICE - Consolidated Business Intelligence
+ * ANALYTICS ENGINE SERVICE - Consolidated Business Intelligence + Scoring
  * 
- * Consolidates business-focused analytics from AnalyticsService into unified API:
+ * Consolidates business-focused analytics and scoring into unified API:
  * - KPI snapshots and dashboards
  * - Conversion metrics (AO → Offer → Project)
  * - Revenue forecasts and margin analysis
  * - Team load and efficiency tracking
  * - Delay tracking and project performance
  * - Business benchmarks and insights
+ * - Technical scoring (from ScoringService)
  * 
  * Dependencies:
  * - IStorage: Database operations
  * - EventBus: Event publishing for analytics updates
  * - AnalyticsStorage: Optimized SQL aggregations
  * 
- * Target LOC: ~1,800-2,000 (from 1,827)
+ * Target LOC: ~2,000-2,200 (from BusinessAnalyticsService + ScoringService)
  */
 
-import type { IStorage, DateRange, MetricFilters } from "../../storage-poc";
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import type { DateRange, MetricFilters } from "../../storage-poc";
+import type { StorageFacade } from "../../storage/facade/StorageFacade";
+import { withErrorHandling } from '../../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../../utils/error-handler';
 import { EventBus } from "../../eventBus";
 import type { 
   KpiSnapshot, InsertKpiSnapshot,
   BusinessMetric, InsertBusinessMetric,
   PerformanceBenchmark, InsertPerformanceBenchmark,
-  Ao
+  Ao,
+  SpecialCriteria,
+  TechnicalScoringConfig,
+  TechnicalScoringResult
 } from "@shared/schema";
-import { projectStatusEnum } from "@shared/schema";
+import { projectStatusEnum, defaultTechnicalScoringConfig as defaultScoringConfig } from "@shared/schema";
 
 type ProjectStatus = typeof projectStatusEnum.enumValues[number];
 import { logger } from '../../utils/logger';
@@ -165,7 +170,7 @@ export interface BenchmarkEntity {
 
 abstract class BaseCalculator {
   constructor(
-    protected storage: IStorage,
+    protected storage: StorageFacade,
     protected analyticsStorage: AnalyticsStorage
   ) {}
 }
@@ -177,7 +182,8 @@ class ConversionCalculator extends BaseCalculator {
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
     try {
-      logger.debug('[BusinessAnalyticsService] calculateAOToOfferConversion - Using SQL aggregation', { metadata: { period, filters 
+      logger.debug('[BusinessAnalyticsService] calculateAOToOfferConversion - Using SQL aggregation', { metadata: { period, filters }
+      });
 
       const conversionStats = await this.analyticsStorage.getConversionStats(
         {
@@ -203,6 +209,7 @@ class ConversionCalculator extends BaseCalculator {
             outputCount: stats.offers
           };
         }
+      }
 
       let trend = 0;
       if (!disableTrend) {
@@ -238,14 +245,17 @@ class ConversionCalculator extends BaseCalculator {
         trend: 0
       };
     }
+  }
 
   async calculateOfferToProjectConversion(
-    period: DateRange, 
+    period: DateRange,
     filters?: BusinessFilters,
     disableTrend: boolean = false
   ): Promise<ConversionMetric> {
     try {
-      logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', { metadata: { period, filters 
+      logger.debug('[BusinessAnalyticsService] calculateOfferToProjectConversion - Using SQL aggregation', { 
+        metadata: { period, filters }
+      });
 
       const conversionStats = await this.analyticsStorage.getConversionStats(
         {
@@ -255,7 +265,7 @@ class ConversionCalculator extends BaseCalculator {
         {
           userId: filters?.userId,
           departement: filters?.departement
-              }
+        }
       );
 
       const rate = conversionStats.offerToProject.conversionRate;
@@ -271,6 +281,7 @@ class ConversionCalculator extends BaseCalculator {
             outputCount: stats.signed
           };
         }
+      }
 
       let trend = 0;
       if (!disableTrend) {
@@ -306,6 +317,7 @@ class ConversionCalculator extends BaseCalculator {
         trend: 0
       };
     }
+  }
 
   async calculatePipelineConversion(period: DateRange): Promise<PipelineMetric> {
     try {
@@ -328,15 +340,13 @@ class ConversionCalculator extends BaseCalculator {
         }
       };
     } catch (error) {
-      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion pipeline', { metadata: {
+      logger.error('[BusinessAnalyticsService] Erreur lors du calcul de la conversion pipeline', { 
+        metadata: {
           operation: 'calculatePipelineConversion',
           service: 'BusinessAnalyticsService',
           error: error instanceof Error ? error.message : String(error) 
-
-              }
- 
-              
-                                                            });
+        }
+      });
       return {
         aoToOffer: 0,
         offerToProject: 0,
@@ -348,28 +358,31 @@ class ConversionCalculator extends BaseCalculator {
         }
       };
     }
+  }
+}
 
 // ========================================
-// BUSINESS ANALYTICS SERVICE
+// ANALYTICS ENGINE SERVICE
 // ========================================
 
-export class BusinessAnalyticsService {
+export class AnalyticsEngineService {
   private conversionCalculator: ConversionCalculator;
   private cache: Map<string, unknown> = new Map();
   private readonly CACHE_TTL = 1000 * 60 * 30; // 30 minutes
 
   constructor(
-    private storage: IStorage,
+    private storage: StorageFacade,
     private eventBus: EventBus
   ) {
     const analyticsStorage = new AnalyticsStorage();
     this.conversionCalculator = new ConversionCalculator(storage, analyticsStorage);
 
-    logger.info('BusinessAnalyticsService initialized', {
+    logger.info('AnalyticsEngineService initialized', {
       metadata: {
-        module: 'BusinessAnalyticsService', { operation: 'constructor' 
-
-          });
+        module: 'AnalyticsEngineService',
+        operation: 'constructor'
+      }
+    });
   }
 
   // ========================================
@@ -381,11 +394,10 @@ export class BusinessAnalyticsService {
    */
   async generateKPISnapshot(period: DateRange): Promise<KpiSnapshot> {
     return withErrorHandling(
-    async () => {
-
-      const [conversions] = await Promise.all([
-        this.conversionCalculator.calculatePipelineConversion(period)
-      ]);
+      async () => {
+        const [conversions] = await Promise.all([
+          this.conversionCalculator.calculatePipelineConversion(period)
+        ]);
 
       const snapshot: InsertKpiSnapshot = {
         snapshotDate: new Date(),
@@ -420,20 +432,22 @@ export class BusinessAnalyticsService {
           period: period,
           kpis: {
             conversionRate: conversions.globalConversion
-                }
-              );
+          }
+        }
+      });
 
       return savedSnapshot;
-
-    
     },
     {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    } );
-      throw new AppError(`Échec génération KPIs: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 500);
+      operation: 'generateKPISnapshot',
+      service: 'AnalyticsEngineService',
+      metadata: {
+        periodFrom: period.from.toISOString(),
+        periodTo: period.to.toISOString()
+      }
     }
+    );
+  }
 
   /**
    * Get real-time KPIs with caching
@@ -442,280 +456,255 @@ export class BusinessAnalyticsService {
     const cacheKey = this.buildCacheKey('realtime', filters);
     
     if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey);
-      if (Date.now() - cached.timestamp < this.CACHE_TTL) {
+      const cached = this.cache.get(cacheKey) as { data: RealtimeKPIs; timestamp: number } | undefined;
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
         return cached.data;
       }
+    }
 
     return withErrorHandling(
-    async () => {
+      async () => {
+        const now = new Date();
+        const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+        const period = { from: yesterday, to: now };
 
-      const now = new Date();
-      const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-      const period = { from: yesterday, to: now };
+        const conversions = await this.conversionCalculator.calculatePipelineConversion(period);
 
-      const conversions = await this.conversionCalculator.calculatePipelineConversion(period);
+        const kpis: RealtimeKPIs = {
+          conversionRate: conversions.globalConversion,
+          forecastRevenue: 0,
+          teamLoadAvg: 0,
+          delayedProjectsCount: 0,
+          alertsCount: 0,
+          lastUpdated: now
+        };
 
-      const kpis: RealtimeKPIs = {
-        conversionRate: conversions.globalConversion,
-        forecastRevenue: 0,
-        teamLoadAvg: 0,
-        delayedProjectsCount: 0,
-        alertsCount: 0,
-        lastUpdated: now
-      };
+        this.cache.set(cacheKey, {
+          data: kpis,
+          timestamp: Date.now()
+        });
 
-      this.cache.set(cacheKey, {
-        data: kpis,
-        timestamp: Date.now()
-      });
-
-      return kpis;
-
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    } );
-      return {
-        conversionRate: 0,
-        forecastRevenue: 0,
-        teamLoadAvg: 0,
-        delayedProjectsCount: 0,
-        alertsCount: 0,
-        lastUpdated: new Date()
-      };
-    }
+        return kpis;
+      },
+      {
+        operation: 'getRealtimeKPIs',
+        service: 'AnalyticsEngineService',
+        metadata: {
+          filters: filters || undefined
+        }
+      }
+    );
+  }
 
   /**
    * Get business metrics (conversion, revenue, performance, pipeline)
    */
   async getBusinessMetrics(params?: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        const period = (params?.period as DateRange | undefined) || this.getDefaultPeriod();
+        const filters = params?.filters as BusinessFilters | undefined;
 
-      const period = params?.period || this.getDefaultPeriod();
-      const filters = params?.filters;
+        // Calculate conversion metrics using existing calculator
+        const conversionMetrics = await this.conversionCalculator.calculatePipelineConversion(period);
+        const aoToOffer = await this.conversionCalculator.calculateAOToOfferConversion(period, filters);
+        const offerToProject = await this.conversionCalculator.calculateOfferToProjectConversion(period, filters);
 
-      // Calculate conversion metrics using existing calculator
-      const conversionMetrics = await this.conversionCalculator.calculatePipelineConversion(period);
-      const aoToOffer = await this.conversionCalculator.calculateAOToOfferConversion(period, filters);
-      const offerToProject = await this.conversionCalculator.calculateOfferToProjectConversion(period, filters);
+        // Get counts from storage for revenue and pipeline
+        const aos = await this.storage.getAos();
+        const offers = await this.storage.getOffers();
+        const projects = await this.storage.getProjects();
 
-      // Get counts from storage for revenue and pipeline
-      const aos = await this.storage.getAos();
-      const offers = await this.storage.getOffers();
-      const projects = await this.storage.getProjects();
+        // Calculate revenue totals (basic implementation)
+        const totalRevenue = projects
+          .filter(p => p.budget != null)
+          .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
 
-      // Calculate revenue totals (basic implementation)
-      const totalRevenue = projects
-        .filter(p => p.budget != null)
-        .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
+        // Calculate average project duration (only for projects that have both start and end dates)
+        const completedProjects = projects.filter(p => p.startDate && p.endDate);
+        const avgDuration = completedProjects.length > 0
+          ? completedProjects.reduce((sum, p) => {
+              const start = new Date(p.startDate!).getTime();
+              const end = new Date(p.endDate!).getTime();
+              return sum + (end - start) / (1000 * 60 * 60 * 24); // days
+            }, 0) / completedProjects.length
+          : 0;
 
-      // Calculate average project duration (only for projects that have both start and end dates)
-      const completedProjects = projects.filter(p => p.startDate && p.endDate);
-      const avgDuration = completedProjects.length > 0
-        ? completedProjects.reduce((sum, p) => {
-            const start = new Date(p.startDate!).getTime();
-            const end = new Date(p.endDate!).getTime();
-            return sum + (end - start) / (1000 * 60 * 60 * 24); // days
-          }, 0) / completedProjects.length
-        : 0;
-
-      return {
-        revenue: {
-          total: totalRevenue,
-          byMonth: {},
-          byClient: {},
-          growth: 0
-        },
-        conversion: {
-          rate: conversionMetrics.globalConversion,
-          aoToOffer: aoToOffer.rate,
-          offerToProject: offerToProject.rate,
-          funnel: [
-            { stage: 'AO', count: aos.length },
-            { stage: 'Offer', count: offers.length },
-            { stage: 'Project', count: projects.length }
-          ]
-        },
-        performance: {
-          averageProjectDuration: Math.round(avgDuration),
-          onTimeDelivery: 0, // TODO: calculate based on deadlines
-          clientSatisfaction: 0, // TODO: implement satisfaction tracking
-          teamUtilization: 0 // TODO: implement from team load metrics
-        },
-        pipeline: {
-          aoCount: aos.length,
-          offerCount: offers.length,
-          projectCount: projects.length,
-          totalValue: totalRevenue,
-          expectedRevenue: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0)
+        return {
+          revenue: {
+            total: totalRevenue,
+            byMonth: {},
+            byClient: {},
+            growth: 0
+          },
+          conversion: {
+            rate: conversionMetrics.globalConversion,
+            aoToOffer: aoToOffer.rate,
+            offerToProject: offerToProject.rate,
+            funnel: [
+              { stage: 'AO', count: aos.length },
+              { stage: 'Offer', count: offers.length },
+              { stage: 'Project', count: projects.length }
+            ]
+          },
+          performance: {
+            averageProjectDuration: Math.round(avgDuration),
+            onTimeDelivery: 0, // TODO: calculate based on deadlines
+            clientSatisfaction: 0, // TODO: implement satisfaction tracking
+            teamUtilization: 0 // TODO: implement from team load metrics
+          },
+          pipeline: {
+            aoCount: aos.length,
+            offerCount: offers.length,
+            projectCount: projects.length,
+            totalValue: totalRevenue,
+            expectedRevenue: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0)
+          }
+        };
+      },
+      {
+        operation: 'getBusinessMetrics',
+        service: 'BusinessAnalyticsService',
+        metadata: {
+          hasParams: !!params,
+          hasFilters: !!(params as { filters?: BusinessFilters })?.filters
         }
-      };
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    } );
-      return {
-        revenue: { total: 0, byMonth: {}, byClient: {}, growth: 0 },
-        conversion: { rate: 0, aoToOffer: 0, offerToProject: 0, funnel: [] },
-        performance: { averageProjectDuration: 0, onTimeDelivery: 0, clientSatisfaction: 0, teamUtilization: 0 },
-        pipeline: { aoCount: 0, offerCount: 0, projectCount: 0, totalValue: 0, expectedRevenue: 0 }
-      };
-    }
+      }
+    );
+  }
 
   /**
    * Get dashboard statistics
    */
   async getDashboardStats(): Promise<unknown> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        // Get real counts from storage
+        const aos = await this.storage.getAos();
+        const offers = await this.storage.getOffers();
+        const projects = await this.storage.getProjects();
 
-      // Get real counts from storage
-      const aos = await this.storage.getAos();
-      const offers = await this.storage.getOffers();
-      const projects = await this.storage.getProjects();
+        // Calculate active projects (exclude SAV which is the final phase)
+        const activeProjects = projects.filter(p => 
+          p.status !== 'sav'
+        ).length;
 
-      // Calculate active projects (exclude SAV which is the final phase)
-      const activeProjects = projects.filter(p => 
-        p.status !== 'sav'
-      ).length;
+        // Calculate total revenue from projects with budgets
+        const totalRevenue = projects
+          .filter(p => p.budget != null)
+          .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
 
-      // Calculate total revenue from projects with budgets
-      const totalRevenue = projects
-        .filter(p => p.budget != null)
-        .reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0);
+        // Calculate conversion rate
+        const conversionRate = aos.length > 0 
+          ? (offers.length / aos.length) * 100 
+          : 0;
 
-      // Calculate conversion rate
-      const conversionRate = aos.length > 0 
-        ? (offers.length / aos.length) * 100 
-        : 0;
+        // Calculate average project value
+        const projectsWithBudget = projects.filter(p => p.budget != null);
+        const averageProjectValue = projectsWithBudget.length > 0
+          ? projectsWithBudget.reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0) / projectsWithBudget.length
+          : 0;
 
-      // Calculate average project value
-      const projectsWithBudget = projects.filter(p => p.budget != null);
-      const averageProjectValue = projectsWithBudget.length > 0
-        ? projectsWithBudget.reduce((sum, p) => sum + (parseFloat(p.budget!) || 0), 0) / projectsWithBudget.length
-        : 0;
+        // Calculate team utilization (basic implementation)
+        const tasks = await this.storage.getAllTasks();
+        const teamUtilization = tasks.length > 0 ? 75 : 0; // TODO: implement proper calculation
 
-      // Calculate team utilization (basic implementation)
-      const tasks = await this.storage.getAllTasks();
-      const teamUtilization = tasks.length > 0 ? 75 : 0; // TODO: implement proper calculation
-
-      return {
-        totalAos: aos.length,
-        totalOffers: offers.length,
-        totalProjects: projects.length,
-        activeProjects,
-        totalRevenue,
-        conversionRate: Math.round(conversionRate * 100) / 100,
-        averageProjectValue: Math.round(averageProjectValue * 100) / 100,
-        teamUtilization
-      };
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    } );
-      return {
-        totalAos: 0,
-        totalOffers: 0,
-        totalProjects: 0,
-        activeProjects: 0,
-        totalRevenue: 0,
-        conversionRate: 0,
-        averageProjectValue: 0,
-        teamUtilization: 0
-      };
-    }
+        return {
+          totalAos: aos.length,
+          totalOffers: offers.length,
+          totalProjects: projects.length,
+          activeProjects,
+          totalRevenue,
+          conversionRate: Math.round(conversionRate * 100) / 100,
+          averageProjectValue: Math.round(averageProjectValue * 100) / 100,
+          teamUtilization
+        };
+      },
+      {
+        operation: 'getDashboardStats',
+        service: 'BusinessAnalyticsService',
+        metadata: {
+          operation: 'getDashboardStats'
+        }
+      }
+    );
+  }
 
   /**
    * Get pipeline analytics with optional filters
    */
   async getPipelineAnalytics(filters?: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withErrorHandling(
-    async () => {
+      async () => {
+        // Get data from storage
+        let aos = await this.storage.getAos();
+        let offers = await this.storage.getOffers();
+        let projects = await this.storage.getProjects();
 
-      // Get data from storage
-      let aos = await this.storage.getAos();
-      let offers = await this.storage.getOffers();
-      let projects = await this.storage.getProjects();
-
-      // Apply filters if provided
-      if (filters?.userId) {
-        // Note: AOs don't have responsibleUserId field, so we don't filter them
-        offers = offers.filter(o => o.responsibleUserId === filters.userId);
-        projects = projects.filter(p => p.responsibleUserId === filters.userId);
-      }
-
-      if (filters?.departement) {
-        // TODO: Filter by department when field is available
-      }
-
-      // Calculate stage distribution
-      const stages = [
-        { name: 'AO Created', count: aos.length, value: 0 },
-        { name: 'Offer Sent', count: offers.length, value: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0) },
-        { name: 'Project Won', count: projects.length, value: projects.reduce((sum, p) => sum + (parseFloat(p.budget || '0') || 0), 0) }
-      ];
-
-      // Identify bottlenecks (stages with low conversion)
-      const bottlenecks = [];
-      const aoToOfferRate = aos.length > 0 ? (offers.length / aos.length) * 100 : 0;
-      const offerToProjectRate = offers.length > 0 ? (projects.length / offers.length) * 100 : 0;
-
-      if (aoToOfferRate < 50) {
-        bottlenecks.push({
-          stage: 'AO to Offer',
-          conversionRate: aoToOfferRate,
-          severity: 'high',
-          recommendation: 'Improve AO qualification process'
-        });
-      }
-
-      if (offerToProjectRate < 30) {
-        bottlenecks.push({
-          stage: 'Offer to Project',
-          conversionRate: offerToProjectRate,
-          severity: 'high',
-          recommendation: 'Review pricing strategy and follow-up process'
-        });
-      }
-
-      return {
-        aoCount: aos.length,
-        offerCount: offers.length,
-        projectCount: projects.length,
-        stages,
-        bottlenecks,
-        conversionRates: {
-          aoToOffer: Math.round(aoToOfferRate * 100) / 100,
-          offerToProject: Math.round(offerToProjectRate * 100) / 100,
-          overall: aos.length > 0 ? Math.round((projects.length / aos.length) * 10000) / 100 : 0
+        // Apply filters if provided
+        if (filters?.userId) {
+          // Note: AOs don't have responsibleUserId field, so we don't filter them
+          offers = offers.filter(o => o.responsibleUserId === filters.userId);
+          projects = projects.filter(p => p.responsibleUserId === filters.userId);
         }
-      };
-    
-    },
-    {
-      operation: 'metrics',
-      service: 'BusinessAnalyticsService',
-      metadata: {}
-    } );
-      return {
-        aoCount: 0,
-        offerCount: 0,
-        projectCount: 0,
-        stages: [],
-        bottlenecks: []
-      };
-    }
+
+        if (filters?.departement) {
+          // TODO: Filter by department when field is available
+        }
+
+        // Calculate stage distribution
+        const stages = [
+          { name: 'AO Created', count: aos.length, value: 0 },
+          { name: 'Offer Sent', count: offers.length, value: offers.reduce((sum, o) => sum + (parseFloat(o.montantFinal || '0') || 0), 0) },
+          { name: 'Project Won', count: projects.length, value: projects.reduce((sum, p) => sum + (parseFloat(p.budget || '0') || 0), 0) }
+        ];
+
+        // Identify bottlenecks (stages with low conversion)
+        const bottlenecks = [];
+        const aoToOfferRate = aos.length > 0 ? (offers.length / aos.length) * 100 : 0;
+        const offerToProjectRate = offers.length > 0 ? (projects.length / offers.length) * 100 : 0;
+
+        if (aoToOfferRate < 50) {
+          bottlenecks.push({
+            stage: 'AO to Offer',
+            conversionRate: aoToOfferRate,
+            severity: 'high',
+            recommendation: 'Improve AO qualification process'
+          });
+        }
+
+        if (offerToProjectRate < 30) {
+          bottlenecks.push({
+            stage: 'Offer to Project',
+            conversionRate: offerToProjectRate,
+            severity: 'high',
+            recommendation: 'Review pricing strategy and follow-up process'
+          });
+        }
+
+        return {
+          aoCount: aos.length,
+          offerCount: offers.length,
+          projectCount: projects.length,
+          stages,
+          bottlenecks,
+          conversionRates: {
+            aoToOffer: Math.round(aoToOfferRate * 100) / 100,
+            offerToProject: Math.round(offerToProjectRate * 100) / 100,
+            overall: aos.length > 0 ? Math.round((projects.length / aos.length) * 10000) / 100 : 0
+          }
+        };
+      },
+      {
+        operation: 'getPipelineAnalytics',
+        service: 'BusinessAnalyticsService',
+        metadata: {
+          hasFilters: !!filters,
+          filterKeys: filters ? Object.keys(filters) : []
+        }
+      }
+    );
+  }
 
   /**
    * Generate benchmarks for entity and period
@@ -724,9 +713,12 @@ export class BusinessAnalyticsService {
   async generateBenchmarks(entity: BenchmarkEntity, period: DateRange): Promise<PerformanceBenchmark> {
     logger.warn('generateBenchmarks() called - returning placeholder', {
       metadata: {
-        module: 'BusinessAnalyticsService', { operation: 'generateBenchmarks', entity, period 
-              }
-            );
+        module: 'BusinessAnalyticsService',
+        operation: 'generateBenchmarks',
+        entity,
+        period
+      }
+    });
 
     // Placeholder implementation - return basic benchmark
     const benchmark: InsertPerformanceBenchmark = {
@@ -747,9 +739,11 @@ export class BusinessAnalyticsService {
   async getBenchmarks(params: Record<string, unknown>): Promise<Record<string, unknown>> {
     logger.warn('getBenchmarks() called - returning placeholder', {
       metadata: {
-        module: 'BusinessAnalyticsService', { operation: 'getBenchmarks', params 
-              }
-            );
+        module: 'BusinessAnalyticsService',
+        operation: 'getBenchmarks',
+        params
+      }
+    });
 
     return {
       benchmarks: [],
@@ -767,9 +761,10 @@ export class BusinessAnalyticsService {
     this.cache.clear();
     logger.info('Analytics cache cleared', {
       metadata: {
-        module: 'BusinessAnalyticsService', { operation: 'clearCache' 
-
-          });
+        module: 'BusinessAnalyticsService',
+        operation: 'clearCache'
+      }
+    });
   }
 
   // ========================================
@@ -791,15 +786,125 @@ export class BusinessAnalyticsService {
     return `business_analytics_${operation}_${paramsHash}_${timeWindow}`;
   }
 
+  // ========================================
+  // SCORING METHODS (from ScoringService)
+  // ========================================
+
+  /**
+   * Calcule le score technique basé sur les critères spéciaux et la configuration
+   * Fusionné depuis ScoringService
+   */
+  computeTechnicalScore(
+    specialCriteria: SpecialCriteria, 
+    config: TechnicalScoringConfig = defaultScoringConfig
+  ): TechnicalScoringResult {
+    const details: Record<string, number> = {};
+    const triggeredCriteria: string[] = [];
+    let totalScore = 0;
+
+    // Calculer la contribution de chaque critère
+    const criteriaMapping = {
+      batimentPassif: 'batimentPassif',
+      isolationRenforcee: 'isolationRenforcee',
+      precadres: 'precadres', 
+      voletsExterieurs: 'voletsExterieurs',
+      coupeFeu: 'coupeFeu'
+    } as const;
+
+    for (const [criteriaKey, configKey] of Object.entries(criteriaMapping)) {
+      const isTriggered = specialCriteria[criteriaKey as keyof SpecialCriteria] as boolean;
+      const weight = config.weights[configKey as keyof typeof config.weights];
+      const contribution = isTriggered ? weight : 0;
+      
+      details[criteriaKey] = contribution;
+      totalScore += contribution;
+      
+      if (isTriggered) {
+        triggeredCriteria.push(criteriaKey);
+      }
+    }
+
+    // Déterminer si une alerte doit être déclenchée
+    const shouldAlert = totalScore >= config.threshold;
+
+    logger.info('Calcul scoring technique', {
+      metadata: {
+        service: 'AnalyticsEngineService',
+        operation: 'computeTechnicalScore',
+        totalScore,
+        threshold: config.threshold,
+        triggeredCriteria: triggeredCriteria.join(', ') || 'aucun',
+        shouldAlert,
+        details
+      }
+    });
+
+    return {
+      totalScore,
+      triggeredCriteria,
+      shouldAlert,
+      details
+    };
+  }
+
+  /**
+   * Retourne la configuration par défaut du scoring technique
+   */
+  getDefaultScoringConfig(): TechnicalScoringConfig {
+    return { ...defaultScoringConfig };
+  }
+
+  /**
+   * Valide une configuration de scoring
+   */
+  validateScoringConfig(config: TechnicalScoringConfig): boolean {
+    // Vérifier que tous les poids sont dans la plage valide
+    const weights = config.weights;
+    const validWeights = Object.values(weights).every(w => w >= 0 && w <= 10);
+    
+    // Vérifier que le seuil est dans la plage valide
+    const validThreshold = config.threshold >= 0 && config.threshold <= 50;
+    
+    return validWeights && validThreshold;
+  }
+
+  /**
+   * Calcule le score maximum possible avec une configuration donnée
+   */
+  getMaxPossibleScore(config: TechnicalScoringConfig = defaultScoringConfig): number {
+    const weights = config.weights;
+    return weights.batimentPassif + 
+           weights.isolationRenforcee + 
+           weights.precadres + 
+           weights.voletsExterieurs + 
+           weights.coupeFeu;
+  }
+
+  /**
+   * Obtenir une description textuelle du niveau de score
+   */
+  getScoreLevel(score: number, maxScore: number): 'faible' | 'modéré' | 'élevé' | 'critique' {
+    const percentage = (score / maxScore) * 100;
+    
+    if (percentage >= 80) return 'critique';
+    if (percentage >= 60) return 'élevé';
+    if (percentage >= 30) return 'modéré';
+    return 'faible';
+  }
+}
+
 // ========================================
 // SINGLETON EXPORT
 // ========================================
 
-let businessAnalyticsServiceInstance: BusinessAnalyticsService | null = null;
+let analyticsEngineServiceInstance: AnalyticsEngineService | null = null;
 
-export function getBusinessAnalyticsService(storage: IStorage, eventBus: EventBus): BusinessAnalyticsService {
-  if (!businessAnalyticsServiceInstance) {
-    businessAnalyticsServiceInstance = new BusinessAnalyticsService(storage, eventBus);
+export function getBusinessAnalyticsService(storage: StorageFacade, eventBus: EventBus): AnalyticsEngineService {
+  if (!analyticsEngineServiceInstance) {
+    analyticsEngineServiceInstance = new AnalyticsEngineService(storage, eventBus);
   }
-  return businessAnalyticsServiceInstance;
+  return analyticsEngineServiceInstance;
 }
+
+// Alias pour backward compatibility
+export const getAnalyticsEngineService = getBusinessAnalyticsService;

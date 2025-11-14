@@ -384,6 +384,66 @@ tsx scripts/detect-chat-conflicts.ts --file <filepath> --json
 
 ---
 
+## 🤖 Extension Sub-Agents (Phase 4.3)
+
+### Intégration avec Système de Sub-Agents
+
+**Objectif:** Étendre la coordination multi-chats pour inclure la coordination avec le système de sub-agents.
+
+**Bénéfices:**
+- ✅ Coordination entre chats Cursor et sub-agents
+- ✅ Zones de travail pour sub-agents
+- ✅ Gestion des conflits entre chats et sub-agents
+- ✅ Partage de contexte entre chats et sub-agents
+
+### Zones de Travail pour Sub-Agents
+
+**Chaque rôle sub-agent peut avoir sa propre zone de travail:**
+
+**Zone Architect:**
+- Fichiers d'architecture (`server/modules/*/index.ts`, `shared/schema.ts`)
+- Fichiers de configuration (`drizzle.config.ts`, `tsconfig.json`)
+- Documentation architecture (`docs/architecture/`)
+
+**Zone Developer:**
+- Fichiers de développement (`server/modules/*/routes.ts`, `client/src/components/`)
+- Services (`server/services/`)
+- Utilitaires (`server/utils/`)
+
+**Zone Tester:**
+- Fichiers de tests (`**/*.test.ts`, `**/*.spec.ts`)
+- Configuration tests (`vitest.config.ts`, `playwright.config.ts`)
+- Couverture (`coverage/`)
+
+**Zone Analyst:**
+- Fichiers d'analyse (`analysis/`)
+- Documentation analyse (`docs/`)
+- Métriques (`docs/AGENT_METRICS.json`)
+
+**Zone Coordinator:**
+- Fichiers de coordination (`docs/AGENT_COORDINATION_STATE.json`, `docs/AGENT_TASKS_QUEUE.json`)
+- Événements (`docs/AGENT_EVENTS.json`)
+- Documentation coordination (`docs/COORDINATION_CHATS_CURSOR.md`)
+
+### Règles de Coordination Chats + Sub-Agents
+
+**TOUJOURS:**
+- ✅ Vérifier zones de travail sub-agents avant modification
+- ✅ Coordonner avec sub-agents si fichier dans zone
+- ✅ Partager contexte avec sub-agents
+- ✅ Notifier sub-agents des modifications
+
+**NE JAMAIS:**
+- ❌ Modifier fichier dans zone sub-agent sans coordination
+- ❌ Ignorer sub-agents actifs
+- ❌ Ne pas partager contexte
+
+**Référence:** `@.cursor/rules/sub-agents-orchestration.md` - Orchestration principale  
+**Référence:** `@.cursor/rules/sub-agents-roles.md` - Rôles des sub-agents  
+**Référence:** `@docs/AGENT_COORDINATION_STATE.json` - État coordination
+
+---
+
 **Dernière mise à jour:** 2025-01-29  
-**Prochaine révision:** Après Phase 1
+**Prochaine révision:** Après Phase 4
 

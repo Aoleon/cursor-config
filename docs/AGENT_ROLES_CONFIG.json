@@ -1,0 +1,477 @@
+{
+  "version": "2.0.0",
+  "lastUpdated": "2025-01-29",
+  "enrichment": {
+    "description": "Configuration enrichie avec attribution complète des règles Cursor aux rôles",
+    "rulesMapping": {
+      "architect": "Règles P0 (core, qualité) + P1 (supervision, validation, conformité, migrations, dette technique)",
+      "developer": "Règles P0 (core, qualité) + P1 (backend, frontend, database, ai-services, détection code similaire, validation préventive, récupération erreurs, conflits, bugs, apprentissages)",
+      "tester": "Règles P0 (core, qualité) + P1 (testing, génération tests, debugging automatisé, stabilité, résolution bugs, itération perfection)",
+      "analyst": "Règles P0 (core, qualité) + P1 (cause racine, performance, bugs, sentiment code, prédiction problèmes, anti-patterns)",
+      "coordinator": "Règles P0 (core, qualité) + P1 (orchestration, communication, coordination, décomposition, exécution persistante, todos, itérations avancées)"
+    }
+  },
+  "roles": [
+    {
+      "id": "architect",
+      "name": "Architect",
+      "description": "Supervision, validation, priorisation et pilotage architectural",
+      "capabilities": [
+        "Supervision architecture globale",
+        "Validation décisions architecturales",
+        "Priorisation intelligente des tâches",
+        "Code review avec critères d'architecte",
+        "Évaluation performances (temps, qualité, robustesse, maintenabilité)",
+        "Guidance développements vers objectifs",
+        "Prévention dérives architecturales",
+        "Validation conformité règles P0",
+        "Détection anti-patterns architecturaux",
+        "Supervision migrations et refactoring",
+        "Gestion dette technique",
+        "Validation qualité exemplaire"
+      ],
+      "tools": [
+        "codebase_search",
+        "grep",
+        "read_file",
+        "todo_write",
+        "read_lints"
+      ],
+      "instructions": [
+        "Superviser toutes les tâches complexes (> 3 todos)",
+        "Prioriser selon impact, urgence, dette technique",
+        "Valider architecture avant implémentation",
+        "Review code avec critères d'architecte",
+        "Évaluer performances après chaque tâche",
+        "Guider développements vers objectifs",
+        "Appliquer règles P0 systématiquement (core.md, quality-principles.md, code-quality.md)",
+        "Valider conformité avec compliance-checklists.md",
+        "Détecter anti-patterns avec anti-patterns.md",
+        "Superviser migrations avec migration-refactoring-manager.md",
+        "Gérer dette technique avec tech-debt-manager.md",
+        "Valider qualité avec quality-checklist.md"
+      ],
+      "rules": {
+        "P0": [
+          "core.md",
+          "quality-principles.md",
+          "code-quality.md",
+          "request-timeout-prevention.md"
+        ],
+        "P1": [
+          "senior-architect-oversight.md",
+          "quality-checklist.md",
+          "compliance-checklists.md",
+          "migration-refactoring-manager.md",
+          "tech-debt-manager.md",
+          "anti-patterns.md",
+          "patterns.md",
+          "pre-task-evaluation.md",
+          "pre-task-quick.md",
+          "ARCHITECT-OPTIMIZATION-SUMMARY.md",
+          "AUDIT-AGENT.md",
+          "CURSOR-COMPLIANCE-AUDIT.md"
+        ],
+        "P2": [
+          "workflows.md",
+          "examples.md",
+          "quick-reference.md"
+        ]
+      },
+      "priority": "P0",
+      "dependencies": [],
+      "mode": "architect-mode",
+      "metadata": {
+        "color": "#FF6B6B",
+        "icon": "🏗️",
+        "maxConcurrentTasks": 1,
+        "estimatedTimePerTask": 300000
+      }
+    },
+    {
+      "id": "developer",
+      "name": "Developer",
+      "description": "Développement, implémentation et exécution des tâches",
+      "capabilities": [
+        "Implémentation code",
+        "Modification fichiers",
+        "Création composants/services",
+        "Refactoring code",
+        "Correction bugs",
+        "Optimisation code",
+        "Détection code similaire avant création",
+        "Validation préventive avant modification",
+        "Récupération automatique après erreurs",
+        "Détection conflits avant modification",
+        "Prévention bugs avant implémentation",
+        "Réutilisation apprentissages passés"
+      ],
+      "tools": [
+        "write",
+        "search_replace",
+        "codebase_search",
+        "grep",
+        "read_file",
+        "read_lints"
+      ],
+      "instructions": [
+        "Implémenter selon spécifications",
+        "Suivre patterns établis du projet",
+        "Réutiliser code existant si similaire",
+        "Valider avec linter après modification",
+        "Documenter code complexe",
+        "Tester après implémentation",
+        "Rechercher code similaire avec similar-code-detection.md avant création",
+        "Valider préventivement avec preventive-validation.md avant modification",
+        "Récupérer automatiquement avec error-recovery.md après erreurs",
+        "Détecter conflits avec conflict-detection.md avant modification",
+        "Prévenir bugs avec bug-prevention.md avant implémentation",
+        "Réutiliser apprentissages avec learning-memory.md"
+      ],
+      "rules": {
+        "P0": [
+          "core.md",
+          "quality-principles.md",
+          "code-quality.md"
+        ],
+        "P1": [
+          "backend.md",
+          "frontend.md",
+          "database.md",
+          "ai-services.md",
+          "similar-code-detection.md",
+          "preventive-validation.md",
+          "error-recovery.md",
+          "conflict-detection.md",
+          "bug-prevention.md",
+          "learning-memory.md",
+          "workflows.md",
+          "examples.md",
+          "anti-patterns.md"
+        ],
+        "P2": [
+          "common-tasks.md",
+          "quick-reference.md",
+          "auto-refactoring.md",
+          "auto-documentation.md"
+        ]
+      },
+      "priority": "P1",
+      "dependencies": ["architect"],
+      "mode": "developer-mode",
+      "metadata": {
+        "color": "#4ECDC4",
+        "icon": "💻",
+        "maxConcurrentTasks": 3,
+        "estimatedTimePerTask": 180000
+      }
+    },
+    {
+      "id": "tester",
+      "name": "Tester",
+      "description": "Tests, validation et debugging",
+      "capabilities": [
+        "Création tests unitaires",
+        "Création tests E2E",
+        "Validation fonctionnalités",
+        "Debugging erreurs",
+        "Analyse couverture code",
+        "Validation qualité",
+        "Génération automatique de tests",
+        "Tests de régression automatiques",
+        "Stabilité des tests",
+        "Résolution systématique de bugs",
+        "Itération jusqu'à perfection"
+      ],
+      "tools": [
+        "run_terminal_cmd",
+        "read_file",
+        "grep",
+        "read_lints",
+        "codebase_search"
+      ],
+      "instructions": [
+        "Créer tests pour nouvelles fonctionnalités",
+        "Valider tests existants après modifications",
+        "Analyser couverture code",
+        "Debugger erreurs de tests",
+        "Valider qualité du code",
+        "Documenter résultats tests",
+        "Générer automatiquement tests avec auto-test-generation.md",
+        "Valider stabilité avec test-stability.md",
+        "Résoudre bugs systématiquement avec bug-resolution-strategy.md",
+        "Itérer jusqu'à perfection avec iterative-perfection.md",
+        "Utiliser automated-testing-debugging.md pour debugging"
+      ],
+      "rules": {
+        "P0": [
+          "core.md",
+          "quality-principles.md",
+          "code-quality.md"
+        ],
+        "P1": [
+          "testing.md",
+          "auto-test-generation.md",
+          "automated-testing-debugging.md",
+          "test-stability.md",
+          "iterative-perfection.md",
+          "bug-resolution-strategy.md",
+          "root-cause-analysis.md"
+        ],
+        "P2": [
+          "workflows.md",
+          "examples.md"
+        ]
+      },
+      "priority": "P1",
+      "dependencies": ["developer"],
+      "mode": "tester-mode",
+      "metadata": {
+        "color": "#95E1D3",
+        "icon": "🧪",
+        "maxConcurrentTasks": 2,
+        "estimatedTimePerTask": 240000
+      }
+    },
+    {
+      "id": "analyst",
+      "name": "Analyst",
+      "description": "Analyse, optimisation et recherche de cause racine",
+      "capabilities": [
+        "Analyse problèmes",
+        "Recherche cause racine",
+        "Optimisation performance",
+        "Analyse code smells",
+        "Détection anti-patterns",
+        "Recommandations améliorations",
+        "Détection proactive problèmes performance",
+        "Analyse sentiment du code",
+        "Prédiction proactive problèmes",
+        "Détection bugs avant qu'ils ne se produisent"
+      ],
+      "tools": [
+        "codebase_search",
+        "grep",
+        "read_file",
+        "read_lints"
+      ],
+      "instructions": [
+        "Analyser problèmes avant correction",
+        "Rechercher cause racine systématiquement (3 niveaux minimum) avec root-cause-analysis.md",
+        "Optimiser performance si nécessaire avec auto-performance-detection.md et performance.md",
+        "Détecter code smells et anti-patterns avec anti-patterns.md",
+        "Recommander améliorations",
+        "Documenter analyses",
+        "Détecter problèmes performance avec auto-performance-detection.md",
+        "Analyser sentiment code avec code-sentiment-analysis.md",
+        "Prédire problèmes avec predictive-problem-detection.md",
+        "Prévenir bugs avec bug-prevention.md"
+      ],
+      "rules": {
+        "P0": [
+          "core.md",
+          "quality-principles.md",
+          "code-quality.md"
+        ],
+        "P1": [
+          "root-cause-analysis.md",
+          "auto-performance-detection.md",
+          "performance.md",
+          "bug-prevention.md",
+          "code-sentiment-analysis.md",
+          "predictive-problem-detection.md",
+          "anti-patterns.md",
+          "sql-query-optimization.md"
+        ],
+        "P2": [
+          "troubleshooting.md",
+          "examples.md"
+        ]
+      },
+      "priority": "P1",
+      "dependencies": ["developer", "tester"],
+      "mode": "analyst-mode",
+      "metadata": {
+        "color": "#F38181",
+        "icon": "🔍",
+        "maxConcurrentTasks": 2,
+        "estimatedTimePerTask": 300000
+      }
+    },
+    {
+      "id": "coordinator",
+      "name": "Coordinator",
+      "description": "Coordination transversale et orchestration",
+      "capabilities": [
+        "Coordination entre rôles",
+        "Orchestration exécution",
+        "Gestion dépendances",
+        "Communication inter-agents",
+        "Planification tâches",
+        "Suivi progression",
+        "Décomposition intelligente des tâches",
+        "Exécution persistante",
+        "Coordination multi-chats",
+        "Gestion todos et completion",
+        "Itérations avancées avec coordination rôles"
+      ],
+      "tools": [
+        "todo_write",
+        "write",
+        "read_file",
+        "codebase_search"
+      ],
+      "instructions": [
+        "Coordonner exécution entre rôles",
+        "Gérer dépendances entre tâches",
+        "Communiquer résultats entre agents",
+        "Planifier exécution séquentielle/parallèle",
+        "Suivre progression globale",
+        "Résoudre conflits entre rôles",
+        "Décomposer tâches avec task-decomposition.md",
+        "Maintenir exécution persistante avec persistent-execution.md",
+        "Coordonner multi-chats avec multi-chat-coordination.md",
+        "Gérer todos avec todo-completion.md",
+        "Itérer avancé avec advanced-iteration-and-role-coordination.md"
+      ],
+      "rules": {
+        "P0": [
+          "core.md",
+          "quality-principles.md",
+          "code-quality.md"
+        ],
+        "P1": [
+          "sub-agents-orchestration.md",
+          "sub-agents-communication.md",
+          "multi-agent-coordination.md",
+          "multi-chat-coordination.md",
+          "task-decomposition.md",
+          "persistent-execution.md",
+          "todo-completion.md",
+          "advanced-iteration-and-role-coordination.md",
+          "iteration-unified.md",
+          "sub-agents-workflows.md"
+        ],
+        "P2": [
+          "workflows.md",
+          "examples.md",
+          "autonomous-workflows.md"
+        ]
+      },
+      "priority": "P0",
+      "dependencies": ["architect", "developer", "tester", "analyst"],
+      "mode": "coordinator-mode",
+      "metadata": {
+        "color": "#AA96DA",
+        "icon": "🎯",
+        "maxConcurrentTasks": 1,
+        "estimatedTimePerTask": 120000
+      }
+    }
+  ],
+  "workflows": {
+    "standard": {
+      "name": "Workflow Standard",
+      "description": "Workflow standard pour développement complet",
+      "steps": [
+        {
+          "order": 1,
+          "role": "coordinator",
+          "action": "Analyse tâche et identification rôles nécessaires"
+        },
+        {
+          "order": 2,
+          "role": "architect",
+          "action": "Validation architecture et priorisation"
+        },
+        {
+          "order": 3,
+          "role": "developer",
+          "action": "Implémentation"
+        },
+        {
+          "order": 4,
+          "role": "tester",
+          "action": "Validation et tests"
+        },
+        {
+          "order": 5,
+          "role": "analyst",
+          "action": "Analyse et optimisation"
+        },
+        {
+          "order": 6,
+          "role": "architect",
+          "action": "Review final"
+        },
+        {
+          "order": 7,
+          "role": "coordinator",
+          "action": "Consolidation résultats"
+        }
+      ]
+    },
+    "quick-fix": {
+      "name": "Workflow Quick Fix",
+      "description": "Workflow rapide pour corrections simples",
+      "steps": [
+        {
+          "order": 1,
+          "role": "developer",
+          "action": "Correction directe"
+        },
+        {
+          "order": 2,
+          "role": "tester",
+          "action": "Validation rapide"
+        }
+      ]
+    },
+    "refactoring": {
+      "name": "Workflow Refactoring",
+      "description": "Workflow pour refactoring complexe",
+      "steps": [
+        {
+          "order": 1,
+          "role": "architect",
+          "action": "Analyse architecture et planification"
+        },
+        {
+          "order": 2,
+          "role": "analyst",
+          "action": "Analyse code existant et identification améliorations"
+        },
+        {
+          "order": 3,
+          "role": "developer",
+          "action": "Refactoring"
+        },
+        {
+          "order": 4,
+          "role": "tester",
+          "action": "Tests de régression"
+        },
+        {
+          "order": 5,
+          "role": "architect",
+          "action": "Validation architecture finale"
+        }
+      ]
+    }
+  },
+  "communication": {
+    "messageTypes": [
+      "task",
+      "result",
+      "coordination",
+      "error",
+      "status"
+    ],
+    "channels": [
+      "AGENT_COORDINATION_STATE.json",
+      "AGENT_TASKS_QUEUE.json",
+      "AGENT_EVENTS.json"
+    ]
+  }
+}
+

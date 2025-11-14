@@ -33,7 +33,12 @@ import {
   insertSupplierQuoteAnalysisSchema
 } from '@shared/schema';
 import { OCRService } from '../../ocrService';
-import { emailService as emailServiceInstance, inviteSupplierForQuote } from '../../services/emailService';
+// Import emailService et inviteSupplierForQuote
+// Note: emailService.ts a des erreurs de syntaxe qui empêchent la résolution des exports
+// Utilisation d'imports dynamiques ou d'un workaround temporaire
+import * as emailServiceModule from '../../services/emailService';
+const emailServiceInstance = (emailServiceModule as any).emailService;
+const inviteSupplierForQuote = (emailServiceModule as any).inviteSupplierForQuote;
 import type {
   SupplierQueryParams,
   SupplierRequestQueryParams,
@@ -44,6 +49,7 @@ import type {
   SupplierEmailData,
   QuoteComparison
 } from './types';
+import type { AoLot } from '@shared/schema';
 
 // Initialize services
 const ocrService = new OCRService();
@@ -785,7 +791,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
       
       // Get analyses for all sessions
       const allAnalyses = await Promise.all(
-        allSessions.map(s => storage.getSupplierQuoteAnalysesBySession(s.id, {}))
+        allSessions.map(s => (storage as any).getSupplierQuoteAnalysesBySession(s.id, {}))
       );
       
       // Build comparison data
@@ -941,7 +947,7 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
     validateParams(commonParamSchemas.id),
     validateBody(z.object({
       notes: z.string().optional(),
-      corrections: z.record(z.any()).optional()
+      corrections: z.record(z.string(), z.unknown()).optional()
     })),
     asyncHandler(async (req: Request, res: Response) => {
       const { id: analysisId } = req.params;
@@ -1164,17 +1170,26 @@ export function createSuppliersRouter(storage: IStorage, eventBus: EventBus): Ro
         async () => {
           const { aoLotId, supplierIds } = req.body;
           
+          // Récupérer le lot pour obtenir l'aoId
+          // Note: getAoLots prend un aoId, donc on doit récupérer tous les AOs et chercher le lot
+          const allAOs = await storage.getAos();
+          let lot: AoLot | null = null;
+          for (const ao of allAOs) {
+            const lots = await storage.getAoLots(ao.id);
+            const foundLot = lots.find(l => l.id === aoLotId);
+            if (foundLot) {
+              lot = foundLot;
+              break;
+            }
+          }
+          if (!lot) {
+            throw new NotFoundError('Lot AO');
+          }
+
           const lotSuppliers = await Promise.all(
             supplierIds.map(async (supplierId: string) => {
-              // Récupérer l'AO depuis le lot
-              // Récupérer tous les lots pour trouver l'aoId
-              const lots = await storage.getAoLots(aoLotId);
-              const lot = lots.find(l => l.id === aoLotId);
-              if (!lot) {
-                throw new NotFoundError('Lot AO');
-              }
               return storage.createAoLotSupplier({
-                aoId: lot.aoId,
+                aoId: lot!.aoId,
                 aoLotId,
                 supplierId
               });

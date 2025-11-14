@@ -1,6 +1,6 @@
 import { ConfidentialClientApplication, AuthenticationResult } from '@azure/msal-node';
-import { withErrorHandling } from './utils/error-handler';
-import { AppError, NotFoundError, ValidationError, AuthorizationError } from './utils/error-handler';
+import { withErrorHandling } from '../utils/error-handler';
+import { AppError, NotFoundError, ValidationError, AuthorizationError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 
 interface TokenCache {
@@ -31,9 +31,15 @@ export class MicrosoftAuthService {
         clientId,
         clientSecret,
         authority: `https://login.microsoftonline.com/${tenantId}`
-      });
+      }
+    });
 
-    logger.info('MicrosoftAuthService initialized', { metadata: { tenantId, clientId: clientId.substring(0, 8) + '...' 
+    logger.info('MicrosoftAuthService initialized', { 
+      metadata: { 
+        tenantId, 
+        clientId: clientId.substring(0, 8) + '...' 
+      } 
+    });
   }
 
   async getAccessToken(): Promise<string> {
@@ -44,38 +50,41 @@ export class MicrosoftAuthService {
     }
 
     return withErrorHandling(
-    async () => {
+      async () => {
+        logger.info('Acquiring new Microsoft Graph access token');
+        
+        const result = await this.msalClient.acquireTokenByClientCredential({
+          scopes: this.scopes
+        });
 
-      logger.info('Acquiring new Microsoft Graph access token');
-      
-      const result = await this.msalClient.acquireTokenByClientCredential({
-        scopes: this.scopes
-            });
+        if (!result || !result.accessToken) {
+          throw new AppError('Failed to acquire access token', 500);
+        }
 
-      if (!result || !result.accessToken) {
-        throw new AppError('Failed to acquire access token', 500);
+        // Cache the token (expires in 1 hour typically, we refresh 5 minutes early)
+        const expiresIn = result.expiresOn 
+          ? result.expiresOn.getTime() - Date.now() - (5 * 60 * 1000) 
+          : 55 * 60 * 1000;
+
+        this.tokenCache = {
+          accessToken: result.accessToken,
+          expiresAt: Date.now() + expiresIn
+        };
+
+        logger.info('Microsoft Graph access token acquired successfully', { 
+          metadata: { 
+            expiresIn: Math.floor(expiresIn / 1000) + 's' 
+          } 
+        });
+
+        return result.accessToken;
+      },
+      {
+        operation: 'getAccessToken',
+        service: 'MicrosoftAuthService',
+        metadata: {}
       }
-
-      // Cache the token (expires in 1 hour typically, we refresh 5 minutes early)
-      const expiresIn = result.expiresOn 
-        ? result.expiresOn.getTime() - Date.now() - (5 * 60 * 1000) 
-        : 55 * 60 * 1000;
-
-      this.tokenCache = {
-        accessToken: result.accessToken,
-        expiresAt: Date.now() + expiresIn
-      };
-
-      logger.info('Microsoft Graph access token acquired successfully', { metadata: { expiresIn: Math.floor(expiresIn / 1000) + 's' 
-
-      return result.accessToken;
-    
-    },
-    {
-      operation: 'constructor',
-      service: 'MicrosoftAuthService',
-      metadata: {       }
-     });
+    );
   }
 
   async refreshToken(): Promise<void> {
@@ -87,6 +96,7 @@ export class MicrosoftAuthService {
     this.tokenCache = null;
     logger.info('Microsoft auth token cache cleared');
   }
+}
 
 // Singleton instance
 export const microsoftAuthService = new MicrosoftAuthService();

@@ -74,32 +74,23 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         const reserves = await storage.getProjectReserves(projectId);
         
         logger.info('[AfterSales] Réserves projet récupérées', { metadata: {
-            route: '/api/reserves/:projectId',
-            method: 'GET',
-            projectId,
-            reservesCount: reserves?.length || 0,
-                  userId: req.user?.id
-
-              });
+          route: '/api/reserves/:projectId',
+          method: 'GET',
+          projectId,
+          reservesCount: reserves?.length || 0,
+          userId: req.user?.id
+        }});
 
         sendSuccess(res, reserves);
-      
-    },
-    {
-      operation: 'SAV',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la récupération des réserves');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'getProjectReserves',
+        service: 'aftersales',
+        metadata: {}
+      }
+    );
+    })
+  );
 
   // Create project reserve
   router.post('/api/reserves',
@@ -124,32 +115,23 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         const newReserve = await storage.createProjectReserve(reserveData);
         
         logger.info('[AfterSales] Réserve projet créée', { metadata: {
-            route: '/api/reserves',
-            method: 'POST',
-                  projectId: reserveData.projectId,
-            reserveId: newReserve?.id,
-                  userId: req.user?.id
-
-              });
+          route: '/api/reserves',
+          method: 'POST',
+          projectId: reserveData.projectId,
+          reserveId: newReserve?.id,
+          userId: req.user?.id
+        }});
 
         sendSuccess(res, newReserve, 201);
-      
-    },
-    {
-      operation: 'SAV',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la création de la réserve');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'createProjectReserve',
+        service: 'aftersales',
+        metadata: {}
+      }
+    );
+    })
+  );
 
   // ========================================
   // SAV INTERVENTIONS ROUTES
@@ -178,32 +160,23 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         const interventions = await storage.getSavInterventions(projectId);
         
         logger.info('[AfterSales] Interventions SAV récupérées', { metadata: {
-            route: '/api/sav-interventions/:projectId',
-            method: 'GET',
-            projectId,
-            interventionsCount: interventions?.length || 0,
-                  userId: req.user?.id
-
-              });
+          route: '/api/sav-interventions/:projectId',
+          method: 'GET',
+          projectId,
+          interventionsCount: interventions?.length || 0,
+          userId: req.user?.id
+        }});
 
         sendSuccess(res, interventions);
-      
-    },
-    {
-      operation: 'SAV',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la récupération des interventions SAV');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'getSavInterventions',
+        service: 'aftersales',
+        metadata: {}
+      }
+    );
+    })
+  );
 
   // Create SAV intervention
   router.post('/api/sav-interventions',
@@ -228,32 +201,23 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         const newIntervention = await storage.createSavIntervention(interventionData);
         
         logger.info('[AfterSales] Intervention SAV créée', { metadata: {
-            route: '/api/sav-interventions',
-            method: 'POST',
-                  projectId: interventionData.projectId,
-            interventionId: newIntervention?.id,
-                  userId: req.user?.id
-
-              });
+          route: '/api/sav-interventions',
+          method: 'POST',
+          projectId: interventionData.projectId,
+          interventionId: newIntervention?.id,
+          userId: req.user?.id
+        }});
 
         sendSuccess(res, newIntervention, 201);
-      
-    },
-    {
-      operation: 'SAV',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la création de l\'intervention SAV');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'createSavIntervention',
+        service: 'aftersales',
+        metadata: {}
+      }
+    );
+    })
+  );
 
   // ========================================
   // WARRANTY CLAIMS ROUTES
@@ -282,32 +246,23 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         const claims = await storage.getSavWarrantyClaims(interventionId);
         
         logger.info('[AfterSales] Réclamations garantie récupérées', { metadata: {
-            route: '/api/warranty-claims/:interventionId',
-            method: 'GET',
-            interventionId,
-            claimsCount: claims?.length || 0,
-                  userId: req.user?.id
-
-              });
+          route: '/api/warranty-claims/:interventionId',
+          method: 'GET',
+          interventionId,
+          claimsCount: claims?.length || 0,
+          userId: req.user?.id
+        }});
 
         sendSuccess(res, claims);
-      
-    },
-    {
-      operation: 'SAV',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database('Erreur lors de la récupération des réclamations garantie');
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'getSavWarrantyClaims',
+        service: 'aftersales',
+        metadata: {}
+      }
+    );
+    })
+  );
 
   // ========================================
   // SAV WORKFLOW ROUTES (Fonctionnalité 4)
@@ -321,9 +276,8 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
     asyncHandler(async (req: Request, res: Response) => {
       const demande = await savWorkflowService.createDemande(req.body);
       return sendSuccess(res, demande, 201);
-          }
-        })
-      );
+    })
+  );
 
   // GET /api/sav/demandes
   router.get('/api/sav/demandes',
@@ -346,9 +300,8 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       };
       const demandes = await storage.getSavDemandes(filters);
       return sendSuccess(res, demandes);
-          }
-        })
-      );
+    })
+  );
 
   // GET /api/sav/demandes/:id
   router.get('/api/sav/demandes/:id',
@@ -361,9 +314,8 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
         throw createError.notFound('Demande SAV non trouvée');
       }
       return sendSuccess(res, demande);
-          }
-        })
-      );
+    })
+  );
 
   // POST /api/sav/demandes/:id/commande-materiel
   router.post('/api/sav/demandes/:id/commande-materiel',
@@ -379,9 +331,8 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { materielId, dateLivraisonPrevue } = req.body;
       const demande = await savWorkflowService.commandeMateriel(id, materielId, new Date(dateLivraisonPrevue));
       return sendSuccess(res, demande);
-          }
-        })
-      );
+    })
+  );
 
   // POST /api/sav/demandes/:id/planifier-rdv
   router.post('/api/sav/demandes/:id/planifier-rdv',
@@ -396,9 +347,8 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { rdvDate } = req.body;
       const demande = await savWorkflowService.planifierRdv(id, new Date(rdvDate));
       return sendSuccess(res, demande);
-          }
-        })
-      );
+    })
+  );
 
   // POST /api/sav/demandes/:id/valider-quitus
   router.post('/api/sav/demandes/:id/valider-quitus',
@@ -413,18 +363,13 @@ export function createAfterSalesRoutes(storage: IStorage, eventBus: EventBus): R
       const { quitusDate } = req.body;
       const demande = await savWorkflowService.validerQuitus(id, new Date(quitusDate));
       return sendSuccess(res, demande);
-          }
-        })
-      );
+    })
+  );
 
   logger.info('[AfterSales] AfterSales routes initialized successfully', { metadata: {
-      routesCount: 11,
-      modules: ['reserves', 'sav-interventions', 'warranty-claims', 'sav-workflow']
-    
-          }
-
-    
-            });
+    routesCount: 11,
+    modules: ['reserves', 'sav-interventions', 'warranty-claims', 'sav-workflow']
+  }});
 
   return router;
 }

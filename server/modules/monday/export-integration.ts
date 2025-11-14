@@ -1,137 +1,78 @@
-import { EventBus } from '../../eventBus';
-import { withErrorHandling } from './utils/error-handler';
-import { MondayDataService } from './consolidated/MondayDataService';
+/**
+ * Monday Export Integration
+ *
+ * Enregistre des listeners sur l'EventBus pour exporter automatiquement les projets
+ * et appels d'offres nouvellement créés vers Monday.com via le service dédié.
+ */
+
+import type { EventBus } from '../../eventBus';
+import type { MondayDataService } from '../../services/consolidated/MondayDataService';
 import { logger } from '../../utils/logger';
 
-/**
- * Configure l'export automatique vers Monday.com via EventBus
- * 
- * Auto-export des projets et AOs dès leur création
- * Émet des événements de succès/échec pour monitoring
- */
-export function setupMondayExport(
+interface ExportEventPayload {
+  entityId?: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
+function extractEntityId(event: ExportEventPayload): string | null {
+  return event.entityId ?? event.id ?? null;
+}
+
+async function exportEntity(
+  exportService: MondayDataService,
   eventBus: EventBus,
-  exportService: MondayExportService
-): void {
-  logger.info('[MondayExportIntegration] Configuration export automatique', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-      operation: 'setup',
-      events: ['project:created', 'ao:created']
+  entity: 'project' | 'ao',
+  entityId: string
+): Promise<void> {
+  try {
+    logger.info('[MondayExport] démarrage export automatique', { metadata: { entity, entityId } });
 
-        });
+    const mondayId = await exportService.exportToMonday(entity, entityId, { updateIfExists: true });
 
-  // Auto-export sur création de projet
+    eventBus.publish({
+      type: 'monday:export:success',
+      entity,
+      entityId,
+      severity: 'info',
+      timestamp: new Date().toISOString(),
+      payload: { mondayId },
+    });
+
+    logger.info('[MondayExport] export terminé avec succès', { metadata: { entity, entityId, mondayId } });
+  } catch (error) {
+    logger.error('[MondayExport] échec export automatique', { metadata: { entity, entityId, error } });
+    eventBus.publish({
+      type: 'monday:export:failure',
+      entity,
+      entityId,
+      severity: 'error',
+      timestamp: new Date().toISOString(),
+      payload: { error: error instanceof Error ? error.message : String(error) },
+    });
+  }
+}
+
+export function setupMondayExport(eventBus: EventBus, exportService: MondayDataService): void {
+  logger.info('[MondayExport] configuration des listeners', {
+    metadata: { listeners: ['project:created', 'ao:created'] },
+  });
+
   eventBus.on('project:created', async (event: unknown) => {
-    const projectId = event.entityId || event.id;
-    
+    const projectId = extractEntityId(event as ExportEventPayload);
     if (!projectId) {
-      logger.warn('[MondayExportIntegration] Event project:created sans ID', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'project:created',
-          event
-
-            });
+      logger.warn('[MondayExport] event project:created sans identifiant', { metadata: { event } });
       return;
     }
+    await exportEntity(exportService, eventBus, 'project', projectId);
+  });
 
-    return withErrorHandling(
-    async () => {
-
-      logger.info('[MondayExportIntegration] Auto-export projet démarré', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'autoExportProject',
-          projectId
-
-            });
-
-      const mondayId = await exportService.exportProject(projectId);
-      
-      // Émettre événement de succès
-      eventBus.publish({
-        type: 'monday:export:success',
-        entity: 'project',
-        entityId: projectId,
-        severity: 'info',
-        timestamp: new Date().toISOString(),
-        payload: { mondayId });
-
-      logger.info('[MondayExportIntegration] Auto-export projet réussi', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'autoExportProject',
-          projectId,
-          mondayId
-
-            });
-    
-    },
-    {
-      operation: 'setupMondayExport',
-      service: 'export-integration',
-      metadata: {}
-    } );
-    });
-
-  // Auto-export sur création d'AO
-  eventBus.on('ao:created', async (e: unknown) => {
+  eventBus.on('ao:created', async (event: unknown) => {
+    const aoId = extractEntityId(event as ExportEventPayload);
     if (!aoId) {
-      logger.warn('[MondayExportIntegration] Event ao:created sans ID', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'ao:created',
-          event
-
-            });
+      logger.warn('[MondayExport] event ao:created sans identifiant', { metadata: { event } });
       return;
     }
-
-    return withErrorHandling(
-    async () => {
-
-      logger.info('[MondayExportIntegration] Auto-export AO démarré', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'autoExportAO',
-          aoId
-
-            });
-
-      const mondayId = await exportService.exportAO(aoId);
-      
-      // Émettre événement de succès
-      eventBus.publish({
-        type: 'monday:export:success',
-        entity: 'ao',
-        entityId: aoId,
-        severity: 'info',
-        timestamp: new Date().toISOString(),
-        payload: { mondayId });
-
-      logger.info('[MondayExportIntegration] Auto-export AO réussi', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-          operation: 'autoExportAO',
-          aoId,
-          mondayId
-
-            });
-    
-    },
-    {
-      operation: 'setupMondayExport',
-      service: 'export-integration',
-      metadata: {}
-    } );
-    });
-
-  logger.info('[MondayExportIntegration] Export automatique configuré avec succès', {
-      metadata: {
-        module: 'MondayExportIntegration', {
-      operation: 'setup',
-      listenersCount: 2
-
-        });
+    await exportEntity(exportService, eventBus, 'ao', aoId);
+  });
 }

@@ -201,12 +201,11 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      logger.debug('DocumentProcessor - Raw response', { metadata: { filename, responseLength: responseText.length }
-
-
-              }
-
-              });
+      logger.debug('DocumentProcessor - Raw response', { metadata: { 
+        filename, 
+        responseLength: responseText.length 
+      }
+    });
 
       // Parser la réponse JSON en gérant les blocs markdown
       let jsonText = responseText.trim();
@@ -241,21 +240,20 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         maitreOeuvreDetails: extractedData.maitreOeuvreDetails || null,
       };
 
-      logger.info('DocumentProcessor - Extracted AO data', { metadata: { filename, hasReference: !!cleanedData.reference, hasLots: !!cleanedData.lots 
-              }
- 
-            });
+      logger.info('DocumentProcessor - Extracted AO data', { metadata: { 
+        filename, 
+        hasReference: !!cleanedData.reference, 
+        hasLots: !!cleanedData.lotsConcernes 
+      }
+    });
       return cleanedData;
-
-    
     },
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
       metadata: {}
     });
-      };
-    }
+  }
 
   /**
    * Traite les contacts extraits et les lie automatiquement avec la base de données
@@ -318,14 +316,14 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
  
             });
           }
+        }
+      }
       
       // Retourner les données enrichies avec les informations de liaison
       return {
         ...extractedData,
         linkedContacts
       };
-      
-    
     },
     {
       operation: 'Anthropic',
@@ -383,25 +381,20 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
             } catch {
               return this.generateDemoContent(filename);
             }
-      
+        }
+      } catch (error) {
+        logger.error('DocumentProcessor - Error extracting text', error as Error, { 
+          metadata: { filename }
+        });
+        return this.generateDemoContent(filename);
+      }
     },
     {
       operation: 'Anthropic',
       service: 'documentProcessor',
       metadata: {}
     });
-        return this.generateDemoContent(filename);
-      }
-
-    } catch (error) {
-      logger.error('DocumentProcessor - Error extracting text', error as Error, { metadata: { filename }
-
-
-              }
-
-              });
-      return this.generateDemoContent(filename);
-    }
+  }
 
   /**
    * Extrait des informations détaillées sur les lots de menuiserie depuis le contenu d'un document.
@@ -480,12 +473,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       });
 
       const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-      logger.debug('DocumentProcessor - Detailed lots extraction response', { metadata: { filename, responseLength: responseText.length }
-
-
-              }
-
-              });
+      logger.debug('DocumentProcessor - Detailed lots extraction response', { 
+        metadata: { filename, responseLength: responseText.length }
+      });
 
       // Parser la réponse JSON
       let jsonText = responseText.trim();
@@ -498,12 +488,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
       const extractedData = JSON.parse(jsonText);
       
       if (!extractedData.lots || !Array.isArray(extractedData.lots)) {
-        logger.warn('DocumentProcessor - No lots found in document', { metadata: { filename }
-
-
-                }
-
-                });
+        logger.warn('DocumentProcessor - No lots found in document', { 
+          metadata: { filename }
+        });
         return [];
       }
 
@@ -526,10 +513,8 @@ Réponds UNIQUEMENT avec le JSON, sans explication.
         uniteOeuvre: lot.uniteOeuvre || null,
         montantEstime: lot.montantEstime ? parseFloat(lot.montantEstime.toString()) : null,
         status: this.validateLotStatus(lot.status),
-        technicalDetails: lot.technicalDetails || null,
-                                          }
-                                        }));
-              });
+        technicalDetails: lot.technicalDetails || null
+      }));
       return cleanedLots;
     },
     {
@@ -737,16 +722,18 @@ Description: Travaux de menuiserie selon ${filename}
     } catch {
       return undefined;
     }
+  }
 
   /**
    * Valide et convertit un montant.
    */
-  private validateAmount(am: unknown): number | undefined {
+  private validateAmount(amount: unknown): number | undefined {
     const numAmount = typeof amount === 'string' ? 
       parseFloat(amount.replace(/[^\d.,]/g, '').replace(',', '.')) :
       Number(amount);
     
     return isNaN(numAmount) ? undefined : numAmount;
   }
+}
 
 export const documentProcessor = new DocumentProcessor();

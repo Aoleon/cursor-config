@@ -4,8 +4,8 @@ import { AppError, NotFoundError, ValidationError, AuthorizationError } from './
 import sharp from 'sharp';
 // Types pdf-parse importés depuis le fichier de déclaration
 import type pdfParse from 'pdf-parse';
-// Import du service de scoring technique
-import { ScoringService } from './services/scoringService';
+// Import du service de scoring technique (via AnalyticsEngineService)
+import { getBusinessAnalyticsService } from './services/consolidated/BusinessAnalyticsService';
 import type { TechnicalScoringResult, SpecialCriteria, ColorSpec, MaterialSpec, MaterialColorAlertRule } from '@shared/schema';
 // Import EventBus pour les alertes techniques
 import { eventBus } from './eventBus';
@@ -22,6 +22,10 @@ import {
 } from './services/MenuiserieKnowledgeBase';
 // Import du logger structuré
 import { logger } from './utils/logger';
+// Import des services extraits
+import { PDFParser } from './services/ocr/PDFParser';
+import { ImageParser } from './services/ocr/ImageParser';
+import { ValidationService } from './services/ocr/ValidationService';
 // Imports des types pour le contexte OCR
 import type { 
   AOFieldsExtracted, 
@@ -357,6 +361,15 @@ const SUPPLIER_QUOTE_PATTERNS: Record<string, RegExp[]> = {
 export class OCRService {
   private tesseractWorker: unknown = null;
   private isInitializingTesseract = false;
+  private pdfParser: PDFParser;
+  private imageParser: ImageParser;
+  private validationService: ValidationService;
+
+  constructor() {
+    this.pdfParser = new PDFParser();
+    this.imageParser = new ImageParser();
+    this.validationService = new ValidationService();
+  }
 
   /**
    * Clone une regex pour éviter la persistance du lastIndex
@@ -1775,7 +1788,7 @@ Réponses publiées au plus tard le 22/03/2025
             });
     
     // Évaluation des règles matériaux-couleurs (après tous les champs extraits)
-    return withErrorHandling(
+    await withErrorHandling(
     async () => {
 
       await this.evaluateMaterialColorRules(fields, text);
@@ -1786,7 +1799,6 @@ Réponses publiées au plus tard le 22/03/2025
       service: 'ocrService',
       metadata: {}
     });
-    }
     
     // CORRECTION BLOCKER 2: Calculer et inclure technicalScoring
     const technicalScoring = await this.computeTechnicalScoring(fields.specialCriteria, fields.reference);
@@ -1936,7 +1948,7 @@ Réponses publiées au plus tard le 22/03/2025
       if (rule.specialCriteria && rule.specialCriteria.length > 0) {
         const criteriaMatches = rule.specialCriteria.map(criterion => {
           // Mapping des noms de critères
-          const criteriaMap: Record<string, string> = ) {
+          const criteriaMap: Record<string, string> = {
             'batiment_passif': 'batimentPassif',
             'isolation_renforcee': 'isolationRenforcee',
             'precadres': 'precadres',
@@ -1979,16 +1991,13 @@ Réponses publiées au plus tard le 22/03/2025
       }
       
       return finalMatch;
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'evaluateAlertRule',
       service: 'ocrService',
       metadata: {}
-    } );
-      return false;
     }
+    );
   }
 
   // Méthode fallback pour règles par défaut en cas d'erreur storage
@@ -2127,7 +2136,8 @@ Réponses publiées au plus tard le 22/03/2025
             });
 
       // Calculer le scoring avec la configuration utilisateur (au lieu de la config par défaut)
-      const result = ScoringService.compute(criteriaForScoring, config);
+      const analyticsService = getBusinessAnalyticsService(storage, eventBus);
+      const result = analyticsService.computeTechnicalScore(criteriaForScoring, config);
       
       logger.info('Scoring technique calculé', { metadata: {
           service: 'OCRService',
@@ -2153,15 +2163,13 @@ Réponses publiées au plus tard le 22/03/2025
       }
 
       return result;
-    
     },
     {
-      operation: 'async',
+      operation: 'computeTechnicalScoring',
       service: 'ocrService',
       metadata: {}
-    } );
-      return undefined;
     }
+    );
   }
 
   // ========================================
@@ -2253,15 +2261,15 @@ Réponses publiées au plus tard le 22/03/2025
           finish: associatedFinish.standard || associatedFinish.wood || associatedFinish.special,
           evidences: [match[0]],
           confidence: isMenuiserieContext ? 0.9 : 0.7
-      as unknown);
-      as unknown);
-            service: 'OCRService',
-                    operation: 'extractMaterialsAndColors',
-            ralCode: ralCode,
-            colorName: this.getRalColorName(ralCode)
-              }
-
-            });
+        } as any);
+        
+        logger.debug('Couleur RAL extraite', { metadata: {
+          service: 'OCRService',
+          operation: 'extractMaterialsAndColors',
+          ralCode: ralCode,
+          colorName: this.getRalColorName(ralCode)
+        }
+      });
       }
       
       // Détecter couleurs par nom avec finitions spécialisées
@@ -2275,7 +2283,7 @@ Réponses publiées au plus tard le 22/03/2025
           finish: associatedFinishes.standard || associatedFinishes.wood || associatedFinishes.special,
           evidences: [match[0]],
           confidence: isMenuiserieContext ? 0.8 : 0.6
-  as unknown) as unknown);
+        } as any);
         
         logger.info('Couleur nommée détectée', { metadata: {
             service: 'OCRService',
@@ -2338,8 +2346,8 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Extrait toutes les finitions disponibles depuis le contexte - VERSION OPTIMISÉE
    */
-  private extractAllFinishesFromContext(context: string): { s: unknown;d?: unknown; woounknownnown;any; special?: unknown} {
-    const finis: unknown; s: unknunknown;d?: unknunknown; wood?: any; speci: unknown}y } = {};
+  private extractAllFinishesFromContext(context: string): { standard?: string; wood?: string; special?: string } {
+    const finishes: { standard?: string; wood?: string; special?: string } = {};
     
     // Finitions standards
     const standardFinishMatch = this.safeMatch(context, COLOR_PATTERNS.finishes);
@@ -2365,7 +2373,7 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Extrait une finition depuis le contexte - VERSION MAINTENUE POUR COMPATIBILITÉ
    */
-  private extractFinishFromContext(counknownxt: string): any {
+  private extractFinishFromContext(context: string): any {
     const allFinishes = this.extractAllFinishesFromContext(context);
     return allFinishes.standard || allFinishes.wood || allFinishes.special;
   }
@@ -2373,7 +2381,7 @@ Réponses publiées au plus tard le 22/03/2025
   /**
    * Mappe une finition standard vers l'enum approprié
    */
-  private mapFinishToEnunknownfinish: string): any {
+  private mapFinishToEnum(finish: string): any {
     const finishLower = finish.toLowerCase();
     // Mapper vers les enums valides
     const finishMapping: Record<string, string> = {
@@ -2453,7 +2461,7 @@ Réponses publiées au plus tard le 22/03/2025
   private deduplicateColors(colors: ColorSpec[]): ColorSpec[] {
     const seen = new Set<string>();
     return colors.filter(color => {
-      const key = `${color.ralCode || color.name}_$) {color.finish || 'no-finish'}`;
+      const key = `${color.ralCode || color.name}_${color.finish || 'no-finish'}`;
       if (seen.has(key)) {
         return false;
       }
@@ -2473,10 +2481,10 @@ Réponses publiées au plus tard le 22/03/2025
     async () => {
 
       logger.info('Évaluation règles matériaux-couleurs', { metadata: {
-          service: 'OCRService',
-          operation: 'evaluateMaterialColorRules'
-
-            });
+        service: 'OCRService',
+        operation: 'evaluateMaterialColorRules'
+      }
+    });
       
       const rules = await storage.getMaterialColorRules();
       logger.info('Règles matériaux-couleurs récupérées', { metadata: {
@@ -2504,14 +2512,13 @@ Réponses publiées au plus tard le 22/03/2025
           // Ne pas publier d'alerte individuelle ici pour éviter les doublons
         }
       }
-    
     },
     {
-      operation: 'async',
+      operation: 'evaluateMaterialColorRules',
       service: 'ocrService',
       metadata: {}
-    } );
     }
+    );
   }
 
   /**
@@ -2573,7 +2580,7 @@ Réponses publiées au plus tard le 22/03/2025
       if (rule.specialCriteria && rule.specialCriteria.length > 0) {
         const criteriaMatches = rule.specialCriteria.map(criterion => {
           // Mapping des noms de critères
-          const criteriaMap: Record<string, string> = ) {
+          const criteriaMap: Record<string, string> = {
             'batiment_passif': 'batimentPassif',
             'isolation_renforcee': 'isolationRenforcee',
             'precadres': 'precadres',
@@ -2622,16 +2629,13 @@ Réponses publiées au plus tard le 22/03/2025
 
             });
       return finalMatch;
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'evaluateRule',
       service: 'ocrService',
       metadata: {}
-    } );
-      return false;
     }
+    );
   }
 
   /**
@@ -2673,10 +2677,10 @@ Réponses publiées au plus tard le 22/03/2025
     async () => {
 
       logger.info('Initialisation Tesseract pour devis fournisseur', { metadata: {
-          service: 'OCRService',
-          operation: 'processSupplierQuoteWithOCR'
-
-            });
+        service: 'OCRService',
+        operation: 'processSupplierQuoteWithOCR'
+      }
+      });
       await this.initialize();
       
       if (!this.tesseractWorker) {
@@ -2685,27 +2689,23 @@ Réponses publiées au plus tard le 22/03/2025
       
       // Pour le POC, utiliser des données simulées de devis
       logger.info('Mode POC: simulation OCR pour devis fournisseur', { metadata: {
-          service: 'OCRService',
-          operation: 'processSupplierQuoteWithOCR'
-              }
-
-            });
+        service: 'OCRService',
+        operation: 'processSupplierQuoteWithOCR'
+      }
+    });
       const simulatedText = this.getSimulatedSupplierQuoteText();
       
       return {
         extractedText: simulatedText,
         confidence: 85
       };
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'processSupplierQuoteWithOCR',
       service: 'ocrService',
       metadata: {}
-    } );
-      throw new AppError(`Échec OCR devis fournisseur: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
+    );
   }
 
   /**
@@ -2888,19 +2888,17 @@ l.bernard@menuiseries-moderne.fr
               }
 
             });
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'parseSupplierQuoteFields',
       service: 'ocrService',
       metadata: {}
-    } );
+    }
+    ).catch((error: unknown) => {
       fields.processingErrors = fields.processingErrors || [];
       fields.processingErrors.push(`Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    return fields;
+      return fields;
+    });
   }
 
   /**
@@ -3092,11 +3090,11 @@ l.bernard@menuiseries-moderne.fr
     async () => {
 
       logger.info('Sauvegarde analyse devis', { metadata: {
-          service: 'OCRService',
-          operation: 'saveSupplierQuoteAnalysis',
-          documentId: data.documentId
-
-            });
+        service: 'OCRService',
+        operation: 'saveSupplierQuoteAnalysis',
+        documentId: data.documentId
+      }
+      });
       
       const analysisData = {
         documentId: data.documentId,
@@ -3153,22 +3151,20 @@ l.bernard@menuiseries-moderne.fr
       });
       
       logger.info('Analyse devis sauvegardée', { metadata: {
-          service: 'OCRService',
-          operation: 'saveSupplierQuoteAnalysis',
-          documentId: data.documentId
-              }
-
-            });
-      
-    
+        service: 'OCRService',
+        operation: 'saveSupplierQuoteAnalysis',
+        documentId: data.documentId
+      }
+    });
     },
     {
-      operation: 'async',
+      operation: 'saveSupplierQuoteAnalysis',
       service: 'ocrService',
       metadata: {}
-    } );
-      throw error;
     }
+    ).catch((error: unknown) => {
+      throw error;
+    });
   }
 
   /**
@@ -3211,15 +3207,13 @@ l.bernard@menuiseries-moderne.fr
               }
 
             });
-      
-    
     },
     {
-      operation: 'async',
+      operation: 'saveSupplierQuoteAnalysisError',
       service: 'ocrService',
       metadata: {}
-    } );
     }
+    );
   }
 }
 

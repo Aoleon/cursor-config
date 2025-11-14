@@ -3,7 +3,6 @@
  * Gère les tentatives automatiques pour services externes instables
  */
 import { logger } from './logger';
-import { withErrorHandling } from './utils/error-handler';
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -72,56 +71,55 @@ export async function withRetry<T>(
   let lastError: Error;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
-      await withErrorHandling(
-    async () => {
-
+    try {
       const result = await fn();
       
       if (attempt > 1) {
-        logger.info('Retry successful', { metadata: {
-                  module: 'RetryService',
-                  operation: 'withRetry',
+        logger.info('Retry successful', { 
+          metadata: {
+            module: 'RetryService',
+            operation: 'withRetry',
             attempt,
             totalAttempts: opts.maxAttempts
-
-              });
+          }
+        });
       }
       
       return result;
-    
-    },
-    {
-      operation: 'isRetryableError',
-      service: 'retry-service',
-      metadata: {}
-    });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Si c'est la dernière tentative, throw immédiatement
+      if (attempt === opts.maxAttempts) {
+        throw lastError;
+      }
       
       // Vérifier si l'erreur est retryable
       if (!isRetryableError(lastError, opts.retryableErrors)) {
-        logger.warn('Non-retryable error encountered', { metadata: {
-                  module: 'RetryService',
-                  operation: 'withRetry',
-                  error: lastError.message,
+        logger.warn('Non-retryable error encountered', { 
+          metadata: {
+            module: 'RetryService',
+            operation: 'withRetry',
+            error: lastError.message,
             attempt
-                }
-
-            });
+          }
+        });
         throw lastError;
       }
       
       // Calculer délai et attendre
       const delayMs = calculateDelay(attempt, opts);
       
-      logger.warn('Retrying after error', { metadata: {
+      logger.warn('Retrying after error', { 
+        metadata: {
           module: 'RetryService',
           operation: 'withRetry',
           attempt,
           maxAttempts: opts.maxAttempts,
           delayMs,
           error: lastError.message
-              }
-
-            });
+        }
+      });
       
       if (options.onRetry) {
         options.onRetry(attempt, lastError);
@@ -129,6 +127,7 @@ export async function withRetry<T>(
       
       await sleep(delayMs);
     }
+  }
   
   // TypeScript safety - ne devrait jamais arriver ici
   throw lastError!;
@@ -143,6 +142,7 @@ export class RetryService {
   async execute<T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T> {
     return withRetry(fn, { ...this.defaultOptions, ...options });
   }
+}
 
 // Export instance par défaut
 export const retryService = new RetryService();

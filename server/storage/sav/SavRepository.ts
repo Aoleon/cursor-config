@@ -15,11 +15,14 @@ import { AppError, NotFoundError, ValidationError, AuthorizationError } from './
 import { logger } from './utils/logger';
 import { 
   savInterventions,
+  savDemandes,
   type SavIntervention, 
-  type InsertSavIntervention
+  type InsertSavIntervention,
+  type SavDemande,
+  type InsertSavDemande
 } from '@shared/schema';
 import type { DrizzleTransaction, PaginationOptions, PaginatedResult, SearchFilters, SortOptions } from '../types';
-import { eq, desc, asc } from 'drizzle-orm';
+import { eq, desc, asc, and, gte, lte } from 'drizzle-orm';
 import { safeInsert, safeUpdate, safeDelete } from '../../utils/safe-query';
 
 /**
@@ -514,3 +517,88 @@ export class SavRepository extends BaseRepository<
       {}
     );
   }
+
+  // ========================================
+  // SAV DEMANDES OPERATIONS
+  // ========================================
+
+  async getSavDemandes(filters?: { projectId?: string; status?: string; demandeType?: string; dateFrom?: Date; dateTo?: Date }, tx?: DrizzleTransaction): Promise<SavDemande[]> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        let query = dbToUse.select().from(savDemandes);
+        
+        const conditions = [];
+        if (filters?.projectId) {
+          conditions.push(eq(savDemandes.projectId, filters.projectId));
+        }
+        if (filters?.status) {
+          conditions.push(eq(savDemandes.status, filters.status as unknown));
+        }
+        if (filters?.demandeType) {
+          conditions.push(eq(savDemandes.demandeType, filters.demandeType as unknown));
+        }
+        if (filters?.dateFrom) {
+          conditions.push(gte(savDemandes.createdAt, filters.dateFrom));
+        }
+        if (filters?.dateTo) {
+          conditions.push(lte(savDemandes.createdAt, filters.dateTo));
+        }
+        
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
+        
+        return await query.orderBy(desc(savDemandes.createdAt));
+      },
+      'getSavDemandes',
+      { filters }
+    );
+  }
+
+  async getSavDemande(id: string, tx?: DrizzleTransaction): Promise<SavDemande | undefined> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [demande] = await dbToUse.select().from(savDemandes).where(eq(savDemandes.id, id));
+        return demande;
+      },
+      'getSavDemande',
+      { id }
+    );
+  }
+
+  async createSavDemande(data: InsertSavDemande, tx?: DrizzleTransaction): Promise<SavDemande> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [newDemande] = await dbToUse.insert(savDemandes)
+          .values(data)
+          .returning();
+        this.emitEvent('sav_demande:created', { id: newDemande.id });
+        return newDemande;
+      },
+      'createSavDemande',
+      { projectId: data.projectId }
+    );
+  }
+
+  async updateSavDemande(id: string, data: Partial<InsertSavDemande>, tx?: DrizzleTransaction): Promise<SavDemande> {
+    const dbToUse = this.getDb(tx);
+    return this.executeQuery(
+      async () => {
+        const [updatedDemande] = await dbToUse.update(savDemandes)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(savDemandes.id, id))
+          .returning();
+        if (!updatedDemande) {
+          throw new NotFoundError(`SAV demande with id ${id} not found`);
+        }
+        this.emitEvent('sav_demande:updated', { id });
+        return updatedDemande;
+      },
+      'updateSavDemande',
+      { id }
+    );
+  }
+}

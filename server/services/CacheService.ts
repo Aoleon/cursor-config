@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { withErrorHandling } from '../utils/error-handler';
 import type { EventBus } from '../eventBus';
 import { RedisCacheAdapter } from './RedisCacheAdapter';
 
@@ -239,109 +240,108 @@ export class CacheService {
    * Set value in cache with TTL
    */
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-    try {
-      await this.adapter.set(key, value, ttlSeconds);
-      
-      logger.debug('[CacheService] Valeur mise en cache', { metadata: {
-          service: 'CacheService',
-          operation: 'set',
+    return withErrorHandling(
+      async () => {
+        await this.adapter.set(key, value, ttlSeconds);
+        
+        logger.debug('[CacheService] Valeur mise en cache', { metadata: {
+            service: 'CacheService',
+            operation: 'set',
+            key,
+            ttlSeconds 
+          }
+        });
+      },
+      {
+        operation: 'set',
+        service: 'CacheService',
+        metadata: {
           key,
-          ttlSeconds 
+          ttlSeconds
         }
-      });
-    } catch (error) {
-      logger.error('[CacheService] Erreur lors de la mise en cache', { metadata: {
-          service: 'CacheService',
-          operation: 'set',
-          key,
-          error: error instanceof Error ? error.message : String(error) 
-        }
-      });
-      throw error;
-    }
+      }
+    );
   }
 
   /**
    * Invalidate specific cache key
    */
   async invalidate(key: string): Promise<void> {
-    try {
-      await this.adapter.del(key);
-      
-      logger.info('[CacheService] Clé invalidée', { metadata: {
-          service: 'CacheService',
-          operation: 'invalidate',
-          key 
+    return withErrorHandling(
+      async () => {
+        await this.adapter.del(key);
+        
+        logger.info('[CacheService] Clé invalidée', { metadata: {
+            service: 'CacheService',
+            operation: 'invalidate',
+            key 
+          }
+        });
+      },
+      {
+        operation: 'invalidate',
+        service: 'CacheService',
+        metadata: {
+          key
         }
-      });
-    } catch (error) {
-      logger.error('[CacheService] Erreur lors de l\'invalidation', { metadata: {
-          service: 'CacheService',
-          operation: 'invalidate',
-          key,
-          error: error instanceof Error ? error.message : String(error) 
-        }
-      });
-      throw error;
-    }
+      }
+    );
   }
 
   /**
    * Invalidate all keys matching pattern
    */
   async invalidatePattern(pattern: string): Promise<void> {
-    try {
-      const keys = await this.adapter.keys();
-      const regex = new RegExp(pattern.replace(/\*/g, '.*'));
-      
-      const matchingKeys = keys.filter(key => regex.test(key));
-      
-      for (const key of matchingKeys) {
-        await this.adapter.del(key);
-      }
+    return withErrorHandling(
+      async () => {
+        const keys = await this.adapter.keys();
+        const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+        
+        const matchingKeys = keys.filter(key => regex.test(key));
+        
+        for (const key of matchingKeys) {
+          await this.adapter.del(key);
+        }
 
-      logger.info('[CacheService] Pattern invalidé', { metadata: {
-          service: 'CacheService',
-          operation: 'invalidatePattern',
-          pattern,
-          invalidatedCount: matchingKeys.length 
+        logger.info('[CacheService] Pattern invalidé', { metadata: {
+            service: 'CacheService',
+            operation: 'invalidatePattern',
+            pattern,
+            invalidatedCount: matchingKeys.length 
+          }
+        });
+      },
+      {
+        operation: 'invalidatePattern',
+        service: 'CacheService',
+        metadata: {
+          pattern
         }
-      });
-    } catch (error) {
-      logger.error('[CacheService] Erreur lors de l\'invalidation du pattern', { metadata: {
-          service: 'CacheService',
-          operation: 'invalidatePattern',
-          pattern,
-          error: error instanceof Error ? error.message : String(error) 
-        }
-      });
-      throw error;
-    }
+      }
+    );
   }
 
   /**
    * Flush all cache
    */
   async flush(): Promise<void> {
-    try {
-      await this.adapter.flush();
-      this.hits = 0;
-      this.misses = 0;
-      
-      logger.info('[CacheService] Cache complètement vidé', { metadata: {
-          service: 'CacheService',
-          operation: 'flush' 
-        }
-      });
-    } catch (error) {
-      logger.error('[CacheService] Erreur lors du vidage du cache', { metadata: {
-          service: 'CacheService',
-          operation: 'flush',
-          error: error instanceof Error ? error.message : String(error) 
-        }
-      });
-      throw error;
-    }
+    return withErrorHandling(
+      async () => {
+        await this.adapter.flush();
+        this.hits = 0;
+        this.misses = 0;
+        
+        logger.info('[CacheService] Cache complètement vidé', { metadata: {
+            service: 'CacheService',
+            operation: 'flush' 
+          }
+        });
+      },
+      {
+        operation: 'flush',
+        service: 'CacheService'
+      }
+    );
   }
 
   /**

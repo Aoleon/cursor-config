@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-29T00:00:00Z",
+  "state": {
+    "currentTask": null,
+    "activeRoles": [],
+    "queues": {
+      "architect": [],
+      "developer": [],
+      "tester": [],
+      "analyst": [],
+      "coordinator": []
+    },
+    "results": {},
+    "dependencies": {},
+    "conflicts": [],
+    "status": "idle"
+  },
+  "metadata": {
+    "sessionId": null,
+    "startTime": null,
+    "lastActivity": null,
+    "totalTasks": 0,
+    "completedTasks": 0,
+    "failedTasks": 0
+  }
+}
+

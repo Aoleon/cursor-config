@@ -411,15 +411,21 @@ export class KpiRepository {
       `));
 
       // Parse JSON result
-      const row = result.rows[0] as unknown;
+      const row = result.rows[0] as {
+        period_summary?: unknown;
+        conversion_by_user?: Record<string, unknown>;
+        load_by_user?: Record<string, unknown>;
+        margin_by_category?: Record<string, unknown>;
+        time_series?: unknown[];
+      };
       const kpiResult: ConsolidatedKpis = {
-        periodSummary: row.period_summary,
+        periodSummary: row.period_summary as ConsolidatedKpis['periodSummary'],
         breakdowns: {
-          conversionByUser: row.conversion_by_user || {},
-          loadByUser: row.load_by_user || {},
-          marginByCategory: row.margin_by_category || {}
+          conversionByUser: (row.conversion_by_user || {}) as ConsolidatedKpis['breakdowns']['conversionByUser'],
+          loadByUser: (row.load_by_user || {}) as ConsolidatedKpis['breakdowns']['loadByUser'],
+          marginByCategory: (row.margin_by_category || {}) as ConsolidatedKpis['breakdowns']['marginByCategory']
         },
-        timeSeries: row.time_series || []
+        timeSeries: (row.time_series || []) as ConsolidatedKpis['timeSeries']
       };
 
       // Calculate performance metrics
@@ -456,9 +462,11 @@ export class KpiRepository {
           baseline: {
             legacyMs: PERFORMANCE_BASELINE.LEGACY_AVG_MS,
             targetMs: PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS,
-                  status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' :
-                    executionTimeMs <= PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'acceptable' : 'degraded'
-          });
+            status: executionTimeMs <= PERFORMANCE_BASELINE.OPTIMIZED_TARGET_MS ? 'on_target' :
+              executionTimeMs <= PERFORMANCE_BASELINE.WARNING_THRESHOLD_MS ? 'acceptable' : 'degraded'
+          }
+        }
+      });
 
       return kpiResult;
     } catch (error) {
@@ -466,8 +474,9 @@ export class KpiRepository {
           operation: 'getConsolidatedKpis',
           service: 'KpiRepository',
           error: error instanceof Error ? error.message : String(error)
-              }
-
-            });
+        }
+      });
       throw error;
     }
+  }
+}

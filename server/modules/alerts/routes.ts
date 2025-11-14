@@ -7,8 +7,8 @@
  */
 
 import { Router } from 'express';
-import { withErrorHandling } from './utils/error-handler';
-import type { Request, Response } from 'express';
+import { withErrorHandling } from '../../utils/error-handler';
+import type { Request, Response, NextFunction } from 'express';
 import { isAuthenticated } from '../../replitAuth';
 import { asyncHandler, sendSuccess, sendPaginatedSuccess, createError } from '../../middleware/errorHandler';
 import { validateBody, validateParams, validateQuery, commonParamSchemas } from '../../middleware/validation';
@@ -86,13 +86,7 @@ const getTopTriggeredThresholds = (alerts: BusinessAlert[]) => {
   return Object.entries(thresholdCounts)
     .sort(([,a], [,b]) => b - a)
     .slice(0, 5)
-    .map(([thresholdId, count]) => ({ thresholdId, count       }
-                 }
-
-                           }
-
-
-                         }));
+    .map(([thresholdId, count]) => ({ thresholdId, count }));
 };
 
 const calculateTeamPerformance = (alerts: BusinessAlert[]) => {
@@ -138,8 +132,8 @@ const calculateAlertsTrends = (alerts: BusinessAlert[]) => {
 };
 
 // Middleware pour vérifier les rôles autorisés pour validation technique
-const requireTechnicalValidationRole = (req: unknown,: unknown, unknown, next: unknown) => {
-  const userRole = req.session?.user?.role;
+const requireTechnicalValidationRole = (req: Request, res: Response, next: NextFunction) => {
+  const userRole = (req as any).session?.user?.role;
   if (!userRole || !['responsable_be', 'admin'].includes(userRole)) {
     return res.status(403).json({
       success: false,
@@ -153,8 +147,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
   const router = Router();
   
   // Import services dynamically to avoid circular dependencies
-  let dateAlertDetectionService: unknown;
-  let periodicDetectionSched: unknown;unknown;
+  let dateAlertDetectionService: any;
+  let periodicDetectionScheduler: any;
   
   // Lazy initialization of services
   const getServices = async () => {
@@ -164,12 +158,12 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       const { DateIntelligenceService } = await import('../../services/DateIntelligenceService');
       const { MenuiserieDetectionRules } = await import('../../services/DateAlertDetectionService');
       const { getBusinessAnalyticsService } = await import('../../services/consolidated/BusinessAnalyticsService');
-      const { PredictiveEngineService } = await import('../../services/PredictiveEngineService');
+        const { PredictiveService } = await import('../../services/PredictiveEngineService');
       
       const dateIntelligenceService = new DateIntelligenceService(storage);
       const menuiserieRules = new MenuiserieDetectionRules(storage);
       const analyticsService = getBusinessAnalyticsService(storage, eventBus);
-      const predictiveEngineService = new PredictiveEngineService(storage);
+        const predictiveEngineService = new PredictiveService(storage);
       
       dateAlertDetectionService = new DateAlertDetectionService(
         storage,
@@ -202,29 +196,23 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateQuery(technicalAlertsFilterSchema),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const filter = req.query as unknown;
-        const alerts = await storage.listTechnicalAlerts(filter);
-        
-        sendSuccess(res, alerts);
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database("Erreur lors de la récupération des alertes techniques");
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        async () => {
+          const filter = req.query as {
+            status?: "pending" | "acknowledged" | "validated" | "bypassed";
+            userId?: string;
+            aoId?: string;
+          };
+          const alerts = await storage.listTechnicalAlerts(filter);
+          sendSuccess(res, alerts);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
   // GET /api/technical-alerts/:id - Détail d'une alerte technique
   router.get("/api/technical-alerts/:id",
@@ -233,33 +221,24 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const alert = await storage.getTechnicalAlert(id);
-        
-        if (!alert) {
-          throw createError.notFound("Alerte technique non trouvée");
+        async () => {
+          const { id } = req.params;
+          const alert = await storage.getTechnicalAlert(id);
+          
+          if (!alert) {
+            throw createError.notFound("Alerte technique non trouvée");
+    }
+          
+          sendSuccess(res, alert);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        sendSuccess(res, alert);
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw error;
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // PATCH /api/technical-alerts/:id/ack - Acknowledgment d'une alerte
   router.patch("/api/technical-alerts/:id/ack",
@@ -269,45 +248,34 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       return withErrorHandling(
-    async () => {
-
-        const userId = req.session?.user?.id;
-        
-        if (!userId) {
-          throw createError.unauthorized("Utilisateur non authentifié");
+        async () => {
+          const userId = (req as any).session?.user?.id;
+          
+          if (!userId) {
+            throw createError.unauthorized("Utilisateur non authentifié");
+    }
+          
+          await storage.acknowledgeTechnicalAlert(id, userId);
+          
+          // Publier événement EventBus
+          if (eventBus) {
+            eventBus.publishTechnicalAlertActionPerformed({
+              alertId: id,
+              action: 'acknowledged',
+              userId: userId,
+            });
+    }
+          
+          sendSuccess(res, { alertId: id });
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        await storage.acknowledgeTechnicalAlert(id, userId);
-        
-        // Publier événement EventBus
-        if (eventBus) {
-          eventBus.publishTechnicalAlertActionPerformed({
-            alertId: id,
-            action: 'acknowledged',
-                userId: userId,
-          });
-        }
-        
-        sendSuccess(res, { alertId: id 
-
-              });
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw error;
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // PATCH /api/technical-alerts/:id/validate - Validation d'une alerte
   router.patch("/api/technical-alerts/:id/validate",
@@ -317,45 +285,34 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       return withErrorHandling(
-    async () => {
-
-        const userId = req.session?.user?.id;
-        
-        if (!userId) {
-          throw createError.unauthorized("Utilisateur non authentifié");
+        async () => {
+          const userId = (req as any).session?.user?.id;
+          
+          if (!userId) {
+            throw createError.unauthorized("Utilisateur non authentifié");
+    }
+          
+          await storage.validateTechnicalAlert(id, userId);
+          
+          // Publier événement EventBus
+          if (eventBus) {
+            eventBus.publishTechnicalAlertActionPerformed({
+              alertId: id,
+              action: 'validated',
+              userId: userId,
+            });
+    }
+          
+          sendSuccess(res, { alertId: id });
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        await storage.validateTechnicalAlert(id, userId);
-        
-        // Publier événement EventBus
-        if (eventBus) {
-          eventBus.publishTechnicalAlertActionPerformed({
-            alertId: id,
-            action: 'validated',
-                userId: userId,
-          });
-        }
-        
-        sendSuccess(res, { alertId: id 
-
-              });
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw error;
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // PATCH /api/technical-alerts/:id/bypass - Bypass temporaire d'une alerte
   router.patch("/api/technical-alerts/:id/bypass",
@@ -366,48 +323,36 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     asyncHandler(async (req, res) => {
       const { id } = req.params;
       return withErrorHandling(
-    async () => {
-
-        const { until, reason } = req.body;
-        const userId = req.session?.user?.id;
-        
-        if (!userId) {
-          throw createError.unauthorized("Utilisateur non authentifié");
+        async () => {
+          const { until, reason } = req.body;
+          const userId = (req as any).session?.user?.id;
+          
+          if (!userId) {
+            throw createError.unauthorized("Utilisateur non authentifié");
+    }
+          
+          await storage.bypassTechnicalAlert(id, userId, new Date(until), reason);
+          
+          // Publier événement EventBus
+          if (eventBus) {
+            eventBus.publishTechnicalAlertActionPerformed({
+              alertId: id,
+              action: 'bypassed',
+              userId: userId,
+              metadata: { until, reason }
+            });
+    }
+          
+          sendSuccess(res, { alertId: id, until, reason });
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        await storage.bypassTechnicalAlert(id, userId, new Date(until), reason);
-        
-        // Publier événement EventBus
-        if (eventBus) {
-          eventBus.publishTechnicalAlertActionPerformed({
-            alertId: id,
-            action: 'bypassed',
-                userId: userId,
-            metadata: { until, reason 
-                    }
-                  );
-        }
-        
-        sendSuccess(res, { alertId: id, until, reason 
-
-              });
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw error;
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // GET /api/technical-alerts/:id/history - Historique des actions sur une alerte
   router.get("/api/technical-alerts/:id/history",
@@ -416,29 +361,19 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const history = await storage.listTechnicalAlertHistory(id);
-        
-        sendSuccess(res, history);
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw createError.database("Erreur lors de la récupération de l'historique");
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        async () => {
+          const { id } = req.params;
+          const history = await storage.listTechnicalAlertHistory(id);
+          sendSuccess(res, history);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
   // POST /api/technical-alerts/seed - Seeder pour tests E2E (NODE_ENV=test uniquement)
   router.post("/api/technical-alerts/seed",
@@ -449,9 +384,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       }
       
       return withErrorHandling(
-    async () => {
-
-        const alertData = req.body;
+        async () => {
+          const alertData = req.body;
         
         // Valider les données d'entrée basiques
         if (!alertData.id || !alertData.aoId || !alertData.aoReference) {
@@ -469,35 +403,27 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           rawEventData: {
             source: 'test-seed',
             ...alertData.metadata
-          });
+    }
+        });
         
         logger.info('Test seed alerte créée', { metadata: {
- alertId: alert.id
-      }
-    });
+          alertId: alert.id
+        }});
         
         res.status(201).json({ 
           success: true, 
           message: 'Alerte test créée',
           alert 
         });
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {}
-    } );
-        throw error;
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      },
+      {
+        operation: 'Alerts',
+        service: 'routes',
+        metadata: {}
+      }
+    );
+  })
+  );
 
   // ========================================
   // DATE INTELLIGENCE ALERTS ROUTES
@@ -509,65 +435,58 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateQuery(alertsFilterSchema),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { entityType, entityId, status, severity, limit, offset } = req.query;
-        
-        logger.info('Récupération alertes avec filtres', { metadata: {
- filters: req.query
-      }
-    });
-        
-        // Construire les filtres pour le storage
-        const filters: unknown = {};
-        if (entityType) filters.entityType = entityType;
-        if (entityId) filters.entityId = entityId;
-        if (status) filters.status = status;
-        
-        // Récupérer les alertes depuis le storage
-        let alerts = await storage.getDateAlerts(filters);
-        
-        // Appliquer le filtre de sévérité
-        if (severity) {
-          alerts = alerts.filter(alert => alert.severity === severity);
+        async () => {
+          const { entityType, entityId, status, severity, limit, offset } = req.query;
+          
+          logger.info('Récupération alertes avec filtres', { metadata: {
+            filters: req.query
+          }});
+          
+          // Construire les filtres pour le storage
+          const filters: any = {};
+          if (entityType) filters.entityType = entityType;
+          if (entityId) filters.entityId = entityId;
+          if (status) filters.status = status;
+          
+          // Récupérer les alertes depuis le storage
+          let alerts = await storage.getDateAlerts(filters);
+          
+          // Appliquer le filtre de sévérité
+          if (severity) {
+            alerts = alerts.filter((alert: any) => alert.severity === severity);
+    }
+          
+          // Pagination
+          const numLimit = Number(limit) || 50;
+          const numOffset = Number(offset) || 0;
+          const total = alerts.length;
+          alerts = alerts.slice(numOffset, numOffset + numLimit);
+          
+          const result = {
+            alerts,
+            pagination: {
+              total,
+              limit: numLimit,
+              offset: numOffset,
+              hasMore: numOffset + numLimit < total
+            },
+            metadata: {
+              pendingCount: alerts.filter((a: any) => a.status === 'pending').length,
+              criticalCount: alerts.filter((a: any) => a.severity === 'critical').length,
+              retrievedAt: new Date()
+            }
+          };
+          
+          sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        // Pagination
-        const numLimit = Number(limit) || 50;
-        const numOffset = Number(offset) || 0;
-        const total = alerts.length;
-        alerts = alerts.slice(numOffset, numOffset + numLimit);
-        
-        const result = {
-          alerts,
-          pagination: {
-            total,
-                  limit: numLimit,
-                  offset: numOffset,
-            hasMore: numOffset + numLimit < total
-          },
-          metadata: {
-
-            pendingCount: alerts.filter(a => a.status === 'pending').length,
-            criticalCount: alerts.filter(a => a.severity === 'critical').length,
-            retrievedAt: new Date()
-      }
-    });
-        
-        sendPaginatedSuccess(res, result.alerts, { page: Math.floor(numOffset / numLimit) + 1, limit: numLimit, total });
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    });
-          }
-                                            }
-
-                                          });
+      );
+    })
+  );
 
   // PUT /api/date-alerts/:id/acknowledge - Accusé de réception alerte
   router.put("/api/date-alerts/:id/acknowledge",
@@ -577,69 +496,51 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateBody(acknowledgeAlertSchema),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const { note } = req.body;
-        const userId = (req as unknown).user?.id || 'unknown';
-        
-        logger.info('Acquittement alerte', { metadata: { alertId: id, userId 
-
-              });
-        
-        // Vérifier que l'alerte existe
-        const existingAlert = await storage.getDateAlert(id);
-        if (!existingAlert) {
-          throw createError.notFound("Alerte", id);
-                }
-        
-        // Vérifier le statut actuel
-        if (existingAlert.status === 'resolved') {
-          throw createError.validation("Impossible d'acquitter une alerte déjà résolue", {
-            currentStatus: existingAlert.status,
+        async () => {
+          const { id } = req.params;
+          const { note } = req.body;
+          const userId = (req as any).user?.id || 'unknown';
+          
+          logger.info('Acquittement alerte', { metadata: { alertId: id, userId } });
+          
+          // Vérifier que l'alerte existe
+          const existingAlert = await storage.getDateAlert(id);
+          if (!existingAlert) {
+            throw createError.notFound("Alerte", id);
+    }
+          
+          // Vérifier le statut actuel
+          if (existingAlert.status === 'resolved') {
+            throw createError.validation("Impossible d'acquitter une alerte déjà résolue", {
+              currentStatus: existingAlert.status,
+              alertId: id
+            });
+    }
+          
+          // Acquitter l'alerte
+          const acknowledgedAlert = await storage.acknowledgeAlert(id, userId);
+          
+          // Ajouter une note si fournie
+          if (note) {
+            await storage.updateDateAlert(id, {
+              actionTaken: note
+            });
+    }
+          
+          logger.info('Alerte acquittée avec succès', { metadata: {
             alertId: id
-          });
+          }});
+          
+          sendSuccess(res, acknowledgedAlert);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        // Acquitter l'alerte
-        const acknowledgedAlert = await storage.acknowledgeAlert(id, userId);
-        
-        // Ajouter une note si fournie
-        if (note) {
-          await storage.updateDateAlert(id, {
-                  actionTaken: note
-          });
-        }
-        
-        logger.info('Alerte acquittée avec succès', { metadata: {
- alertId: id
-      }
-    });
-        
-        sendSuccess(res, acknowledgedAlert);
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    });
-        
-        throw createError.database("Erreur lors de l'acquittement de l'alerte", {
-          alertId: req.params.id,
-          errorType: 'ALERT_ACKNOWLEDGMENT_FAILED'
-        });
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // PUT /api/date-alerts/:id/resolve - Résolution d'alerte
   router.put("/api/date-alerts/:id/resolve",
@@ -652,55 +553,38 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     })),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const { actionTaken, resolution } = req.body;
-        const userId = (as unknown.user?.id || 'unknown';
+        async () => {
+          const { id } = req.params;
+          const { actionTaken, resolution } = req.body;
+          const userId = (req as any).user?.id || 'unknown';
         
-        logger.info('Résolution alerte', { metadata: {
- alertId: id, userId
-      }
-    });
-        
-        // Vérifier que l'alerte existe
-        const existingAlert = await storage.getDateAlert(id);
-        if (!existingAlert) {
-          throw createError.notFound("Alerte", id);
+          logger.info('Résolution alerte', { metadata: {
+            alertId: id, userId
+          }});
+          
+          // Vérifier que l'alerte existe
+          const existingAlert = await storage.getDateAlert(id);
+          if (!existingAlert) {
+            throw createError.notFound("Alerte", id);
+    }
+          
+          // Résoudre l'alerte
+          const resolvedAlert = await storage.resolveAlert(id, userId, actionTaken);
+          
+          logger.info('Alerte résolue avec succès', { metadata: {
+            alertId: id
+          }});
+          
+          sendSuccess(res, resolvedAlert);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
         }
-        
-        // Résoudre l'alerte
-        const resolvedAlert = await storage.resolveAlert(id, userId, actionTaken);
-        
-        logger.info('Alerte résolue avec succès', { metadata: {
- alertId: id
-      }
-    });
-        
-        sendSuccess(res, resolvedAlert);
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    });
-        
-        throw createError.database("Erreur lors de la résolution de l'alerte", {
-          alertId: req.params.id,
-          errorType: 'ALERT_RESOLUTION_FAILED'
-        });
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+      );
+    })
+  );
 
   // GET /api/date-alerts/dashboard - Dashboard alertes utilisateur
   router.get("/api/date-alerts/dashboard",
@@ -709,10 +593,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       return withErrorHandling(
     async () => {
 
-        const userIdas unknown) as unknown).user?.id;
-        logger.info('Récupération dashboard pour utilisateur', { metadata: { userId 
-
-              });
+        const userId = (req as any).user?.id || 'unknown';
+        logger.info('Récupération dashboard pour utilisateur', { metadata: { userId } });
         
         const services = await getServices();
         
@@ -737,8 +619,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }, {} as Record<string, number>);
         
         // Projets à risque élevé
-        const highRiskProjects = projectRiskProfiles.filte: unknunknown)unknown) => p.riskScore >= 70);
-        const deterioratingProjects = projectRiskProfiles.f: unknunknown)unknown any) => p.trendDirection === 'deteriorating');
+        const highRiskProjects = projectRiskProfiles.filter((p: any) => p.riskScore >= 70);
+        const deterioratingProjects = projectRiskProfiles.filter((p: any) => p.trendDirection === 'deteriorating');
         
         // Alertes récentes (24h)
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -763,7 +645,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             totalProjects: projectRiskProfiles.length,
             highRiskProjects: highRiskProjects.length,
             deterioratingProjects: deterioratingProjects.length,
-            averageRiskScore: projectRiskProfiles.reduce((su: unknunknown)unknown, p: any) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
+            averageRiskScore: projectRiskProfiles.reduce((sum: number, p: any) => sum + p.riskScore, 0) / (projectRiskProfiles.length || 1)
           },
           recentAlerts: recentAlerts.slice(0, 10),
           criticalAlerts: criticalAlerts.slice(0, 5),
@@ -797,25 +679,15 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         sendSuccess(res, dashboard);
-        
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    }););
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
   // POST /api/date-alerts/run-detection - Déclencher détection manuelle
   router.post("/api/date-alerts/run-detection",
@@ -828,19 +700,17 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     })),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { detectionType, projectId, daysAhead } = req.body;
-        const usas unknunknown)unknown unknown any).user?.id;
-        
-        logger.info('Détection manuelle déclenchée', { metadata: {
- detectionType, userId, projectId
-      }
-    });
+        async () => {
+          const { detectionType, projectId, daysAhead } = req.body;
+          const userId = (req as any).user?.id || 'unknown';
+          
+          logger.info('Détection manuelle déclenchée', { metadata: {
+            detectionType, userId, projectId
+          }});
         
         const services = await getServices();
         
-        let res: unknown =ny = {};
+        let results: any = {};
         const startTime = Date.now();
         
         switch (detectionType) {
@@ -906,33 +776,21 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         };
         
         logger.info('Détection terminée', { metadata: {
- 
-            detectionType, 
-            totalAlerts: results.totalAlertsGenerated, 
-            executionTime
-      }
-    });
+          detectionType, 
+          totalAlerts: results.totalAlertsGenerated, 
+          executionTime
+        }});
         
         sendSuccess(res, response, 201);
-        
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    }););
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
   // POST /api/date-alerts/:id/escalate - Escalade manuelle d'alerte
   router.post("/api/date-alerts/:id/escalate",
@@ -946,16 +804,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     })),
     asyncHandler(async (req, res) => {
       return withErrorHandling(
-    async () => {
-
-        const { id } = req.params;
-        const { escalationLevel, reason, urgency } = req.body;
-        consas unknunknown)unknown unknownq as any).user?.id;
-        
-        logger.info('Escalade alerte', { metadata: {
- alertId: id, escalationLevel, userId
-      }
-    });
+        async () => {
+          const { id } = req.params;
+          const { escalationLevel, reason, urgency } = req.body;
+          const userId = (req as any).user?.id || 'unknown';
+          
+          logger.info('Escalade alerte', { metadata: {
+            alertId: id, escalationLevel, userId
+          }});
         
         // Vérifier que l'alerte existe
         const existingAlert = await storage.getDateAlert(id);
@@ -996,8 +852,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             reason,
             urgency,
             immediateAction: urgency === 'immediate'
-                  }
-                );
+    }
+        });
         
         // Notifier selon le niveau d'escalade
         const escalationTargets: Record<string, string[]> = {
@@ -1028,8 +884,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             targets,
             escalatedAt: new Date().toISOString(),
             action: 'alert_escalated'
-                  }
-                );
+    }
+        });
         
         const response = {
           escalatedAlert,
@@ -1040,39 +896,23 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
             escalatedBy: userId,
             escalatedAt: new Date(),
             targets
-          }
+    }
         };
         
         logger.info('Alerte escaladée avec succès', { metadata: {
- alertId: id, escalationLevel
-      }
-    });
+          alertId: id, escalationLevel
+        }});
         
-        sendSuccess(res, response, `Alerte escaladée au niveau ${escalationLevel}`);
-        
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
-      }
-    });
-        
-        throw createError.database("Erreur lors de l'escalade de l'alerte", {
-          alertId: req.params.id,
-          errorType: 'ALERT_ESCALATION_FAILED'
-        });
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+        sendSuccess(res, response);
+        },
+        {
+          operation: 'Alerts',
+          service: 'routes',
+          metadata: {}
+        }
+      );
+    })
+  );
 
   // GET /api/date-alerts/summary - Résumé alertes par type/criticité
   router.get("/api/date-alerts/summary",
@@ -1083,18 +923,17 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       includeResolved: z.boolean().default(false)
     })),
     asyncHandler(async (req, res) => {
+      const { period, groupBy, includeResolved } = req.query as { period?: string; groupBy?: string; includeResolved?: boolean };
+      
       return withErrorHandling(
-    async () => {
-
-        const { period, groupBy, includeResolved } = req.query;
-        
-        logger.info('Récupération résumé alertes', { metadata: {
- period, groupBy
-      }
-    });
-        
-        // Calculer la période
-        let startDate: Date = new Date();
+        async () => {
+          
+          logger.info('Récupération résumé alertes', { metadata: {
+            period, groupBy
+          }});
+          
+          // Calculer la période
+          let startDate: Date = new Date();
         switch (period) {
           case 'today':
             startDate = new Date();
@@ -1143,7 +982,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
               break;
             default:
               key = 'unknown';
-          }
+    }
           
           if (!acc[key]) {
             acc[key] = {
@@ -1156,7 +995,7 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
               acknowledgedCount: 0,
               resolvedCount: 0
             };
-          }
+    }
           
           acc[key].count++;
           acc[key].alerts.push(alert);
@@ -1172,7 +1011,16 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           else if (alert.status === 'resolved') acc[key].resolvedCount++;
           
           return acc;
-        }, {} as Record<string, unknown>);
+        }, {} as Record<string, {
+          count: number;
+          alerts: any[];
+          criticalCount: number;
+          warningCount: number;
+          infoCount: number;
+          pendingCount: number;
+          acknowledgedCount: number;
+          resolvedCount: number;
+        }>);
         
         // Calculer les statistiques globales
         const totalAlerts = periodAlerts.length;
@@ -1192,15 +1040,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }, {} as Record<string, number>);
         
         const topEntities = Object.entries(entitiesSummary)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([,a], [,b]) => (b as number) - (a as number))
           .slice(0, 5)
-          .map(([entity, count]) => ({ entity, count       }
-                 }
-
-                           }
-
-
-                         }));
+          .map(([entity, count]) => ({ entity, count }));
         
         // Tendances (comparaison avec période précédente)
         const previousPeriodStart = new Date(startDate.getTime() - (Date.now() - startDate.getTime()));
@@ -1262,30 +1104,22 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         }
         
         logger.info('Résumé généré', { metadata: {
- totalAlerts, groupCount: Object.keys(grouped).length
-      }
-    });
+          totalAlerts, groupCount: Object.keys(grouped).length
+        }});
         
         sendSuccess(res, summary);
-        
-      
-    },
-    {
-      operation: 'Alerts',
-      service: 'routes',
-      metadata: {
-
+      },
+      {
+        operation: 'Alerts',
+        service: 'routes',
+        metadata: {
+          period: String(period || 'unknown'),
+          groupBy: String(groupBy || 'unknown')
+        }
       }
-    }););
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
+    );
+    })
+  );
 
   // ========================================
   // GENERIC BUSINESS ALERTS ROUTES
@@ -1319,13 +1153,13 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           total: result.total,
           limit: params.limit,
           offset: params.offset,
-          has_more: (params.offset + params.limit) < result.total
+          has_more: ((Number(params.offset) || 0) + (Number(params.limit) || 50)) < result.total
         },
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 2. POST /api/alerts/thresholds - Create threshold
   router.post('/api/alerts/thresholds', 
@@ -1333,13 +1167,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateBody(insertAlertThresholdSchema),
     asyncHandler(async (req: Request, res: Response) => {
       // RBAC - Vérification rôle
-      if (!['admin', 'executive'].includes(req.user?.role)) {
+      const user = (req as any).user;
+      if (!user || !['admin', 'executive'].includes(user.role)) {
         throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
       }
       
       const thresholdData = {
         ...req.body,
-        createdBy: req.user.id
+        createdBy: user.id as string
       };
       
       // CRÉATION SEUIL
@@ -1347,9 +1182,8 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       const thresholdId = await storage.createThreshold(thresholdData);
       
       logger.info('[Alerts] Seuil créé', { metadata: {
- thresholdId, createdBy: req.user.id
-      }
-    });
+        thresholdId, createdBy: user.id
+      }});
       
       // RESPONSE SUCCESS
       res.status(201).json({
@@ -1361,9 +1195,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Seuil créé avec succès',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 3. PATCH /api/alerts/thresholds/:id - Update threshold
   router.patch('/api/alerts/thresholds/:id', 
@@ -1372,11 +1206,15 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateBody(updateAlertThresholdSchema),
     asyncHandler(async (req: Request, res: Response) => {
       // RBAC
-      if (!['admin', 'executive'].includes(req.user?.role)) {
+      const user = (req as any).user;
+      if (!user || !['admin', 'executive'].includes(user.role)) {
         throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
       }
       
-      const thresholdId = req.params.id;
+      const thresholdId = req.params.id as string;
+      if (!thresholdId) {
+        throw new ValidationError('ID de seuil requis');
+      }
       
       // VÉRIFICATION EXISTENCE
       // @ts-ignore - Phase 6+ feature not yet implemented
@@ -1407,9 +1245,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Seuil mis à jour avec succès',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 4. DELETE /api/alerts/thresholds/:id - Deactivate threshold
   router.delete('/api/alerts/thresholds/:id', 
@@ -1417,13 +1255,19 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     validateParams(commonParamSchemas.id),
     asyncHandler(async (req: Request, res: Response) => {
       // RBAC
-      if (!['admin', 'executive'].includes(req.user?.role)) {
+      const user = (req as any).user;
+      if (!user || !['admin', 'executive'].includes(user.role)) {
         throw new AuthorizationError('Accès refusé - Rôle admin ou executive requis');
+      }
+      
+      const thresholdId = req.params.id as string;
+      if (!thresholdId) {
+        throw new ValidationError('ID de seuil requis');
       }
       
       // DÉSACTIVATION (soft delete)
       // @ts-ignore - Phase 6+ feature not yet implemented
-      const success = await storage.deactivateThreshold(req.params.id);
+      const success = await storage.deactivateThreshold(thresholdId);
       
       if (!success) {
         throw new NotFoundError('Seuil non trouvé');
@@ -1443,9 +1287,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Seuil désactivé avec succès',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // ========================================
   // B. BUSINESS ALERTS MANAGEMENT ENDPOINTS
@@ -1459,18 +1303,24 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       const query = { ...req.query };
       
       // FILTRAGE PAR RÔLE USER (RBAC)
-      if (req.user?.role === 'user') {
+      const user = (req as any).user;
+      if (user?.role === 'user') {
         // Utilisateurs normaux voient seulement alertes assignées ou scope project
-        query.assignedTo = req.user.id;
+        query.assignedTo = user.id as string;
       }
       
       // RÉCUPÉRATION ALERTES  
-      const result = await storage.listBusinessAlerts(query);
+      const limit = Number(query.limit) || 50;
+      const offset = Number(query.offset) || 0;
+      const result = await storage.listBusinessAlerts({
+        limit,
+        offset,
+        ...query
+      } as any);
       
       logger.info('[BusinessAlerts] Alertes récupérées', { metadata: {
- total: result.total, userRole: req.user?.role, limit: query.limit
-      }
-    });
+        total: result.total, userRole: user?.role, limit
+      }});
       
       // RESPONSE ENRICHIE
       res.json({
@@ -1481,14 +1331,14 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
           total: result.total,
           limit: query.limit,
           offset: query.offset,
-          has_more: (query.offset + query.limit) < result.total
+          has_more: ((Number(query.offset) || 0) + (Number(query.limit) || 50)) < result.total
         },
         filters_applied: query,
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 6. POST /api/alerts/:id/acknowledge - Acknowledge alert
   router.post('/api/alerts/:id/acknowledge', 
@@ -1498,8 +1348,15 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       notes: z.string().max(500).optional()
     })),
     asyncHandler(async (req: Request, res: Response) => {
-      const alertId = req.params.id;
-      const userId = req.user.id;
+      const alertId = req.params.id as string;
+      if (!alertId) {
+        throw new ValidationError('ID d\'alerte requis');
+      }
+      const user = (req as any).user;
+      if (!user) {
+        throw new AuthorizationError('Utilisateur non authentifié');
+      }
+      const userId = user.id as string;
       
       // VÉRIFICATION ALERTE EXISTE
       const alert = await storage.getBusinessAlertById(alertId);
@@ -1536,9 +1393,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Alerte accusée réception',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 7. POST /api/alerts/:id/resolve - Resolve alert
   router.post('/api/alerts/:id/resolve', 
@@ -1548,8 +1405,15 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
       resolution_notes: z.string().min(10).max(1000)
     })),
     asyncHandler(async (req: Request, res: Response) => {
-      const alertId = req.params.id;
-      const userId = req.user.id;
+      const alertId = req.params.id as string;
+      if (!alertId) {
+        throw new ValidationError('ID d\'alerte requis');
+      }
+      const user = (req as any).user;
+      if (!user) {
+        throw new AuthorizationError('Utilisateur non authentifié');
+      }
+      const userId = user.id as string;
       
       // VÉRIFICATION ALERTE
       const alert = await storage.getBusinessAlertById(alertId);
@@ -1591,9 +1455,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Alerte résolue avec succès',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 8. PATCH /api/alerts/:id/assign - Assign alert
   router.patch('/api/alerts/:id/assign', 
@@ -1604,13 +1468,17 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
     })),
     asyncHandler(async (req: Request, res: Response) => {
       // RBAC - Assignation par admin/executive/manager
-      if (!['admin', 'executive', 'manager'].includes(req.user?.role)) {
+      const user = (req as any).user;
+      if (!user || !['admin', 'executive', 'manager'].includes(user.role)) {
         throw new AuthorizationError('Accès refusé - Rôle manager minimum requis');
       }
       
-      const alertId = req.params.id;
-      const assignedTo = req.body.assigned_to;
-      const assignedBy = req.user.id;
+      const alertId = req.params.id as string;
+      if (!alertId) {
+        throw new ValidationError('ID d\'alerte requis');
+      }
+      const assignedTo = req.body.assigned_to as string;
+      const assignedBy = user.id as string;
       
       // ASSIGNATION VIA STORAGE
       const success = await storage.updateBusinessAlertStatus(
@@ -1639,9 +1507,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         message: 'Alerte assignée avec succès',
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // ========================================
   // C. DASHBOARD ENDPOINTS
@@ -1651,7 +1519,11 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
   router.get('/api/alerts/dashboard', 
     isAuthenticated, 
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = req.user.id;
+      const user = (req as any).user;
+      if (!user) {
+        throw new AuthorizationError('Utilisateur non authentifié');
+      }
+      const userId = user.id as string;
       
       // STATS GLOBALES ALERTES
       const openAlerts = await storage.listBusinessAlerts({
@@ -1709,26 +1581,30 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
                 title: alert.title,
               resolved_by: alert.resolvedBy,
               resolved_at: alert.resolvedAt,
-              type: alert.alertType
+              type: alert.alertType || 'unknown'
             }))
         },
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   // 10. GET /api/alerts/stats - Alert statistics
   router.get('/api/alerts/stats', 
     isAuthenticated, 
     asyncHandler(async (req: Request, res: Response) => {
-      // RBAC - Stats détaillées pour admin/executive
-      if (!['admin', 'executive'].includes(req.user?.role)) {
-        throw new AuthorizationError('Accès refusé - Statistiques admin/executive uniquement');
+      const user = (req as any).user;
+      if (!user) {
+        throw new AuthorizationError('Utilisateur non authentifié');
       }
       
-      const userId = req.user.id;
-      const userRole = req.user.role;
+      // RBAC - Stats détaillées pour admin/executive
+      if (!['admin', 'executive'].includes(user.role)) {
+        throw new AuthorizationError('Accès refusé - Statistiques admin/executive uniquement');
+      }
+      const userId = user.id as string;
+      const userRole = user.role as string;
       
       // CALCULS STATISTIQUES
       const allAlerts = await storage.listBusinessAlerts({
@@ -1765,9 +1641,9 @@ export function createAlertsRouter(storage: IStorage, eventBus: EventBus): Route
         generated_at: new Date().toISOString(),
         timestamp: new Date().toISOString()
       });
-          }
-        })
-      );
+    })
+  );
+
 
   return router;
 }

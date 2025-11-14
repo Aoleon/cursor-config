@@ -18,7 +18,7 @@
  */
 
 import type { IStorage } from "../../storage-poc";
-import { withErrorHandling } from './utils/error-handler';
+import { withErrorHandling } from '../../utils/error-handler';
 import { db } from "../../db";
 import { sql, eq, and, desc, gte, lte } from "drizzle-orm";
 import crypto from "crypto";
@@ -159,9 +159,10 @@ export class TechnicalMetricsService {
 
     logger.info('TechnicalMetricsService initialized', {
       metadata: {
-        module: 'TechnicalMetricsService', { operation: 'constructor' 
-
-          });
+        module: 'TechnicalMetricsService',
+        operation: 'constructor'
+      }
+    });
   }
 
   // ========================================
@@ -187,7 +188,7 @@ export class TechnicalMetricsService {
   /**
    * Start pipeline step
    */
-  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<st, unknown>): void {
+  startStep(traceId: string, stepName: PipelineStep, metadata?: Record<string, unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
       logger.warn('Attempt to start step on non-existent trace', { metadata: {
@@ -215,19 +216,16 @@ export class TechnicalMetricsService {
   /**
    * End pipeline step
    */
-  endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Recor, unknown>unknown>unknown>): void {
+  endStep(traceId: string, stepName: PipelineStep, success: boolean = true, metadata?: Record<string, unknown>): void {
     const traces = this.activeTraces.get(traceId);
     if (!traces) {
       logger.warn('Attempt to end step on non-existent trace', { metadata: {
           service: 'TechnicalMetricsService',
           operation: 'endStep',
           stepName,
-          traceId 
-              
-              }
- 
-              
-            });
+          traceId
+        }
+      });
       return;
     }
     const step = traces.reverse().find(s => s.stepName === stepName && !s.endTime);
@@ -238,12 +236,9 @@ export class TechnicalMetricsService {
           service: 'TechnicalMetricsService',
           operation: 'endStep',
           stepName,
-          traceId 
-              
-              }
- 
-              
-            });
+          traceId
+        }
+      });
       return;
     }
     step.endTime = Date.now();
@@ -252,6 +247,7 @@ export class TechnicalMetricsService {
     if (metadata) {
       step.metadata = { ...step.metadata, ...metadata };
     }
+  }
 
   /**
    * End pipeline trace and persist metrics
@@ -322,8 +318,8 @@ export class TechnicalMetricsService {
       operation: 'statistics',
       service: 'TechnicalMetricsService',
       metadata: {}
-    } );
     }
+    );
     return timings;
   }
 
@@ -406,6 +402,7 @@ export class TechnicalMetricsService {
       const savings = ((this.parallelismStats.averageSequentialTime - this.parallelismStats.averageParallelTime) / this.parallelismStats.averageSequentialTime) * 100;
       this.parallelismStats.timeSavingsPercent = Math.max(0, savings);
     }
+  }
 
   /**
    * Get parallelism metrics
@@ -734,14 +731,172 @@ export class TechnicalMetricsService {
         if (now - oldestTrace > MAX_TRACE_AGE_MS) {
           this.activeTraces.delete(traceId);
         }
+      }
+    }
+  }
 
   private refreshRealtimeMetrics(): void {
     // Placeholder for real-time metrics refresh logic
     logger.debug('Real-time metrics refreshed', {
       metadata: {
-        module: 'TechnicalMetricsService', { operation: 'refreshRealtimeMetrics' 
+        module: 'TechnicalMetricsService',
+        operation: 'refreshRealtimeMetrics'
+      }
+    });
+  }
 
-          });
+  // ========================================
+  // PLACEHOLDER METHODS (To be implemented)
+  // ========================================
+
+  /**
+   * Placeholder: Get pipeline metrics with filters
+   * TODO: Implement full pipeline metrics retrieval
+   */
+  async getPipelineMetrics(params: {
+    timeRange?: { startDate: string; endDate: string };
+    complexity?: 'simple' | 'complex' | 'expert';
+    userId?: string;
+    includeP95P99?: boolean;
+  }): Promise<unknown> {
+    return withErrorHandling(
+      async () => {
+        logger.info('TechnicalMetricsService.getPipelineMetrics - Placeholder called', {
+          metadata: { params }
+        });
+        return {
+          metrics: [],
+          summary: {
+            totalQueries: 0,
+            averageLatency: 0,
+            p50: 0,
+            p95: 0,
+            p99: 0
+          }
+        };
+      },
+      {
+        operation: 'getPipelineMetrics',
+        service: 'TechnicalMetricsService',
+        metadata: {}
+      }
+    );
+  }
+
+  /**
+   * Placeholder: Get cache analytics
+   * TODO: Implement cache analytics retrieval
+   */
+  async getCacheAnalytics(params?: {
+    timeRange?: { startDate: string; endDate: string };
+    cacheType?: string;
+  }): Promise<unknown> {
+    return withErrorHandling(
+      async () => {
+        logger.info('TechnicalMetricsService.getCacheAnalytics - Placeholder called', {
+          metadata: { params }
+        });
+        return {
+          hitRate: 0,
+          missRate: 0,
+          totalRequests: 0,
+          cacheSize: 0,
+          evictions: 0
+        };
+      },
+      {
+        operation: 'getCacheAnalytics',
+        service: 'TechnicalMetricsService',
+        metadata: {}
+      }
+    );
+  }
+
+  /**
+   * Placeholder: Get SLO compliance metrics
+   * TODO: Implement SLO compliance calculation
+   */
+  async getSLOCompliance(params?: {
+    timeRange?: { startDate: string; endDate: string };
+    includeTrends?: boolean;
+    includeAlerts?: boolean;
+  }): Promise<unknown> {
+    return withErrorHandling(
+      async () => {
+        logger.info('TechnicalMetricsService.getSLOCompliance - Placeholder called', {
+          metadata: { params }
+        });
+        return {
+          compliance: {
+            simple: { target: '5s', actual: '0s', compliance: 100 },
+            complex: { target: '10s', actual: '0s', compliance: 100 },
+            expert: { target: '15s', actual: '0s', compliance: 100 }
+          },
+          trends: [],
+          alerts: []
+        };
+      },
+      {
+        operation: 'getSLOCompliance',
+        service: 'TechnicalMetricsService',
+        metadata: {}
+      }
+    );
+  }
+
+  /**
+   * Placeholder: Identify performance bottlenecks
+   * TODO: Implement bottleneck identification logic
+   */
+  async identifyBottlenecks(params: {
+    timeRange?: { startDate: string; endDate: string };
+    thresholdSeconds?: number;
+  }): Promise<unknown> {
+    return withErrorHandling(
+      async () => {
+        logger.info('TechnicalMetricsService.identifyBottlenecks - Placeholder called', {
+          metadata: { params }
+        });
+        return {
+          bottlenecks: [],
+          summary: {
+            totalBottlenecks: 0,
+            averageLatency: 0,
+            worstStep: null
+          }
+        };
+      },
+      {
+        operation: 'identifyBottlenecks',
+        service: 'TechnicalMetricsService',
+        metadata: {}
+      }
+    );
+  }
+
+  /**
+   * Placeholder: Get real-time statistics
+   * TODO: Implement real-time stats retrieval
+   */
+  async getRealTimeStats(): Promise<unknown> {
+    return withErrorHandling(
+      async () => {
+        logger.info('TechnicalMetricsService.getRealTimeStats - Placeholder called');
+        return {
+          activeQueries: 0,
+          averageLatency: 0,
+          requestsPerSecond: 0,
+          cacheHitRate: 0,
+          errorRate: 0,
+          timestamp: new Date().toISOString()
+        };
+      },
+      {
+        operation: 'getRealTimeStats',
+        service: 'TechnicalMetricsService',
+        metadata: {}
+      }
+    );
   }
 
 // ========================================

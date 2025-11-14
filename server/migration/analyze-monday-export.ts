@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { logger } from './utils/logger';
+import { logger } from '../utils/logger';
 import path from 'path';
 
 interface MondayItem {
@@ -31,12 +31,37 @@ interface AnalysisResult {
 
 // Read and parse the JSON file
 const jsonPath = path.join(process.cwd(), 'attached_assets', 'export-monday.json');
-logger.info('📖 Lecture du fichier:', jsonPath);
+logger.info('📖 Lecture du fichier:', { metadata: { jsonPath } });
 
-const rawData = fs.readFileSync(jsonPath, 'utf-8');
-const mondayData = JSON.parse(rawData);
+let rawData: string;
+let mondayData: unknown;
 
-logger.info('✅ Fichier parsé avec succès');
+try {
+  rawData = fs.readFileSync(jsonPath, 'utf-8');
+} catch (error) {
+  logger.error('Erreur lors de la lecture du fichier', error as Error, {
+    metadata: { jsonPath, operation: 'readFile' }
+  });
+  process.exit(1);
+}
+
+try {
+  mondayData = JSON.parse(rawData);
+} catch (error) {
+  logger.error('Erreur lors du parsing JSON', error as Error, {
+    metadata: { jsonPath, operation: 'parseJSON' }
+  });
+  process.exit(1);
+}
+
+if (typeof mondayData !== 'object' || mondayData === null) {
+  logger.error('Données JSON invalides', new Error('JSON data is not an object'), {
+    metadata: { jsonPath, operation: 'validateJSON' }
+  });
+  process.exit(1);
+}
+
+logger.info('✅ Fichier parsé avec succès', { metadata: { jsonPath } });
 
 // Initialize analysis
 const analysis: AnalysisResult = {
@@ -58,7 +83,8 @@ const allClients = new Set<string>();
 const allTypes = new Set<string>();
 
 // Analyze each board
-for (const [fileName, fileContent] of Object.entries(mondayData)) {
+const mondayDataTyped = mondayData as Record<string, unknown>;
+for (const [fileName, fileContent] of Object.entries(mondayDataTyped)) {
   logger.info(`\n🔍 Analyse du fichier: ${fileName}`);
   
   if (typeof fileContent !== 'object' || fileContent === null) continue;
@@ -96,7 +122,8 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
       Object.keys(item).forEach(key => {
         if (key && key !== 'undefined') {
           columnSet.add(key);
-        });
+        }
+      });
       
       // Extract values
       const values = Object.values(item);
@@ -133,43 +160,49 @@ for (const [fileName, fileContent] of Object.entries(mondayData)) {
             if (value.match(/^\d{4}-\d{2}-\d{2}T/)) {
               boardAnalysis.dates.push(value);
             }
+          }
         
-        // Extract project patterns from name
-        if (firstValue) {
-          // Extract city (usually at the start, in caps)
-          const cityMatch = firstValue.match(/^([A-Z\-\s]+?)(?:\s+\d+|\s+-)/);
-          if (cityMatch) {
-            allCities.add(cityMatch[1].trim());
-          }
-          
-          // Extract numbers (logements count)
-          const numberMatch = firstValue.match(/\d+/g);
-          if (numberMatch) {
-            analysis.project_patterns.number_patterns.push(...numberMatch);
-          }
-          
-          // Extract type keywords
-          const typeKeywords = ['MEXT', 'MINT', 'TMA', 'Réhabilitation', 'Réha', 'Construction', 'neuf', 'Rénovation', 'ALU', 'PVC', 'Bardage'];
-          typeKeywords.forEach(keyword => {
-            if (firstValue.includes(keyword)) {
-              allTypes.add(keyword);
+          // Extract project patterns from name
+          if (firstValue) {
+            // Extract city (usually at the start, in caps)
+            const cityMatch = firstValue.match(/^([A-Z\-\s]+?)(?:\s+\d+|\s+-)/);
+            if (cityMatch) {
+              allCities.add(cityMatch[1].trim());
+            }
+            
+            // Extract numbers (logements count)
+            const numberMatch = firstValue.match(/\d+/g);
+            if (numberMatch) {
+              analysis.project_patterns.number_patterns.push(...numberMatch);
+            }
+            
+            // Extract type keywords
+            const typeKeywords = ['MEXT', 'MINT', 'TMA', 'Réhabilitation', 'Réha', 'Construction', 'neuf', 'Rénovation', 'ALU', 'PVC', 'Bardage'];
+            typeKeywords.forEach(keyword => {
+              if (firstValue.includes(keyword)) {
+                allTypes.add(keyword);
+              }
             });
-          
-          // Extract client names (usually in caps after -)
-          const clientMatch = firstValue.match(/\s-\s([A-Z\s&]+?)(?:\s-|$)/);
-          if (clientMatch) {
-            allClients.add(clientMatch[1].trim());
+            
+            // Extract client names (usually in caps after -)
+            const clientMatch = firstValue.match(/\s-\s([A-Z\s&]+?)(?:\s-|$)/);
+            if (clientMatch) {
+              allClients.add(clientMatch[1].trim());
+            }
           }
         
-        // Check for subitems
-        if (firstValue === 'Subitems' || item[firstKey] === 'Subitems') {
-          boardAnalysis.subitems_count++;
-        }
+          // Check for subitems
+          if (firstValue === 'Subitems' || item[firstKey] === 'Subitems') {
+            boardAnalysis.subitems_count++;
+          }
         
-        // Store sample items (max 10 per board)
-        if (boardAnalysis.sample_items.length < 10) {
-          boardAnalysis.sample_items.push(item);
+          // Store sample items (max 10 per board)
+          if (boardAnalysis.sample_items.length < 10) {
+            boardAnalysis.sample_items.push(item);
+          }
         }
+      }
+    }
     
     boardAnalysis.count = itemCount;
     boardAnalysis.columns = Array.from(columnSet);
@@ -190,7 +223,17 @@ analysis.project_patterns.clients = Array.from(allClients).sort();
 analysis.project_patterns.types = Array.from(allTypes).sort();
 
 // Clean up board analysis for JSON output
-const cleanedBoards: unknown = {};
+interface CleanedBoard {
+  count: number;
+  columns: string[];
+  groups: string[];
+  sample_items: unknown[];
+  statuses: string[];
+  dates_count: number;
+  subitems_count: number;
+}
+
+const cleanedBoards: Record<string, CleanedBoard> = {};
 for (const [key, board] of Object.entries(analysis.boards)) {
   cleanedBoards[key] = {
     count: board.count,
@@ -210,8 +253,15 @@ const finalAnalysis = {
 
 // Write JSON analysis
 const jsonOutputPath = path.join(process.cwd(), 'server', 'migration', 'monday-analysis.json');
-fs.writeFileSync(jsonOutputPath, JSON.stringify(finalAnalysis, null, 2), 'utf-8');
-logger.info(`\n✅ Analyse JSON écrite: ${jsonOutputPath}`);
+try {
+  fs.writeFileSync(jsonOutputPath, JSON.stringify(finalAnalysis, null, 2), 'utf-8');
+  logger.info('✅ Analyse JSON écrite', { metadata: { jsonOutputPath } });
+} catch (error) {
+  logger.error('Erreur lors de l\'écriture du fichier JSON', error as Error, {
+    metadata: { jsonOutputPath, operation: 'writeJSON' }
+  });
+  process.exit(1);
+}
 
 // Generate Markdown report
 let mdReport = `# Rapport d'Analyse Monday.com Export
@@ -245,12 +295,18 @@ for (const [boardKey, board] of Object.entries(analysis.boards)) {
   if (board.sample_items.length > 0) {
     mdReport += `\n**Exemples d'items**:\n`;
     board.sample_items.slice(0, 3).forEach((item, idx) => {
-      const firstKey = Object.keys(item)[0];
-      const name = item[firstKey];
-      if (name && name !== 'Name' && name.length > 2) {
+      if (typeof item !== 'object' || item === null) return;
+      const itemTyped = item as Record<string, unknown>;
+      const keys = Object.keys(itemTyped);
+      if (keys.length === 0) return;
+      const firstKey = keys[0];
+      const name = itemTyped[firstKey];
+      if (name && typeof name === 'string' && name !== 'Name' && name.length > 2) {
         mdReport += `${idx + 1}. ${name}\n`;
-      });
+      }
+    });
   }
+}
 
 mdReport += `\n---
 
@@ -382,8 +438,15 @@ Les chantiers Monday contiennent souvent:
 `;
 
 const mdOutputPath = path.join(process.cwd(), 'server', 'migration', 'monday-report.md');
-fs.writeFileSync(mdOutputPath, mdReport, 'utf-8');
-logger.info(`✅ Rapport Markdown écrit: ${mdOutputPath}`);
+try {
+  fs.writeFileSync(mdOutputPath, mdReport, 'utf-8');
+  logger.info('✅ Rapport Markdown écrit', { metadata: { mdOutputPath } });
+} catch (error) {
+  logger.error('Erreur lors de l\'écriture du rapport Markdown', error as Error, {
+    metadata: { mdOutputPath, operation: 'writeMarkdown' }
+  });
+  process.exit(1);
+}
 
 logger.info('\n🎉 Analyse terminée avec succès!\n');
 logger.info('📊 Résumé:');
@@ -392,3 +455,6 @@ logger.info(`   - ${analysis.total_items} items trouvés`);
 logger.info(`   - ${analysis.statuses.length} statuts uniques`);
 logger.info(`   - ${analysis.project_patterns.cities.length} villes`);
 logger.info(`   - ${analysis.project_patterns.clients.length} clients`);
+
+// Export pour compatibilité TypeScript
+export {};

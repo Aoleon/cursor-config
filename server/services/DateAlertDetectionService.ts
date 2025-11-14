@@ -1,4 +1,4 @@
-import type { IStorage } from "../storage-poc";
+import type { StorageFacade } from "../storage/facade/StorageFacade";
 import { withErrorHandling } from './utils/error-handler';
 import { EventBus } from "../eventBus";
 import { DateIntelligenceService } from "./DateIntelligenceService";
@@ -176,7 +176,7 @@ export interface PredictiveRiskViolation {
 
 export class DateAlertDetectionService {
   constructor(
-    private storage: IStorage,
+    private storage: StorageFacade,
     private eventBus: EventBus,
     private dateIntelligenceService: DateIntelligenceService,
     private menuiserieRules: MenuiserieDetectionRules,
@@ -1468,7 +1468,7 @@ export class DateAlertDetectionService {
 
 export class MenuiserieDetectionRules {
   
-  constructor(private storage: IStorage) {}
+  constructor(private storage: StorageFacade) {}
 
   // Détection retards selon contraintes météo
   detectWeatherRelatedDelays(timeline: ProjectTimeline): DelayRisk | null {

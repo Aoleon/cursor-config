@@ -123,6 +123,18 @@ Les règles sont organisées en 3 niveaux de priorité pour optimiser le chargem
 - ✅ **PLANIFIER AUTOMATIQUEMENT les prochaines étapes identifiées dès qu'elles sont mentionnées (IMPÉRATIF)**
 - ✅ **EXÉCUTER IMMÉDIATEMENT les prochaines étapes planifiées sans s'arrêter (IMPÉRATIF)**
 - ✅ **NE JAMAIS s'arrêter si des prochaines étapes sont mentionnées dans la réponse (IMPÉRATIF)**
+- ✅ **DÉTECTER AUTOMATIQUEMENT les propositions de choix AVANT de générer une réponse (validation préventive) (IMPÉRATIF)**
+- ✅ **INTERCEPTER et traiter automatiquement toute proposition de choix sans générer la réponse (IMPÉRATIF)**
+- ✅ **FAIRE LE CHOIX LE PLUS LOGIQUE ET ROBUSTE selon les critères de qualité (robustesse > maintenabilité > performance) (IMPÉRATIF)**
+- ✅ **CRÉER UNE TASK LIST COMPLÈTE pour exécuter la décision prise (IMPÉRATIF)**
+- ✅ **EXÉCUTER IMMÉDIATEMENT la task list sans demander confirmation (IMPÉRATIF)**
+- ✅ **VÉRIFIER APRÈS GÉNÉRATION que la réponse ne contient pas de proposition de choix (validation post-génération) (IMPÉRATIF)**
+- ✅ **NE JAMAIS proposer un choix à l'utilisateur - TOUJOURS prendre une décision autonome (IMPÉRATIF)**
+- ✅ **DÉTECTER AUTOMATIQUEMENT les questions et demandes de confirmation (stratégies, approches, méthodes) (IMPÉRATIF)**
+- ✅ **NE JAMAIS poser de questions à l'utilisateur - TOUJOURS analyser et décider (IMPÉRATIF)**
+- ✅ **NE JAMAIS demander confirmation de stratégie - TOUJOURS définir et exécuter directement (IMPÉRATIF)**
+- ✅ **DÉTECTER les patterns "confirmez-vous", "qu'en pensez-vous", "êtes-vous d'accord" et traiter automatiquement (IMPÉRATIF)**
+- ✅ **DÉTECTER les patterns "stratégie ?", "approche ?", "méthode ?" et décider automatiquement (IMPÉRATIF)**
 
 **NE JAMAIS:**
 - ❌ Utiliser `console.log`/`error` dans le code serveur
@@ -161,51 +173,131 @@ Les règles sont organisées en 3 niveaux de priorité pour optimiser le chargem
 - ❌ **Mentionner des tâches restantes sans les planifier et exécuter immédiatement (IMPÉRATIF)**
 - ❌ **Mentionner qu'on va faire quelque chose "ensuite" ou "plus tard" sans l'exécuter immédiatement (IMPÉRATIF)**
 - ❌ **S'arrêter si la réponse contient des phrases comme "prochaines étapes", "il reste", "il faudra", "dans un second temps" (IMPÉRATIF)**
+- ❌ **Proposer un choix à l'utilisateur au lieu de prendre une décision autonome (IMPÉRATIF)**
+- ❌ **Générer une réponse contenant une proposition de choix sans l'intercepter (IMPÉRATIF)**
+- ❌ **Demander confirmation avant d'exécuter une décision prise (IMPÉRATIF)**
+- ❌ **Mentionner "voulez-vous", "souhaitez-vous", "préférez-vous" ou équivalents sans traiter automatiquement (IMPÉRATIF)**
+- ❌ **Poser des questions à l'utilisateur au lieu d'analyser et décider (IMPÉRATIF)**
+- ❌ **Demander confirmation de stratégie, approche ou méthode (IMPÉRATIF)**
+- ❌ **Utiliser "confirmez-vous", "qu'en pensez-vous", "êtes-vous d'accord" ou équivalents (IMPÉRATIF)**
+- ❌ **Définir une stratégie puis demander confirmation au lieu d'exécuter directement (IMPÉRATIF)**
+- ❌ **Mentionner "stratégie ?", "approche ?", "méthode ?" sans décider automatiquement (IMPÉRATIF)**
+- ❌ **S'arrêter après avoir défini une stratégie au lieu de l'exécuter immédiatement (IMPÉRATIF)**
 
-## ⚠️ RÈGLE ANTI-INTERRUPTION : PROCHAINES ÉTAPES (CRITIQUE)
+## ⚠️ RÈGLE ANTI-INTERRUPTION : PROCHAINES ÉTAPES (CRITIQUE - RENFORCÉE)
 
 **PROBLÈME IDENTIFIÉ:** L'agent s'arrête encore alors qu'il mentionne des "prochaines étapes" dans sa réponse.
 
-**SOLUTION STRICTE:**
+**SOLUTION STRICTE RENFORCÉE:**
 
 ### Workflow Obligatoire Avant TOUT Arrêt
 
-**ÉTAPE 1 - Détection Automatique (OBLIGATOIRE):**
+**ÉTAPE 1 - Détection Automatique Renforcée (OBLIGATOIRE):**
 Avant de s'arrêter, l'agent DOIT analyser sa propre réponse pour détecter :
-- Phrases contenant "prochaines étapes", "étapes suivantes", "next steps"
-- Phrases contenant "tâches restantes", "il reste", "il faudra", "actions à faire"
-- Phrases contenant "ensuite", "plus tard", "dans un second temps", "then", "later"
 
-**ÉTAPE 2 - Planification Automatique (OBLIGATOIRE):**
+**Patterns français:**
+- "prochaines étapes", "étapes suivantes", "next steps"
+- "tâches restantes", "il reste", "il faudra", "actions à faire"
+- "ensuite", "plus tard", "dans un second temps", "then", "later"
+- "à faire", "restant", "prochaine action", "action suivante"
+- "il reste à", "il faudrait", "il serait nécessaire"
+- "dans un prochain temps", "ultérieurement", "par la suite"
+- "une fois que", "après avoir", "une fois terminé"
+
+**Patterns anglais:**
+- "next steps", "following steps", "remaining tasks"
+- "to do", "remaining", "next action", "following action"
+- "it remains to", "it would be necessary", "should be done"
+- "in a next time", "later", "subsequently"
+- "once", "after", "once completed"
+
+**Patterns contextuels:**
+- Phrases contenant "prochaine" + action (ex: "prochaine modification")
+- Phrases contenant "reste" + action (ex: "reste à modifier")
+- Phrases contenant "faudra" + action (ex: "faudra vérifier")
+- Phrases contenant "ensuite" + action (ex: "ensuite modifier")
+
+**ÉTAPE 2 - Validation Automatique Obligatoire (NOUVEAU):**
+Avant tout arrêt, l'agent DOIT vérifier :
+- ✅ Aucune mention de "prochaines étapes" dans la réponse
+- ✅ Tous les todos sont `completed` (aucun `in_progress` ou `pending`)
+- ✅ Aucune erreur TypeScript non résolue
+- ✅ Tous les tests passent
+- ✅ Toutes les fonctionnalités sont complètes
+- ✅ Aucune tâche mentionnée sans exécution
+
+**Si une vérification échoue:**
+- ❌ **ARRÊT INTERDIT** - Forcer continuation
+- ✅ Corriger le problème détecté
+- ✅ Réexécuter les vérifications
+- ✅ Ne s'arrêter que si toutes les vérifications passent
+
+**ÉTAPE 3 - Planification Automatique (OBLIGATOIRE):**
 Si des mentions sont détectées, l'agent DOIT :
 - Identifier toutes les prochaines étapes mentionnées
 - Créer un plan détaillé pour ces étapes
 - Créer des todos pour chaque étape identifiée
+- Logger la détection et l'action prise
 
-**ÉTAPE 3 - Exécution Immédiate (OBLIGATOIRE):**
+**ÉTAPE 4 - Exécution Immédiate (OBLIGATOIRE):**
 L'agent DOIT :
 - Exécuter immédiatement les todos créés
 - Ne pas s'arrêter tant que toutes les étapes ne sont pas complétées
 - Vérifier que toutes les étapes sont complétées avant de s'arrêter
 
-**RÈGLE ABSOLUE:**
-**Si l'agent mentionne des "prochaines étapes" dans sa réponse, il DOIT les planifier et les exécuter immédiatement. Aucun arrêt n'est autorisé tant que ces étapes ne sont pas complétées.**
+**ÉTAPE 5 - Checkpointing Automatique (NOUVEAU):**
+Avant tout arrêt, l'agent DOIT :
+- ✅ Sauvegarder l'état actuel (todos, erreurs, contexte)
+- ✅ Logger les raisons de l'arrêt (si validé)
+- ✅ Vérifier qu'aucun checkpoint n'indique un arrêt prématuré
 
-**Pattern de Détection:**
+**Si checkpoint indique arrêt prématuré:**
+- ❌ **ARRÊT INTERDIT** - Reprendre automatiquement
+- ✅ Continuer l'exécution
+- ✅ Mettre à jour le checkpoint
+
+**RÈGLE ABSOLUE:**
+**Si l'agent mentionne des "prochaines étapes" dans sa réponse, il DOIT les planifier et les exécuter immédiatement. Aucun arrêt n'est autorisé tant que ces étapes ne sont pas complétées. Toute violation de cette règle est considérée comme un bug critique.**
+
+**Pattern de Détection Renforcé:**
 ```typescript
 // Avant de s'arrêter, analyser la réponse
 const response = getLastResponse();
 const nextStepsPhrases = [
+  // Français
   'prochaines étapes', 'étapes suivantes', 'next steps',
   'tâches restantes', 'il reste', 'il faudra', 'actions à faire',
-  'ensuite', 'plus tard', 'dans un second temps', 'then', 'later'
+  'ensuite', 'plus tard', 'dans un second temps', 'then', 'later',
+  'à faire', 'restant', 'prochaine action', 'action suivante',
+  'il reste à', 'il faudrait', 'il serait nécessaire',
+  'dans un prochain temps', 'ultérieurement', 'par la suite',
+  'une fois que', 'après avoir', 'une fois terminé',
+  // Anglais
+  'next steps', 'following steps', 'remaining tasks',
+  'to do', 'remaining', 'next action', 'following action',
+  'it remains to', 'it would be necessary', 'should be done',
+  'in a next time', 'later', 'subsequently',
+  'once', 'after', 'once completed'
 ];
 
+// Détection simple
 const hasNextSteps = nextStepsPhrases.some(phrase => 
   response.toLowerCase().includes(phrase.toLowerCase())
 );
 
-if (hasNextSteps) {
+// Détection contextuelle
+const contextualPatterns = [
+  /prochaine\s+\w+/i,  // "prochaine modification"
+  /reste\s+à\s+\w+/i,  // "reste à modifier"
+  /faudra\s+\w+/i,     // "faudra vérifier"
+  /ensuite\s+\w+/i     // "ensuite modifier"
+];
+
+const hasContextualNextSteps = contextualPatterns.some(pattern => 
+  pattern.test(response)
+);
+
+if (hasNextSteps || hasContextualNextSteps) {
   // FORCER planification et exécution
   await planAndExecuteNextSteps(response);
   // NE PAS s'arrêter
@@ -236,6 +328,7 @@ if (hasNextSteps) {
 - `@.cursor/rules/todo-completion.md` - Completion des todos (IMPÉRATIF - éviter interruptions)
 - `@.cursor/rules/iterative-perfection.md` - Itération automatique jusqu'à perfection (IMPÉRATIF - éviter arrêt prématuré)
 - `@.cursor/rules/persistent-execution.md` - Exécution persistante (IMPÉRATIF - éviter arrêts prématurés, runs longs)
+- `@.cursor/rules/autonomous-decision-making.md` - Prise de décision autonome continue (P0 - IMPÉRATIF - détection propositions choix/questions/confirmations, analyse options, décision robuste, exécution autonome continue)
 - `@.cursor/rules/advanced-iteration-and-role-coordination.md` - Itérations avancées et coordination des rôles (IMPÉRATIF - maximiser autonomie, durée, qualité)
 - `@.cursor/rules/task-decomposition.md` - Décomposition des tâches conforme documentation Cursor (IMPÉRATIF - critères de taille optimale, pensée séquentielle, Background Agent, listes structurées)
 - `@.cursor/rules/intelligent-task-detection.md` - Détection intelligente des tâches (détection automatique complexité, chargement optimisé)

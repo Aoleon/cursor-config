@@ -117,6 +117,7 @@ export class ContactService {
           reason: score.reason
         };
       }
+    }
     
     return bestMatch;
   }
@@ -141,6 +142,7 @@ export class ContactService {
           reason: score.reason
         };
       }
+    }
     
     return bestMatch;
   }
@@ -166,6 +168,7 @@ export class ContactService {
         score += 0.6;
         reasons.push(`Nom similaire (${Math.round(nomSimilarity * 100)}%)`);
       }
+    }
     
     // Correspondance email
     if (extracted.email && existing.email && extracted.email.toLowerCase() === existing.email.toLowerCase()) {
@@ -181,6 +184,7 @@ export class ContactService {
         score += 0.2;
         reasons.push('Téléphone identique');
       }
+    }
     
     // Correspondance adresse/ville
     if (extracted.ville && existing.ville) {
@@ -189,6 +193,7 @@ export class ContactService {
         score += 0.1;
         reasons.push('Ville identique');
       }
+    }
     
     return { 
       confidence: Math.min(score, 1.0), 
@@ -242,6 +247,8 @@ export class ContactService {
             matrix[i - 1][j] + 1
           );
         }
+      }
+    }
     
     return matrix[str2.length][str1.length];
   }
@@ -264,7 +271,9 @@ export class ContactService {
       adresse: extractedData.adresse || null,
       codePostal: extractedData.codePostal || null,
       ville: extractedData.ville || null,
-      departement: extractedData.departement as unknown || null,
+      departement: (extractedData.departement && typeof extractedData.departement === 'string' && /^\d{2}$/.test(extractedData.departement)) 
+        ? extractedData.departement as "01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10" | "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "22" | "23" | "24" | "25" | "26" | "27" | "28" | "29" | "30" | "31" | "32" | "33" | "34" | "35" | "36" | "37" | "38" | "39" | "40" | "41" | "42" | "43" | "44" | "45" | "46" | "47" | "48" | "49" | "50" | "51" | "52" | "53" | "54" | "55" | "56" | "57" | "58" | "59" | "60" | "61" | "62" | "63" | "64" | "65" | "66" | "67" | "68" | "69" | "70" | "71" | "72" | "73" | "74" | "75" | "76" | "77" | "78" | "79" | "80" | "81" | "82" | "83" | "84" | "85" | "86" | "87" | "88" | "89" | "90" | "91" | "92" | "93" | "94" | "95" | "971" | "972" | "973" | "974" | "976" | undefined
+        : null,
       telephone: extractedData.telephone || null,
       email: extractedData.email || null,
       siteWeb: extractedData.siteWeb || null,
@@ -305,7 +314,9 @@ export class ContactService {
       adresse: extractedData.adresse || null,
       codePostal: extractedData.codePostal || null,
       ville: extractedData.ville || null,
-      departement: extractedData.departement || null,
+      departement: (extractedData.departement && typeof extractedData.departement === 'string' && /^\d{2,3}$/.test(extractedData.departement)) 
+        ? extractedData.departement as "01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10" | "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "22" | "23" | "24" | "25" | "26" | "27" | "28" | "29" | "30" | "31" | "32" | "33" | "34" | "35" | "36" | "37" | "38" | "39" | "40" | "41" | "42" | "43" | "44" | "45" | "46" | "47" | "48" | "49" | "50" | "51" | "52" | "53" | "54" | "55" | "56" | "57" | "58" | "59" | "60" | "61" | "62" | "63" | "64" | "65" | "66" | "67" | "68" | "69" | "70" | "71" | "72" | "73" | "74" | "75" | "76" | "77" | "78" | "79" | "80" | "81" | "82" | "83" | "84" | "85" | "86" | "87" | "88" | "89" | "90" | "91" | "92" | "93" | "94" | "95" | "971" | "972" | "973" | "974" | "976" | undefined
+        : null,
       telephone: extractedData.telephone || null,
       email: extractedData.email || null,
       siteWeb: extractedData.siteWeb || null,
@@ -347,14 +358,67 @@ export class ContactService {
           logger.info('Maître d\'ouvrage trouvé', {
             service: 'ContactService',
             metadata: {
-                      operation: 'findOrCreateContact',
+              operation: 'findOrCreateContact',
               role: 'maitre_ouvrage',
-                      nom: existingMatch.contact.nom,
-                      id: existingMatch.contact.id,
+              nom: existingMatch.contact.nom,
+              id: existingMatch.contact.id,
               confidence: Math.round(existingMatch.confidence * 100),
               reason: existingMatch.reason
-                          }
-                        });
+            }
+          });
+          return {
+            found: true,
+            created: false,
+            contact: existingMatch.contact,
+            confidence: existingMatch.confidence,
+            reason: existingMatch.reason
+          };
+        }
+        
+        // Créer un nouveau maître d'ouvrage
+        const newContact = await this.createMaitreOuvrage(extractedData, tx);
+        return {
+          found: false,
+          created: true,
+          contact: newContact,
+          confidence: 1.0,
+          reason: 'Nouveau maître d\'ouvrage créé'
+        };
+      }
+      
+      if (extractedData.role === 'maitre_oeuvre') {
+        // Rechercher un maître d'œuvre existant
+        const existingMatch = await this.findSimilarMaitreOeuvre(extractedData, tx);
+        
+        if (existingMatch) {
+          logger.info('Maître d\'œuvre trouvé', {
+            service: 'ContactService',
+            metadata: {
+              operation: 'findOrCreateContact',
+              role: 'maitre_oeuvre',
+              nom: existingMatch.contact.nom,
+              id: existingMatch.contact.id,
+              confidence: Math.round(existingMatch.confidence * 100),
+              reason: existingMatch.reason
+            }
+          });
+          return {
+            found: true,
+            created: false,
+            contact: existingMatch.contact,
+            confidence: existingMatch.confidence,
+            reason: existingMatch.reason
+          };
+        }
+        
+        // Créer un nouveau maître d'œuvre
+        const newContact = await this.createMaitreOeuvre(extractedData, tx);
+        return {
+          found: false,
+          created: true,
+          contact: newContact,
+          confidence: 1.0,
+          reason: 'Nouveau maître d\'œuvre créé'
         };
       }
       
@@ -418,6 +482,7 @@ export class ContactService {
           reason: score.reason
         };
       }
+    }
     
     return bestMatch;
   }
@@ -458,6 +523,9 @@ export class ContactService {
             score += 0.3;
             reasons.push(`Entreprise similaire (${Math.round(companySim * 100)}%)`);
           }
+        }
+      }
+    }
     
     // Téléphone tie-breaker
     if (extracted.phone && existing.phone && score > 0.5) {
@@ -467,6 +535,7 @@ export class ContactService {
         score += 0.2;
         reasons.push('Téléphone identique');
       }
+    }
     
     return {
       confidence: Math.min(score, 1.0),
@@ -489,7 +558,9 @@ export class ContactService {
       email: data.email || null,
       phone: data.phone || null,
       company: data.company || null,
-      poste: data.poste || null,
+      poste: (data.poste && typeof data.poste === 'string' && ['directeur', 'responsable', 'technicien', 'assistant', 'architecte', 'ingenieur', 'coordinateur', 'autre'].includes(data.poste))
+        ? data.poste as "directeur" | "responsable" | "technicien" | "assistant" | "architecte" | "ingenieur" | "coordinateur" | "autre"
+        : null,
       address: data.address || null,
       notes: data.notes || `Créé automatiquement - Source: ${data.source}`
     };
@@ -501,15 +572,14 @@ export class ContactService {
     
     logger.info('Nouveau contact individuel créé', {
       metadata: {
-        module: 'ContactService', {
+        module: 'ContactService',
         id: newContact.id,
         firstName: newContact.firstName,
         lastName: newContact.lastName,
         email: newContact.email,
         company: newContact.company
-              }
-
-                                                                                  });
+      }
+    });
     
     return newContact;
   }
@@ -529,12 +599,49 @@ export class ContactService {
       
       if (existingMatch) {
         logger.info('Contact individuel trouvé', {
-      metadata: {
-        module: 'ContactService', {
-                id: existingMatch.contact.id,
-                firstName: existingMatch.contact.firstName,
-                lastName: existingMatch.contact.lastName,
+          metadata: {
+            module: 'ContactService',
+            id: existingMatch.contact.id,
+            firstName: existingMatch.contact.firstName,
+            lastName: existingMatch.contact.lastName,
             confidence: existingMatch.confidence,
             reason: existingMatch.reason
-                    }
-                  });
+          }
+        });
+        
+        return {
+          found: true,
+          created: false,
+          contact: existingMatch.contact,
+          confidence: existingMatch.confidence,
+          reason: existingMatch.reason
+        };
+      }
+      
+      // Créer un nouveau contact
+      const newContact = await this.createContact(data, tx);
+      
+      logger.info('Nouveau contact individuel créé', {
+        metadata: {
+          module: 'ContactService',
+          id: newContact.id,
+          firstName: newContact.firstName,
+          lastName: newContact.lastName
+        }
+      });
+      
+      return {
+        found: false,
+        created: true,
+        contact: newContact,
+        confidence: 1.0,
+        reason: 'Nouveau contact créé automatiquement'
+      };
+    },
+    {
+      operation: 'findOrCreateIndividualContact',
+      service: 'contactService',
+      metadata: {}
+    });
+  }
+}

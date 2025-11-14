@@ -227,23 +227,22 @@ export class ActionExecutionService {
 
       return {
         hasActionIntention: bestMatch.confidence > 0.6,
-        actionType: bestMatch.type || undefined,
+        actionType: (bestMatch.type || undefined) as 'create' | 'update' | 'delete' | 'business_action' | undefined,
         entity: bestMatch.entity || undefined,
         confidence: bestMatch.confidence,
         operation: bestMatch.operation || undefined
       };
-    },
-    {
-      operation: 'detectActionIntention',
-      service: 'ActionExecutionService',
-      metadata: {}
-    }) as {
-      hasActionIntention: boolean;
-      actionType?: 'create' | 'update' | 'delete' | 'business_action';
-      entity?: string;
-      confidence: number;
-      operation?: string;
-    };
+    } catch (error) {
+      logger.error('Erreur détection intention action', { metadata: {
+        service: 'ActionExecutionService',
+        operation: 'detectActionIntention',
+        error: error instanceof Error ? error.message : String(error)
+      }});
+      return {
+        hasActionIntention: false,
+        confidence: 0
+      };
+    }
   }
 
   /**
@@ -294,7 +293,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
             service: 'ActionExecutionService',
             operation: 'analyzeActionWithAI',
             error: parseError instanceof Error ? parseError.message : String(parseError)
-          }});
+          }
+      });
           return null;
         }
       }
@@ -327,7 +327,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: 'proposeAction',
           actionId,
           userId: request.userId
-        }});
+        }
+      });
       // 1. Validation RBAC préliminaire
       const rbacCheck = await this.rbacService.validateTableAccess({
         userId: request.userId,
@@ -347,7 +348,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           resource: `action:${request.entity}:${request.operation}`,
           action: 'propose_action',
           entityType: 'action',
-          metadata: { denialReason: rbacCheck.denialReason }
+          metadata: { denialReason: rbacCheck.denialReason || 'Accès refusé' }
         });
         return {
           success: false,
@@ -400,7 +401,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         userRole: request.userRole,
         sessionId: request.sessionId,
         conversationId: request.conversationId,
-        parameters: request.parameters,
+        parameters: request.parameters || {},
         targetEntityId: request.targetEntityId,
         riskLevel,
         confirmationRequired,
@@ -496,6 +497,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         }
       };
     });
+  }
+
   // ========================================
   // EXÉCUTION D'ACTIONS
   // ========================================
@@ -512,7 +515,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: 'executeAction',
           actionId: request.actionId,
           userId: request.userId
-        }});
+        }
+      });
       // 1. Récupérer l'action
       const actionResults = await db
         .select()
@@ -663,7 +667,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: currentAction.operation,
           executionTime: Date.now() - startTime,
           success: executionResult.success
-        }});
+        }
+      });
       return {
         success: executionResult.success,
         result: executionResult,
@@ -724,6 +729,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       if (operations.includes(operation)) {
         return level as 'low' | 'medium' | 'high';
       }
+    }
     return 'medium'; // Par défaut
   }
   private getTableNameForEntity(entity: string): string {
@@ -763,6 +769,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       }
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
+
   private async createActionConfirmation(actionId: string, userId: string, riskLevel: string, parameters: unknown): Promise<string> {
     const confirmationId = crypto.randomUUID();
     const expiresAt = new Date();
@@ -847,7 +854,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         if (request.decision) {
           await this.updateActionStatus(confirmation.actionId, 'confirmed', 'Action confirmée par l\'utilisateur');
         } else {
-          await this.updateActionStatus(confirmation.actionId, 'rejected', request.rejectionReason || 'Action rejetée par l\'utilisateur');
+          await this.updateActionStatus(confirmation.actionId, 'cancelled', request.rejectionReason || 'Action rejetée par l\'utilisateur');
         }
         
         // 6. Logging audit
@@ -860,7 +867,6 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           resource: `action:confirmation:${request.confirmationId}`,
           action: 'update_confirmation',
           metadata: {
-            confirmationId: request.confirmationId,
             actionId: confirmation.actionId,
             decision: request.decision,
             comment: request.comment
@@ -922,10 +928,11 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       if (currentAction.length === 0) return;
       const oldStatus = currentAction[0].status;
       // Mettre à jour l'action
+      const statusEnum = status as 'proposed' | 'confirmed' | 'executing' | 'completed' | 'failed' | 'cancelled' | 'timeout';
       await db
         .update(actions)
         .set({
-          status,
+          status: statusEnum,
           updatedAt: new Date(),
           ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
           ...(status === 'executing' ? { executedAt: new Date() } : {}),
@@ -935,8 +942,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       // Enregistrer l'historique
       const historyData: InsertActionHistory = {
         actionId,
-        fromStatus: oldStatus,
-        toStatus: status,
+        fromStatus: oldStatus as 'proposed' | 'confirmed' | 'executing' | 'completed' | 'failed' | 'cancelled' | 'timeout',
+        toStatus: statusEnum,
         changeReason: reason,
         changeType: 'system_update',
         success: true
@@ -957,7 +964,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           operation: 'performActionExecution',
           actionOperation: action.operation,
           entity: action.entity
-        }});
+        }
+      });
       switch (action.entity) {
         case 'offer':
           return await this.executeOfferAction(action);
@@ -994,6 +1002,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
         }
       };
     });
+  }
+
   private async executeOfferAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
       case 'create_offer':
@@ -1013,6 +1023,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           }
         };
     }
+  }
+
   private async executeProjectAction(action: Action): Promise<ActionExecutionResult> {
     switch (action.operation) {
       case 'create_project':
@@ -1054,6 +1066,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           }
         };
     }
+  }
+
   private async executeContactAction(action: Action): Promise<ActionExecutionResult> {
     return {
       success: false,
@@ -1094,8 +1108,8 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
           reference,
           client: params.client,
           location: params.location || '',
-          menuiserieType: params.menuiserieType || 'fenetre',
-          montantEstime: params.montantEstime ? parseFloat(params.montantEstime) : null,
+          menuiserieType: (params.menuiserieType || 'fenetre') as 'fenetre' | 'porte' | 'portail' | 'volet' | 'cloison' | 'verriere' | 'autre',
+          montantEstime: params.montantEstime ? parseFloat(params.montantEstime).toFixed(2) : undefined,
           responsibleUserId: params.responsibleUserId,
           departement: params.departement,
           source: params.source || 'website'
@@ -1120,7 +1134,7 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
       async () => {
         await db
           .update(offers)
-          .set({ status: status, updatedAt: new Date() })
+          .set({ status: status as 'brouillon' | 'etude_technique' | 'en_attente_fournisseurs' | 'en_cours_chiffrage' | 'en_attente_validation' | 'fin_etudes_validee' | 'valide' | 'signe' | 'transforme_en_projet' | 'termine' | 'archive', updatedAt: new Date() })
           .where(eq(offers.id, offerId));
         return {
           success: true,
@@ -1140,38 +1154,83 @@ Soyez précis dans l'extraction des paramètres (IDs, noms, valeurs).
   }
   private async archiveOffer(offerId: string): Promise<ActionExecutionResult> {
     return withErrorHandling(
-    async () => {
-      await db
-        .update(offers)
-        .set({ status: 'archive', updatedAt: new Date() })
-        .where(eq(offers.id, offerId));
-      return {
-        success: true,
-        entityId: offerId,
-        affectedRows: 1,
-        warnings: ['Offre archivée - action irréversible']
-      };
-    },
-    {
-      operation: 'constructor',
-      service: 'ActionExecutionService',
-      metadata: {}
-    } );
-      return {
-        success: false,
-        actions: [],
-        total: 0,
-        hasMore: false,
-        error: {
-          type: 'execution',
-          message: 'Erreur lors de la récupération de l\'historique'
-        }
-      };
-    },
-    {
-      operation: 'getActionHistory',
-      service: 'ActionExecutionService',
-      metadata: {}
-    }
+      async () => {
+        await db
+          .update(offers)
+          .set({ status: 'archive' as const, updatedAt: new Date() })
+          .where(eq(offers.id, offerId));
+        return {
+          success: true,
+          entityId: offerId,
+          affectedRows: 1,
+          warnings: ['Offre archivée - action irréversible']
+        };
+      },
+      {
+        operation: 'archiveOffer',
+        service: 'ActionExecutionService',
+        metadata: {}
+      }
     );
   }
+
+  private async transformOfferToProject(offerId: string): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Transformation offre en projet non implémentée'
+      }
+    };
+  }
+
+  private async createProject(parameters: unknown): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Création de projet non implémentée'
+      }
+    };
+  }
+
+  private async updateProjectStatus(projectId: string, status: string): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Mise à jour statut projet non implémentée'
+      }
+    };
+  }
+
+  private async archiveProject(projectId: string): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Archivage projet non implémenté'
+      }
+    };
+  }
+
+  private async createProjectTask(parameters: unknown): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Création tâche projet non implémentée'
+      }
+    };
+  }
+
+  private async updateTaskStatus(taskId: string, status: string): Promise<ActionExecutionResult> {
+    return {
+      success: false,
+      error: {
+        type: 'validation',
+        message: 'Mise à jour statut tâche non implémentée'
+      }
+    };
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "summary": {
+    "totalConversations": 96,
+    "analyzedConversations": 96,
+    "dateRange": {
+      "oldest": "2025-11-13T12:28:08.000Z",
+      "newest": "2025-11-13T12:28:08.000Z"
+    },
+    "averageMessagesPerConversation": 0
+  },
+  "errorPatterns": {
+    "common": [],
+    "categories": {}
+  },
+  "solutionPatterns": {
+    "effective": [],
+    "categories": {}
+  },
+  "topicAnalysis": {
+    "topTopics": [],
+    "domainDistribution": {}
+  },
+  "performanceIssues": {
+    "longConversations": [],
+    "repeatedErrors": []
+  },
+  "recommendations": [],
+  "actionPlan": []
+}

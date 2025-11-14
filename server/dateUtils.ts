@@ -13,18 +13,16 @@ import { logger } from './utils/logger';
  * @param dateLimiteRemise - Date limite de remise de l'AO
  * @returns Date de remise calculée (J-15) ou undefined si la date limite est invalide
  */
-export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): Date | undefined {
+export async function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): Promise<Date | undefined> {
   if (!dateLimiteRemise) return undefined;
 
-  return withErrorHandling(
+  return await withErrorHandling(
     async () => {
 
     const dateLimite = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
     
     if (isNaN(dateLimite.getTime())) {
-      logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise 
-
-            });
+      logger.warn('DateUtils - Date limite invalide', { metadata: { dateLimiteRemise } });
       return undefined;
     }
 
@@ -33,11 +31,10 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
     dateRemise.setDate(dateRemise.getDate() - 15);
 
     logger.debug('DateUtils - Date remise calculée', { metadata: { 
-        dateLimite: dateLimite.formatDateFR(new Date()), 
-        dateRemise: dateRemise.formatDateFR(new Date()) 
-            }
- 
-            });
+        dateLimite: formatDateFR(dateLimite), 
+        dateRemise: formatDateFR(dateRemise) 
+      }
+    });
     
     return dateRemise;
   
@@ -53,18 +50,16 @@ export function calculerDateRemiseJ15(dateLimiteRemise: Date | string | null): D
  * Calcule automatiquement la date limite de remise selon les règles métier JLM
  * Règle : Date de sortie AO + 30 jours par défaut (délai standard pour les appels d'offres publics)
  */
-export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null, delaiJours: number = 30): Date | undefined {
+export async function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null, delaiJours: number = 30): Promise<Date | undefined> {
   if (!dateSortieAO) return undefined;
 
-  return withErrorHandling(
+  return await withErrorHandling(
     async () => {
 
     const dateSortie = typeof dateSortieAO === 'string' ? new Date(dateSortieAO) : dateSortieAO;
     
     if (isNaN(dateSortie.getTime())) {
-      logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO 
-
-            });
+      logger.warn('DateUtils - Date de sortie AO invalide', { metadata: { dateSortieAO } });
       return undefined;
     }
 
@@ -73,12 +68,11 @@ export function calculerDateLimiteRemiseAuto(dateSortieAO: Date | string | null,
     dateLimite.setDate(dateLimite.getDate() + delaiJours);
 
     logger.debug('DateUtils - Date limite calculée', { metadata: { 
-        dateSortie: dateSortie.formatDateFR(new Date()), 
-        dateLimite: dateLimite.formatDateFR(new Date()),
+        dateSortie: formatDateFR(dateSortie), 
+        dateLimite: formatDateFR(dateLimite),
         delaiJours 
-            }
- 
-            });
+      }
+    });
     
     return dateLimite;
   
@@ -109,16 +103,16 @@ export interface DatesImportantes {
  * @param dateLivraisonPrevue - Date de livraison extraite par OCR
  * @returns Objet avec toutes les dates importantes calculées
  */
-export function calculerDatesImportantes(
+export async function calculerDatesImportantes(
   dateLimiteRemise?: string | Date | null,
   demarragePrevu?: string | Date | null,
   dateLivraisonPrevue?: string | Date | null
-): DatesImportantes {
+): Promise<DatesImportantes> {
   const dates: DatesImportantes = {};
 
   // Date limite de remise
   if (dateLimiteRemise) {
-    return withErrorHandling(
+    await withErrorHandling(
     async () => {
 
       dates.dateLimiteRemise = typeof dateLimiteRemise === 'string' ? new Date(dateLimiteRemise) : dateLimiteRemise;
@@ -130,13 +124,13 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {
-      });
+      metadata: {}
+    });
   }
 
   // Date de démarrage des travaux
   if (demarragePrevu) {
-    return withErrorHandling(
+    await withErrorHandling(
     async () => {
 
       dates.demarragePrevu = typeof demarragePrevu === 'string' ? new Date(demarragePrevu) : demarragePrevu;
@@ -145,13 +139,13 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {
-      });
+      metadata: {}
+    });
   }
 
   // Date de livraison prévue
   if (dateLivraisonPrevue) {
-    return withErrorHandling(
+    await withErrorHandling(
     async () => {
 
       dates.dateLivraisonPrevue = typeof dateLivraisonPrevue === 'string' ? new Date(dateLivraisonPrevue) : dateLivraisonPrevue;
@@ -160,8 +154,8 @@ export function calculerDatesImportantes(
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {
-      });
+      metadata: {}
+    });
   }
 
   return dates;
@@ -173,10 +167,10 @@ export function calculerDatesImportantes(
  * @param options - Options de formatage
  * @returns Date formatée ou chaîne vide si invalide
  */
-export function formaterDateFR(date?: Date | string | null, options: Intl.DateTimeFormatOptions = {}): string {
+export async function formaterDateFR(date?: Date | string | null, options: Intl.DateTimeFormatOptions = {}): Promise<string> {
   if (!date) return '';
 
-  return withErrorHandling(
+  return await withErrorHandling(
     async () => {
 
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -206,10 +200,10 @@ export function formaterDateFR(date?: Date | string | null, options: Intl.DateTi
  * @param dateFin - Date de fin
  * @returns Nombre de jours ou null si une date est invalide
  */
-export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: Date | string | null): number | null {
+export async function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: Date | string | null): Promise<number | null> {
   if (!dateDebut || !dateFin) return null;
 
-  return withErrorHandling(
+  return await withErrorHandling(
     async () => {
 
     const debut = typeof dateDebut === 'string' ? new Date(dateDebut) : dateDebut;
@@ -226,8 +220,8 @@ export function calculerNombreJours(dateDebut?: Date | string | null, dateFin?: 
     {
       operation: 'e',
       service: 'dateUtils',
-      metadata: {
-      });
+      metadata: {}
+    });
 }
 
 /**
@@ -246,6 +240,7 @@ export function estDatePassee(date?: Date | string | null): boolean {
   } catch (error) {
     return false;
   }
+}
 
 /**
  * Vérifie si une date est urgente (dans les 7 prochains jours)
@@ -266,6 +261,7 @@ export function estDateUrgente(date?: Date | string | null): boolean {
   } catch (error) {
     return false;
   }
+}
 
 // ========================================
 // FONCTIONS ANALYTICS DATE HELPERS - PHASE 3.1.4
@@ -307,6 +303,7 @@ export function parsePeriod(period: string): DateRange {
     default:
       return getDefaultPeriod();
   }
+}
 
 /**
  * Retourne la période par défaut pour les analytics (1 mois)

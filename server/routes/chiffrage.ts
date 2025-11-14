@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { z } from "zod";
 import { insertChiffrageElementSchema, insertDpgfDocumentSchema } from "../../shared/schema";
 import type { IStorage } from "../storage-poc";
@@ -20,12 +20,28 @@ const dpgfQuerySchema = z.object({
 });
 
 // Helper pour récupérer l'utilisateur authentifié
-function getAuthenticatedUserId(req: unknown): string {
+function getAuthenticatedUserId(req: Request): string {
   const user = req.user;
-  if (!user || !user.claims) {
+  if (!user) {
     throw new ValidationError("User not authenticated");
   }
-  return user.claims.sub || user.claims.id || "unknown-user";
+  
+  // Support pour basic auth
+  if (user.isBasicAuth && user.id) {
+    return user.id;
+  }
+  
+  // Support pour OIDC auth
+  if (user.claims) {
+    const sub = user.claims.sub;
+    const claimsId = user.claims.id;
+    if (typeof sub === 'string') return sub;
+    if (typeof claimsId === 'string') return claimsId;
+  }
+  
+  // Fallback
+  if (user.id) return user.id;
+  return "unknown-user";
 }
 
 export function registerChiffrageRoutes(app: Express, storage: IStorage) {
@@ -34,40 +50,29 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Récupération éléments chiffrage', { 
-      userId: (req.user as unknown)?.id,
-      metadata: { offerId 
-              }
-            );
+      metadata: { 
+        offerId,
+        userId: req.user?.id 
+      }
+    });
     
     const elements = await storage.getChiffrageElementsByOffer(offerId);
     
-    logger.info('[Chiffrage] Éléments récupérés', { metadata: { offerId, count: elements.length 
-
-            }
- 
-
-            });
+    logger.info('[Chiffrage] Éléments récupérés', { metadata: { offerId, count: elements.length }});
     
     res.json(elements);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Créer un nouvel élément de chiffrage
   app.post("/api/offers/:offerId/chiffrage-elements", isAuthenticated, asyncHandler(async (req, res) => {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Création élément chiffrage', { 
-      userId: (req.uas unknown?.id,
-      metadata: { offerId 
-              }
-            );
+      metadata: { 
+        offerId,
+        userId: req.user?.id 
+      }
+    });
     
     // Validation des données
     const validationResult = insertChiffrageElementSchema.safeParse({
@@ -79,7 +84,23 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       throw new ValidationError("Données d'élément de chiffrage invalides");
     }
 
-    const element = await storage.createChiffrageElement(validationResult.data);
+    // Convertir les nombres en strings pour les champs decimal de Drizzle
+    const elementData = {
+      ...validationResult.data,
+      quantity: validationResult.data.quantity.toString(),
+      unitPrice: validationResult.data.unitPrice.toString(),
+      totalPrice: validationResult.data.totalPrice !== null && validationResult.data.totalPrice !== undefined
+        ? validationResult.data.totalPrice.toString()
+        : (validationResult.data.quantity * validationResult.data.unitPrice).toString(),
+      coefficient: validationResult.data.coefficient !== null && validationResult.data.coefficient !== undefined
+        ? validationResult.data.coefficient.toString()
+        : undefined,
+      marginPercentage: validationResult.data.marginPercentage !== null && validationResult.data.marginPercentage !== undefined
+        ? validationResult.data.marginPercentage.toString()
+        : undefined,
+    };
+
+    const element = await storage.createChiffrageElement(elementData);
     
     logger.info('[Chiffrage] Élément créé', { metadata: { offerId, elementId: element.id 
             }
@@ -87,25 +108,19 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
             });
     
     res.status(201).json(element);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Mettre à jour un élément de chiffrage
   app.put("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, asyncHandler(async (req, res) => {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Modification élément chiffrage', { 
-      userId: (ras unknown) as unknown)?.id,
-      metadata: { offerId, elementId 
-              }
-            );
+      metadata: { 
+        offerId, 
+        elementId,
+        userId: req.user?.id 
+      }
+    });
     
     // Validation des données (sans offerId car déjà défini)
     const validationResult = insertChiffrageElementSchema.partial().safeParse(req.body);
@@ -114,61 +129,59 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       throw new ValidationError("Données de modification invalides");
     }
 
-    const element = await storage.updateChiffrageElement(elementId, validationResult.data);
+    // Convertir les nombres en strings pour les champs decimal de Drizzle
+    const updateData: Record<string, unknown> = { ...validationResult.data };
+    if (validationResult.data.quantity !== undefined) {
+      updateData.quantity = validationResult.data.quantity.toString();
+    }
+    if (validationResult.data.unitPrice !== undefined) {
+      updateData.unitPrice = validationResult.data.unitPrice.toString();
+    }
+    if (validationResult.data.totalPrice !== undefined && validationResult.data.totalPrice !== null) {
+      updateData.totalPrice = validationResult.data.totalPrice.toString();
+    }
+    if (validationResult.data.coefficient !== undefined && validationResult.data.coefficient !== null) {
+      updateData.coefficient = validationResult.data.coefficient.toString();
+    }
+    if (validationResult.data.marginPercentage !== undefined && validationResult.data.marginPercentage !== null) {
+      updateData.marginPercentage = validationResult.data.marginPercentage.toString();
+    }
+
+    const element = await storage.updateChiffrageElement(elementId, updateData);
     
-    logger.info('[Chiffrage] Élément modifié', { metadata: { offerId, elementId 
-            }
- 
-            });
+    logger.info('[Chiffrage] Élément modifié', { metadata: { offerId, elementId } });
     
     res.json(element);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Supprimer un élément de chiffrage
   app.delete("/api/offers/:offerId/chiffrage-elements/:elementId", isAuthenticated, asyncHandler(async (req, res) => {
     const { offerId, elementId } = req.params;
     
     logger.info('[Chiffrage] Suppression élément chiffrage', { 
-      userIdas unknown)uas unknunknown)unknown)?.id,
-      metadata: { offerId, elementId 
-              }
-            );
+      metadata: { 
+        offerId, 
+        elementId,
+        userId: req.user?.id 
+      }
+    });
     
     await storage.deleteChiffrageElement(elementId);
     
-    logger.info('[Chiffrage] Élément supprimé', { metadata: { offerId, elementId 
-
-            }
- 
-
-            });
+    logger.info('[Chiffrage] Élément supprimé', { metadata: { offerId, elementId } });
     
     res.status(204).send();
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Récupérer le DPGF d'une offre
   app.get("/api/offers/:offerId/dpgf", isAuthenticated, asyncHandler(async (req, res) => {
     const { offerId } = req.params;
     
     logger.info('[Chiffrage] Récupération DPGF', { 
-      offerId,
-      usas unknown)ras unknunknown)unknown any)?.id 
+      metadata: { 
+        offerId,
+        userId: req.user?.id 
+      }
     });
     
     const dpgf = await storage.getDpgfDocumentByOffer(offerId);
@@ -177,20 +190,14 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     }
     
     logger.info('[Chiffrage] DPGF récupéré', { 
-      offerId,
-      dpgfId: dpgf.id 
+      metadata: { 
+        offerId,
+        dpgfId: dpgf.id 
+      }
     });
     
     res.json(dpgf);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Générer un DPGF à partir des éléments de chiffrage avec PDF
   app.post("/api/offers/:offerId/dpgf/generate", isAuthenticated, asyncHandler(async (req, res) => {
@@ -208,10 +215,12 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const userId = getAuthenticatedUserId(req);
 
     logger.info('[Chiffrage] Génération DPGF', { 
-      offerId,
-      includeOptional,
-      tvaPercentage,
-      userId 
+      metadata: { 
+        offerId,
+        includeOptional,
+        tvaPercentage,
+        userId 
+      }
     });
 
     // Récupérer les éléments de chiffrage
@@ -280,10 +289,12 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     }
 
     logger.info('[Chiffrage] DPGF généré avec succès', { 
-      offerId,
-      dpgfId: dpgf.id,
-      pdfFilename: pdfResult.filename,
-      pdfSize: pdfResult.size 
+      metadata: { 
+        offerId,
+        dpgfId: dpgf.id,
+        pdfFilename: pdfResult.filename,
+        pdfSize: pdfResult.size 
+      }
     });
     
     // Retourner les métadonnées du DPGF avec info PDF
@@ -293,15 +304,7 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
       pdfFilename: pdfResult.filename,
       pdfSize: pdfResult.size
     });
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Prévisualisation HTML du DPGF
   app.get("/api/offers/:offerId/dpgf/preview", isAuthenticated, asyncHandler(async (req, res) => {
@@ -316,10 +319,12 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { includeOptional, tvaPercentage } = validationResult.data;
 
     logger.info('[Chiffrage] Prévisualisation DPGF', { 
-      offerId,
-      includeOptional,
-      tvaPercentage,
-    as unknown)das unknunknown)unknownr as any)?.id 
+      metadata: { 
+        offerId,
+        includeOptional,
+        tvaPercentage,
+        userId: req.user?.id 
+      }
     });
 
     // Récupérer les éléments de chiffrage
@@ -348,22 +353,11 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     // Générer le HTML de prévisualisation
     const htmlPreview = await PdfGeneratorService.generateDpgfPreview(dpgfData);
 
-    logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId 
-            }
- 
-            });
+    logger.info('[Chiffrage] Prévisualisation générée', { metadata: { offerId } });
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(htmlPreview);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Téléchargement du PDF DPGF
   app.get("/api/offers/:offerId/dpgf/download", isAuthenticated, asyncHandler(async (req, res) => {
@@ -378,10 +372,12 @@ export function registerChiffrageRoutes(app: Express, storage: IStorage) {
     const { includeOptional, tvaPercentage } = validationResult.data;
 
     logger.info('[Chiffrage] Téléchargement PDF DPGF', { 
-      offerId,
-      includeOptional,
-      tvaPercentage,
-as unknown)sas unknunknown)unknown.user as any)?.id 
+      metadata: { 
+        offerId,
+        includeOptional,
+        tvaPercentage,
+        userId: req.user?.id 
+      }
     });
 
     // Récupérer les éléments de chiffrage
@@ -417,22 +413,16 @@ as unknown)sas unknunknown)unknown.user as any)?.id
     res.setHeader("Cache-Control", "no-cache");
 
     logger.info('[Chiffrage] PDF téléchargé', { 
-      offerId,
-      filename: pdfResult.filename,
-      size: pdfResult.size 
+      metadata: { 
+        offerId,
+        filename: pdfResult.filename,
+        size: pdfResult.size 
+      }
     });
     
     // Envoi du PDF
     res.send(pdfResult.buffer);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Valider la fin d'études d'une offre
   app.post("/api/offers/:offerId/validate-studies", isAuthenticated, asyncHandler(async (req, res) => {
@@ -442,8 +432,10 @@ as unknown)sas unknunknown)unknown.user as any)?.id
     const userId = getAuthenticatedUserId(req);
 
     logger.info('[Chiffrage] Validation fin d\'études', { 
-      offerId,
-      userId 
+      metadata: { 
+        offerId,
+        userId 
+      }
     });
 
     // Vérifier qu'un DPGF existe
@@ -468,20 +460,14 @@ as unknown)sas unknunknown)unknown.user as any)?.id
     });
 
     logger.info('[Chiffrage] Fin d\'études validée', { 
-      offerId,
-      dpgfId: dpgf.id 
+      metadata: { 
+        offerId,
+        dpgfId: dpgf.id 
+      }
     });
 
     res.json(offer);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 
   // Transformer une offre validée en projet
   app.post("/api/offers/:offerId/convert-to-project", isAuthenticated, asyncHandler(async (req, res) => {
@@ -491,8 +477,10 @@ as unknown)sas unknunknown)unknown.user as any)?.id
     const userId = getAuthenticatedUserId(req);
 
     logger.info('[Chiffrage] Conversion offre en projet', { 
-      offerId,
-      userId 
+      metadata: { 
+        offerId,
+        userId 
+      }
     });
 
     // Récupérer l'offre
@@ -555,18 +543,12 @@ as unknown)sas unknunknown)unknown.user as any)?.id
     });
 
     logger.info('[Chiffrage] Offre convertie en projet', { 
-      offerId,
-      projectId: project.id 
+      metadata: { 
+        offerId,
+        projectId: project.id 
+      }
     });
 
     res.status(201).json(project);
-        }
-
-                  }
-
-
-                            }
-
-
-                          }));
+  }));
 }

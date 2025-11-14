@@ -11,6 +11,8 @@ import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 import { storage } from "./storage-poc";
 import { logger } from './utils/logger';
+// Import dynamique pour éviter problème de circular dependency
+// import { refreshMicrosoftToken } from './services/MicrosoftOAuthService';
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new AppError("Environment variable REPLIT_DOMAINS not provided", 500);
@@ -44,12 +46,8 @@ export function getSession() {
     logger.info('Session store: Mémoire (développement)', { metadata: {
         module: 'ReplitAuth',
         operation: 'getSession',
-        context: { store: 'memory', reason: 'Éviter cold starts Neon en dev' 
-
-            }
- 
-
-            });
+        context: { store: 'memory', reason: 'Éviter cold starts Neon en dev' }
+    }});
   } else {
     // PostgreSQL pour production avec timeouts optimisés
     const pgStore = connectPg(session);
@@ -67,12 +65,8 @@ export function getSession() {
     logger.info('Session store: PostgreSQL (production)', { metadata: {
         module: 'ReplitAuth',
         operation: 'getSession',
-        context: { store: 'postgresql' 
-
-                    }
- 
-
-                                                                                                                                                                                                                                                                              });
+        context: { store: 'postgresql' }
+    }});
   }
   
   // Configuration adaptée selon l'environnement
@@ -89,11 +83,8 @@ export function getSession() {
         isReplit,
         isProduction,
         isDevelopment
-
-          }
-
-
-            });
+      }
+    }});
   
   // CORRECTION CRITIQUE : FORCER HTTP en développement même avec REPLIT_DOMAINS
   let cookieConfig;
@@ -109,12 +100,8 @@ export function getSession() {
     logger.info('Configuration session: développement HTTP', { metadata: {
         module: 'ReplitAuth',
         operation: 'initializeSession',
-        context: { mode: 'development', protocol: 'http', sameSite: 'lax' 
-
-            }
- 
-
-            });
+        context: { mode: 'development', protocol: 'http', sameSite: 'lax' }
+    }});
   } else if (isReplit && !isDevelopment) {
     // Mode Replit production (iframe/third-party HTTPS)
     cookieConfig = {
@@ -126,12 +113,8 @@ export function getSession() {
     logger.info('Configuration session: Replit HTTPS iframe', { metadata: {
         module: 'ReplitAuth',
         operation: 'initializeSession',
-        context: { mode: 'replit', protocol: 'https', sameSite: 'none' 
-
-            }
- 
-
-            });
+        context: { mode: 'replit', protocol: 'https', sameSite: 'none' }
+    }});
   } else {
     // Mode production standard (HTTPS)
     cookieConfig = {
@@ -143,12 +126,8 @@ export function getSession() {
     logger.info('Configuration session: production HTTPS', { metadata: {
         module: 'ReplitAuth',
         operation: 'initializeSession',
-        context: { mode: 'production', protocol: 'https', sameSite: 'strict' 
-
-            }
- 
-
-            });
+        context: { mode: 'production', protocol: 'https', sameSite: 'strict' }
+    }});
   }
   
   return session({
@@ -161,7 +140,7 @@ export function getSession() {
 }
 
 function updateUserSession(
-  user: unknown,
+  user: any,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
   user.claims = tokens.claims();
@@ -171,14 +150,14 @@ function updateUserSession(
 }
 
 async function upsertUser(
-  cl: unknown, unknown,
+  claims: client.UserInfoResponse
 ) {
   await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+    id: String(claims["sub"] ?? ''),
+    email: String(claims["email"] ?? ''),
+    firstName: String(claims["first_name"] ?? ''),
+    lastName: String(claims["last_name"] ?? ''),
+    profileImageUrl: claims["profile_image_url"] ? String(claims["profile_image_url"]) : null,
   });
 }
 
@@ -315,36 +294,30 @@ export async function setupAuth(app: Express) {
   }
 
   // CORRECTION CRITIQUE : Sérialisation basée sur l'ID pour éviter les problèmes de session
-  passport.serializeUs: unknown,er: unknown, cb) => {
+  passport.serializeUser((user: any, cb) => {
     logger.info('Sérialisation utilisateur session', { metadata: {
         module: 'ReplitAuth',
         operation: 'serializeUser',
         userId: user.id,
         isOIDC: user.isOIDC
-            }
-
-            });
+    }});
     // Sérialiser seulement l'ID utilisateur pour éviter les problèmes de taille/persistance
     cb(null, { id: user.id, isOIDC: user.isOIDC });
   });
   
-  passport.deserializeUser(async (se: unknown,edUsunknown,unknown, cb) => {
+  passport.deserializeUser(async (serializedUser: any, cb) => {
     try {
       logger.info('Désérialisation utilisateur session', { metadata: {
           module: 'ReplitAuth',
           operation: 'deserializeUser',
           userId: serializedUser?.id
-              }
-
-            });
+      }});
       
       if (!serializedUser || !serializedUser.id) {
         logger.warn('Données utilisateur sérialisées invalides', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'deserializeUser'
-                }
-
-            });
+            module: 'ReplitAuth',
+            operation: 'deserializeUser'
+        }});
         return cb(null, null);
       }
       
@@ -352,12 +325,10 @@ export async function setupAuth(app: Express) {
       const dbUser = await storage.getUser(serializedUser.id);
       if (!dbUser) {
         logger.warn('Utilisateur non trouvé en base de données', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'deserializeUser',
-                  userId: serializedUser.id
-                }
-
-            });
+            module: 'ReplitAuth',
+            operation: 'deserializeUser',
+            userId: serializedUser.id
+        }});
         return cb(null, null);
       }
       
@@ -381,13 +352,11 @@ export async function setupAuth(app: Express) {
         };
         
         logger.info('Utilisateur OIDC désérialisé', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'deserializeUser',
-                  userId: user.id,
+            module: 'ReplitAuth',
+            operation: 'deserializeUser',
+            userId: user.id,
             userEmail: user.email
-                }
-
-            });
+        }});
         return cb(null, user);
       }
       
@@ -398,11 +367,10 @@ export async function setupAuth(app: Express) {
           module: 'ReplitAuth',
           operation: 'deserializeUser',
           error: error instanceof Error ? error.message : String(error)
-              }
-
-            });
+      }});
       cb(error, null);
-    });
+    }
+  });
 
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
@@ -427,6 +395,7 @@ export async function setupAuth(app: Express) {
         }).href
       );
     });
+  });
 
   // Route spéciale pour authentification des tests E2E
   app.post("/api/test-login", (req, res) => {
@@ -467,17 +436,17 @@ export async function setupAuth(app: Express) {
       };
 
       // Stocker dans la session
-      (req as unknown).session.user = testUser;
+      (req as any).session.user = testUser;
 
       // Sauvegarder la session
-      (as unknown).session.save((err: unknown) => {
-                module: 'ReplitAuth',
-                operation: 'testLogin',
-                error: err instanceof Error ? err.message : String(err),
-              stack: err instanceof Error ? err.stack : undefined
-              }
-
-            });
+      (req as any).session.save((err: unknown) => {
+        if (err) {
+          logger.error('Erreur sauvegarde session test E2E', { metadata: {
+            module: 'ReplitAuth',
+            operation: 'testLogin',
+            error: err instanceof Error ? err.message : String(err),
+            stack: err instanceof Error ? err.stack : undefined
+          }});
           return res.status(500).json({
             success: false,
             message: 'Erreur de sauvegarde de session'
@@ -485,42 +454,41 @@ export async function setupAuth(app: Express) {
         }
 
         logger.info('Utilisateur test E2E authentifié', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'testLogin',
-                  userId: testUser.id
-                }
-
-            });
+            module: 'ReplitAuth',
+            operation: 'testLogin',
+            userId: testUser.id
+        }});
         res.json({
           success: true,
           message: 'Authentification test E2E réussie',
           user: testUser
-
-              });
+        });
+      });
     } catch (error) {
       logger.error('[ReplitAuth] Erreur lors de l\'authentification test E2E', { metadata: {
           module: 'ReplitAuth',
           operation: 'testLogin',
           error: error instanceof Error ? error.message : String(error)
-              }
-
-            });
+      }});
       res.status(500).json({
         success: false,
         message: 'Erreur serveur'
       });
+    }
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // MULTI-PROVIDER AUTH: Check for session user (basic or Microsoft)
-  const useras unknown) as unknown).session?.user || req.user;
+  const user = (req as any).session?.user || req.user;
   
   if (!user) {
     return res.status(401).json({ success: false, message: 'Non authentifié' });
   }
 
   // For basic auth users, no token expiration check needed
-  if (user.isBasicAuth)as unknown)(as unknunknunknown)any).user = user;
+  if (user.isBasicAuth) {
+    (req as any).user = user;
     return next();
   }
 
@@ -529,7 +497,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const now = Math.floor(Date.now() / 1000);
     
     // Token still valid
-    if (now < user.expiresAas unknown) as unknunknunknown) as any).user = user;
+    if (now < user.expiresAt) {
+      (req as any).user = user;
       return next();
     }
 
@@ -537,15 +506,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     if (user.refreshToken) {
       try {
         logger.info('[Auth] Microsoft token expired, attempting refresh', { metadata: {
-                  userId: user.id,
+            userId: user.id,
             expiresAt: new Date(user.expiresAt * 1000).toISOString()
-                }
+        }});
 
-                                    });
-
-        // Import token refresh utilities
-        const { refreshMicrosoftToken } = await import('./services/MicrosoftOAuthService');
-        const newTokens = await refreshMicrosoftToken(user.refreshToken);
+        // Import token refresh utility dynamically
+        const MicrosoftOAuthModule = await import('./services/MicrosoftOAuthService');
+        const newTokens = await (MicrosoftOAuthModule as any).refreshMicrosoftToken(user.refreshToken);
 
         // Update user object with new tokens
         const updatedUser = {
@@ -556,267 +523,38 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         };
 
         // Save updated session
- as unknunknunknown)(req as any).session.user = updateas unknoas unknunknunknown)    (req as any).user = updatedUser;
+        (req as any).session.user = updatedUser;
+        (req as any).user = updatedUser;
 
-        logger.info('[Auth] Microsoft token refreshed successfully', { metadata: { userId: user.id 
-                }
- 
-            });
+        logger.info('[Auth] Microsoft token refreshed successfully', { metadata: { 
+            userId: user.id 
+        }});
 
         return next();
       } catch (error) {
         logger.error('[ReplitAuth] Erreur lors du rafraîchissement du token Microsoft', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'isAuthenticated',
-                  userId: user.id,
-                  error: error instanceof Error ? error.message : String(error)
-                }
-
-            });
+            module: 'ReplitAuth',
+            operation: 'isAuthenticated',
+            userId: user.id,
+            error: error instanceof Error ? error.message : String(error)
+        }});
         
         // Clear session and return 401
         (req as any).session.user = null;
         return res.status(401).json({ success: false, message: 'Session expirée' });
       }
+    }
 
     // No refresh token available
-    logger.warn('[Auth] Microsoft token expired and no refresh token', { metadata: { userId: user.id 
-            }
- as unknoas unknunknunknown)});
+    logger.warn('[Auth] Microsoft token expired and no refresh token', { metadata: { 
+        userId: user.id 
+    }});
     (req as any).session.user = null;
     return res.status(401).json({ success: false, message: 'Session expirée' });
   }
 
   // User authenticated but no expiration info (shouldn't happen, but be safe)
   (req as any).user = user;
-  next();
-  
-  // ===== OLD CODE BELOW (kept for reference, but commented out) =====
-  /*
-  const user_old = req.user as as unknoas unknunknunknown)t session = (req as any).session;
-  
-  // CORRECTION BLOCKER 3: Bypass auth pour tests E2E
-  if (process.env.NODE_ENV === 'test') {
-    logger.info('Environnement test - bypass auth', { metadata: {
-        module: 'ReplitAuth',
-        operation: 'isAuthenticated',
-        path: req.path
-            }
-
-            });
-    // Créer un utilisateur test pour les tests E2E
-    (req as any).user = {
-      id: 'test-user-e2e',
-      email: 'test@e2e.local',
-      firstName: 'Test',
-      lastName: 'E2E',
-      profileImageUrl: null,
-      role: 'admin',
-      isTestUser: true
-    };
-    return next();
-  }
-  
-  // NOUVEAU: Bypass auth pour tests E2E Playwright en mode development
-  const isE2ETest = (
-    process.env.NODE_ENV === 'development' && 
-    (
-      req.headers['x-e2e-test'] === 'true' ||
-      process.env.E2E_TESTING === 'true' ||
-      req.headers['user-agent']?.includes('Playwright')
-    )
-  );
-  
-  if (isE2ETest) {
-    logger.info('Test E2E détecté - bypass auth', { metadata: {
-        module: 'ReplitAuth',
-        operation: 'isAuthenticated',
-        path: req.path
-            }
-
-            });
-    // Créer un utilisateur test pour les tests E2E en mode development
-    (req as any).user = {
-      id: 'test-user-e2e-dev',
-      email: 'test@e2e-dev.local',
-      firstName: 'Test',
-      lastName: 'E2E Dev',
-      profileImageUrl: null,
-      role: 'admin',
-      isBasicAuth: true,  // AJOUTÉ: Marquer comme basic auth pour compatibilité avec /api/auth/user
-      isTestUser: true,
-      isE2EUser: true
-    };
-    return next();
-  }
-  
-  // ========================================
-  // 🔥 CORRECTION CRITIQUE : AUTO-AUTHENTIFICATION DÉVELOPPEMENT 🔥
-  // ========================================
-  
-  // GARDE DE SÉCURITÉ : Strictement limité au mode development
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  if (isDevelopment && !user && !session?.user) {
-    // GARDE SUPPLÉMENTAIRE : Vérifier qu'on n'est pas dans un contexte de test
-    const isTestContext = (
-      req.headers['x-e2e-test'] === 'true' ||
-      process.env.E2E_TESTING === 'true' ||
-      req.headers['user-agent']?.includes('Playwright') ||
-      process.env.NODE_ENV === 'test'
-    );
-    
-    if (!isTestContext) {
-      // Créer automatiquement l'utilisateur par défaut pour le développement
-      const defaultDevUser = {
-        id: 'admin-dev-user',
-        email: 'admin@jlm-dev.local',
-        firstName: 'Admin',
-        lastName: 'Development',
-        profileImageUrl: null,
-        role: 'admin',
-        isBasicAuth: true,
-        isDefaultDevUser: true
-      };
-      
-      // SÉCURITÉ : Logger uniquement en mode development
-      logger.info('Mode développement: création auto utilisateur par défaut', { metadata: {
-          module: 'ReplitAuth',
-          operation: 'isAuthenticated',
-          userId: defaultDevUser.id,
-          userEmail: defaultDevUser.email,
-          path: req.path
-              }
-
-            });
-      
-      return withErrorHandling(
-    async () => {
-
-        // Stocker dans la session
-        session.user = defaultDevUser;
-        
-        // Assigner également à req.user pour compatibilité immédiate
-        (req as any).user = defaultDevUser;
-        
-        // Sauvegarder la session de manière synchrone pour garantir la persistance
-        await new Promise<void>((resolve, reject) => {
-     unknunknown) session.save(: unknown)any) => {
-            if (err) {
-              logger.error('Erreur sauvegarde session utilisateur par défaut', { metadata: {
-                        module: 'ReplitAuth',
-                        operation: 'isAuthenticated',
-                        error: err instanceof Error ? err.message : String(err),
-                  stack: err instanceof Error ? err.stack : undefined
-                      }
-
-            });
-              reject(err);
-            } else {
-              logger.info('Utilisateur par défaut créé et session sauvegardée', { metadata: {
-                        module: 'ReplitAuth',
-                        operation: 'isAuthenticated',
-                        userId: defaultDevUser.id
-                      }
-
-            });
-              resolve();
-            });
-        
-        logger.info('Auto-auth développement réussie - utilisateur par défaut', { metadata: {
-                  module: 'ReplitAuth',
-                  operation: 'isAuthenticated',
-                  userId: defaultDevUser.id
-                }
-
-            });
-        return next();
-        
-      
-    },
-    {
-      operation: 'if',
-      service: 'replitAuth',
-      metadata: {}
-    } );
-        // En cas d'erreur, continuer avec le flow normal d'authentification
-      }
-  
-  // DÉBOGAGE ULTRA-DÉTAILLÉ pour résoudre le problème une fois pour toutes
-  logger.info('Analyse middleware isAuthenticated', { metadata: {
-      module: 'ReplitAuth',
-      operation: 'isAuthenticated',
-      path: req.path,
-      method: req.method,
-      context: {
-        hasUser: !!user,
-        hasSession: !!session,
-        sessionHasUser: !!(session?.user),
-        sessionUserIsBasicAuth: session?.user?.isBasicAuth,
-        sessionUserId: session?.user?.id,
-        userType: session?.user?.isBasicAuth ? 'basic_auth' : (user ? 'oidc' : 'none')
-
-                                                                                                                                                                                                                                                                                                                                                                      }
-
-
-                                                                                                                                                                                                                                                                              });
-
-  // CORRECTIF URGENT - Vérifier d'abord si c'est un utilisateur basic auth
-  if (session?.user?.isBasicAuth) {
-    // CORRECTIF SÉCURITÉ : Log supprimé pour éviter exposition données session
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('Session basic auth trouvée', { metadata: {
-          module: 'ReplitAuth',
-          operation: 'isAuthenticated',
-          userId: session.user.id
-              }
-
-            });
-    }
-    // Pour l'auth basique, utiliser les données de session
-    (req as any).user = session.user;
-    return next();
-  }
-  
-  // CORRECTIF URGENT - Vérifier aussi req.user.isBasicAuth pour session persistée
-  if (user?.isBasicAuth) {
-    // CORRECTIF SÉCURITÉ : Log supprimé pour éviter exposition données user
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('Utilisateur basic auth dans req.user', { metadata: {
-          module: 'ReplitAuth',
-          operation: 'isAuthenticated',
-          userId: user.id
-              }
-
-            });
-    }
-    return next();
-  }
-
-  // Si pas d'utilisateur basic auth, vérifier l'authentification OIDC
-  if (!req.isAuthenticated() || !user?.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-  */
+  return next();
 };
+

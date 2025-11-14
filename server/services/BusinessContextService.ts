@@ -40,6 +40,10 @@ import {
   adaptiveLearningPatterns,
   businessContextMetricsLog
 } from "@shared/schema";
+// Import des services extraits
+import { RBACContextBuilder } from './context/RBACContextBuilder';
+import { TemporalContextBuilder } from './context/TemporalContextBuilder';
+import { ContextComposer } from './context/ContextComposer';
 
 // ========================================
 // CONSTANTES DE CONFIGURATION
@@ -86,10 +90,18 @@ export class BusinessContextService {
   private domainKnowledge: MenuiserieDomain | null = null;
   private schemasCache: SchemaWithDescriptions[] | null = null;
   
+  // Services extraits
+  private rbacContextBuilder: RBACContextBuilder;
+  private contextComposer: ContextComposer;
+  
   constructor(storage: IStorage, rbacService: RBACService, eventBus: EventBus) {
     this.storage = storage;
     this.rbacService = rbacService;
     this.eventBus = eventBus;
+    
+    // Initialiser les builders
+    this.rbacContextBuilder = new RBACContextBuilder(rbacService);
+    this.contextComposer = new ContextComposer(this.rbacContextBuilder);
     
     // Initialisation différée de la base de connaissances
     this.initializeDomainKnowledge();
@@ -424,7 +436,7 @@ export class BusinessContextService {
   private async buildEnrichedBusinessContext(request: BusinessContextRequest): Promise<BusinessContext> {
     // Mode SQL minimal : contexte ultra-light pour génération SQL rapide
     if (request.generation_mode === 'sql_minimal') {
-      return await this.buildMinimalSQLContext(request);
+      return await this.contextComposer.composeMinimalSQLContext(request);
     }
     
     // Mode full : contexte complet (comportement par défaut)
@@ -438,18 +450,20 @@ export class BusinessContextService {
       request.complexity_preference
     );
     
-    // 3. Construction du contexte RBAC
-    const roleSpecificConstraints = await this.buildRBACContext(request.userId, request.user_role);
-    
-    // 4. Génération des requêtes suggérées
+    // 3. Génération des requêtes suggérées
     const suggestedQueries = await this.generateSuggestedQueries(
       request.user_role,
       request.query_hint,
       request.personalization_level
     );
     
-    // 5. Contexte temporel (saisonnalité, contraintes BTP)
-    const temporal_context = this.buildTemporalContext();
+    // 4. Composition du contexte via ContextComposer
+    return await this.contextComposer.composeEnrichedContext(
+      request,
+      databaseSchemas,
+      businessExamples,
+      suggestedQueries
+    );
     
     // 6. Métadonnées de cache
     const cache_metadata = {
@@ -474,7 +488,12 @@ export class BusinessContextService {
    * Contexte SQL minimal : résolveur intent→tables + schémas limités UNIQUEMENT
    * Performance: <100ms | Tokens: <2k | Pour génération SQL rapide
    */
+  // buildMinimalSQLContext déplacé vers ContextComposer
   private async buildMinimalSQLContext(request: BusinessContextRequest): Promise<BusinessContext> {
+    return await this.contextComposer.composeMinimalSQLContext(request);
+  }
+  
+  private async buildMinimalSQLContextOriginal(request: BusinessContextRequest): Promise<BusinessContext> {
     // 1. Résolution intent → tables pertinentes (heuristique rapide)
     const relevantTables = this.resolveIntentToTables(request.query_hint || '');
     
@@ -2469,7 +2488,13 @@ export class BusinessContextService {
   /**
    * Construit le contexte temporel (saisonnalité BTP)
    */
+  // buildTemporalContext déplacé vers TemporalContextBuilder
   private buildTemporalContext() {
+    const temporalBuilder = new TemporalContextBuilder();
+    return temporalBuilder.buildTemporalContext() as any;
+  }
+  
+  private buildTemporalContextOriginal() {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     

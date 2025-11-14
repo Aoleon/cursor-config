@@ -80,9 +80,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters 
-
-            });
+      logger.debug('[AnalyticsStorage] getProjectStats - SQL aggregation', { metadata: { filters }});
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -99,7 +97,7 @@ export class AnalyticsStorage {
         conditions.push(eq(projects.responsibleUserId, filters.responsibleUserId));
       }
       if (filters?.departement) {
-        conditions.push(eq(projects.departement, filters.departement));
+        conditions.push(eq(projects.departement, filters.departement as typeof projects.departement.enumValues[number]));
       }
 
       // Query 1: Overall stats
@@ -130,11 +128,12 @@ export class AnalyticsStorage {
       for (const stat of statusStats) {
         if (stat.status) {
           byStatus[stat.status] = {
-                count: Number(stat.count),
+            count: Number(stat.count),
             totalBudget: Number(stat.totalBudget || 0),
             avgBudget: Number(stat.avgBudget || 0)
           };
         }
+      }
 
       return {
         totalCount: Number(overallStats?.totalCount || 0),
@@ -142,13 +141,15 @@ export class AnalyticsStorage {
         totalBudget: Number(overallStats?.totalBudget || 0),
         avgBudget: Number(overallStats?.avgBudget || 0)
       };
-    
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getOfferStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        filters: filters ? JSON.stringify(filters) : undefined
+      }
+    }
+    );
   }
 
   /**
@@ -164,9 +165,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters 
-
-            });
+      logger.debug('[AnalyticsStorage] getOfferStats - SQL aggregation', { metadata: { filters }});
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -214,11 +213,12 @@ export class AnalyticsStorage {
       for (const stat of statusStats) {
         if (stat.status) {
           byStatus[stat.status] = {
-                count: Number(stat.count),
+            count: Number(stat.count),
             totalAmount: Number(stat.totalAmount || 0),
             avgAmount: Number(stat.avgAmount || 0)
           };
         }
+      }
 
       return {
         totalCount: Number(overallStats?.totalCount || 0),
@@ -226,13 +226,15 @@ export class AnalyticsStorage {
         totalAmount: Number(overallStats?.totalAmount || 0),
         avgAmount: Number(overallStats?.avgAmount || 0)
       };
-    
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getAOStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        filters: filters ? JSON.stringify(filters) : undefined
+      }
+    }
+    );
   }
 
   /**
@@ -246,9 +248,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters 
-
-            });
+      logger.debug('[AnalyticsStorage] getAOStats - SQL aggregation', { metadata: { filters }});
 
       // Build WHERE conditions
       const conditions: SQL[] = [];
@@ -259,7 +259,7 @@ export class AnalyticsStorage {
         conditions.push(lte(aos.createdAt, new Date(filters.dateTo)));
       }
       if (filters?.departement) {
-        conditions.push(eq(aos.departement, filters.departement));
+        conditions.push(eq(aos.departement, filters.departement as typeof aos.departement.enumValues[number]));
       }
 
       // Query 1: Overall stats
@@ -287,18 +287,19 @@ export class AnalyticsStorage {
         if (stat.departement) {
           byDepartement[stat.departement] = Number(stat.count);
         }
+      }
 
       return {
         totalCount: Number(overallStats?.totalCount || 0),
         byDepartement
       };
-    
     },
     {
       operation: 'getProjectStats',
       service: 'analytics',
       metadata: {}
-    });
+    }
+  );
   }
 
   /**
@@ -314,24 +315,23 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getConversionStats - SQL aggregation', { metadata: { period, filters 
-
-            });
+      logger.debug('[AnalyticsStorage] getConversionStats - SQL aggregation', { metadata: { period, filters }});
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
 
       // Build WHERE conditions for AOs
-      const aoConditions: unknown[] = [
+      const aoConditions: SQL[] = [
         gte(aos.createdAt, fromDate),
         lte(aos.createdAt, toDate)
       ];
       if (filters?.departement) {
-        aoConditions.push(eq(aos.departement, filters.departement as unknown));
+        const deptValue = filters.departement as typeof aos.departement.enumValues[number];
+        aoConditions.push(eq(aos.departement, deptValue));
       }
 
       // Build WHERE conditions for Offers
-      const offerCondit: unknown[]ny[] = [
+      const offerConditions: SQL[] = [
         gte(offers.createdAt, fromDate),
         lte(offers.createdAt, toDate)
       ];
@@ -339,7 +339,7 @@ export class AnalyticsStorage {
         offerConditions.push(eq(offers.responsibleUserId, filters.userId));
       }
       if (filters?.departement) {
-        offerConditions.push(eq(offers.departement, filters.departement));
+        offerConditions.push(eq(offers.departement, filters.departement as typeof offers.departement.enumValues[number]));
       }
 
       // Query 1: AO to Offer conversion
@@ -348,14 +348,15 @@ export class AnalyticsStorage {
           totalAOs: count()
         })
         .from(aos)
-        .where(and(...aoConditions));
+        .where(aoConditions.length > 0 ? and(...aoConditions) : undefined);
 
+      const offerWhereClause = offerConditions.length > 0 ? and(...offerConditions) : undefined;
       const [offerStats] = await db
         .select({
           totalOffers: count()
         })
         .from(offers)
-        .where(and(...offerConditions));
+        .where(offerWhereClause);
 
       const totalAOs = Number(aoStats?.totalAOs || 0);
       const totalOffersCreated = Number(offerStats?.totalOffers || 0);
@@ -398,6 +399,8 @@ export class AnalyticsStorage {
               rate: offersCount > 0 ? (signedCount / offersCount) * 100 : 0
             };
           }
+        }
+      }
 
       return {
         aoToOffer: {
@@ -413,13 +416,16 @@ export class AnalyticsStorage {
           byUser: Object.keys(offerToProjectByUser).length > 0 ? offerToProjectByUser : undefined
         }
       };
-    
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getConversionStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        period: `${period.from} to ${period.to}`,
+        filters: filters ? JSON.stringify(filters) : undefined
+      }
+    }
+    );
   }
 
   /**
@@ -432,9 +438,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getProjectDelayStats - SQL aggregation', { metadata: { period 
-
-            });
+      logger.debug('[AnalyticsStorage] getProjectDelayStats - SQL aggregation', { metadata: { period }});
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -501,13 +505,15 @@ export class AnalyticsStorage {
         criticalDelayed,
         byPhase
       };
-    
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getProjectDelayStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        period: `${period.from} to ${period.to}`
+      }
+    }
+  );
   }
 
   /**
@@ -520,9 +526,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getTeamPerformanceStats - SQL aggregation', { metadata: { period 
-
-            });
+      logger.debug('[AnalyticsStorage] getTeamPerformanceStats - SQL aggregation', { metadata: { period }});
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -575,6 +579,7 @@ export class AnalyticsStorage {
         if (delay <= 1) { // <= 1 day = on time
           userStats[project.userId].onTimeCount++;
         }
+      }
 
       // Build result
       const results = Object.entries(userStats).map(([userId, stats]) => {
@@ -596,13 +601,15 @@ export class AnalyticsStorage {
       });
 
       return results.sort((a, b) => b.onTimeRate - a.onTimeRate);
-    
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getTeamPerformanceStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        period: `${period.from} to ${period.to}`
+      }
+    }
+    );
   }
 
   /**
@@ -619,9 +626,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity 
-
-            });
+      logger.debug('[AnalyticsStorage] getDelayedProjects - SQL aggregation with JOIN', { metadata: { severity }});
 
       // Thresholds by severity
       const thresholds = {
@@ -650,26 +655,23 @@ export class AnalyticsStorage {
           )
         );
 
-      return delayedProjects.map(p  => ({
+      const mappedProjects = delayedProjects.map(p => ({
         ...p,
         delayDays: Number(p.delayDays),
         budget: Number(p.budget || 0)
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
-    
+      }));
+      const count = mappedProjects.length;
+      return mappedProjects;
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getDelayedProjects',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        severity,
+        count
+      }
+    }
+    );
   }
 
   /**
@@ -686,9 +688,7 @@ export class AnalyticsStorage {
     return withErrorHandling(
     async () => {
 
-      logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period 
-
-            });
+      logger.debug('[AnalyticsStorage] getRevenueByCategoryStats - SQL aggregation', { metadata: { period }});
 
       const fromDate = new Date(period.from);
       const toDate = new Date(period.to);
@@ -708,29 +708,25 @@ export class AnalyticsStorage {
             lte(projects.createdAt, toDate),
             sql`${projects.budget} IS NOT NULL`
           )
+        )
         .groupBy(sql`COALESCE(${offers.menuiserieType}, 'autres')`);
 
-      return categoryStats.map(stat  => ({
+      return categoryStats.map(stat => ({
         category: stat.category || 'autres',
         revenue: Number(stat.revenue || 0),
         projectCount: Number(stat.projectCount || 0)
-            }
-
-                      }
-
-
-                                }
-
-
-                              }));
-    
+      }));
     },
     {
-      operation: 'getProjectStats',
+      operation: 'getRevenueByCategoryStats',
       service: 'analytics',
-      metadata: {}
-    });
+      metadata: {
+        period: `${period.from} to ${period.to}`
+      }
+    }
+    );
   }
+}
 
 // Export singleton instance
 export const analyticsStorage = new AnalyticsStorage();

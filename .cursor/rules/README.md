@@ -91,7 +91,9 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── meta-cognition.md # Méta-cognition et réflexion avancée (P1 - IMPÉRATIF)
 ├── holistic-analysis.md # Analyse holistique et vision globale (P1 - IMPÉRATIF)
 ├── cognitive-frameworks.md # Frameworks cognitifs avancés (P1 - IMPÉRATIF)
-└── systems-thinking.md # Pensée systémique (P1 - IMPÉRATIF)
+├── systems-thinking.md # Pensée systémique (P1 - IMPÉRATIF)
+├── advanced-problem-solving.md # Résolution problèmes avancée (P1 - IMPÉRATIF)
+└── intelligent-debugging.md # Debugging intelligent (P1 - IMPÉRATIF)
 ```
 
 ## 🎯 Organisation des Règles
@@ -233,12 +235,19 @@ Le système de sub-agents permet l'exécution de tâches complexes en totale aut
 - **transversality-enhancement.md** : Amélioration transversalité (coordination multi-domaines, validation globale) (P1)
 
 ### Capacités Cognitives Avancées
-**Appliquées pour réflexion et compréhension profondes** - Méta-cognition, vision holistique, frameworks cognitifs et pensée systémique
+**Appliquées pour réflexion et compréhension profondes** - Intelligence cognitive complète de niveau expert
 
+#### Fondamentaux Cognitifs
 - **meta-cognition.md** : Méta-cognition et réflexion avancée (conscience de soi, auto-évaluation, réflexion stratégique, apprentissage méta-cognitif, adaptation contextuelle) (P1 - IMPÉRATIF)
 - **holistic-analysis.md** : Analyse holistique et vision globale (architecture système, domaine métier, expérience utilisateur, performance système, qualité, évolution) (P1 - IMPÉRATIF)
+
+#### Frameworks et Méthodologies
 - **cognitive-frameworks.md** : Frameworks cognitifs avancés (First Principles, OODA Loop, Six Thinking Hats, SWOT, 5 Whys, Design Thinking) (P1 - IMPÉRATIF)
-- **systems-thinking.md** : Pensée systémique (émergence, feedback loops, limites système, stocks/flux, archétypes, leviers) (P1 - IMPÉRATIF)
+- **systems-thinking.md** : Pensée systémique (émergence, feedback loops, limites système, stocks/flux, archétypes systémiques, leviers intervention) (P1 - IMPÉRATIF)
+
+#### Résolution et Debugging
+- **advanced-problem-solving.md** : Résolution de problèmes avancée (décomposition récursive, inversion, contraintes→opportunités, analogies, divergent-convergent) (P1 - IMPÉRATIF)
+- **intelligent-debugging.md** : Debugging intelligent (diagnostic rapide, cause racine, systémique, prédictif, time-travel debugging) (P1 - IMPÉRATIF)
 
 ## 📊 Matrice de Responsabilités des Rôles
 

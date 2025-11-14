@@ -746,6 +746,363 @@ const TIMEOUT_CONFIG: Record<MessageType, number> = {
 
 **Note:** Ce fichier définit le protocole de communication inter-agents avec format de messages structurés, incluant les fonctionnalités avancées (types avancés, corrélation, priorisation, timeouts).
 
-**Version:** 2.0.0  
+## 🚀 Communication Profonde Inter-Agents (NOUVEAU v3.0)
+
+### 1. Communication Asynchrone avec Queue Messages
+
+**IMPÉRATIF:** Implémenter communication asynchrone avec queue messages pour éviter blocages.
+
+**TOUJOURS:**
+- ✅ Utiliser queue messages pour communication asynchrone
+- ✅ Gérer priorités dans queue
+- ✅ Traiter messages dans ordre priorité
+- ✅ Gérer timeouts et retry automatiques
+
+**Pattern:**
+```typescript
+// Communication asynchrone avec queue
+interface AsyncMessageQueue {
+  queue: MessageQueue;
+  priorityQueue: PriorityQueue;
+  processing: Map<string, MessageProcessing>;
+}
+
+class AsyncCommunicationEngine {
+  private messageQueue: MessageQueue = new MessageQueue();
+  private priorityQueue: PriorityQueue = new PriorityQueue();
+  
+  async sendAsyncMessage(
+    message: AgentMessage,
+    context: Context
+  ): Promise<void> {
+    // 1. Ajouter à queue selon priorité
+    if (message.priority === 'critical' || message.priority === 'high') {
+      await this.priorityQueue.enqueue(message, context);
+    } else {
+      await this.messageQueue.enqueue(message, context);
+    }
+    
+    // 2. Notifier destinataires (non-bloquant)
+    await this.notifyRecipientsAsync(message, context);
+  }
+  
+  async processMessageQueue(
+    role: Role,
+    context: Context
+  ): Promise<void> {
+    // 1. Traiter messages prioritaires d'abord
+    while (await this.priorityQueue.hasMessages(role, context)) {
+      const message = await this.priorityQueue.dequeue(role, context);
+      await this.processMessage(message, context);
+    }
+    
+    // 2. Traiter messages normaux
+    while (await this.messageQueue.hasMessages(role, context)) {
+      const message = await this.messageQueue.dequeue(role, context);
+      await this.processMessage(message, context);
+    }
+  }
+}
+```
+
+### 2. Partage Contexte Riche
+
+**IMPÉRATIF:** Partager contexte riche entre agents (pas juste résultats).
+
+**TOUJOURS:**
+- ✅ Partager contexte complet (fichiers, état, historique)
+- ✅ Partager insights et raisonnements
+- ✅ Partager métriques et métadonnées
+- ✅ Maintenir cohérence contexte partagé
+
+**Pattern:**
+```typescript
+// Partage contexte riche
+interface RichContext {
+  files: FileContext[];
+  state: AgentState;
+  history: ExecutionHistory[];
+  insights: Insight[];
+  metrics: Metrics;
+  metadata: RichMetadata;
+}
+
+interface DeepCommunication extends AgentMessage {
+  messageType: 'context' | 'insight' | 'question' | 'result';
+  payload: RichPayload; // Objets structurés, pas juste string
+  sharedMemory: SharedMemoryRef;
+  context: RichContext;
+}
+
+class RichContextSharing {
+  async shareRichContext(
+    sender: Role,
+    receiver: Role,
+    context: RichContext,
+    context: Context
+  ): Promise<void> {
+    // 1. Construire contexte riche
+    const richContext = await this.buildRichContext(context, context);
+    
+    // 2. Créer message avec contexte riche
+    const message: DeepCommunication = {
+      id: generateMessageId(),
+      type: 'coordination',
+      from: sender,
+      to: receiver,
+      timestamp: new Date().toISOString(),
+      priority: 'high',
+      messageType: 'context',
+      payload: {
+        context: richContext,
+        files: context.files,
+        state: context.state,
+        history: context.history,
+        insights: context.insights
+      },
+      sharedMemory: await this.getSharedMemoryRef(context),
+      context: richContext
+    };
+    
+    // 3. Envoyer message
+    await this.sendMessage(message, context);
+  }
+  
+  private async buildRichContext(
+    context: Context,
+    fullContext: Context
+  ): Promise<RichContext> {
+    return {
+      files: await this.getRelevantFiles(context, fullContext),
+      state: await this.getCurrentState(context),
+      history: await this.getExecutionHistory(context),
+      insights: await this.extractInsights(context, fullContext),
+      metrics: await this.collectMetrics(context),
+      metadata: await this.buildMetadata(context, fullContext)
+    };
+  }
+}
+```
+
+### 3. Négociation Inter-Agents
+
+**IMPÉRATIF:** Implémenter négociation inter-agents pour résolution conflits.
+
+**TOUJOURS:**
+- ✅ Détecter conflits entre agents
+- ✅ Négocier résolution conflits
+- ✅ Trouver compromis acceptables
+- ✅ Documenter négociations
+
+**Pattern:**
+```typescript
+// Négociation inter-agents
+interface Negotiation {
+  conflictId: string;
+  participants: Role[];
+  proposals: Proposal[];
+  currentProposal: Proposal;
+  status: 'negotiating' | 'agreed' | 'failed';
+}
+
+class InterAgentNegotiation {
+  async negotiateConflict(
+    conflict: Conflict,
+    participants: Role[],
+    context: Context
+  ): Promise<NegotiationResult> {
+    // 1. Créer négociation
+    const negotiation: Negotiation = {
+      conflictId: conflict.id,
+      participants,
+      proposals: [],
+      currentProposal: null,
+      status: 'negotiating'
+    };
+    
+    // 2. Collecter propositions de chaque participant
+    for (const participant of participants) {
+      const proposal = await this.collectProposal(
+        participant,
+        conflict,
+        context
+      );
+      negotiation.proposals.push(proposal);
+    }
+    
+    // 3. Négocier compromis
+    const compromise = await this.findCompromise(
+      negotiation.proposals,
+      conflict,
+      context
+    );
+    
+    // 4. Valider compromis avec participants
+    const agreement = await this.validateCompromise(
+      compromise,
+      participants,
+      context
+    );
+    
+    if (agreement) {
+      negotiation.status = 'agreed';
+      negotiation.currentProposal = compromise;
+    } else {
+      negotiation.status = 'failed';
+    }
+    
+    return {
+      negotiation,
+      result: agreement ? 'agreed' : 'failed',
+      compromise: agreement ? compromise : null
+    };
+  }
+}
+```
+
+### 4. Mémoire Partagée
+
+**IMPÉRATIF:** Implémenter mémoire partagée accessible à tous agents.
+
+**TOUJOURS:**
+- ✅ Créer mémoire partagée accessible
+- ✅ Synchroniser accès mémoire partagée
+- ✅ Gérer versions mémoire partagée
+- ✅ Valider cohérence mémoire partagée
+
+**Pattern:**
+```typescript
+// Mémoire partagée
+interface SharedMemory {
+  id: string;
+  data: Map<string, any>;
+  version: number;
+  lastUpdated: number;
+  accessControl: AccessControl;
+}
+
+class SharedMemoryManager {
+  private sharedMemory: Map<string, SharedMemory> = new Map();
+  
+  async createSharedMemory(
+    name: string,
+    initialData: any,
+    context: Context
+  ): Promise<SharedMemory> {
+    const memory: SharedMemory = {
+      id: generateMemoryId(),
+      data: new Map(Object.entries(initialData)),
+      version: 1,
+      lastUpdated: Date.now(),
+      accessControl: {
+        read: ['all'],
+        write: ['all']
+      }
+    };
+    
+    this.sharedMemory.set(name, memory);
+    await this.saveSharedMemory(memory, context);
+    
+    return memory;
+  }
+  
+  async readSharedMemory(
+    name: string,
+    key: string,
+    role: Role,
+    context: Context
+  ): Promise<any> {
+    const memory = this.sharedMemory.get(name);
+    if (!memory) {
+      throw new Error(`Shared memory ${name} not found`);
+    }
+    
+    // Vérifier accès
+    if (!this.hasReadAccess(memory, role)) {
+      throw new Error(`Role ${role} does not have read access`);
+    }
+    
+    return memory.data.get(key);
+  }
+  
+  async writeSharedMemory(
+    name: string,
+    key: string,
+    value: any,
+    role: Role,
+    context: Context
+  ): Promise<void> {
+    const memory = this.sharedMemory.get(name);
+    if (!memory) {
+      throw new Error(`Shared memory ${name} not found`);
+    }
+    
+    // Vérifier accès
+    if (!this.hasWriteAccess(memory, role)) {
+      throw new Error(`Role ${role} does not have write access`);
+    }
+    
+    // Écrire avec versioning
+    memory.data.set(key, value);
+    memory.version++;
+    memory.lastUpdated = Date.now();
+    
+    await this.saveSharedMemory(memory, context);
+  }
+}
+```
+
+### 5. Synchronisation État Temps Réel
+
+**IMPÉRATIF:** Synchroniser état entre agents en temps réel.
+
+**TOUJOURS:**
+- ✅ Synchroniser état entre agents
+- ✅ Détecter changements état
+- ✅ Notifier changements état
+- ✅ Maintenir cohérence état
+
+**Pattern:**
+```typescript
+// Synchronisation état temps réel
+class RealTimeStateSync {
+  private stateSubscriptions: Map<Role, Set<string>> = new Map();
+  
+  async subscribeToState(
+    role: Role,
+    stateKeys: string[],
+    context: Context
+  ): Promise<void> {
+    if (!this.stateSubscriptions.has(role)) {
+      this.stateSubscriptions.set(role, new Set());
+    }
+    
+    const subscriptions = this.stateSubscriptions.get(role)!;
+    for (const key of stateKeys) {
+      subscriptions.add(key);
+    }
+  }
+  
+  async notifyStateChange(
+    stateKey: string,
+    newValue: any,
+    context: Context
+  ): Promise<void> {
+    // Notifier tous les rôles abonnés
+    for (const [role, subscriptions] of this.stateSubscriptions.entries()) {
+      if (subscriptions.has(stateKey)) {
+        await this.notifyRole(role, {
+          type: 'state-change',
+          key: stateKey,
+          value: newValue,
+          timestamp: Date.now()
+        }, context);
+      }
+    }
+  }
+}
+```
+
+**Version:** 3.0.0  
 **Dernière mise à jour:** 2025-01-29
 

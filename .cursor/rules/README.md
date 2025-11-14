@@ -211,6 +211,9 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 - **cursor-limits-workaround.md** : Système unifié de contournement toutes limites Cursor (surveillance multi-limites, contournements coordonnés, optimisation globale, validation)
 - **multi-agent-coordination.md** : Coordination multi-agents (orchestration, communication, collaboration)
 - **reinforcement-learning.md** : Apprentissage par renforcement (récompenses/pénalités, ajustement stratégies)
+- **reinforcement-learning-advanced.md** : Apprentissage renforcement avancé (Q-learning, exploration-exploitation, convergence stratégies optimales) (P1)
+- **self-evolution-engine.md** : Moteur d'auto-évolution (stratégie ICE: Investigate-Consolidate-Exploit, apprentissage symbolique) (P1)
+- **continuous-improvement-loop.md** : Boucle d'amélioration continue (collecte métriques, analyse patterns, recommandations, application automatique) (P1)
 
 ### Système de Sub-Agents
 **Appliqués pour maxi runs autonomes** - Orchestration et coordination de 5 rôles spécialisés
@@ -220,13 +223,15 @@ Le système de sub-agents permet l'exécution de tâches complexes en totale aut
 - **sub-agents-orchestration.md** : Orchestration principal (analyse tâches, identification rôles, planification, gestion dépendances) (P1 - IMPÉRATIF)
 - **sub-agents-roles.md** : Définition des 5 rôles spécialisés (Architect, Consultant, Developer, Tester, Reviewer) (P1 - IMPÉRATIF)
 - **sub-agents-workflows.md** : Workflows collaboratifs entre sub-agents (P1)
-- **sub-agents-communication.md** : Protocoles de communication inter-agents (P1)
+- **sub-agents-communication.md** : Protocoles de communication inter-agents (communication profonde, mémoire partagée, synchronisation temps réel) (P1)
+- **agent-collaboration-protocols.md** : Protocoles collaboration avancés (consensus, escalation, validation croisée, apprentissage collaboratif) (P1)
 - **sub-agents-learning.md** : Apprentissage collaboratif et amélioration continue (P1)
 - **sub-agents-monitoring.md** : Monitoring performances et métriques sub-agents (P1)
 - **sub-agents-modes.md** : Modes d'exécution (séquentiel, parallèle, hybride) (P1)
 - **sub-agents-quick-activation.md** : Activation rapide et optimisée des sub-agents (P1)
 - **sub-agents-usage-patterns.md** : Patterns d'usage courants et best practices (P1)
-- **sub-agents-background-integration.md** : Intégration avec Background Agent de Cursor (P1)
+- **sub-agents-background-integration.md** : Intégration avec Background Agent et Composer Mode (tâches longues, éditions multi-fichiers, handoff intelligent) (P1)
+- **cursor-modes-optimization.md** : Optimisation utilisation modes Cursor (Agent Mode, Composer Mode, Cmd+K, Background Agent) (P1)
 
 ### Optimisations Agent
 **Appliquées pour performances maximales** - Optimisations spécifiques de l'agent
@@ -256,6 +261,19 @@ Le système de sub-agents permet l'exécution de tâches complexes en totale aut
 - **memory-management-advanced.md** : Gestion mémoire avancée (5 types mémoire, checkpoints, stockage persistant, consolidation) (P1 - IMPÉRATIF)
 - **intelligent-todo-planning.md** : Planification intelligente todos (décomposition, estimation, priorisation basées mémoire et patterns) (P1 - IMPÉRATIF)
 - **proactive-todo-tracking.md** : Suivi proactif todos (monitoring continu, détection blocages, completion automatique, prévention incompletion) (P1 - IMPÉRATIF)
+
+#### Auto-Évolution et Amélioration Continue
+- **self-evolution-engine.md** : Moteur d'auto-évolution (stratégie ICE: Investigate-Consolidate-Exploit, apprentissage symbolique, optimisation processus) (P1)
+- **reinforcement-learning-advanced.md** : Apprentissage renforcement avancé (Q-learning, exploration-exploitation optimisée, convergence stratégies optimales) (P1)
+- **continuous-improvement-loop.md** : Boucle d'amélioration continue (collecte métriques, analyse patterns, recommandations, application automatique) (P1)
+
+#### Automatisation et Migration
+- **technical-debt-automation.md** : Automatisation résolution dette technique (741 try-catch, 933 any, 79 fichiers monolithiques) (P1)
+- **migration-automation-engine.md** : Moteur migration automatisée (détection routes, génération modules, validation continue, synchronisation) (P1)
+
+#### Monitoring et Intelligence Domaine
+- **agent-performance-metrics.md** : Métriques performance agent (dashboard temps réel, métriques cognitives/mémoire/todos/sub-agents, export JSON, alertes) (P1)
+- **saxium-specific-intelligence.md** : Intelligence spécifique domaine JLM/BTP (compréhension métier, règles business mémorisées, validation décisions) (P1)
 
 ## 📊 Matrice de Responsabilités des Rôles
 

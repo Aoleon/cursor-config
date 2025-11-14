@@ -89,13 +89,15 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - `@.cursor/rules/sub-agents-orchestration.md` - Orchestration sub-agents (IMPÉRATIF - analyse, planification, coordination)
 - `@.cursor/rules/sub-agents-roles.md` - Rôles sub-agents (IMPÉRATIF - 5 rôles spécialisés)
 - `@.cursor/rules/sub-agents-workflows.md` - Workflows sub-agents (collaboration, coordination)
-- `@.cursor/rules/sub-agents-communication.md` - Communication sub-agents (protocoles, messages)
+- `@.cursor/rules/sub-agents-communication.md` - Communication sub-agents (communication profonde, mémoire partagée, synchronisation temps réel)
+- `@.cursor/rules/agent-collaboration-protocols.md` - Protocoles collaboration avancés (consensus, escalation, validation croisée, apprentissage collaboratif)
 - `@.cursor/rules/sub-agents-learning.md` - Apprentissage sub-agents (amélioration continue)
 - `@.cursor/rules/sub-agents-monitoring.md` - Monitoring sub-agents (performances, métriques)
 - `@.cursor/rules/sub-agents-modes.md` - Modes sub-agents (séquentiel, parallèle, hybride)
 - `@.cursor/rules/sub-agents-quick-activation.md` - Activation rapide sub-agents
 - `@.cursor/rules/sub-agents-usage-patterns.md` - Patterns d'usage sub-agents
-- `@.cursor/rules/sub-agents-background-integration.md` - Intégration Background Agent
+- `@.cursor/rules/sub-agents-background-integration.md` - Intégration Background Agent et Composer Mode (tâches longues, éditions multi-fichiers, handoff intelligent)
+- `@.cursor/rules/cursor-modes-optimization.md` - Optimisation utilisation modes Cursor (Agent Mode, Composer Mode, Cmd+K, Background Agent)
 
 **Optimisations Agent:**
 - `@.cursor/rules/agent-performance-optimization.md` - Optimisation performances agent
@@ -103,6 +105,32 @@ Saxium est une application full-stack de gestion de projets pour **JLM Menuiseri
 - `@.cursor/rules/bug-resolution-strategy.md` - Stratégie résolution bugs
 - `@.cursor/rules/root-cause-analysis.md` - Analyse cause racine
 - `@.cursor/rules/transversality-enhancement.md` - Amélioration transversalité
+
+**Capacités Cognitives Avancées:**
+- `@.cursor/rules/meta-cognition.md` - Méta-cognition et réflexion avancée (IMPÉRATIF)
+- `@.cursor/rules/holistic-analysis.md` - Analyse holistique et vision globale (IMPÉRATIF)
+- `@.cursor/rules/cognitive-frameworks.md` - Frameworks cognitifs avancés (IMPÉRATIF)
+- `@.cursor/rules/systems-thinking.md` - Pensée systémique (IMPÉRATIF)
+- `@.cursor/rules/advanced-problem-solving.md` - Résolution problèmes avancée (IMPÉRATIF)
+- `@.cursor/rules/intelligent-debugging.md` - Debugging intelligent (IMPÉRATIF)
+
+**Gestion Mémoire et Todos:**
+- `@.cursor/rules/memory-management-advanced.md` - Gestion mémoire avancée (IMPÉRATIF)
+- `@.cursor/rules/intelligent-todo-planning.md` - Planification intelligente todos (IMPÉRATIF)
+- `@.cursor/rules/proactive-todo-tracking.md` - Suivi proactif todos (IMPÉRATIF)
+
+**Auto-Évolution et Amélioration Continue:**
+- `@.cursor/rules/self-evolution-engine.md` - Moteur d'auto-évolution (stratégie ICE, apprentissage symbolique)
+- `@.cursor/rules/reinforcement-learning-advanced.md` - Apprentissage renforcement avancé (Q-learning, exploration-exploitation)
+- `@.cursor/rules/continuous-improvement-loop.md` - Boucle d'amélioration continue (métriques, patterns, recommandations)
+
+**Automatisation et Migration:**
+- `@.cursor/rules/technical-debt-automation.md` - Automatisation résolution dette technique (741 try-catch, 933 any, 79 fichiers monolithiques)
+- `@.cursor/rules/migration-automation-engine.md` - Moteur migration automatisée (détection, génération, validation, synchronisation)
+
+**Monitoring et Intelligence Domaine:**
+- `@.cursor/rules/agent-performance-metrics.md` - Métriques performance agent (dashboard temps réel, export JSON, alertes)
+- `@.cursor/rules/saxium-specific-intelligence.md` - Intelligence spécifique domaine JLM/BTP (règles business, validation métier)
 
 ### P2 - Règles d'Optimisation (Optionnelles)
 

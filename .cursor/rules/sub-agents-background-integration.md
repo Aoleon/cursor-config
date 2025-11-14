@@ -423,6 +423,259 @@ async function executeWithBackgroundAgent(
 
 **Note:** Ce fichier définit l'intégration du Background Agent de Cursor avec le système de sub-agents pour l'exécution de tâches différées et la gestion d'état persistante.
 
-**Version:** 1.0.0  
+## 🚀 Intégration Background Agent et Composer Mode (NOUVEAU v3.0)
+
+### 1. Background Agent pour Tâches Longues Asynchrones
+
+**IMPÉRATIF:** Utiliser Background Agent pour tâches longues (>30min) exécutées asynchronement.
+
+**TOUJOURS:**
+- ✅ Identifier tâches >30min pour Background Agent
+- ✅ Exécuter tâches en arrière-plan
+- ✅ Surveiller progression tâches background
+- ✅ Notifier completion tâches background
+
+**Cas d'usage Background Agent:**
+- Migration 741 try-catch en background
+- Typage 933 any en background
+- Optimisation SQL en background
+- Migration modulaire complète (routes-poc.ts)
+
+**Pattern:**
+```typescript
+// Background Agent pour tâches longues
+class BackgroundAgentIntegration {
+  async executeBackgroundTask(
+    task: Task,
+    context: Context
+  ): Promise<BackgroundTaskResult> {
+    // 1. Vérifier si tâche éligible Background Agent
+    if (!this.isEligibleForBackground(task, context)) {
+      return await this.executeForeground(task, context);
+    }
+    
+    // 2. Préparer tâche background
+    const backgroundTask = await this.prepareBackgroundTask(task, context);
+    
+    // 3. Démarrer exécution background
+    const backgroundExecution = await this.startBackgroundExecution(
+      backgroundTask,
+      context
+    );
+    
+    // 4. Surveiller progression
+    await this.monitorBackgroundProgress(
+      backgroundExecution,
+      context
+    );
+    
+    // 5. Attendre completion
+    const result = await this.waitForBackgroundCompletion(
+      backgroundExecution,
+      context
+    );
+    
+    return result;
+  }
+  
+  private isEligibleForBackground(
+    task: Task,
+    context: Context
+  ): boolean {
+    // Tâche >30min
+    if (task.estimatedDuration > 30 * 60 * 1000) {
+      return true;
+    }
+    
+    // Tâche non-bloquante
+    if (!task.isBlocking) {
+      return true;
+    }
+    
+    // Tâche avec état sauvegardable
+    if (task.canResumeAfterInterruption) {
+      return true;
+    }
+    
+    return false;
+  }
+}
+```
+
+### 2. Composer Mode pour Éditions Multi-Fichiers Coordonnées
+
+**IMPÉRATIF:** Utiliser Composer Mode pour éditions multi-fichiers coordonnées.
+
+**TOUJOURS:**
+- ✅ Identifier éditions multi-fichiers (>3 fichiers)
+- ✅ Utiliser Composer Mode pour coordination
+- ✅ Maintenir cohérence entre fichiers
+- ✅ Valider éditions coordonnées
+
+**Pattern:**
+```typescript
+// Composer Mode pour éditions multi-fichiers
+class ComposerModeIntegration {
+  async executeComposerEdit(
+    edits: FileEdit[],
+    context: Context
+  ): Promise<ComposerEditResult> {
+    // 1. Vérifier si édition éligible Composer Mode
+    if (edits.length < 3) {
+      return await this.executeStandardEdit(edits, context);
+    }
+    
+    // 2. Préparer édition Composer
+    const composerEdit = await this.prepareComposerEdit(edits, context);
+    
+    // 3. Coordonner éditions multi-fichiers
+    const coordinatedEdits = await this.coordinateMultiFileEdits(
+      composerEdit,
+      context
+    );
+    
+    // 4. Valider cohérence
+    const validation = await this.validateCoherence(
+      coordinatedEdits,
+      context
+    );
+    
+    if (!validation.valid) {
+      throw new Error('Éditions incohérentes détectées');
+    }
+    
+    // 5. Appliquer éditions coordonnées
+    const result = await this.applyCoordinatedEdits(
+      coordinatedEdits,
+      context
+    );
+    
+    return result;
+  }
+}
+```
+
+### 3. Agent Mode vs Composer Mode - Quand Utiliser Chaque Mode
+
+**IMPÉRATIF:** Sélectionner mode approprié selon type tâche.
+
+**Agent Mode:**
+- Analyse et planification
+- Décisions stratégiques
+- Orchestration sub-agents
+- Debugging et résolution problèmes
+
+**Composer Mode:**
+- Éditions multi-fichiers (>3 fichiers)
+- Refactoring large
+- Migration modulaire
+- Modifications coordonnées
+
+**Cmd+K:**
+- Éditions simples fichier unique
+- Corrections mineures
+- Modifications locales
+
+**Pattern:**
+```typescript
+// Sélection mode approprié
+class ModeSelector {
+  async selectMode(
+    task: Task,
+    context: Context
+  ): Promise<CursorMode> {
+    // 1. Analyser type tâche
+    const taskType = this.analyzeTaskType(task, context);
+    
+    // 2. Sélectionner mode selon type
+    if (taskType === 'analysis' || taskType === 'planning' || taskType === 'debugging') {
+      return 'agent';
+    }
+    
+    if (taskType === 'multi-file-edit' && task.files.length > 3) {
+      return 'composer';
+    }
+    
+    if (taskType === 'single-file-edit' && task.files.length === 1) {
+      return 'cmd-k';
+    }
+    
+    // Par défaut: Agent Mode
+    return 'agent';
+  }
+}
+```
+
+### 4. Handoff Intelligent entre Modes
+
+**IMPÉRATIF:** Gérer handoff intelligent entre modes selon progression tâche.
+
+**TOUJOURS:**
+- ✅ Détecter besoin changement mode
+- ✅ Préparer handoff (sauvegarder état)
+- ✅ Exécuter handoff
+- ✅ Valider handoff réussi
+
+**Pattern:**
+```typescript
+// Handoff intelligent entre modes
+class IntelligentHandoff {
+  async performHandoff(
+    fromMode: CursorMode,
+    toMode: CursorMode,
+    task: Task,
+    context: Context
+  ): Promise<HandoffResult> {
+    // 1. Sauvegarder état mode actuel
+    const currentState = await this.saveCurrentState(
+      fromMode,
+      task,
+      context
+    );
+    
+    // 2. Préparer transition vers nouveau mode
+    const transition = await this.prepareTransition(
+      fromMode,
+      toMode,
+      currentState,
+      context
+    );
+    
+    // 3. Exécuter handoff
+    const handoff = await this.executeHandoff(
+      transition,
+      context
+    );
+    
+    // 4. Valider handoff réussi
+    const validation = await this.validateHandoff(
+      handoff,
+      toMode,
+      context
+    );
+    
+    if (!validation.valid) {
+      // Rollback si handoff échoue
+      await this.rollbackHandoff(
+        currentState,
+        fromMode,
+        context
+      );
+      
+      throw new Error('Handoff échoué');
+    }
+    
+    return {
+      success: true,
+      fromMode,
+      toMode,
+      handoff,
+      validation
+    };
+  }
+}
+```
+
+**Version:** 2.0.0  
 **Dernière mise à jour:** 2025-01-29
 

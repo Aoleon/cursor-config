@@ -93,7 +93,10 @@ Ce répertoire contient les règles de projet pour Cursor AI, organisées par do
 ├── cognitive-frameworks.md # Frameworks cognitifs avancés (P1 - IMPÉRATIF)
 ├── systems-thinking.md # Pensée systémique (P1 - IMPÉRATIF)
 ├── advanced-problem-solving.md # Résolution problèmes avancée (P1 - IMPÉRATIF)
-└── intelligent-debugging.md # Debugging intelligent (P1 - IMPÉRATIF)
+├── intelligent-debugging.md # Debugging intelligent (P1 - IMPÉRATIF)
+├── memory-management-advanced.md # Gestion mémoire avancée (P1 - IMPÉRATIF)
+├── intelligent-todo-planning.md # Planification intelligente todos (P1 - IMPÉRATIF)
+└── proactive-todo-tracking.md # Suivi proactif todos (P1 - IMPÉRATIF)
 ```
 
 ## 🎯 Organisation des Règles
@@ -248,6 +251,11 @@ Le système de sub-agents permet l'exécution de tâches complexes en totale aut
 #### Résolution et Debugging
 - **advanced-problem-solving.md** : Résolution de problèmes avancée (décomposition récursive, inversion, contraintes→opportunités, analogies, divergent-convergent) (P1 - IMPÉRATIF)
 - **intelligent-debugging.md** : Debugging intelligent (diagnostic rapide, cause racine, systémique, prédictif, time-travel debugging) (P1 - IMPÉRATIF)
+
+#### Gestion Mémoire et Todos
+- **memory-management-advanced.md** : Gestion mémoire avancée (5 types mémoire, checkpoints, stockage persistant, consolidation) (P1 - IMPÉRATIF)
+- **intelligent-todo-planning.md** : Planification intelligente todos (décomposition, estimation, priorisation basées mémoire et patterns) (P1 - IMPÉRATIF)
+- **proactive-todo-tracking.md** : Suivi proactif todos (monitoring continu, détection blocages, completion automatique, prévention incompletion) (P1 - IMPÉRATIF)
 
 ## 📊 Matrice de Responsabilités des Rôles
 

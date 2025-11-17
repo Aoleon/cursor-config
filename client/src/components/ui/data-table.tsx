@@ -179,7 +179,7 @@ export function DataTable<T extends Record<string, any>>({
         // Filtre date : comparaison de dates
         if (column.filterType === 'date') {
           const dateValue = new Date(value);
-          const filterDate = new Date(filterValue);
+          const filterDate = new Date(String(filterValue));
           return dateValue.toDateString() === filterDate.toDateString();
         }
 
@@ -212,7 +212,7 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   const renderFilter = (column: DataTableColumn<T>) => {
-    const currentFilter = preferences.filters[column.id] || '';
+    const currentFilter = String(preferences.filters[column.id] || '');
     const hasFilter = currentFilter !== '' && currentFilter !== 'all';
 
     if (!column.filterable) return null;

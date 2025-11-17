@@ -80,7 +80,7 @@ export default function Header() {
 
           {/* User menu */}
           <div className="flex items-center space-x-4">
-            {user && (
+            {user && typeof user === 'object' ? (
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <div className="text-sm font-medium text-on-surface">
@@ -104,7 +104,7 @@ export default function Header() {
                   </AvatarFallback>
                 </Avatar>
               </div>
-            )}
+            ) : null}
             
             <Button 
               variant="outline" 

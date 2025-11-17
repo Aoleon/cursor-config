@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import UnifiedOffersDisplay from '@/components/offers/unified-offers-display';
+import { LoadingState } from '@/components/ui/loading-states';
 
 interface AOsTableViewProps {
   showCreateButton?: boolean;
@@ -209,10 +210,11 @@ export default function AOsTableView({
     return (
       <Card data-testid="aos-loading">
         <CardContent className="p-6">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Chargement des AOs...</p>
-          </div>
+          <LoadingState 
+            type="skeleton-list" 
+            message="Chargement des AOs..."
+            count={5}
+          />
         </CardContent>
       </Card>
     );

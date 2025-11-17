@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
 import { FileText, Search, Calendar, MapPin, Building, Plus, Star, Eye, Edit, Home, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { SyncStatusBadge } from "@/components/monday/SyncStatusBadge";
 import { useMondaySync } from "@/hooks/useMondaySync";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/loading-states";
 
 interface UnifiedOffersDisplayProps {
   showCreateButton?: boolean;
@@ -39,6 +40,7 @@ export default function UnifiedOffersDisplay({
   const [page, setPage] = useState(1);
   const limit = 20;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Active les notifications Monday sync
   useMondaySync();
@@ -222,10 +224,11 @@ export default function UnifiedOffersDisplay({
     return (
       <Card data-testid="offers-loading">
         <CardContent className="p-6">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" data-testid="loading-spinner"></div>
-            <p className="text-muted-foreground" data-testid="loading-message">Chargement des offres...</p>
-          </div>
+          <LoadingState 
+            type="skeleton-list" 
+            message="Chargement des offres..."
+            count={5}
+          />
         </CardContent>
       </Card>
     );
@@ -235,20 +238,11 @@ export default function UnifiedOffersDisplay({
     return (
       <Card data-testid="offers-error">
         <CardContent className="p-6">
-          <div className="text-center py-8">
-            <div className="text-error mb-4">⚠️</div>
-            <p className="text-on-surface-muted mb-4" data-testid="error-message">
-              Impossible de charger les offres.
-              {error && ` (${(error as Error).message})`}
-            </p>
-            <Button 
-              onClick={() => window.location.reload()}
-              variant="outline"
-              data-testid="button-reload-offers"
-            >
-              Réessayer
-            </Button>
-          </div>
+          <ErrorState
+            title="Erreur lors du chargement"
+            message={error instanceof Error ? error.message : "Impossible de charger les offres"}
+            onRetry={() => queryClient.invalidateQueries({ queryKey: [endpoint] })}
+          />
         </CardContent>
       </Card>
     );
@@ -312,27 +306,18 @@ export default function UnifiedOffersDisplay({
       
       <CardContent>
         {offers.length === 0 ? (
-          <div className="text-center py-12" data-testid="offers-empty-state">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-on-surface mb-2" data-testid="empty-title">
-              Aucune offre trouvée
-            </h3>
-            <p className="text-muted-foreground mb-4" data-testid="empty-description">
-              {search || statusFilter !== "tous" 
-                ? "Aucune offre ne correspond aux critères de recherche"
-                : "Commencez par créer votre première offre"
-              }
-            </p>
-            {showCreateButton && (
-              <Button 
-                onClick={() => setLocation(createRoute)}
-                data-testid="button-create-first-unified"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {createButtonLabel}
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            title="Aucune offre trouvée"
+            description={search || statusFilter !== "tous" 
+              ? "Aucune offre ne correspond aux critères de recherche"
+              : "Commencez par créer votre première offre"
+            }
+            icon={<FileText className="h-12 w-12 mx-auto opacity-50" />}
+            action={showCreateButton ? {
+              label: createButtonLabel,
+              onClick: () => setLocation(createRoute)
+            } : undefined}
+          />
         ) : (
           <>
             <div className="grid gap-4" data-testid="offers-list">

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import UnifiedOffersDisplay from '@/components/offers/unified-offers-display';
+import { formatCurrency, formatPercentage } from '@/utils/formatters';
+import { LoadingState } from '@/components/ui/loading-states';
 
 interface OffersTableViewProps {
   showCreateButton?: boolean;
@@ -97,24 +99,8 @@ export default function OffersTableView({
     return <Badge variant="outline" className={config.color}>{config.label}</Badge>;
   };
 
-  const formatCurrency = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return '-';
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(numValue)) return '-';
-    return new Intl.NumberFormat('fr-FR', { 
-      style: 'currency', 
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(numValue);
-  };
-
-  const formatPercentage = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return '-';
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(numValue)) return '-';
-    return `${numValue.toFixed(1)}%`;
-  };
+  // Utilisation des utilitaires centralisés
+  // formatCurrency et formatPercentage sont importés depuis @/utils/formatters
 
   // Définir les colonnes du tableau
   const columns: DataTableColumn[] = [
@@ -313,9 +299,11 @@ export default function OffersTableView({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Chargement...</div>
-          </div>
+          <LoadingState 
+            type="skeleton-list" 
+            message="Chargement des offres..."
+            count={5}
+          />
         </CardContent>
       </Card>
     );

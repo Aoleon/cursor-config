@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/loading-states";
 import {
   Table,
   TableBody,
@@ -78,6 +79,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ExportPdfButton } from "@/components/comparaison/ExportPdfButton";
 import { ScoringSystem } from "@/components/comparaison/ScoringSystem";
+import { formatCurrency } from "@/utils/formatters";
 
 // Types pour la comparaison des devis
 interface SupplierComparison {
@@ -271,13 +273,18 @@ export default function ComparaisonDevis() {
     }
   });
 
-  // Fonction pour formater les prix
+  // Utilisation de l'utilitaire centralisé pour le formatage des prix
+  // formatCurrency est importé depuis @/utils/formatters
   const formatPrice = (price?: number, currency: string = 'EUR') => {
-    if (price == null) return '-';
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: currency,
-    }).format(price);
+    if (currency !== 'EUR') {
+      // Pour les devises autres qu'EUR, utiliser Intl.NumberFormat directement
+      if (price == null) return '-';
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: currency,
+      }).format(price);
+    }
+    return formatCurrency(price);
   };
 
   // Fonction pour formater les délais
@@ -357,10 +364,12 @@ export default function ComparaisonDevis() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center" data-testid="loading-comparison">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Chargement de la comparaison...</p>
-        </div>
+        <LoadingState 
+          type="skeleton-detail" 
+          message="Chargement de la comparaison..."
+          showSidebar={false}
+          showTabs={false}
+        />
       </div>
     );
   }
@@ -368,15 +377,11 @@ export default function ComparaisonDevis() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <XCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600 mb-4">Erreur lors du chargement</p>
-            <Button onClick={() => refetch()} data-testid="button-retry">
-              Réessayer
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Erreur lors du chargement"
+          message={error instanceof Error ? error.message : "Erreur inconnue"}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -396,18 +401,17 @@ export default function ComparaisonDevis() {
           </div>
         </div>
         
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">Aucun devis à comparer</h3>
-            <p className="text-muted-foreground mb-4">
-              Aucun fournisseur n'a encore soumis de devis pour ce lot.
-            </p>
-            <Button variant="outline" data-testid="button-manage-suppliers">
-              Gérer les fournisseurs
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title="Aucun devis à comparer"
+          description="Aucun fournisseur n'a encore soumis de devis pour ce lot."
+          icon={<FileText className="h-12 w-12 mx-auto opacity-50" />}
+          action={{
+            label: "Gérer les fournisseurs",
+            onClick: () => {
+              // TODO: Implémenter navigation vers gestion fournisseurs
+            }
+          }}
+        />
       </div>
     );
   }

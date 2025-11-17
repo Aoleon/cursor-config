@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, Plus, Euro, Clock, User, Building } from "lucide-react";
+import { LoadingState, EmptyState } from "@/components/ui/loading-states";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
@@ -159,11 +160,17 @@ export default function Pricing() {
           <CardContent>
             <div className="space-y-3">
               {offersLoading ? (
-                <div className="text-center py-4 text-muted-foreground">Chargement...</div>
+                <LoadingState 
+                  type="skeleton-list" 
+                  message="Chargement des offres..."
+                  count={3}
+                />
               ) : offers.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Aucune offre en cours de chiffrage
-                </div>
+                <EmptyState
+                  title="Aucune offre en cours de chiffrage"
+                  description="Les offres en cours de chiffrage apparaîtront ici"
+                  icon={<Building className="h-12 w-12 mx-auto opacity-50" />}
+                />
               ) : (
                 offers.map((offer) => (
                   <Card 
@@ -338,15 +345,23 @@ export default function Pricing() {
           </CardHeader>
           <CardContent>
             {!selectedOfferId ? (
-              <div className="text-center py-8 text-on-surface-muted">
-                Sélectionnez une offre pour voir ses devis
-              </div>
+              <EmptyState
+                title="Aucune offre sélectionnée"
+                description="Sélectionnez une offre dans la liste pour voir ses devis fournisseurs"
+                icon={<Calculator className="h-12 w-12 mx-auto opacity-50" />}
+              />
             ) : quotationsLoading ? (
-              <div className="text-center py-8 text-on-surface-muted">Chargement...</div>
+              <LoadingState 
+                type="skeleton-list" 
+                message="Chargement des devis..."
+                count={3}
+              />
             ) : quotations.length === 0 ? (
-              <div className="text-center py-8 text-on-surface-muted">
-                Aucun devis pour cette offre
-              </div>
+              <EmptyState
+                title="Aucun devis pour cette offre"
+                description="Ajoutez un devis fournisseur pour commencer"
+                icon={<Calculator className="h-12 w-12 mx-auto opacity-50" />}
+              />
             ) : (
               <div className="space-y-4">
                 {/* Résumé financier */}

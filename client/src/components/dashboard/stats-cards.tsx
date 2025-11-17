@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { FolderOpen, Calculator, Clock, TrendingUp } from "lucide-react";
+import { LoadingState, ErrorState } from "@/components/ui/loading-states";
 
 export default function StatsCards() {
+  const queryClient = useQueryClient();
   const { data: stats = {}, isLoading, isError, error } = useQuery({
     queryKey: ["/api/dashboard/stats"],
   });
@@ -26,19 +28,12 @@ export default function StatsCards() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="stats-cards-error">
         <Card className="col-span-full">
-          <CardContent className="p-6 text-center">
-            <div className="text-error mb-2">⚠️</div>
-            <p className="text-sm text-on-surface-muted" data-testid="stats-error-message">
-              Impossible de charger les statistiques. 
-              {error && ` (${(error as Error).message})`}
-            </p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-2 text-sm text-primary hover:underline"
-              data-testid="button-reload-stats"
-            >
-              Réessayer
-            </button>
+          <CardContent className="p-6">
+            <ErrorState
+              title="Erreur lors du chargement"
+              message={error instanceof Error ? error.message : "Impossible de charger les statistiques"}
+              onRetry={() => queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] })}
+            />
           </CardContent>
         </Card>
       </div>
